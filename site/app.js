@@ -22,16 +22,16 @@
     var p = t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
     return JSON.parse(decodeURIComponent(escape(atob(p))));
   }
-  // Keep the session across a refresh, sealed with this device's key (vault.js). Expired parts are dropped.
+  // Keep the session across a refresh, sealed with this device's key (sealed-store.js). Expired parts are dropped.
   function persist() {
-    if (!window.Vault || !Vault.available() || !mem.idToken) return Promise.resolve();
+    if (!window.SealedStore || !SealedStore.available() || !mem.idToken) return Promise.resolve();
     var exp = mem.claims.exp * 1000;
     Object.keys(mem.creds).forEach(function (k) { exp = Math.max(exp, mem.creds[k].expiration); });
-    return Vault.seal("session", { idToken: mem.idToken, creds: mem.creds }, exp).catch(function () { /* memory only */ });
+    return SealedStore.seal("session", { idToken: mem.idToken, creds: mem.creds }, exp).catch(function () { /* memory only */ });
   }
   function restore() {
-    if (!window.Vault || !Vault.available()) return Promise.resolve();
-    return Vault.open("session").then(function (s) {
+    if (!window.SealedStore || !SealedStore.available()) return Promise.resolve();
+    return SealedStore.open("session").then(function (s) {
       if (!s) return;
       var now = Date.now();
       Object.keys(s.creds || {}).forEach(function (k) { if (s.creds[k].expiration - now > 60 * 1000) mem.creds[k] = s.creds[k]; });
@@ -61,17 +61,17 @@
   }
 
   // ---- Accounts, on this device only ----
-  // Account IDs are sealed in the device vault too (kept ten years; Forget this device deletes them).
+  // Account IDs are sealed in the sealed store too (kept ten years; Forget this device deletes them).
   var TEN_YEARS = 10 * 365 * 24 * 3600 * 1000;
   var accounts = [];
   function saveAccounts(a) {
-    if (window.Vault && Vault.available()) return Vault.seal("accounts", a, Date.now() + TEN_YEARS).catch(function () {});
+    if (window.SealedStore && SealedStore.available()) return SealedStore.seal("accounts", a, Date.now() + TEN_YEARS).catch(function () {});
   }
   function loadAccounts() {
     var old = null;
     try { old = JSON.parse(localStorage.getItem(STORE) || "null"); localStorage.removeItem(STORE); } catch (e) { /* none */ }
-    if (!window.Vault || !Vault.available()) { accounts = old || []; return Promise.resolve(); }
-    return Vault.open("accounts").then(function (a) {
+    if (!window.SealedStore || !SealedStore.available()) { accounts = old || []; return Promise.resolve(); }
+    return SealedStore.open("accounts").then(function (a) {
       accounts = a || old || [];
       if (old && !a) saveAccounts(accounts);
     }).catch(function () { accounts = old || []; });
@@ -245,12 +245,12 @@
     mem.idToken = null; mem.claims = null; mem.creds = {};
     if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
     $("step1-done").hidden = true; renderAccounts();
-    if (window.Vault) Vault.forget("session");
+    if (window.SealedStore) SealedStore.forget("session");
   };
   $("forget-device").onclick = function () {
     $("sign-out").onclick();
     accounts = []; renderAccounts();
-    if (window.Vault) Vault.forgetDevice().then(function () { say($("vault-status"), "This device's key and everything sealed with it are deleted.", "ok"); });
+    if (window.SealedStore) SealedStore.forgetDevice().then(function () { say($("store-status"), "This device's key and everything sealed with it are deleted.", "ok"); });
   };
   initGoogle();
   loadAccounts().then(restore).then(renderAccounts);

@@ -1,4 +1,4 @@
-// The device vault: keeps a session across a refresh or a browser restart, readable only by this site on
+// The sealed store: keeps a session across a refresh or a browser restart, readable only by this site on
 // this device. Dinis Cruz, 22 Nov 2026: "create a public and private key ... for this website, which should
 // survive browser restart. And that public private key should never be known ... use the public key to
 // encrypt these details so that only this page ... [can read them]".
@@ -18,7 +18,7 @@
 // dropped once it passes.
 (function (root) {
   "use strict";
-  var subtle = root.crypto.subtle, DB = "sws-vault", STORE = "kv";
+  var subtle = root.crypto.subtle, DB = "sws-sealed-store", STORE = "kv";
   var enc = new TextEncoder(), dec = new TextDecoder();
 
   function db() {
@@ -91,6 +91,8 @@
     return new Promise(function (resolve) { var r = root.indexedDB.deleteDatabase(DB); r.onsuccess = r.onerror = r.onblocked = function () { resolve(); }; });
   }
   function available() { return !!(root.indexedDB && subtle); }
+  // An earlier build named this database sws-vault; delete it (it held only expiring, sealed records).
+  try { root.indexedDB && root.indexedDB.deleteDatabase("sws-vault"); } catch (e) { /* none */ }
 
-  root.Vault = { seal: seal, open: open, forget: forget, forgetDevice: forgetDevice, available: available };
+  root.SealedStore = { seal: seal, open: open, forget: forget, forgetDevice: forgetDevice, available: available };
 })(window);

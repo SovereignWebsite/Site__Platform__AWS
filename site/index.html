@@ -62,13 +62,13 @@
 <p id="no-client" class="status bad" hidden>The owner has not set this site's Google client ID yet (config.js).</p>
 <div id="google-button"></div>
 <div id="step1-done" hidden>
-  <p id="restored" class="small" hidden>Restored from this device's vault: your session was sealed with a key only this site, in this browser, can use.</p>
+  <p id="restored" class="small" hidden>Restored from this device's sealed store: your session was sealed with a key only this site, in this browser, can use.</p>
   <p id="who" class="status ok"></p>
   <p class="small">Your Google account ID: <code id="sub"></code>. Not a secret; your AWS roles trust only this ID and this site.</p>
   <button type="button" id="sign-out" class="quiet">Sign out (forget the token and all credentials)</button>
   <button type="button" id="forget-device" class="quiet">Forget this device (also delete its key)</button>
 </div>
-<p id="vault-status" class="status"></p>
+<p id="store-status" class="status"></p>
 </section>
 
 <section class="step" id="step2" hidden>
@@ -108,7 +108,7 @@
 A sovereign website, made with the <a href="https://sovereignwebsite.org/">open pattern</a>. Source: <a href="https://github.com/SovereignWebsite/Site__Platform__AWS">github.com/SovereignWebsite/Site__Platform__AWS</a>.</footer>
 </main>
 <script src="config.js"></script>
-<script src="vault.js"></script>
+<script src="sealed-store.js"></script>
 <script src="sigv4.js"></script>
 <script src="plan.js"></script>
 <script src="app.js"></script>
