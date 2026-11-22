@@ -19,3 +19,5 @@ pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; 
 .status.ok { color: var(--ok); } .status.bad { color: var(--bad); }
 code { font-size: .9em; overflow-wrap: anywhere; }
 footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); margin-top: 3rem; padding-top: 1rem; }
+/* Google's button draws in its own frame; if its inline styles are refused, keep its fallback icon small. */
+#google-button { min-height: 44px; } #google-button svg { width: 18px; height: 18px; }
