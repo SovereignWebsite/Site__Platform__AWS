@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' https://accounts.google.com/gsi/ https://sts.amazonaws.com https://iam.amazonaws.com https://ce.us-east-1.amazonaws.com; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' https://accounts.google.com/gsi/ https://sts.amazonaws.com https://iam.amazonaws.com https://ce.us-east-1.amazonaws.com; img-src 'self' data:; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <title>AWS Platform Sovereign Website</title>
 <meta name="description" content="Run your AWS accounts from your own browser: sign in with Google, one-hour credentials, read-only by default, and every change a plan you approve. An unofficial site, not made or endorsed by Amazon Web Services.">
@@ -62,15 +62,18 @@
 <p id="no-client" class="status bad" hidden>The owner has not set this site's Google client ID yet (config.js).</p>
 <div id="google-button"></div>
 <div id="step1-done" hidden>
+  <p id="restored" class="small" hidden>Restored from this device's vault: your session was sealed with a key only this site, in this browser, can use.</p>
   <p id="who" class="status ok"></p>
   <p class="small">Your Google account ID: <code id="sub"></code>. Not a secret; your AWS roles trust only this ID and this site.</p>
   <button type="button" id="sign-out" class="quiet">Sign out (forget the token and all credentials)</button>
+  <button type="button" id="forget-device" class="quiet">Forget this device (also delete its key)</button>
 </div>
+<p id="vault-status" class="status"></p>
 </section>
 
 <section class="step" id="step2" hidden>
 <h2>2. Your AWS accounts</h2>
-<p class="small">Account IDs are kept on this device only, never on the page or in any repository.</p>
+<p class="small">Account IDs are kept on this device only, sealed with its key; never on the page or in any repository.</p>
 <ul class="cards" id="accounts"></ul>
 <form id="add-account" class="row">
   <input id="acct-label" placeholder="Name, for you" aria-label="Account name">
@@ -89,7 +92,8 @@
 
 <h2>How this works</h2>
 <ul>
-<li>Google gives this page an ID token for you. AWS STS (AssumeRoleWithWebIdentity) swaps it for credentials that end within the hour. Both live in this tab's memory only, and closing it ends them.</li>
+<li>Google gives this page an ID token for you. AWS STS (AssumeRoleWithWebIdentity) swaps it for credentials that end within the hour.</li>
+<li>So a refresh does not sign you out, the page seals both with this device's own key before keeping them: a key pair made by your browser for this site, whose private half cannot be read by anyone, this page included; the browser only lets this site use it. Sealed records end when the credentials do. Sign out deletes them; Forget this device also deletes the key.</li>
 <li>Your roles are the mandate: they are written as infrastructure as code, and a role can do only what its template lists.</li>
 <li>Calls go from your browser straight to AWS (STS, IAM, Cost Explorer), signed in the page with your one-hour credentials. No server of ours sits in between, and there is no tracking.</li>
 </ul>
@@ -104,6 +108,7 @@
 A sovereign website, made with the <a href="https://sovereignwebsite.org/">open pattern</a>. Source: <a href="https://github.com/SovereignWebsite/Site__Platform__AWS">github.com/SovereignWebsite/Site__Platform__AWS</a>.</footer>
 </main>
 <script src="config.js"></script>
+<script src="vault.js"></script>
 <script src="sigv4.js"></script>
 <script src="plan.js"></script>
 <script src="app.js"></script>

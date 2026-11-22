@@ -22,9 +22,28 @@
     var p = t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
     return JSON.parse(decodeURIComponent(escape(atob(p))));
   }
-  function onGoogle(resp) {
-    mem.idToken = resp.credential;
-    mem.claims = decodeJwt(resp.credential);
+  // Keep the session across a refresh, sealed with this device's key (vault.js). Expired parts are dropped.
+  function persist() {
+    if (!window.Vault || !Vault.available() || !mem.idToken) return Promise.resolve();
+    var exp = mem.claims.exp * 1000;
+    Object.keys(mem.creds).forEach(function (k) { exp = Math.max(exp, mem.creds[k].expiration); });
+    return Vault.seal("session", { idToken: mem.idToken, creds: mem.creds }, exp).catch(function () { /* memory only */ });
+  }
+  function restore() {
+    if (!window.Vault || !Vault.available()) return Promise.resolve();
+    return Vault.open("session").then(function (s) {
+      if (!s) return;
+      var now = Date.now();
+      Object.keys(s.creds || {}).forEach(function (k) { if (s.creds[k].expiration - now > 60 * 1000) mem.creds[k] = s.creds[k]; });
+      if (s.idToken && decodeJwt(s.idToken).exp * 1000 - now > 60 * 1000) showSignedIn(s.idToken, true);
+      else if (Object.keys(mem.creds).length) { $("who").textContent = "Your Google sign-in has expired; AWS credentials still valid are kept until they end. Sign in again for new ones."; $("step1-done").hidden = false; renderAccounts(); }
+    }).catch(function () {});
+  }
+  function onGoogle(resp) { showSignedIn(resp.credential, false); persist(); }
+  function showSignedIn(token, restored) {
+    mem.idToken = token;
+    mem.claims = decodeJwt(token);
+    $("restored").hidden = !restored;
     $("who").textContent = "Signed in with Google as " + (mem.claims.email || "your account") + ".";
     $("sub").textContent = mem.claims.sub;
     $("step1-done").hidden = false;
@@ -42,9 +61,21 @@
   }
 
   // ---- Accounts, on this device only ----
-  function loadAccounts() { try { return JSON.parse(localStorage.getItem(STORE) || "[]"); } catch (e) { return []; } }
-  function saveAccounts(a) { try { localStorage.setItem(STORE, JSON.stringify(a)); } catch (e) { /* private window: memory only */ } }
-  var accounts = loadAccounts();
+  // Account IDs are sealed in the device vault too (kept ten years; Forget this device deletes them).
+  var TEN_YEARS = 10 * 365 * 24 * 3600 * 1000;
+  var accounts = [];
+  function saveAccounts(a) {
+    if (window.Vault && Vault.available()) return Vault.seal("accounts", a, Date.now() + TEN_YEARS).catch(function () {});
+  }
+  function loadAccounts() {
+    var old = null;
+    try { old = JSON.parse(localStorage.getItem(STORE) || "null"); localStorage.removeItem(STORE); } catch (e) { /* none */ }
+    if (!window.Vault || !Vault.available()) { accounts = old || []; return Promise.resolve(); }
+    return Vault.open("accounts").then(function (a) {
+      accounts = a || old || [];
+      if (old && !a) saveAccounts(accounts);
+    }).catch(function () { accounts = old || []; });
+  }
 
   function roleArn(acct, role) { return "arn:aws:iam::" + acct.id + ":role/" + role; }
 
@@ -68,6 +99,7 @@
         c = { accessKeyId: xmlText(x.doc, "AccessKeyId"), secretAccessKey: xmlText(x.doc, "SecretAccessKey"),
               sessionToken: xmlText(x.doc, "SessionToken"), expiration: Date.parse(xmlText(x.doc, "Expiration")) };
         mem.creds[key] = c;
+        persist();
         return c;
       });
   }
@@ -213,6 +245,13 @@
     mem.idToken = null; mem.claims = null; mem.creds = {};
     if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
     $("step1-done").hidden = true; renderAccounts();
+    if (window.Vault) Vault.forget("session");
+  };
+  $("forget-device").onclick = function () {
+    $("sign-out").onclick();
+    accounts = []; renderAccounts();
+    if (window.Vault) Vault.forgetDevice().then(function () { say($("vault-status"), "This device's key and everything sealed with it are deleted.", "ok"); });
   };
   initGoogle();
+  loadAccounts().then(restore).then(renderAccounts);
 })();
