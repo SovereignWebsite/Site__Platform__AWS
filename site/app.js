@@ -224,7 +224,7 @@
           go.disabled = true; say(st, "Applying...");
           // Re-read first: if the role changed since the plan was shown, stop.
           getRole(c, plan.target_role).then(function (again) {
-            if (JSON.stringify(again) !== JSON.stringify(before)) throw new Error("The role changed since the plan was shown. Show the plan again.");
+            if (!Plans.same(again, before)) throw new Error("The role changed since the plan was shown. Show the plan again.");
             return queryCall(c, "iam.amazonaws.com", "iam", { Action: "UpdateAssumeRolePolicy", Version: "2010-05-08",
               RoleName: plan.target_role, PolicyDocument: JSON.stringify(r.after) });
           }).then(function () { return getRole(c, plan.target_role); }).then(function (now) {

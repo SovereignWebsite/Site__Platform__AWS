@@ -15,7 +15,7 @@ input, select { font: inherit; padding: .45rem .6rem; border: 1px solid var(--li
 ul.cards { list-style: none; padding: 0; } ul.cards > li { border-top: 1px solid var(--line); padding: .8rem 0; }
 .row { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
 pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: .7rem; overflow-x: auto; font-size: .8rem; }
-.status, li, p { overflow-wrap: anywhere; } pre { max-width: 100%; white-space: pre; }
+.status, li, p { overflow-wrap: anywhere; } pre { max-width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; }
 .status.ok { color: var(--ok); } .status.bad { color: var(--bad); }
 code { font-size: .9em; overflow-wrap: anywhere; }
 footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); margin-top: 3rem; padding-top: 1rem; }

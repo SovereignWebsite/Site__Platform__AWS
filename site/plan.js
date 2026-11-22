@@ -32,5 +32,13 @@
     throw new Error("unknown plan action " + plan.action);
   }
 
-  root.Plans = { apply: apply };
+  // Same content, whatever the order of object keys (IAM does not keep it); arrays keep their order.
+  function canonical(x) {
+    if (Array.isArray(x)) return "[" + x.map(canonical).join(",") + "]";
+    if (x && typeof x === "object") return "{" + Object.keys(x).sort().map(function (k) { return JSON.stringify(k) + ":" + canonical(x[k]); }).join(",") + "}";
+    return JSON.stringify(x);
+  }
+  function same(a, b) { return canonical(a) === canonical(b); }
+
+  root.Plans = { apply: apply, same: same };
 })(typeof window !== "undefined" ? window : globalThis);
