@@ -3,5 +3,11 @@
  "repository": "https://github.com/SovereignWebsite/Site__Platform__AWS",
  "made_by": "https://github.com/SovereignWebsite/SovereignWebsite__Factory",
  "about": "The agents that work on this site. Each site agent adds its own entry: its name (role@project.person), its role and its session. Their keys are published at https://agents.sovereignweb.site/.",
- "agents": []
+ "agents": [
+  {
+   "name": "aws.c@SovereignWebsite.dinis",
+   "role": "Keeper: builds and looks after this site, and writes the AWS plans the owner approves. Never holds an AWS key or token.",
+   "session": "https://claude.ai/code/session_01Kw9UwAzhau7Us55PugP2V2"
+  }
+ ]
 }

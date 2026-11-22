@@ -3,14 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' https://accounts.google.com/gsi/ https://sts.amazonaws.com https://iam.amazonaws.com https://ce.us-east-1.amazonaws.com; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
 <title>AWS Platform Sovereign Website</title>
-<meta name="description" content="What Amazon Web Services offers and a set of automations for it, run in the browser with the owner's own short-lived tokens. An unofficial site, not made or endorsed by Amazon Web Services.">
+<meta name="description" content="Run your AWS accounts from your own browser: sign in with Google, one-hour credentials, read-only by default, and every change a plan you approve. An unofficial site, not made or endorsed by Amazon Web Services.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="AWS Platform Sovereign Website">
 <meta property="og:locale" content="en_GB">
 <meta property="og:url" content="https://aws.platform.sovereignweb.site/">
 <meta property="og:title" content="AWS Platform Sovereign Website">
-<meta property="og:description" content="What Amazon Web Services offers and a set of automations for it, run in the browser with the owner's own short-lived tokens. An unofficial site, not made or endorsed by Amazon Web Services.">
+<meta property="og:description" content="Run your AWS accounts from your own browser: sign in with Google, one-hour credentials, read-only by default, and every change a plan you approve. An unofficial site, not made or endorsed by Amazon Web Services.">
 <meta property="og:image" content="https://aws.platform.sovereignweb.site/assets/share/card-1200x630.jpg">
 <meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
@@ -18,49 +20,11 @@
 <meta property="og:image:alt" content="AWS Platform Sovereign Website">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="AWS Platform Sovereign Website">
-<meta name="twitter:description" content="What Amazon Web Services offers and a set of automations for it, run in the browser with the owner's own short-lived tokens. An unofficial site, not made or endorsed by Amazon Web Services.">
+<meta name="twitter:description" content="Run your AWS accounts from your own browser: sign in with Google, one-hour credentials, read-only by default, and every change a plan you approve. An unofficial site, not made or endorsed by Amazon Web Services.">
 <meta name="twitter:image" content="https://aws.platform.sovereignweb.site/assets/share/card-1200x630.jpg">
 <link rel="canonical" href="https://aws.platform.sovereignweb.site/">
-<style>
-:root{--bg:#fbfaf7;--fg:#1d1d1b;--muted:#5d5c57;--accent:#2f6b4f;--line:#e4e1d8}
-@media (prefers-color-scheme:dark){:root{--bg:#141513;--fg:#ecebe6;--muted:#a8a69e;--accent:#7fc3a0;--line:#2c2d29}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.6 system-ui,-apple-system,Segoe UI,sans-serif}
-main{max-width:44rem;margin:0 auto;padding:10vh 1rem 4rem}
-.skip{position:absolute;left:-999px}.skip:focus{left:1rem;top:1rem}
-.mark{font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
-h1{font-size:clamp(2rem,6vw,3rem);line-height:1.1;margin:.4rem 0 1rem}
-p{color:var(--muted);margin:0 0 1rem}a{color:var(--accent)}
-footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--line);font-size:.85rem;color:var(--muted)}
-/* The Sovereign Website credit on a customer's site: one small, muted control at the far top right that opens a
-   pop-up menu of the family links. Not a strip and not a menu bar: the site is about its owner (Dinis, 20 November
-   2026: "It needs to fundamentally be about the site and who is it about ... top right pop-up menu").
-   CSS only (details/summary), so no script and no CSP issue. It sits in the page's corner, above the owner's header;
-   a site whose own header uses that corner moves it with --family-top / --family-right.
-   To remove it, the owner sets one attribute: <html data-family-credit="off">. */
-.family-credit{--fam-fg:var(--family-fg,#5a5a5a);--fam-strong:var(--family-fg-strong,#111);--fam-bg:var(--family-bg,#fff);
-  position:absolute;top:var(--family-top,.4rem);right:var(--family-right,.75rem);z-index:50;font-size:.75rem;line-height:1.4}
-@media (prefers-color-scheme:dark){.family-credit{--fam-fg:var(--family-fg,#b5b5b5);--fam-strong:var(--family-fg-strong,#fff);--fam-bg:var(--family-bg,#1c1c1c)}}
-.family-credit summary{display:inline-flex;align-items:center;gap:.3rem;cursor:pointer;color:var(--fam-fg);list-style:none;min-height:24px;padding:.15rem .3rem;border-radius:4px}
-.family-credit summary::-webkit-details-marker{display:none}
-.family-credit summary::after{content:"";width:.35rem;height:.35rem;border:solid currentColor;border-width:0 1px 1px 0;transform:rotate(45deg) translateY(-2px)}
-.family-credit summary:hover,.family-credit summary:focus-visible,.family-credit[open] summary{color:var(--fam-strong)}
-.family-credit ul{position:absolute;right:0;top:100%;margin:.25rem 0 0;padding:.35rem 0;list-style:none;min-width:11rem;
-  background:var(--fam-bg);border:1px solid rgba(127,127,127,.3);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.12)}
-.family-credit a{display:block;padding:.3rem .8rem;min-height:24px;color:var(--fam-fg);text-decoration:none}
-.family-credit a:hover,.family-credit a:focus-visible{color:var(--fam-strong);background:rgba(127,127,127,.1)}
-.family-credit .family-gap{border-bottom:1px solid rgba(127,127,127,.25);padding-bottom:.3rem;margin-bottom:.3rem}
-[data-family-credit="off"] .family-credit{display:none}
-@media print{.family-credit{display:none}}
-.top{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1.5rem;max-width:44rem;margin:0 auto;padding:2.2rem 1rem 0}
-.top .name{font-weight:600;color:var(--fg);text-decoration:none}
-.own{display:flex;gap:1rem;margin-left:auto;font-size:.95rem}
-.own a,.site-links a{color:var(--accent);font-weight:600}
-.site-links{display:flex;flex-wrap:wrap;gap:.25rem 1.25rem;margin-bottom:.8rem;font-size:.95rem}
-@media (max-width:40rem){.own{margin:0;width:100%}}
-h2{font-size:1.25rem;margin:2rem 0 .5rem}ol,ul.plain{color:var(--muted);padding-left:1.2rem}li{margin:.35rem 0}
-pre{background:rgba(127,127,127,.1);padding:.8rem 1rem;border-radius:6px;white-space:pre-wrap;font-size:.9rem;color:var(--fg)}
-code{font-size:.9em}main a,main code{overflow-wrap:anywhere}
-</style>
+<link rel="stylesheet" href="family.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -91,8 +55,45 @@ code{font-size:.9em}main a,main code{overflow-wrap:anywhere}
 <main id="main">
 <div class="mark">aws.platform.sovereignweb.site</div>
 <h1>AWS Platform Sovereign Website</h1>
-<p>What Amazon Web Services offers and a set of automations for it, run in the browser with the owner's own short-lived tokens. An unofficial site, not made or endorsed by Amazon Web Services.</p>
-<p>This site was made by one request to the Sovereign Website pipeline. Its files, its history and its address are in a repository its owner controls, and can move anywhere.</p>
+<p>Run your AWS accounts from this page, in your own browser. You sign in with Google; AWS gives this page credentials for one hour, for the roles you created; read-only unless you approve a plan. No AWS key is ever made, and nothing you sign in with leaves this tab except to Google and AWS.</p>
+
+<section class="step" id="step1">
+<h2>1. Sign in with Google</h2>
+<p id="no-client" class="status bad" hidden>The owner has not set this site's Google client ID yet (config.js).</p>
+<div id="google-button"></div>
+<div id="step1-done" hidden>
+  <p id="who" class="status ok"></p>
+  <p class="small">Your Google account ID: <code id="sub"></code>. Not a secret; your AWS roles trust only this ID and this site.</p>
+  <button type="button" id="sign-out" class="quiet">Sign out (forget the token and all credentials)</button>
+</div>
+</section>
+
+<section class="step" id="step2" hidden>
+<h2>2. Your AWS accounts</h2>
+<p class="small">Account IDs are kept on this device only, never on the page or in any repository.</p>
+<ul class="cards" id="accounts"></ul>
+<form id="add-account" class="row">
+  <input id="acct-label" placeholder="Name, for you" aria-label="Account name">
+  <input id="acct-id" placeholder="12-digit account ID" inputmode="numeric" aria-label="AWS account ID">
+  <button type="submit">Add</button>
+</form>
+<p id="add-status" class="status"></p>
+<p class="small">Setting up an account creates two roles with CloudFormation, once: <strong>sws-aws-platform-read</strong> (view only, plus budgets and costs) and <strong>sws-aws-platform-change</strong> (only the changes listed in the <a href="cloudformation/bootstrap.yaml">template</a>). Both trust only your Google ID through this site, for one hour at a time.</p>
+</section>
+
+<section class="step" id="step3" hidden>
+<h2>3. Plans waiting for your approval</h2>
+<p class="small">Each plan reads what AWS holds now, shows it beside what it will hold after, and changes nothing until you press Approve.</p>
+<ul class="cards" id="plans"></ul>
+</section>
+
+<h2>How this works</h2>
+<ul>
+<li>Google gives this page an ID token for you. AWS STS (AssumeRoleWithWebIdentity) swaps it for credentials that end within the hour. Both live in this tab's memory only, and closing it ends them.</li>
+<li>Your roles are the mandate: they are written as infrastructure as code, and a role can do only what its template lists.</li>
+<li>Calls go from your browser straight to AWS (STS, IAM, Cost Explorer), signed in the page with your one-hour credentials. No server of ours sits in between, and there is no tracking.</li>
+</ul>
+
 <footer>
 <nav class="site-links" aria-label="About this site">
   <a href="/start/">Start here</a>
@@ -102,5 +103,9 @@ code{font-size:.9em}main a,main code{overflow-wrap:anywhere}
 </nav>
 A sovereign website, made with the <a href="https://sovereignwebsite.org/">open pattern</a>. Source: <a href="https://github.com/SovereignWebsite/Site__Platform__AWS">github.com/SovereignWebsite/Site__Platform__AWS</a>.</footer>
 </main>
+<script src="config.js"></script>
+<script src="sigv4.js"></script>
+<script src="plan.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

@@ -1,0 +1,21 @@
+:root { --bg:#fbfaf7; --fg:#1d1d1b; --muted:#5d5d58; --line:#dedbd2; --accent:#1f5fa8; --ok:#1d6b3a; --bad:#a3261b; --card:#fff; }
+@media (prefers-color-scheme: dark) { :root { --bg:#151513; --fg:#ecebe6; --muted:#a8a69e; --line:#34332f; --accent:#7fb0ec; --ok:#7fd39b; --bad:#f2958b; --card:#1d1d1a; } }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+h1 { font-size: 1.7rem; margin: .5rem 0; } h2 { font-size: 1.2rem; margin-top: 2rem; } h4 { margin: 1rem 0 .3rem; }
+.small, .note { color: var(--muted); font-size: .9rem; }
+section.step { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.2rem; margin: 1rem 0; }
+.step h2 { margin-top: 0; }
+button, .button { font: inherit; padding: .5rem .9rem; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; text-decoration: none; display: inline-block; margin: .25rem .4rem .25rem 0; }
+button.quiet { background: transparent; color: var(--accent); }
+button.approve { background: var(--ok); border-color: var(--ok); }
+button:disabled { opacity: .5; cursor: default; }
+input, select { font: inherit; padding: .45rem .6rem; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); max-width: 100%; }
+ul.cards { list-style: none; padding: 0; } ul.cards > li { border-top: 1px solid var(--line); padding: .8rem 0; }
+.row { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: .7rem; overflow-x: auto; font-size: .8rem; }
+.status, li, p { overflow-wrap: anywhere; } pre { max-width: 100%; white-space: pre; }
+.status.ok { color: var(--ok); } .status.bad { color: var(--bad); }
+code { font-size: .9em; overflow-wrap: anywhere; }
+footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); margin-top: 3rem; padding-top: 1rem; }

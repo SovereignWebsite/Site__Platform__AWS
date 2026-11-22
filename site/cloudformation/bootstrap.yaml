@@ -1,0 +1,76 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  SovereignWebsite AWS platform, bootstrap (the last console log-in). Two roles that
+  Dinis's own Google sign-in, in his browser on aws.platform.sovereignweb.site, may
+  assume through STS AssumeRoleWithWebIdentity for at most one hour. No IAM user, no
+  access key, nothing stored. Written by aws.c@SovereignWebsite.dinis, 22 Nov 2026; the site fills in both parameters.
+
+Parameters:
+  GoogleClientId:
+    Type: String
+    Description: The OAuth client ID (Web) of the AWS platform site, ending .apps.googleusercontent.com
+    AllowedPattern: "^[0-9A-Za-z-]+\\.apps\\.googleusercontent\\.com$"
+  GoogleSub:
+    Type: String
+    Description: The owner's Google account subject (the numeric "sub" the site shows after sign-in; not a secret)
+    AllowedPattern: "^[0-9]{5,40}$"
+
+Resources:
+  PlatformRead:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: sws-aws-platform-read
+      Description: Read-only view of this account from the AWS platform site, Dinis's Google sign-in only
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Federated: accounts.google.com }
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                accounts.google.com:aud: !Ref GoogleClientId
+                accounts.google.com:sub: !Ref GoogleSub
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+        - arn:aws:iam::aws:policy/SecurityAudit
+      Policies:
+        - PolicyName: costs-read
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: BudgetsAndCostExplorerRead
+                Effect: Allow
+                Action: [budgets:ViewBudget, budgets:DescribeBudgetAction, budgets:DescribeBudgetActionsForAccount, ce:GetCostAndUsage, ce:GetCostForecast, ce:GetDimensionValues]
+                Resource: "*"
+
+  PlatformChange:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: sws-aws-platform-change
+      Description: The changes Dinis approves from the AWS platform site; grows only by a reviewed change to this template
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Federated: accounts.google.com }
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                accounts.google.com:aud: !Ref GoogleClientId
+                accounts.google.com:sub: !Ref GoogleSub
+      Policies:
+        - PolicyName: dns-role-trust-only
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: TheDnsRoleTrustPolicy
+                Effect: Allow
+                Action: [iam:GetRole, iam:UpdateAssumeRolePolicy]
+                Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/sovereignwebsite-factory-dns
+
+Outputs:
+  ReadRoleArn: { Value: !GetAtt PlatformRead.Arn }
+  ChangeRoleArn: { Value: !GetAtt PlatformChange.Arn }

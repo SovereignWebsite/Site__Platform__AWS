@@ -1,0 +1,12 @@
+{
+  "id": "2026-11-22__iac-dns-trust",
+  "title": "The IaC rename: let the DNS role trust SovereignWebsite__IaC",
+  "why": "SovereignWebsite__Factory becomes SovereignWebsite__IaC (Dinis Cruz, 22 Nov 2026). DNS apply assumes the role sovereignwebsite-factory-dns through GitHub OIDC, and GitHub's subject names the repository, so the trust policy must also accept the new name before the rename merges. Plan agreed with factory.c (policy/proposals/2026-11-22__iac-rename-plan.md on the Factory).",
+  "role": "sws-aws-platform-change",
+  "action": "iam.add_oidc_subjects",
+  "target_role": "sovereignwebsite-factory-dns",
+  "condition_key": "token.actions.githubusercontent.com:sub",
+  "add": ["repo:SovereignWebsite@358722364/SovereignWebsite__IaC@1464324035:environment:apply"],
+  "keep": "every existing subject; the Factory lines come out in a later plan, after DNS apply has run under the new name",
+  "never": "any other statement, condition, principal or the role's permissions"
+}
