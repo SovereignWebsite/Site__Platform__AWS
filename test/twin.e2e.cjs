@@ -90,7 +90,7 @@ const fail = (m) => { throw new Error(m); };
   const attack = await pg.textContent("#s3-file");
   if (!attack.includes("203.0.113.66") || !/sqlmap|Nuclei/.test(attack)) fail("attack not in the logs");
   // fails closed: a service the twin does not answer gets a 501, and nothing leaves the page
-  const st = await pg.evaluate(() => AwsTransport.fetch("https://lambda.eu-west-2.amazonaws.com/2015-03-31/functions", { headers: {} }).then((r) => r.status));
+  const st = await pg.evaluate(() => AwsTransport.fetch("https://dynamodb.eu-west-2.amazonaws.com/", { headers: {} }).then((r) => r.status));
   if (st !== 501) fail("twin did not fail closed: " + st);
   // leaving the twin goes back to the real sign-in
   inTwin = false;

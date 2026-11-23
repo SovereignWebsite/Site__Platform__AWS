@@ -270,6 +270,61 @@
     });
   }
 
+  // Lambda (REST JSON, API version 2015-03-31) and Firehose (JSON 1.1, Firehose_20150804): read calls only.
+  // lambda.aws.a, 23 Nov 2026. Three synthetic functions; demo-handler is built from the dependency zip in the
+  // deps bucket (its CodeSize and CodeSha256 are that zip's), and one Firehose stream whose S3 destination is the
+  // CloudFront logs bucket, so the hourly files already in the twin are its output. Synthetic simplification:
+  // the twin writes one file per hour, where Firehose would write one per buffer interval (at most 900 s).
+  var ROLE = function (n) { return "arn:aws:iam::" + ACCOUNT + ":role/" + n; };
+  var FN = {
+    "demo-handler": { Runtime: "python3.12", Handler: "demo_handler.handler.run", Timeout: 30, MemorySize: 256, Description: "Returns the vault ids in a request (vault API)", LastModified: "2026-11-18T16:54:00.000+0000", zip: "lambdas-dependencies/demo-handler==v1.0.0.zip" },
+    "demo-log-enricher": { Runtime: "python3.12", Handler: "enricher.handler", Timeout: 60, MemorySize: 128, Description: "Adds the country and the vault id to each CloudFront log line before Firehose writes it", LastModified: "2026-11-19T10:12:00.000+0000", CodeSize: 4182 },
+    "demo-nightly-report": { Runtime: "python3.12", Handler: "report.handler", Timeout: 300, MemorySize: 512, Description: "Counts yesterday's requests per vault and writes a summary", LastModified: "2026-11-17T22:40:00.000+0000", CodeSize: 9031 }
+  };
+  function fnArn(n) { return "arn:aws:lambda:" + REGION + ":" + ACCOUNT + ":function:" + n; }
+  function b64(bytes) { var s = ""; for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]); return btoa(s); }
+  function fnConfig(n) {
+    var f = FN[n], o = build().objects[B.deps][f.zip || ""];
+    var code = o ? o.body.then(function (b) { return crypto.subtle.digest("SHA-256", b).then(function (h) { return { size: b.length, sha: b64(new Uint8Array(h)) }; }); })
+      : Promise.resolve({ size: f.CodeSize, sha: b64(enc.encode(("twin-" + n + "-code-sha256-padding!").slice(0, 32))) });
+    return code.then(function (c) {
+      return { FunctionName: n, FunctionArn: fnArn(n), Runtime: f.Runtime, Role: ROLE(n + "-role"), Handler: f.Handler, CodeSize: c.size, Description: f.Description,
+        Timeout: f.Timeout, MemorySize: f.MemorySize, LastModified: f.LastModified, CodeSha256: c.sha, Version: "$LATEST", State: "Active", LastUpdateStatus: "Successful",
+        PackageType: "Zip", Architectures: ["x86_64"] };
+    });
+  }
+  function lambdaJson(o, status, type) { var h = { "content-type": "application/json" }; if (type) h["x-amzn-errortype"] = type; return new Response(JSON.stringify(o), { status: status || 200, headers: h }); }
+  function lambda(url, init) {
+    if (!signed(init)) return lambdaJson({ message: "Missing Authentication Token" }, 403, "MissingAuthenticationTokenException");
+    if ((init.method || "GET").toUpperCase() !== "GET") return lambdaJson({ Type: "User", Message: "Not in the twin yet: read calls only" }, 400, "InvalidRequestContentException");
+    var path = new URL(url).pathname, m;
+    if (/^\/2015-03-31\/functions\/?$/.test(path)) return Promise.all(Object.keys(FN).sort().map(fnConfig)).then(function (fs) { return lambdaJson({ Functions: fs, NextMarker: null }); });
+    if ((m = /^\/2015-03-31\/functions\/([^/]+)\/configuration\/?$/.exec(path))) {
+      var n = decodeURIComponent(m[1]).replace(/^arn:aws:lambda:[a-z0-9-]+:\d{12}:function:/, "");
+      if (!FN[n]) return lambdaJson({ Type: "User", Message: "Function not found: " + fnArn(n) }, 404, "ResourceNotFoundException");
+      return fnConfig(n).then(function (c) { return lambdaJson(c); });
+    }
+    return lambdaJson({ Type: "User", Message: "Not in the twin yet: " + path }, 400, "InvalidRequestContentException");
+  }
+  var STREAMS = { "demo-cloudfront-logs": { created: 1794819600, prefix: "cloudfront/", bucket: function () { return B.logs; }, processor: "demo-log-enricher" } };
+  function firehoseJson(o, status) { return new Response(JSON.stringify(o), { status: status || 200, headers: { "content-type": "application/x-amz-json-1.1" } }); }
+  function firehose(target, body, init) {
+    if (!signed(init)) return firehoseJson({ __type: "MissingAuthenticationTokenException", message: "Missing Authentication Token" }, 403);
+    var q = {}; try { q = JSON.parse(body || "{}"); } catch (e) { return firehoseJson({ __type: "SerializationException", message: "Body is not JSON" }, 400); }
+    if (target === "ListDeliveryStreams") return firehoseJson({ DeliveryStreamNames: Object.keys(STREAMS).sort(), HasMoreDeliveryStreams: false });
+    if (target === "DescribeDeliveryStream") {
+      var st = STREAMS[q.DeliveryStreamName];
+      if (!st) return firehoseJson({ __type: "ResourceNotFoundException", message: "Firehose " + q.DeliveryStreamName + " under account " + ACCOUNT + " not found." }, 400);
+      return firehoseJson({ DeliveryStreamDescription: { DeliveryStreamName: q.DeliveryStreamName, DeliveryStreamARN: "arn:aws:firehose:" + REGION + ":" + ACCOUNT + ":deliverystream/" + q.DeliveryStreamName,
+        DeliveryStreamStatus: "ACTIVE", DeliveryStreamType: "DirectPut", VersionId: "1", CreateTimestamp: st.created, HasMoreDestinations: false,
+        Destinations: [{ DestinationId: "destinationId-000000000001", ExtendedS3DestinationDescription: { RoleARN: ROLE(q.DeliveryStreamName + "-firehose"), BucketARN: "arn:aws:s3:::" + st.bucket(),
+          Prefix: st.prefix, ErrorOutputPrefix: "errors/", BufferingHints: { SizeInMBs: 5, IntervalInSeconds: 900 }, CompressionFormat: "GZIP",
+          EncryptionConfiguration: { NoEncryptionConfig: "NoEncryption" }, S3BackupMode: "Disabled",
+          ProcessingConfiguration: { Enabled: true, Processors: [{ Type: "Lambda", Parameters: [{ ParameterName: "LambdaArn", ParameterValue: fnArn(st.processor) + ":$LATEST" }] }] } } }] } });
+    }
+    return firehoseJson({ __type: "UnknownOperationException", message: "Not in the twin yet: " + target }, 400);
+  }
+
   // Answer a request as AWS would. Returns a Promise of a Response, or null if the host is not AWS.
   function handle(url, init) {
     init = init || {};
@@ -282,6 +337,8 @@
       else if (/^cloudformation\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudformation(new URLSearchParams(body), init);
       else if (/^ce\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = ce();
       else if (/^cloudcontrolapi\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudcontrol((hdr(init, "x-amz-target") || "").split(".")[1], body, init, host);
+      else if (/^lambda\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = lambda(url, init);
+      else if (/^firehose\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = firehose((hdr(init, "x-amz-target") || "").split(".")[1], body, init);
       else if (/\.?s3\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = s3(url, init);
       else return null;
     } catch (e) { p = xmlErr("InternalFailure", e.message, 500); }
