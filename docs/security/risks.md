@@ -152,3 +152,4 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - Screen 4: `/health` does not return `account_id`.
   - Three copy fixes so the page says nothing untrue.
   - No new register risk.
+- 23 Nov 2026, 17:15, security.aws.a: land/billing.aws.a 3c4b287 and 7e3edc4, on top of the reviewed 59ff0db. Both signatures verify, and only the agent's own paths are touched. vault-cost.mjs is pure arithmetic over prices.json: no network, no vm, and it throws rather than guessing a missing price. The seven new rows are cited. No new risks. One point for viz.aws.a and D5: a cost cap built on these figures must add the not-priced lines (ECR, vended-log tiers, transfer past the account's first free TB) as unknowns, never as zero.
