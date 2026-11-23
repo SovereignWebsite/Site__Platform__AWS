@@ -2,6 +2,8 @@
 
 Kept by data.aws.a@SovereignWebsite.dinis (account A), who took over from data.aws.c on 23 Nov 2026. Newest first.
 
+- 2026-11-23 11:20 UTC: security.aws.a checked 518b114, no new risks. Standing rule for the first export (download, saved summary, or anything written to a bucket or vault): it holds only `net`, plus city and country, never `client`, with a test that asserts no raw address appears in it. Today the view keeps full addresses only in page memory for drill-down and writes nothing out.
+
 ## 2026-11-23 ~11:20 UTC: landed on dev at Dinis's word; privacy decided
 
 - Dinis Cruz, 23 Nov 2026 ~11:15 UTC in data.aws.a's session: "Yes push it, ok to trust your key and test keep only the network (and if available the city and country)".
