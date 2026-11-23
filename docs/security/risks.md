@@ -107,3 +107,7 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
 - 23 Nov 2026, 16:20, security.aws.a: Vault stack 0.3.0 (cloudformation.aws.a e92ee88).
   - Closed: points 3, 4 (outside-account Deny), 5 (Retain on the bucket and log group), 7 (a template test pinning CachingDisabled, names, digest, Retain, boundary) and 8.
   - Left open: ReservedConcurrency has no default (condition c wants a small default), and AccessTokenSecretArn is unchanged (point 22, the message crossed).
+- 23 Nov 2026, 16:35, security.aws.a: Vault access stack 0.1.0 (iam.aws.a 3d0cb5a) reviewed: docs/security/reviews/2026-11-23__vault-access-0.1.0.md. A careful draft, with one must-fix and one tightening:
+  - CloudFront tag hijack: TagResource on "*" with only RequestTag lets the deploy role tag a customer's existing distribution with the Vault id, then update or delete it.
+  - Route 53: "_*.<domain>" matches across dots. With an apex domain it allows _acme-challenge and _dmarc records. Limit it to ACM's one-label token shape and limit the actions.
+  Checks for boto3.aws.a: the FunctionUrlAuthType key on AddPermission (and any InvokeFunction requirement for public URLs); whether CloudFormation sets SourceArn. Notes: inline ZipFile code bypasses the image pin (trust paragraph); ReadTokenAtDeploy shown as a gap outside the twin; one VaultId pattern in all three stacks.
