@@ -13,13 +13,16 @@ Metadata:
 Parameters:
   VaultId:
     Type: String
+    MaxLength: 12
     AllowedPattern: "^[0-9a-f]{12}$"
   DomainName:
     Type: String
+    MaxLength: 253
     AllowedPattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
     Description: The Vault's own domain, for example vault.example.com.
   HostedZoneId:
     Type: String
+    MaxLength: 32
     Default: ""
     AllowedPattern: "^$|^Z[A-Z0-9]{1,31}$"
     Description: >-
