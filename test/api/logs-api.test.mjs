@@ -130,6 +130,11 @@ ok(doc["x-not-requests"] && doc["x-not-requests"].invocations && typeof LogsApi.
   ok(hosts.length === 1 && hosts[0] === "https://logs.eu-west-2.amazonaws.com/ eu-west-2", "the region string tested is the one used: " + hosts);
   const src = (await import("node:fs")).readFileSync(new URL("../../site/api/logs-api.js", import.meta.url), "utf8");
   ok(!/\beval\(|new Function|innerHTML|document\./.test(src), "no eval or HTML in the source: messages stay text");
+  let sent = 0; const n = LogsApi(async () => { sent++; return new Response(JSON.stringify({ events: [] })); });
+  await rejects(n.events("eu-west-2", "/g", { newest: true, start: "2023-12-31T23:59:59Z" }), (e) => e.name === "TypeError" && /2024-01-01/.test(e.message), "newest with a start before 2024 is refused (AWS's InvalidParameterException)");
+  ok(sent === 0, "nothing sent for it");
+  await n.events("eu-west-2", "/g", { newest: true, start: "2024-01-01T00:00:00Z" });
+  ok(sent === 1, "newest with a start on 2024-01-01 is sent");
 }
 
 if (failures) { console.error(failures + " failed, " + passed + " passed"); process.exit(1); }

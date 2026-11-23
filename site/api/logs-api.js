@@ -7,7 +7,8 @@
 //   api.events(region, group, { start, end, pattern, newest, next, max }) -> { items: [event], next }   FilterLogEvents
 //   group = { name, arn, region, created, retentionDays, storedBytes }   (created ISO; retentionDays null = never expire)
 //   event = { stream, time, timestamp, message, id }                    (time ISO, timestamp epoch ms, message as written)
-//   start and end: ISO strings or epoch ms; newest: true asks for the latest events first (startFromHead false).
+//   start and end: ISO strings or epoch ms; newest: true asks for the latest events first (startFromHead false, which
+//   AWS accepts only with a start on or after 2024-01-01; an earlier start is refused before any request).
 //   group: a log group name, or its ARN (with or without the trailing :*).
 //   LogsApi.invocations(events) -> [invocation]   no request: groups Lambda's START/END/REPORT lines by request id
 //   invocation = { requestId, start, end, durationMs, billedMs, memoryMb, maxMemoryMb, initMs, errors, complete, lines }
@@ -61,7 +62,12 @@
       if (s !== undefined) { if (isNaN(s)) return Promise.reject(new TypeError("not a time: " + o.start)); q.startTime = s; }
       if (e !== undefined) { if (isNaN(e)) return Promise.reject(new TypeError("not a time: " + o.end)); q.endTime = e; }
       if (o.pattern) q.filterPattern = String(o.pattern);
-      if (o.newest) q.startFromHead = false;
+      // FilterLogEvents takes startFromHead (botocore 1.44.9's logs model, 2014-03-28); false is accepted only with a
+      // startTime on or after 2024-01-01T00:00:00Z, else InvalidParameterException, so that is refused here first.
+      if (o.newest) {
+        if (s !== undefined && s < Date.UTC(2024, 0, 1)) return Promise.reject(new TypeError("newest needs a start on or after 2024-01-01 (FilterLogEvents)"));
+        q.startFromHead = false;
+      }
       q.limit = Math.min(Math.max(1, (o.max || 100) | 0), 10000);
       if (o.next) q.nextToken = o.next;
       return call(region, "FilterLogEvents", q).then(function (j) {
