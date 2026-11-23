@@ -126,3 +126,24 @@ Not every agent every hour. Agents start at **different minutes of the hour**, s
 4. Five consoles: the designer designs and proposes them.
 5. Key sites to read (Dinis, ~02:55 UTC), for every agent: https://sgit.ai (vaults, append lanes, examples), https://coding.sgit.ai (coding principles), https://nfrs.sgit.ai (non-functional requirements), https://newsroom.sgit.ai (articles, including browser-side protection).
 6. Schedule: as section 12; conductor.aws and the PM run it; maestro.c creates the team.
+
+---
+
+# Part 3 (Dinis, ~03:00 UTC)
+
+## 14. Added to the team
+
+- **A journalist and researcher (journalist.aws.c):** maps everything the team does and writes the documentation. Also researches the features people ask for in AWS (forums, issue trackers, posts), so the team learns from others' good ideas and builds them.
+- **A parity tracker,** kept by the journalist with the PM: for each AWS feature we use, whether we have **parity** with AWS, and where we do **better than AWS** (for example: reading inside a zip by byte ranges, .json.gz shown as formatted JSON, plans with a diff before any change, the bucket graph). Published on the hub site.
+
+## 15. Decisions, briefed as animations
+
+When Dinis has to decide, he is briefed the way maestro has done before: programmatic animations he can play in the browser (not videos), with a large visual of the decision and its options. One place for all decisions (maestro, or the decision level), not a request per agent.
+
+## 16. Priority tonight: no blockers overnight
+
+Dinis: "when I go to bed, there's no blockers and you guys can just continue." Agents work through the night on code, design, documentation, the twin and research. Anything that needs Dinis waits in the decision brief for the morning. Nothing waits silently.
+
+Known limits overnight:
+- **No live AWS data.** Only Dinis's browser can sign in to his AWS. Agents work from the code, AWS's public documentation and the twin, with synthetic data. Real data arrives when he next signs in.
+- **New AWS permissions** need his Approve on the site; they are prepared as plans, reviewed by the security agents overnight, and wait for the morning.
