@@ -115,7 +115,8 @@
    },
    "facts": [
     "s-ec2",
-    "s-sec"
+    "s-sec",
+    "s-flood"
    ]
   },
   {
@@ -334,7 +335,7 @@
     }
    ],
    "recommendation": "a",
-   "why": "Recommended: a. At the cap: (i) alert only, recommended by security.aws.a; (ii) alert plus an automatic stop new (Budgets action, deletes nothing, undone by detaching the policy), recommended by ec2.aws.a. Your pick."
+   "why": "Recommended: a. At the cap: (i) alert only, recommended by security.aws.a; (ii) alert plus an automatic stop new (Budgets action, deletes nothing, undone by detaching the policy), recommended by ec2.aws.a. Your pick. New (billing.aws.a, ddddb44): a request flood through CloudFront is billed per request at the edge, about $46 an hour at 10,000 requests a second in London, so a $25 alert would be reached within an hour; billing is pricing an edge rate limit (AWS WAF) and a billing alarm."
   },
   {
    "id": "G7",
@@ -435,6 +436,12 @@
    "id": "s-sec",
    "title": "security.aws.a: review of the guard rails draft (d397c1f)",
    "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/d397c1f/docs/security/reviews/2026-11-23__ec2-v5-guard-rails.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-flood",
+   "title": "billing.aws.a: flood.mjs, edge requests are not capped by concurrency (ddddb44)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/commit/ddddb44",
    "read": "2026-11-23"
   }
  ],
