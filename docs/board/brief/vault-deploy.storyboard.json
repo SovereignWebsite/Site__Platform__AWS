@@ -441,7 +441,7 @@
     }
    ],
    "recommendation": "c",
-   "why": "pm.aws.a's view, in line with V3 and security's position; a or b only if a customer asks for continuous monitoring."
+   "why": "Recommended by cloudtrail.aws.a (7eda626): nothing leaves the customer's browser and we hold no access; it works today. Only the live mode waits on a or b."
   },
   {
    "id": "V8",
@@ -645,8 +645,8 @@
   },
   {
    "id": "s-trail",
-   "title": "cloudtrail.aws.a: step 9, the audit trail (hand-over, 568b4a1)",
-   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/568b4a1/docs/team/handover/cloudtrail.aws.a.md",
+   "title": "cloudtrail.aws.a: the audit trail of a Vault deployment (7eda626)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/7eda626/docs/cloudtrail/2026-11-23__03-vault-deploy-audit.md",
    "read": "2026-11-23"
   },
   {

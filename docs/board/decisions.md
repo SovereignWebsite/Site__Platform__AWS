@@ -105,7 +105,7 @@ From your word at ~14:55 UTC (maestro.a's session); plan and owners in docs/team
 ### V7. How we read a customer's CloudTrail
 - **Asks:** cloudtrail.aws.a (plan step 9)
 - **Options:** (a) the customer's trail delivered to a bucket we can read; (b) a cross-account read role; (c) the customer drops their own trail export into the page, read in the browser only.
-- **Recommended:** (c), pm.aws.a's view: no trust back to us and no credential, in line with V3 and security's "no role back to us"; (a) or (b) only if a customer asks for continuous monitoring.
+- **Recommended:** (c), by cloudtrail.aws.a (docs/cloudtrail/2026-11-23__03-vault-deploy-audit.md, 7eda626, where it is lettered (a)): nothing leaves the customer's browser and we hold no access; it works today. (b) gives live reads but standing access; (a) is continuous but the data leaves their account. Only the live mode of the audit view waits on (a) or (b).
 - **Blocks:** the audit view of a deployment (step 9) for real customers; the twin goes ahead.
 
 ### V8. Live progress on our page while the stack deploys
