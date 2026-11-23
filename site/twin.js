@@ -350,6 +350,7 @@
   // Synthetic, as the rest of the twin. Datapoints exist only for the hours that have log files.
   function metricSeries(ns, name, dims, stat, h) {
     var d = Object.create(null); dims.forEach(function (x) { d[x[0]] = x[1]; });
+    if (dims.length !== 1) return null; // a metric is matched on its exact dimension set, as CloudWatch does
     var L = h.lines, api = L.filter(function (l) { return /^\/vault\/[^/]+\/files/.test(l.cs_uri_stem); });
     var mean = function (a) { return a.length ? a.reduce(function (s, l) { return s + l.time_taken * 1000; }, 0) / a.length : null; };
     if (ns === "AWS/Firehose" && d.DeliveryStreamName === "demo-cloudfront-logs" && (name === "IncomingRecords" || name === "DeliveryToS3.Records")) return stat === "Sum" ? L.length : null;
@@ -376,13 +377,27 @@
       var q = "MetricDataQueries.member." + i + ".", m = q + "MetricStat.Metric.", dims = [];
       for (var j = 1; form.get(m + "Dimensions.member." + j + ".Name"); j++) dims.push([form.get(m + "Dimensions.member." + j + ".Name"), form.get(m + "Dimensions.member." + j + ".Value")]);
       var period = +form.get(q + "MetricStat.Period"), stat = form.get(q + "MetricStat.Stat"), ns = form.get(m + "Namespace"), name = form.get(m + "MetricName");
-      if (period !== 3600) return xmlErr("InvalidParameterValue", "The twin keeps hourly datapoints only: use a Period of 3600.");
-      var pts = s.hours.filter(function (h) { var t = Date.parse(h.at); return t >= t0 && t < t1; })
+      // Period: AWS takes 1, 5, 10, 30 or any multiple of 60 seconds (boto3.aws.a, against AWS's reference). The twin
+      // keeps hourly datapoints: multiples of 3600 are aggregated from them (Sum adds; Average is the mean of the
+      // hourly averages, a synthetic simplification); shorter periods answer Complete with no datapoints and a note (TwinHourlyOnly is the twin's own code, not an AWS one).
+      if (!(period > 0 && (period % 60 === 0 || [1, 5, 10, 30].indexOf(period) >= 0))) return xmlErr("InvalidParameterValue", "The parameter Period must be 1, 5, 10, 30 or a multiple of 60.");
+      var note = "";
+      var hourly = s.hours.filter(function (h) { var t = Date.parse(h.at); return t >= t0 && t < t1; })
         .map(function (h) { return [h.at, metricSeries(ns, name, dims, stat, h)]; }).filter(function (p) { return p[1] !== null; });
+      var pts = [];
+      if (period % 3600 !== 0) { if (hourly.length) note = "<Messages><member><Code>TwinHourlyOnly</Code><Value>The twin keeps hourly datapoints; ask with a Period that is a multiple of 3600.</Value></member></Messages>"; }
+      else {
+        var buckets = {}, order = [];
+        hourly.forEach(function (p) {
+          var b = new Date(Math.floor(Date.parse(p[0]) / (period * 1000)) * period * 1000).toISOString().replace(".000Z", "Z");
+          if (!buckets[b]) { buckets[b] = []; order.push(b); } buckets[b].push(p[1]);
+        });
+        pts = order.map(function (b) { var v = buckets[b], sum = v.reduce(function (a, x) { return a + x; }, 0); return [b, stat === "Average" ? +(sum / v.length).toFixed(2) : sum]; });
+      }
       if (!asc) pts.reverse();
       out.push("<member><Id>" + esc(form.get(q + "Id")) + "</Id><Label>" + esc(form.get(q + "Label") || name || "") + "</Label><Timestamps>" +
         pts.map(function (p) { return "<member>" + p[0] + "</member>"; }).join("") + "</Timestamps><Values>" +
-        pts.map(function (p) { return "<member>" + p[1] + "</member>"; }).join("") + "</Values><StatusCode>Complete</StatusCode></member>");
+        pts.map(function (p) { return "<member>" + p[1] + "</member>"; }).join("") + "</Values><StatusCode>Complete</StatusCode>" + note + "</member>");
     }
     return xml("<GetMetricDataResponse xmlns=\"http://monitoring.amazonaws.com/doc/2010-08-01/\"><GetMetricDataResult><MetricDataResults>" + out.join("") +
       "</MetricDataResults><Messages/></GetMetricDataResult><ResponseMetadata><RequestId>twin-metrics</RequestId></ResponseMetadata></GetMetricDataResponse>");

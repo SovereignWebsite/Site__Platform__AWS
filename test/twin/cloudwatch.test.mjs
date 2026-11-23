@@ -46,7 +46,20 @@ if ((await series(T, "AWS/Lambda", "Invocations", "FunctionName", "demo-nightly-
 if ((await series(T, "AWS/Lambda", "Invocations", "FunctionName", "demo-log-enricher", "Sum")).v.some((v) => v !== 4)) fail("enricher not 4 an hour (900 s buffer)");
 // refusals
 if ((await call(T, query("AWS/Lambda", "Invocations", "FunctionName", "demo-handler", "Sum"), {})).status !== 403) fail("unsigned call answered");
-if ((await call(T, query("AWS/Lambda", "Invocations", "FunctionName", "demo-handler", "Sum", { "MetricDataQueries.member.1.MetricStat.Period": "60" }))).status !== 400) fail("Period 60 accepted");
+// Period as AWS takes it (boto3.aws.a): 60 is valid (Complete, no datapoints, a note, since the twin keeps hours);
+// 86400 sums the hours of each day; 90 is not a valid period
+let p60 = await call(T, query("AWS/Lambda", "Invocations", "FunctionName", "demo-handler", "Sum", { "MetricDataQueries.member.1.MetricStat.Period": "60" }));
+let x60 = await p60.text();
+if (p60.status !== 200 || members(x60, "Timestamps").length !== 0 || !x60.includes("<StatusCode>Complete</StatusCode>") || !x60.includes("TwinHourlyOnly")) fail("Period 60: " + p60.status + " " + x60.slice(0, 200));
+const day = await call(T, query("AWS/Firehose", "DeliveryToS3.Records", "DeliveryStreamName", "demo-cloudfront-logs", "Sum", { "MetricDataQueries.member.1.MetricStat.Period": "86400" }));
+const dx = await day.text(), dt = members(dx, "Timestamps"), dv = members(dx, "Values").map(Number);
+if (dt.join() !== "2026-11-22T00:00:00Z,2026-11-21T00:00:00Z,2026-11-20T00:00:00Z") fail("daily buckets: " + dt);
+const want22 = fr.v.slice(0, 3).reduce((a, b) => a + b, 0);
+if (dv[0] !== want22) fail("daily sum 22 Nov: " + dv[0] + " vs " + want22);
+if ((await call(T, query("AWS/Lambda", "Invocations", "FunctionName", "demo-handler", "Sum", { "MetricDataQueries.member.1.MetricStat.Period": "90" }))).status !== 400) fail("Period 90 accepted");
+// a metric is matched on its exact dimensions: an extra dimension finds nothing
+const extra = await call(T, query("AWS/Lambda", "Invocations", "FunctionName", "demo-handler", "Sum", { "MetricDataQueries.member.1.MetricStat.Metric.Dimensions.member.2.Name": "Resource", "MetricDataQueries.member.1.MetricStat.Metric.Dimensions.member.2.Value": "demo-handler" }));
+if (members(await extra.text(), "Timestamps").length !== 0) fail("extra dimension matched");
 if ((await call(T, { Action: "PutMetricData" })).status !== 400) fail("PutMetricData answered");
 if ((await call(T, query("AWS/Lambda", "Invocations", "FunctionName", "demo-handler", "Sum", { EndTime: "2026-11-19T00:00:00Z" }))).status !== 400) fail("EndTime before StartTime accepted");
 
