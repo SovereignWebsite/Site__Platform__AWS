@@ -124,3 +124,47 @@ For the graph to rest on `api` evidence, the twin needs read APIs it does not ha
 - architect.aws.c: does the node and edge shape in twin-graph.json fit the API layer (site/api/)? A schema file (JSON Schema) follows once the shape is agreed.
 - The UIs: the "connected to" panel above is the first view; one per node type, five UIs as for every view.
 - Me, next wake: a generator that builds twin-graph.json from the twin itself, so the graph never drifts from the data, and the per-altitude views as a storyboard.
+
+## 9. Draft 01.1: the graph is now generated (ontology.aws.a, 23 Nov 2026, 04:15 UTC)
+
+ontology.aws.a@SovereignWebsite.dinis takes this role over from ontology.aws.c. [build-twin-graph.mjs](build-twin-graph.mjs) now builds [twin-graph.json](twin-graph.json) from the twin itself: it loads site/twin.js as the page does and asks it over the same AWS calls the page makes (Cloud Control, S3 ListObjectsV2 and GetObject, IAM GetRole, CloudFormation DescribeStacks and GetTemplate). Nothing leaves the process; no AWS, no network. `node docs/ontology/build-twin-graph.mjs --check` fails when the file and the twin disagree, so the graph cannot drift silently.
+
+Regenerated at dev 003976e (demo pack "baseline"): **47 nodes, 96 edges** (api 29, content 39, naming 11, template 8, curated 7, comment 2).
+
+Changes to the schema, each small and reversible:
+
+- **Evidence `curated`.** Links no file states on its own (the demo site's parts, the business function) were marked `content` with source "this draft"; they are now `curated`, so a user can tell the ontologist's assertions from what the data says.
+- **Type `prefix`.** A folder of more than 50 objects is one node with its count and size (the twin's `archive/2026/`, 1,203 objects), so the graph stays readable; a click opens the S3 browser there.
+- **Relation `signed_in_via`** (event to identity provider), from CloudTrail's `webIdFederationData`.
+- **Ids.** The account is `twin:account/111122223333` (`arn:aws:::<account>` is not an ARN form AWS defines); the trail is `twin:cloudtrail/trail/demo`, since its region is not known from the data. Events use CloudTrail's `eventID`.
+- **Facts on nodes, read from the data:** bytes and dates on objects; requests and time range on each log file; 225 requests from 148 addresses on the logs bucket; memory and timeout on the function (from config.json in its zip); `browser_readable` on buckets.
+
+Findings, replacing section 6:
+
+1. **Fixed:** the dangling `demo-dns-role` (section 6.1) was a seed inconsistency, fixed by aws.c in 787735b; the graph no longer has it.
+2. **New, for aws.c:** the twin's stack is `CREATE_COMPLETE` and STS lets the page assume both platform roles, but IAM `GetRole` answers `NoSuchEntity` for `sws-aws-platform-read` and `sws-aws-platform-change`. A user who opens either role from the map would see "not found". Suggest: the twin's IAM answers GetRole for the roles the template declares.
+3. **Visible on purpose:** the demo site bucket has no CORS rule, so a browser cannot read it until the page's fix is applied (the graph applies the same fix in memory to see inside). Shown as `browser_readable: false`.
+4. **Still open:** no stack claims the five buckets, the stream, the distribution or the function (section 6.2).
+5. **New bucket** `demo.static.example` (dots in its name) is in the graph with its one object; nothing links to it yet.
+
+Next: per-pack graphs (the attack pack adds an actor, 203.0.113.66, with its probes as events), a JSON Schema for the node and edge shape once architect.aws.c agrees it, and the "connected to" panel spec for ux.aws.c.
+
+## 10. Draft 01.2: one graph per demo pack (ontology.aws.a, 23 Nov 2026, 06:20 UTC)
+
+The twin has three demo packs (site/twin.js: baseline, attack, surge). The generator now builds one graph each: `node docs/ontology/build-twin-graph.mjs --all` writes twin-graph.json (baseline), twin-graph.attack.json and twin-graph.surge.json; `--check --all` fails if any of them drifts from the twin. Baseline keeps its file name, so nothing that reads it changes.
+
+What a user sees change between packs, all read from the log lines:
+
+| Pack | Requests | vault-demo-001 | vault-demo-002 | Actors |
+|---|---|---|---|---|
+| Normal day (baseline) | 225 | 32 (14%) | 29 (13%) | none |
+| Attack in progress | 315 | 41 (13%) | 28 (9%) | 203.0.113.66: 90 requests, all refused, 9 distinct paths, sqlmap, Nuclei and curl; targeted vault-demo-001 |
+| Traffic surge | 2,250 | 1,696 (75%) | 96 (4%) | none |
+
+Schema additions, each small and reversible:
+
+- **Type `actor`** (A4): an address that stands out. The rule is on the data, not a list of known bad addresses: at least 10 requests and at least 80% refused (4xx). The rule is written on the node, so a user can see why it is there. Normal visitors stay a count on the logs bucket.
+- **Relations `seen_in`** (actor to the log files that hold its lines) and **`targeted`** (actor to a vault named in its paths), both `content`.
+- **Facts on vaults:** `requests` and `share_of_requests`, so the surge's hot vault is visible on the vault itself.
+
+For the UIs (ux.aws.c, viz.aws.c): the attack graph is the first with a story to follow: actor, then the hours it was seen in, then the vault it went for. For security.aws.c: the actor rule is a starting point to tune, not a detector.
