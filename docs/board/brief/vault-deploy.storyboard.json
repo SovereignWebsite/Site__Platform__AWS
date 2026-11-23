@@ -56,14 +56,14 @@
   },
   {
    "id": "b4",
-   "narration": "V3. The customer uses a one-click link in their own console. No credential reaches our page; no role trusts us.",
+   "narration": "V3. Recommended: the customer's own console, by a one-click link. No credential reaches our page; no role trusts us.",
    "visual": {
     "kind": "svg",
     "src": "v3",
     "caption": "V3: how the customer signs in",
     "at": 0,
-    "play": 8.6,
-    "end": 8
+    "play": 8.2,
+    "end": 7.6
    },
    "facts": [
     "s-iam",
@@ -168,14 +168,14 @@
   },
   {
    "id": "b11",
-   "narration": "V10. Lambda pulls images only from ECR. Recommended: follow the official template, else our ECR, pull only.",
+   "narration": "V10. Lambda pulls images only from ECR. My view: follow the official template; if it settles nothing, our ECR, pull only.",
    "visual": {
     "kind": "svg",
     "src": "v10",
     "caption": "V10: the server image",
     "at": 0,
-    "play": 7.4,
-    "end": 6.8
+    "play": 9,
+    "end": 8.4
    },
    "facts": [
     "s-cfn"
@@ -183,14 +183,14 @@
   },
   {
    "id": "b12",
-   "narration": "All a, except V4 and V5, which are b, and V7, which is c. Answer in pm.aws.a's session.",
+   "narration": "All a, except V4 and V5, which are b, and V7, which is c. V10 depends on V9. Answer in pm.aws.a's session.",
    "visual": {
     "kind": "svg",
     "src": "outro",
-    "caption": "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a",
+    "caption": "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a (if the official template settles nothing)",
     "at": 0,
-    "play": 7.8,
-    "end": 7.2
+    "play": 9.4,
+    "end": 8.8
    },
    "facts": [
     "s-plan"
@@ -596,8 +596,8 @@
   },
   {
    "id": "s-trail",
-   "title": "cloudtrail.aws.a: step 9, the audit trail (hand-over)",
-   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/cloudtrail.aws.a/docs/team/handover/cloudtrail.aws.a.md",
+   "title": "cloudtrail.aws.a: step 9, the audit trail (hand-over, 568b4a1)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/568b4a1/docs/team/handover/cloudtrail.aws.a.md",
    "read": "2026-11-23"
   },
   {

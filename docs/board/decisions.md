@@ -125,7 +125,7 @@ From your word at ~14:55 UTC (maestro.a's session); plan and owners in docs/team
 - **Recommended:** follow what the official Lambda template does (V9); if it settles nothing, (a), pm.aws.a's view: no customer credential and no role back to us.
 - **Blocks:** any real deploy (ImageUri is the one parameter the link must fill in); not the twin.
 
-Recommended answers for batch 2: "V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a".
+Recommended answers for batch 2: "V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a" (V10 a only if the official template settles nothing; pm.aws.a's view).
 
 ## Not needed yet
 - **Which vault endpoint first** (vaults.aws.a): recommended, the twin now, then your own SG/Send in eu-west-2 (append routes exist only on dev.send.sgraph.ai today). Asked before any live vault write.
