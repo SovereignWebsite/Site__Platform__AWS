@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.2.1 (iam.aws.a, deploy plan step 3; for review by
+  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.2.2 (iam.aws.a, deploy plan step 3; for review by
   security.aws.a and cloudformation.aws.a; not for any real account). Run first, by the customer, from their own
   console. Makes two things only: the deploy role that stacks sws-vault-<id> and sws-vault-<id>-edge run with, and
   the boundary that caps the Vault's own role. Nothing here can reach outside this one Vault's resources.
@@ -158,7 +158,10 @@ Resources:
                   lambda:PutFunctionConcurrency, lambda:DeleteFunctionConcurrency,
                   lambda:GetFunctionUrlConfig, lambda:UpdateFunctionUrlConfig, lambda:DeleteFunctionUrlConfig,
                   lambda:RemovePermission, lambda:GetPolicy, lambda:GetFunctionCodeSigningConfig,
-                  lambda:GetRuntimeManagementConfig, lambda:GetFunctionRecursionConfig]
+                  lambda:GetRuntimeManagementConfig, lambda:GetFunctionRecursionConfig,
+                  # boto3.aws.a: the create handler lists these; whether it calls them with the properties absent is
+                  # not documented. Granted on this function only (small effect), to drop if the test stack never calls them.
+                  lambda:PutRuntimeManagementConfig, lambda:PutFunctionRecursionConfig]
                 Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:sws-vault-${VaultId}-api"
               # security.aws.a ruling (d): a public principal only for a Function URL with auth NONE.
               # New Function URLs also need lambda:InvokeFunction in the resource policy (boto3.aws.a 08). Allowed only
