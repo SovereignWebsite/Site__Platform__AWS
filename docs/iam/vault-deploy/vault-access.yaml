@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.1.1 (iam.aws.a, deploy plan step 3; for review by
+  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.1.2 (iam.aws.a, deploy plan step 3; for review by
   security.aws.a and cloudformation.aws.a; not for any real account). Run first, by the customer, from their own
   console. Makes two things only: the deploy role that stacks sws-vault-<id> and sws-vault-<id>-edge run with, and
   the boundary that caps the Vault's own role. Nothing here can reach outside this one Vault's resources.
@@ -168,11 +168,14 @@ Resources:
                   cloudfront:PublishFunction, cloudfront:DeleteFunction]
                 Resource: !Sub "arn:aws:cloudfront::${AWS::AccountId}:function/sws-vault-${VaultId}-health"
               # Tag only in the create request (security.aws.a point 4); change and delete only what carries this id.
-              # The CreateDistributionWithTags API needs IAM CreateDistribution plus TagResource; whether TagResource at
-              # create carries aws:RequestTag is a check for boto3.aws.a (else tag after create with a name scope).
-              - Sid: DistributionCreateTagged
+              # security.aws.a review 0.1.0 (1): TagResource on "*" with only aws:RequestTag would let the role tag a
+              # customer's existing distribution and then change or delete it. So create carries no tagging right;
+              # tagging and every change only where the distribution already carries sws-vault = <id>, and an
+              # explicit deny otherwise (NeverTagOthers below). If CreateDistributionWithTags cannot then tag the new
+              # distribution (boto3.aws.a to check), scope by the distribution id instead (an output passed back on update).
+              - Sid: DistributionCreate
                 Effect: Allow
-                Action: [cloudfront:CreateDistribution, cloudfront:TagResource]
+                Action: cloudfront:CreateDistribution
                 Resource: "*"
                 Condition:
                   StringEquals: { "aws:RequestTag/sws-vault": !Ref VaultId }
@@ -202,7 +205,9 @@ Resources:
                     StringEquals: { "aws:ResourceTag/sws-vault": !Ref VaultId }
                 - !Ref AWS::NoValue
               # security.aws.a point 5: the one zone by id, the Vault's name and the certificate's validation name only,
-              # A, AAAA and CNAME only (no NS, no SOA, no delegation). The validation name is random, hence "_*.".
+              # A, AAAA and CNAME only (no NS, no SOA, no delegation). ACM's validation name is "_" plus a fixed-length
+              # token directly under the name (32 characters as security.aws.a recalls; boto3.aws.a to confirm), so 32 "?"
+              # rather than "*": it cannot match _acme-challenge or _dmarc (security.aws.a review 0.1.0 (2)).
               - !If
                 - HasZone
                 - Sid: DnsTheseNamesOnly
@@ -211,7 +216,8 @@ Resources:
                   Resource: !Sub "arn:aws:route53:::hostedzone/${HostedZoneId}"
                   Condition:
                     ForAllValues:StringLike:
-                      "route53:ChangeResourceRecordSetsNormalizedRecordNames": [!Ref DomainName, !Sub "_*.${DomainName}"]
+                      "route53:ChangeResourceRecordSetsNormalizedRecordNames": [!Ref DomainName, !Sub "_????????????????????????????????.${DomainName}"]
+                      "route53:ChangeResourceRecordSetsActions": [CREATE, UPSERT, DELETE]
                     ForAllValues:StringEquals:
                       "route53:ChangeResourceRecordSetsRecordTypes": [A, AAAA, CNAME]
                 - !Ref AWS::NoValue
@@ -246,6 +252,12 @@ Resources:
                   secretsmanager:PutResourcePolicy, secretsmanager:ReplicateSecretToRegions,
                   lambda:InvokeFunction]
                 Resource: "*"
+              - Sid: NeverTagOthers
+                Effect: Deny
+                Action: [cloudfront:TagResource, cloudfront:UntagResource]
+                Resource: "*"
+                Condition:
+                  StringNotEquals: { "aws:ResourceTag/sws-vault": !Ref VaultId }
               - Sid: NeverAnotherStack
                 Effect: Deny
                 Action: "cloudformation:*"

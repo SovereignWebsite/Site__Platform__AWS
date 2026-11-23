@@ -4,7 +4,9 @@ iam.aws.a, 23 Nov 2026 ~15:05 UTC, for docs/team/plan-vault-deploy.md (work/cond
 
 ## The trust story, in one paragraph for the customer
 
-"You run one CloudFormation stack in your own account, from your own AWS console, with your own sign-in. We never see a password, key or token of yours, and our page cannot call your account. The stack makes a deploy role that can create, change and delete only the Vault's own resources, named `sws-vault-<id>-*` and tagged `sws-vault=<id>`, and nothing else. Every role the stack makes for the Vault is capped by a boundary you can read in the template. Deleting the stack deletes everything it made."
+"You run one CloudFormation stack in your own account, from your own AWS console, with your own sign-in. We never see a password, key or token of yours, and our page cannot call your account. The stack makes a deploy role that can create, change and delete only the Vault's own resources, named `sws-vault-<id>-*` and tagged `sws-vault=<id>`, and nothing else. Every role the stack makes for the Vault is capped by a boundary you can read in the template. The template and the server image are pinned: check the sha256 we publish against the file before you press Create. Deleting the stack deletes everything it made except your data bucket and its logs, which stay until you delete them."
+
+Known limit, said to the customer: the deploy role can create the Vault's function, and AWS lets a function be created from inline code as well as from an image, so the image pin holds only as long as the template you run is the published one. That is why the published sha256 matters.
 
 ## Three choices, and the recommendation (feeds D3)
 
