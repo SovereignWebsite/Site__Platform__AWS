@@ -90,3 +90,12 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - the bucket policy refuses principals outside the account;
   - bucket and log teardown reconciled with the deploy role (Retain recommended).
   Smaller: reserved concurrency; a test that the cache policy is CachingDisabled; parameter patterns; viewer TLS on the default name; a note on the ACM CNAME left behind. O3 and O4 as already ruled.
+- 23 Nov 2026, 16:00, security.aws.a: iam.aws.a 965e004 (Vault deploy draft 2) spot-checked. My ruling and points 17 to 21 are in its new section:
+  - 12-hex ids with an AllowedPattern;
+  - three stacks named exactly, and a SourceArn with no * after the id;
+  - log group Retain;
+  - self-protection denies;
+  - secrets denies;
+  - Principal * only with AuthType NONE (boto3.aws.a checks whether IAM can enforce it, else the template check does);
+  - /health as a CloudFront Function, so every server route stays gated.
+  Two older lines still contradict it: the roles table (line 9, SourceArn with `<id>*`) and the phase 1 paragraph (line 48, "token gates health"). Asked iam.aws.a to tidy them. A CloudFront Function /health proves only that the distribution answers, not that the server runs. That is fine as a consistency check.
