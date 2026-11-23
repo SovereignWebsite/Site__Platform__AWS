@@ -213,9 +213,6 @@
   var TEXT = /\.(txt|md|csv|tsv|log|yaml|yml|xml|html|htm|css|js|mjs|ts|py|sh|toml|ini|cfg|conf|sql|svg)$/i;
   var IMAGE = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp" };
   function isGzip(u8) { return u8.length > 2 && u8[0] === 0x1f && u8[1] === 0x8b; }
-  function gunzip(u8) {
-    return new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer().then(function (b) { return new Uint8Array(b); });
-  }
   function downloadLink(name, blob) { return P.el("a", { class: "button", href: URL.createObjectURL(blob), download: name, text: "Download" }); }
 
   // Show bytes as JSON (formatted), JSON Lines, text, an image, or "use Download". Never runs anything.
@@ -346,6 +343,9 @@
     function current() { return my === state.file; }
     state.key = key; go(state.bucket, key);
     box.appendChild(P.el("h4", { text: key }));
+    // The size comes from the folder's listing. Without it (a link to a key not on the listing's first page) nothing
+    // is fetched: a file of unknown size could be any size, and a zip must be read by ranges, not whole (R-016).
+    if (!(size >= 0)) return P.say(st, name + ": its size is not known yet, so it was not opened. Choose it in its folder's list.", "bad");
     if (window.Zip && Zip.isZip(key) && size > 22) return openZip(key, size, name, box, st, current);
     if (size > LIMITS.show) return openPreview(key, size, name, box, st, current);
     P.say(st, "Opening " + key + (size >= 0 ? " (" + human(size) + ")" : "") + "...");
@@ -361,8 +361,14 @@
         // unzipped (Content-Encoding: gzip), the bytes are not gzip and are shown as they are.
         if (isGzip(u8)) {
           var inner = name.replace(/\.gz$/i, "");
-          return gunzip(u8).then(function (out) {
+          // Unzipping stops past limits.show: a small .gz can expand to gigabytes (R-016).
+          return gunzipStart(u8, LIMITS.show + 1).then(function (out) {
             if (!current()) return;
+            if (out.length > LIMITS.show) {
+              var part = wholeLines(out.subarray(0, LIMITS.show));
+              box.appendChild(P.el("p", { class: "small preview", text: "gzip: " + human(u8.length) + " unzips to more than " + human(LIMITS.show) + "; unzipping stopped there and the first " + human(part.length) + " is shown. Download has the whole file." }));
+              return show(box, inner, "", part, st);
+            }
             box.appendChild(P.el("p", { class: "small", text: "gzip: " + human(u8.length) + " unzipped to " + human(out.length) + " in this browser." }));
             show(box, inner, "", out, st);
           });
