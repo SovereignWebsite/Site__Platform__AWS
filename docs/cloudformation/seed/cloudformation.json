@@ -51,10 +51,10 @@
     },
     {
       "StackName": "demo-dns",
-      "Region": "us-east-1",
+      "Region": "eu-west-2",
       "StackStatus": "CREATE_COMPLETE",
       "CreationTime": "2026-11-18T15:00:00Z",
-      "Description": "The demo zone and its www alias to the demo site's distribution (imported from demo-site).",
+      "Description": "The demo zone and its www alias to the demo site's distribution (imported from demo-site; an export is only importable in its own region, so both stacks are in eu-west-2; Route 53 itself is global).",
       "Parameters": [],
       "Outputs": [],
       "Imports": [ "demo-site-distribution-domain" ],
