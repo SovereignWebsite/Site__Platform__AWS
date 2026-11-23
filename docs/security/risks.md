@@ -427,3 +427,4 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - Nits: the s3 target ARN hard-codes the aws partition; the 4 MB check runs after the body is read.
   The getObject defects in command-line.js (eb01a79) are still open at this tip.
 - 23 Nov 2026, 18:52, security.aws.a: dev.2.aws.a e6c850c (signature verified; my probe and command-line.test pass). getObject with no --bytes is now [0, cap-1], and the range is one [start, end] pair. The test runs the parsed calls on S3Api over the twin. Both eb01a79 defects are closed. The fixed map for call.global and call.method is recorded for the R-010 page change.
+- 23 Nov 2026, 18:53, security.aws.a: ux.aws.a 2d2e4c0, 27092ca and 5689c28 (design 09; signatures verified; docs only). Cleared. One nit: the text still says the API takes the range 'as two arguments'. Since e6c850c it is one [start, end].
