@@ -41,9 +41,9 @@ My recommendation, from the customer's side only: one link-out if security can l
 - **boto3.aws.a (b): no.** A quick-create link takes only `templateURL` (an S3 URL), `stackName` and `param_<Name>`; the service role is a choice on AWS's page ("Permissions"), and a template cannot set its own RoleARN. Sources: AWS CloudFormation User Guide, quick-create links and service role pages, read 23 Nov 2026 (docs/boto3/2026-11-23__08-vault-deploy-design-check.md addendum, 3ce137a on work/boto3.aws.a).
 - **cloudformation.aws.a: (c) works** with vault.yaml as it is; the boundary goes back into the stack as a managed policy (as in 0.1.0). A stack that makes its own deploy role and then uses it would need a custom resource: not recommended.
 - **iam.aws.a: (c) as the v1 default**, with the `-access` stack kept as an opt-in "least-privilege mode" for organisations whose deployers are not administrators, drawn as screen 2-alt (docs/iam/vault-deploy/03-one-button.md, 2ec2b93 on work/iam.aws.a). The separate role buys a non-admin deployer and bounded later updates; it does not protect the first create, which the published sha256 does.
-- **security.aws.a: pending**, and has the final word on (c) as the default.
+- **security.aws.a: (a)**, two link-outs with screen 2-alt (docs/security/reviews/2026-11-23__ux-design-06-vault-deploy-page.md, d38c93b on work/security.aws.a). The deploy role bounds every later update whatever the template says, and we are the customer's supply chain (template and image digest). Under (c) every update runs as the customer's admin identity, and moving from (c) to (a) later means a rebuild in every customer account. (c) goes to Dinis as a decision through pm.aws.a, with five conditions in that file.
 
-If (c) holds, screen 2 stays as drawn, and screen 1 gains one quiet link under the button: "Your organisation does not let you create IAM roles? Use least-privilege mode", which leads to screen 2-alt.
+**So this is Dinis's choice**, through pm.aws.a's batch: (a) two guided link-outs, recommended by security.aws.a; or (c) one button, recommended by iam.aws.a and cloudformation.aws.a, under security's five conditions. The design supports both. Under (a), screen 2-alt is the main path. Under (c), screen 2 is the main path, and screen 1 gains one quiet link under the button ("Your organisation does not let you create IAM roles? Use least-privilege mode") that leads to screen 2-alt.
 
 **Consequence for screen 1:** the template must be served from an S3 URL (quick-create accepts no other), so "the template's immutable URL" is an S3 object URL, versioned, whose sha256 the page shows.
 
@@ -55,7 +55,7 @@ A page of its own (V1 a: its own address, so its CSP can let it fetch `https://<
 - a one-line status line (`aria-live="polite"`);
 - the same type, colour tokens and focus styles as the hub.
 
-Single column, at most 40rem wide. One primary button per screen. No sign-in, no cookies, no tracking (CLAUDE.md). The page keeps where the customer is in the URL fragment only (`#/region`, `#/launched/<id>`, `#/done/<id>`): Back works, a reload does not lose the Vault id, and nothing reaches a server. The fragment holds the Vault id and region, never the address or anything the customer pasted, because links get shared.
+Single column, at most 40rem wide. Content Security Policy (security.aws.a): `script-src 'self'` with no inline scripts, and `connect-src 'self' https://*.cloudfront.net`, which is enough for v1's `/health` check and nothing wider. One primary button per screen. No sign-in, no cookies, no tracking (CLAUDE.md). The page keeps where the customer is in the URL fragment only (`#/region`, `#/launched/<id>`, `#/done/<id>`): Back works, a reload does not lose the Vault id, and nothing reaches a server. The fragment holds the Vault id and region, never the address or anything the customer pasted, because links get shared.
 
 ## 3. Screens (desktop, then phone)
 
@@ -85,7 +85,7 @@ Single column, at most 40rem wide. One primary button per screen. No sign-in, no
 
 - **Region list**: only the regions tested end to end on the twin (vaults.aws.a design 04, "the regions that have been tested"). The default is the first entry in the page's published list. No guessing from the browser and no "nearest" until someone has measured what nearest means. The label shows both names ("Europe (London) eu-west-2"), because AWS's console shows the code.
 - **Vault id**: 12 hex characters, made in the browser (`crypto.getRandomValues`) when the page opens, and shown only inside "What this creates". The customer never types it or needs it.
-- **The button** builds the quick-create link with the stack name `sws-vault-<id>`, the template's immutable URL and the parameters VaultId, ImageUri and DeployPageOrigin (cloudformation.aws.a's group "Filled in by the deploy link"). Domain parameters stay empty. It opens in a new tab (`rel="noopener"`), and our page moves to screen 2.
+- **The button** builds the quick-create link with the stack name `sws-vault-<id>`, the template's immutable URL and the parameters VaultId, ImageUri and DeployPageOrigin (cloudformation.aws.a's group "Filled in by the deploy link"). Domain parameters stay empty. It opens in a new tab (`rel="noopener noreferrer"`), and our page moves to screen 2.
 - **"What this creates"** comes from the template's resources, not hand-written (dev.2.aws.a: generated at build from vault.yaml, so it cannot drift). It is collapsed by default but has to be there: it is what a customer reads before trusting a link that opens their console (sherpa.aws.a).
 - **"What it costs"** stays empty until billing.aws.a has a cited figure per region. Until then it reads: "Pay-per-use AWS services; an idle Vault costs little. We will show a cited estimate here." No invented number.
 - **The template line** shows the sha256 from the page's index of published templates (vaults.aws.a 4a option a). View opens the exact file.
@@ -106,7 +106,7 @@ Phone (390 px): the same order, all full width. The region select is a native `<
 | [ I see CREATE_COMPLETE ]                                            |
 |                                                                      |
 | Tab did not open? [ Open it again ↗ ]                                |
-| Changed your mind? Delete the stack in AWS; nothing else is needed.  |
+| Changed your mind? See "Remove this Vault" below.         |
 +----------------------------------------------------------------------+
 ```
 
@@ -114,8 +114,9 @@ Phone (390 px): the same order, all full width. The region select is a native `<
 - **How long**: no figure until cloudformation.aws.a has measured a create on the twin and then on a real account. After that: "This usually takes about N minutes" with the measured N. CloudFront distributions are the slow part.
 - The acknowledgement wording must be copied from the real console when boto3.aws.a or cloudformation.aws.a has seen it (*check*). The text above is a placeholder.
 - The page keeps no timer and polls nothing.
+- "Changed your mind" points to the Remove steps (screen 4). Deleting the stack alone leaves the bucket and the log group, by design (Retain).
 
-**Screen 2-alt (if section 1a ends at option a).** Two numbered blocks. "A. Create the permissions" has its own button and opens `-access`. "B. Create the Vault" is disabled until "A shows CREATE_COMPLETE" is pressed, then opens the Vault stack. Under it: "In Permissions, choose the role sws-vault-<id>-deploy". Same copy rules otherwise.
+**Screen 2-alt (if section 1a ends at option a).** Two numbered blocks. "A. Create the permissions" has its own button and opens a quick-create link with stack name `sws-vault-<id>-access`. "B. Create the Vault" is disabled until "A shows CREATE_COMPLETE" is pressed, then opens a quick-create link with stack name `sws-vault-<id>`. Under B: "In Permissions, under IAM role, choose sws-vault-<id>-deploy" with the page's own id filled in. The role is chosen by name, because the page does not know the account and so cannot build its ARN. Same copy rules otherwise.
 
 ### Screen 3: Connect your Vault
 
@@ -132,7 +133,9 @@ Phone (390 px): the same order, all full width. The region select is a native `<
 
 - The page names the exact output key, `Endpoint`, and where it is. It never asks for `TokenSecretArn` or the token.
 - **Input forgiveness** (sherpa.aws.a): accept with or without `https://`, with or without a trailing slash, and with spaces around it. Show the cleaned value back.
+- **Accepted form**: in v1 the endpoint is always a CloudFront default address, so the page accepts only `https://<id>.cloudfront.net` (a custom domain is a later step). Anything else gets "In v1 this is an address ending in .cloudfront.net".
 - **Check** fetches `<endpoint>/health` (vaults.aws.a 4a: the CloudFront Function, CORS for this page's origin only). It compares `vault_id` with the id this page made, and `template_version` with the published index.
+- **The answer is untrusted** (security.aws.a): fetch with `credentials: "omit"`, `redirect: "error"` and `cache: "no-store"`. Read at most a few KB. `vault_id` must match `^[0-9a-f]{12}$` and `template_version` must be in the index. Render only through `textContent`.
 - The address the customer pasted is kept in memory for this tab only. It is not put in the URL or in storage. A reload asks for it again.
 
 ### Screen 4: Your Vault is ready
@@ -145,7 +148,8 @@ Phone (390 px): the same order, all full width. The region select is a native `<
 |                                                                      |
 | Next                                                                 |
 | 1. Get your access token: in AWS, Secrets Manager, the secret        |
-|    sws-vault-3f9a0c21b7d4-token. Only you can see it.                |
+|    sws-vault-3f9a0c21b7d4-token. Only people with access to your     |
+|    AWS account can see it.                                           |
 | 2. Connect sgit:  sgit ... (command from vaults.aws.a)  [Copy]       |
 |                                                                      |
 | Later                                                                |
@@ -154,7 +158,7 @@ Phone (390 px): the same order, all full width. The region select is a native `<
 +----------------------------------------------------------------------+
 ```
 
-- The account id is shown back because sherpa.aws.a and vaults.aws.a both want the customer to see where it went. It comes from the stack's `AccountId` output. **Gap**: `/health` does not return it, and the customer pasted only the endpoint. Either `/health` adds `account_id` (a public value, but a disclosure; security.aws.a's call) or the screen drops that part. I recommend dropping it from v1 rather than adding a second paste.
+- **No account id in v1.** `/health` does not return it, and it will not: security.aws.a agrees it is public and unauthenticated and would tie a Vault address to an account. The line reads "Vault <id> · <region>". The customer sees the account in their own console. (The sketch above still shows the account; ignore that part.)
 - The secret's exact name and the sgit command come from cloudformation.aws.a and vaults.aws.a (*check*). Placeholder text until then.
 - **Use my own domain** opens design 06b (later): `-access` update, then `-edge` in us-east-1, then the Vault update (iam.aws.a's order). That is three link-outs, which is exactly why it is not on the first path.
 - **Remove this Vault**: delete the stack, then the documented empty-and-delete step for the bucket and the log group (cloudformation.aws.a, 0.3.0 "The removal step that Retain implies"). It says plainly that the bucket stays until they delete it, and that this is so they never lose data by accident.
@@ -192,7 +196,8 @@ Every failure keeps what the customer typed and puts the focus on the field or b
 
 ## 8. Asks
 
-- **iam.aws.a, cloudformation.aws.a, security.aws.a**: section 1a, one launch or two.
+- **pm.aws.a**: section 1a, (a) or (c), for Dinis's batch, with security.aws.a's five conditions on (c).
+- **Copy check**: if V3 changes, re-check "We never see your AWS sign-in" (security.aws.a).
 - **boto3.aws.a**: whether a quick-create link can set the service role. Also the console's exact acknowledgement wording.
 - **cloudformation.aws.a**: a measured create time on the twin, the likely failure causes, and the secret's name for screen 4.
 - **vaults.aws.a**: the sgit command for screen 4; whether `/health` should return `account_id` (screen 4 gap).
