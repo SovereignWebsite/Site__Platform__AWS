@@ -284,7 +284,8 @@
         }
         var refresh = P.el("button", { type: "button", class: "quiet", text: "Refresh", title: "List this folder from S3 again" });
         refresh.onclick = function () { clearListCache(); state.fresh = true; state.keepSearch = true; listObjects(); };
-        box.appendChild(P.el("div", { class: "toolbar" }, [filter, search].concat(clear ? [clear] : []).concat([refresh])));
+        var sum = summariseButton(b, region, state.prefix);
+        box.appendChild(P.el("div", { class: "toolbar" }, [filter, search].concat(clear ? [clear] : []).concat([refresh]).concat(sum ? [sum] : [])));
         var table = P.el("table", { class: "s3-table" });
         var head = P.el("thead", {}, [P.el("tr", {}, [sortHead("Name", "name"), sortHead("Size", "size"), sortHead("Modified (UTC)", "when")])]);
         table.appendChild(head); table.appendChild(P.el("tbody", { id: "s3-list" }));
@@ -336,6 +337,68 @@
     state.file++; $("s3-file").textContent = "";
     P.say($("s3-status"), why, "ok");
     if (arriving !== false) land(box.querySelector(".crumbs button:last-of-type"));
+  }
+  // ---- "Summarise these logs" (data.aws.a's LogView, docs/data/2026-11-23__01-extract-workflow-first-design.md) ----
+  // Offered on a folder of hourly logs (a year, month, day or hour folder: .../2026/11/21/10/) when the page has
+  // loaded site/data/extract.js and view.js. Every file under the folder is listed (no delimiter), then LogView
+  // reads them one at a time through the read role, in this browser only: nothing is kept or sent. Ceilings: at
+  // most SUM_MAX files (LogView refuses more and asks for a smaller folder), no file over SUM_FILE is fetched, and
+  // the listing stops once past SUM_MAX keys.
+  // SUM_TOTAL: bytes one click may fetch in all (security.aws.a: 200 files of 32 MB would be 6.4 GB); the total is
+  // shown before anything is read, and a folder over it is refused with a request for a smaller one.
+  var LOG_FOLDER = /(^|\/)\d{4}\/(\d{2}\/){0,3}$/, SUM_MAX = 200, SUM_FILE = 32 * 1048576, SUM_TOTAL = 500 * 1048576;
+  function summariseButton(b, region, prefix) {
+    if (!window.LogView || !window.LogExtract || !LOG_FOLDER.test(prefix)) return null;
+    var btn = P.el("button", { type: "button", class: "quiet", text: "Summarise these logs", title: "Read every log file under " + prefix + " in this browser" });
+    btn.onclick = function () { summarise(b, region, prefix, btn); };
+    return btn;
+  }
+  function summarise(b, region, prefix, btn) {
+    var my = ++state.file, box = $("s3-file"), st = $("s3-status"), objs = [], sizes = noProto();
+    box.textContent = ""; state.key = ""; go(b, prefix);
+    var head = P.el("h4", { text: "Summary of " + b + "/" + prefix }), out = P.el("div", {});
+    box.appendChild(head); box.appendChild(out); land(head);
+    btn.disabled = true; P.say(st, "Listing every log file under " + prefix + "...");
+    read().then(function (c) {
+      function page(token) {
+        var q = "?list-type=2&max-keys=1000&prefix=" + encodeURIComponent(prefix) + (token ? "&continuation-token=" + encodeURIComponent(token) : "");
+        return s3get(c, bucketUrl(b, region, q), region).then(function (r) {
+          return r.text().then(function (t) {
+            var d = new DOMParser().parseFromString(t, "text/xml"); if (!r.ok) throw P.awsError(d, r.status);
+            Array.prototype.forEach.call(d.getElementsByTagName("Contents"), function (o) {
+              var k = o.getElementsByTagName("Key")[0].textContent, z = +o.getElementsByTagName("Size")[0].textContent;
+              if (k === prefix) return;
+              objs.push({ Key: k, Size: z }); sizes[k] = z;
+            });
+            var nt = d.getElementsByTagName("NextContinuationToken")[0];
+            if (nt && objs.length <= SUM_MAX && my === state.file) return page(nt.textContent);
+          });
+        });
+      }
+      return page(null);
+    }).then(function () {
+      if (my !== state.file) return;
+      var total = objs.reduce(function (a, o) { return a + (o.Size <= SUM_FILE ? o.Size : 0); }, 0), fetched = 0;
+      var many = objs.length + " file" + (objs.length === 1 ? "" : "s");
+      if (total > SUM_TOTAL) return P.say(st, prefix + ": " + many + ", " + human(total) + " in all, more than " + human(SUM_TOTAL) + " for one summary; open a smaller folder (a day or an hour).", "bad");
+      P.say(st, "Summarising " + many + " under " + prefix + " (" + human(total) + " to read)...");
+      // A value in the summary that names a log file opens it through the address, so it gets every check a link
+      // gets (a valid bucket of this account, no climbing out, the size gate); the values come from the logs.
+      var opts = { maxFiles: SUM_MAX, maxFileBytes: SUM_FILE, context: { logsBucket: b },
+        open: function (ref) { if (ref && ref.bucket && ref.key) location.hash = route(String(ref.bucket), String(ref.key)); } };
+      return LogView.run(out, objs, function (key) {
+        if (my !== state.file) return Promise.reject(new Error("stopped: another place was opened"));
+        if (!(sizes[key] <= SUM_FILE)) return Promise.reject(new Error("larger than " + human(SUM_FILE) + "; not read"));
+        if (fetched + sizes[key] > SUM_TOTAL) return Promise.reject(new Error("past " + human(SUM_TOTAL) + " read in all; not read"));
+        fetched += sizes[key];
+        return read().then(function (c) { return s3get(c, bucketUrl(b, region, "", key), region); }).then(function (r) {
+          if (!r.ok) throw new Error("S3 answered " + r.status);
+          return r.arrayBuffer();
+        }).then(function (ab) { return new Uint8Array(ab); });
+      }, opts).then(function () {
+        if (my === state.file) P.say(st, "Summary of " + b + "/" + prefix + ": read in this browser; nothing was kept or sent.", "ok");
+      });
+    }).catch(function (e) { if (my === state.file) P.say(st, e.message, "bad"); }).then(function () { btn.disabled = false; });
   }
   function human(n) { return n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(1) + " MB"; }
 
