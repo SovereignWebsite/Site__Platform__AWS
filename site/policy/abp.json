@@ -143,11 +143,6 @@
             "docs/team/keys/data.aws.a.*"
           ]
         },
-        "cloudtrail.aws.a@SovereignWebsite.dinis": {
-          "may_change": [
-            "docs/cloudtrail/**"
-          ]
-        },
         "billing.aws.c@SovereignWebsite.dinis": {
           "may_change": [
             "docs/billing/**"
