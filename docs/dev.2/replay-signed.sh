@@ -7,7 +7,7 @@
 #
 # Walks <base>..<tip> oldest first (topological order). For each commit not yet in <map-file> ("old new" lines):
 #   - parents are mapped through <map-file>;
-#   - if its author is <author-name>, it is re-created with the same tree, message and author (name, email, date),
+#   - if its author name and email are this repository's git identity (user.name = <author-name>, user.email), it is re-created with the same tree, message and author (name, email, date),
 #     committed and signed by the current git identity, and "old new" is appended to the map. Its Claude-Session
 #     trailer becomes $CLAUDE_SESSION (the CI signer check pairs each key with the session it was published with) and
 #     a "Replayed-from: <old sha>" trailer is added, so the change of signer is on the record;
@@ -20,7 +20,15 @@
 set -euo pipefail
 base=$1 tip=$2 map=$3 me=$4
 : "${CLAUDE_SESSION:?set CLAUDE_SESSION to the session URL published with your key}"
+# A runner re-signs only their own commits (security.aws.a): <author-name> must be this repository's git identity,
+# and each commit's author email must be that identity's email as well as its name matching.
+me_email=$(git config user.email || true)
+[ "$me" = "$(git config user.name || true)" ] || { echo "<author-name> $me is not git config user.name" >&2; exit 2; }
+[ -n "$me_email" ] || { echo "git config user.email is not set" >&2; exit 2; }
 touch "$map"
+# The map must hold one line per old commit (security.aws.a): duplicates are refused.
+dups=$({ grep -v '^#' "$map" || true; } | awk '{print $1}' | sort | uniq -d | head -1)
+[ -z "$dups" ] || { echo "map has $dups twice" >&2; exit 2; }
 # Both runners use the same base (dev.1.aws.a): it is locked in the map's first line, "# base <full sha>".
 want=$(git rev-parse "$base^{commit}")
 if [ ! -s "$map" ]; then echo "# base $want" > "$map"
@@ -30,9 +38,16 @@ lookup() { awk -v c="$1" '$1==c {print $2; f=1} END {if (!f) print c}' "$map"; }
 for c in $(git rev-list --reverse --topo-order "$base..$tip"); do
   if grep -q "^$c " "$map"; then continue; fi
   parents=$(git log -1 --format=%P "$c"); new_parents=""; changed=0
-  for p in $parents; do np=$(lookup "$p"); new_parents="$new_parents $np"; [ "$np" != "$p" ] && changed=1; done
-  author=$(git log -1 --format=%an "$c")
-  if [ "$author" = "$me" ]; then
+  for p in $parents; do
+    np=$(lookup "$p"); new_parents="$new_parents $np"
+    if [ "$np" != "$p" ]; then
+      changed=1
+      # A mapped parent must carry the same tree as the commit it replaces (security.aws.a).
+      [ "$(git rev-parse "$np^{tree}")" = "$(git rev-parse "$p^{tree}")" ] || { echo "mapped parent $np of $c has another tree than $p" >&2; exit 1; }
+    fi
+  done
+  author=$(git log -1 --format=%an "$c"); author_email=$(git log -1 --format=%ae "$c")
+  if [ "$author" = "$me" ] && [ "$author_email" = "$me_email" ]; then
     args=(); for p in $new_parents; do args+=(-p "$p"); done
     new=$(git log -1 --format=%B "$c" | awk -v s="$CLAUDE_SESSION" -v o="$c" '
         /^Claude-Session:/ { if (!done) { print "Claude-Session: " s; print "Replayed-from: " o; done = 1 }; next } { print }
