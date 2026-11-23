@@ -16,9 +16,10 @@ Who deployed what, where and when, for each Vault in a customer's account, read 
 - **Where:** the account and the regions (IAM is global, so it does not count as a region).
 - **When:** the first and last event.
 - **State:** the last applied stack call: created, updated or deleted. It is failed if that call was refused, or if a CloudFormation call after it failed. It is prepared if only change sets exist.
+- **Mode:** access-stack when the Vault stack names the deploy role as its service role; otherwise one-stack.
 - **Counts:** calls, refused, made by CloudFormation, and made out of band.
 
-## Four alarms
+## Eight alarms
 
 | Rule | Level | Fires on |
 |---|---|---|
@@ -26,6 +27,16 @@ Who deployed what, where and when, for each Vault in a customer's account, read 
 | vault-change-not-approved | high | Only when approvals are given: an applied stack call with no approval whose window (and person, if set) covers it. |
 | vault-deleted | medium | DeleteStack on a Vault stack, or DeleteBucket on its data bucket. |
 | vault-deploy-refused | medium | A refused stack call, or a refused CloudFormation call (e.g. stopped by the boundary). |
+| vault-deploy-role-outside-cloudformation | high | The role sws-vault-<id>-deploy acting without CloudFormation's sign. It trusts only CloudFormation, so its credentials are loose or its trust was changed. |
+| vault-root-activity | high | The account root acting on any Vault resource, reads included. |
+| vault-direct-change-refused | medium | A refused direct change to a Vault's resources. |
+| vault-token-read | medium | GetSecretValue on sws-vault-<id>-token, or GetFunction / GetFunctionConfiguration on its function (the token is in its configuration, O3), by anyone other than CloudFormation or the Vault's API role. |
+
+The four rules after the first four come from security.aws.a's review of 7eda626.
+
+**What counts as CloudFormation:** a call with CloudFormation's sign (`invokedBy`, or `sourceIPAddress` cloudformation.amazonaws.com). The deploy role's name alone is not enough. In access-stack mode (the Vault stack was given the deploy role), the Vault stack's calls must also run as that role; only the access stack's own two resources (the deploy role and its boundary) may be made as the customer.
+
+**Stated limit:** in one-stack mode, a call that another stack makes on this Vault's resources looks the same as one by the Vault's own stack. The trail does not carry the stack's name on those calls.
 
 The platform alarms (ct-alarms.js) still run on the same events. Example: a change to a Vault from a new network also raises new-network.
 
@@ -33,7 +44,7 @@ The platform alarms (ct-alarms.js) still run on the same events. Example: a chan
 
 - `docs/cloudtrail/reader/ct-deploy.js`: `group(events)` and `alarms(deployments, { approvals })` over the reader's events.
 - `docs/cloudtrail/scenarios/vault-deploy.js`: the twin-first scenario. It gives the records one access-stack deployment leaves, with options for out of band, refused and teardown. It is for dev.1.aws.a to replay into the twin's customer account (step 4).
-- `docs/cloudtrail/reader/ct-deploy.test.mjs`: 27 cases (run: `node docs/cloudtrail/reader/ct-deploy.test.mjs`).
+- `docs/cloudtrail/reader/ct-deploy.test.mjs`: 37 cases (run: `node docs/cloudtrail/reader/ct-deploy.test.mjs`).
 
 ## To check (boto3.aws.a)
 

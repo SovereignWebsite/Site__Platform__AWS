@@ -65,5 +65,31 @@ check(D.vaultOf(one({ eventName: "GetObject", requestParameters: { bucketName: "
 const apiPut = one({ eventName: "PutObject", eventCategory: "Management", requestParameters: { bucketName: "sws-vault-" + V + "-data-111122223333-eu-west-2", key: "k" },
   userIdentity: { type: "AssumedRole", sessionContext: { sessionIssuer: { userName: "sws-vault-" + V + "-api", arn: "arn:aws:iam::111122223333:role/sws-vault-" + V + "-api" } } } });
 check(rules(D.alarms(D.group([apiPut]))), [], "API role writing data is quiet");
-check(D.rules.length, 4, "four rules");
-console.log("ok ct-deploy: 4 rules, " + cases + " cases over the vault-deploy scenario (clean, out of band, refused, teardown, approvals, two Vaults)");
+// security.aws.a's review of 7eda626
+const base = S.vaultDeploy().Records, A = "111122223333", B = "sws-vault-" + V + "-data-" + A + "-eu-west-2";
+const deployId = base.find((r) => r.userIdentity.sessionContext.sessionIssuer.userName === "sws-vault-" + V + "-deploy").userIdentity;
+const customerId = base[0].userIdentity;
+let rv = 0;
+const add = (r) => D.group(R.read({ Records: [...base, Object.assign({ eventVersion: "1.09", eventTime: "2026-11-24T10:00:00Z", awsRegion: "eu-west-2", recipientAccountId: A, eventCategory: "Management", readOnly: false, sourceIPAddress: "198.51.100.23", eventID: "rv-" + (++rv) }, r)] }).events);
+check(D.group(events())[0].mode, "access-stack", "scenario is access-stack mode");
+// (1) the deploy role used without CloudFormation
+const loose = Object.assign({}, deployId); delete loose.invokedBy;
+check(rules(D.alarms(add({ userIdentity: loose, eventSource: "s3.amazonaws.com", eventName: "PutBucketPolicy", requestParameters: { bucketName: B } }))).sort(), ["vault-deploy-role-outside-cloudformation", "vault-out-of-band-change"], "deploy role outside CloudFormation");
+// (2) a refused direct change
+check(rules(D.alarms(add({ userIdentity: customerId, eventSource: "s3.amazonaws.com", eventName: "PutBucketPolicy", requestParameters: { bucketName: B }, errorCode: "AccessDenied" }))), ["vault-direct-change-refused"], "refused direct change");
+// (3) token reads: the secret, the function configuration (with a version suffix); quiet for the Vault's own role
+check(rules(D.alarms(add({ userIdentity: customerId, eventSource: "secretsmanager.amazonaws.com", eventName: "GetSecretValue", readOnly: true, requestParameters: { secretId: "sws-vault-" + V + "-token" } }))), ["vault-token-read"], "secret read");
+check(rules(D.alarms(add({ userIdentity: customerId, eventSource: "lambda.amazonaws.com", eventName: "GetFunctionConfiguration20150331v2", readOnly: true, requestParameters: { functionName: "sws-vault-" + V + "-api" } }))), ["vault-token-read"], "function configuration read");
+check(rules(D.alarms(add({ userIdentity: customerId, eventSource: "lambda.amazonaws.com", eventName: "GetFunctionUrlConfig", readOnly: true, requestParameters: { functionName: "sws-vault-" + V + "-api" } }))), [], "URL config read is not a token read");
+const apiId = { type: "AssumedRole", sessionContext: { sessionIssuer: { type: "Role", userName: "sws-vault-" + V + "-api", arn: "arn:aws:iam::" + A + ":role/sws-vault-" + V + "-api" } } };
+check(rules(D.alarms(add({ userIdentity: apiId, eventSource: "secretsmanager.amazonaws.com", eventName: "GetSecretValue", readOnly: true, requestParameters: { secretId: "sws-vault-" + V + "-token" } }))), [], "the Vault reading its own token");
+// (4) access-stack mode: a CloudFormation call on the Vault's resources not as the deploy role is out of band
+check(rules(D.alarms(add({ userIdentity: Object.assign({}, customerId, { invokedBy: "cloudformation.amazonaws.com" }), sourceIPAddress: "cloudformation.amazonaws.com", eventSource: "s3.amazonaws.com", eventName: "PutBucketPolicy", requestParameters: { bucketName: B } }))), ["vault-out-of-band-change"], "another stack touching the Vault in access-stack mode");
+// one-stack mode: the same call counts as CloudFormation (stated limit)
+const oneStack = base.filter((r) => !/-access$/.test(JSON.stringify(r.requestParameters.stackName || ""))).map((r) => { const c = structuredClone(r); if (c.requestParameters.roleARN) delete c.requestParameters.roleARN; if (c.userIdentity.sessionContext.sessionIssuer.userName.endsWith("-deploy")) c.userIdentity = Object.assign({}, customerId, { invokedBy: "cloudformation.amazonaws.com" }); return c; });
+const ds1 = D.group(R.read({ Records: oneStack }).events);
+check([ds1[0].mode, ds1[0].counts.outOfBand, D.alarms(ds1).length], ["one-stack", 0, 0], "one-stack mode: CloudFormation as the customer is quiet");
+// (5) root acting on a Vault resource, even a read
+check(rules(D.alarms(add({ userIdentity: { type: "Root", arn: "arn:aws:iam::" + A + ":root" }, eventSource: "s3.amazonaws.com", eventName: "GetBucketPolicy", readOnly: true, requestParameters: { bucketName: B } }))), ["vault-root-activity"], "root read");
+check(D.rules.length, 8, "eight rules");
+console.log("ok ct-deploy: 8 rules, " + cases + " cases over the vault-deploy scenario (clean, out of band, refused, teardown, approvals, two Vaults, security review)");
