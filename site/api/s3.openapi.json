@@ -2,9 +2,9 @@
   "openapi": "3.1.0",
   "info": {
     "title": "S3Api (browser)",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "summary": "The browser-side contract of S3Api (site/api/s3-api.js, 774fc03): its four read methods.",
-    "description": "This site has no server. The paths below are logical names for the methods of the browser object S3Api, not URLs anything listens on; operationId is the method name and parameters are its arguments in order. Each operation lists in x-aws-actions the IAM actions it needs on real AWS; the union over the operations a UI uses is the least-privilege list aws.c turns into the template's next plan. S3Api only reads: design 01's planCors and applyPlan are not in it (changes stay with plans and Approve, site/plan.js), so they are listed under x-not-in-s3api, not as operations. Cloud Control handler permissions for AWS::S3::Bucket are not listed yet: aws.c confirms them against AWS's published resource schema first (x-aws-actions-pending). On the twin (synthetic account 111122223333) no credentials are used."
+    "description": "This site has no server. The paths below are logical names for the methods of the browser object S3Api, not URLs anything listens on; operationId is the method name and parameters are its arguments in order. Each operation lists in x-aws-actions the IAM actions it needs on real AWS; the union over the operations a UI uses is the least-privilege list aws.c turns into the template's next plan. S3Api only reads: design 01's planCors and applyPlan are not in it (changes stay with plans and Approve, site/plan.js), so they are listed under x-not-in-s3api, not as operations. Cloud Control calls also need the permissions the AWS::S3::Bucket handler lists: those are in x-aws-handler-actions, with their source and the check still to make before a plan uses them (x-aws-handler-check). On the twin (synthetic account 111122223333) no credentials are used."
   },
   "servers": [],
   "x-browser-global": "S3Api",
@@ -18,7 +18,6 @@
         "x-aws-actions": [
           "cloudformation:ListResources"
         ],
-        "x-aws-actions-pending": "handler permissions of AWS::S3::Bucket for list, to be confirmed by aws.c",
         "x-role": "read",
         "responses": {
           "200": {
@@ -37,7 +36,12 @@
           "default": {
             "$ref": "#/components/responses/AwsError"
           }
-        }
+        },
+        "x-aws-handler-actions": [
+          "s3:ListAllMyBuckets"
+        ],
+        "x-aws-handler-source": "docs/boto3/2026-11-23__02-cloud-control-s3-handlers.md (boto3.aws.a, from the AWS::S3::Bucket resource schema as cfn-lint 1.61.0 ships it)",
+        "x-aws-handler-check": "A snapshot of the schema; check recent names (s3:GetBucketAbac, s3:GetBucketDefaultStorageClass, s3:GetBucketMetadataTableConfiguration) against the Service Authorization Reference for S3 before a plan uses them."
       }
     },
     "/buckets/{bucket}": {
@@ -48,7 +52,6 @@
         "x-aws-actions": [
           "cloudformation:GetResource"
         ],
-        "x-aws-actions-pending": "handler permissions of AWS::S3::Bucket for read, to be confirmed by aws.c",
         "x-role": "read",
         "parameters": [
           {
@@ -69,7 +72,33 @@
           "default": {
             "$ref": "#/components/responses/AwsError"
           }
-        }
+        },
+        "x-aws-handler-actions": [
+          "s3:GetAccelerateConfiguration",
+          "s3:GetAnalyticsConfiguration",
+          "s3:GetBucketAbac",
+          "s3:GetBucketCORS",
+          "s3:GetBucketDefaultStorageClass",
+          "s3:GetBucketLogging",
+          "s3:GetBucketMetadataTableConfiguration",
+          "s3:GetBucketNotification",
+          "s3:GetBucketObjectLockConfiguration",
+          "s3:GetBucketOwnershipControls",
+          "s3:GetBucketPublicAccessBlock",
+          "s3:GetBucketTagging",
+          "s3:GetBucketVersioning",
+          "s3:GetBucketWebsite",
+          "s3:GetEncryptionConfiguration",
+          "s3:GetIntelligentTieringConfiguration",
+          "s3:GetInventoryConfiguration",
+          "s3:GetLifecycleConfiguration",
+          "s3:GetMetricsConfiguration",
+          "s3:GetReplicationConfiguration",
+          "s3:ListBucket",
+          "s3:ListTagsForResource"
+        ],
+        "x-aws-handler-source": "docs/boto3/2026-11-23__02-cloud-control-s3-handlers.md (boto3.aws.a, from the AWS::S3::Bucket resource schema as cfn-lint 1.61.0 ships it)",
+        "x-aws-handler-check": "A snapshot of the schema; check recent names (s3:GetBucketAbac, s3:GetBucketDefaultStorageClass, s3:GetBucketMetadataTableConfiguration) against the Service Authorization Reference for S3 before a plan uses them."
       }
     },
     "/buckets/{bucket}/{region}/objects": {
