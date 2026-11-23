@@ -12,6 +12,7 @@
   const ms = (t) => Date.parse(t.length === 17 ? t.replace("Z", ":00Z") : t);   // 2026-11-23T03:25Z has no seconds
   const hhmmss = (m) => new Date(m).toISOString().slice(11, 19) + " UTC";
 
+  let maxDepth = 1;
   let agents = new Map(), events = [], R = 0, playing = false, speed = 2, last = 0, picked = null;
 
   // Time warp: long waits shrink, bursts (sixteen spawns in 21 s) spread out so each is seen.
@@ -40,11 +41,13 @@
     };
     const total = roots.reduce((n, a) => n + leaves(a), 0);
     let at = -Math.PI / 2;
+    const deep = (a) => 1 + Math.max(0, ...(kids.get(a.id) || []).map(deep));
+    maxDepth = Math.max(1, ...roots.map(deep)) - 1;
     for (const a of roots) { const span = 2 * Math.PI * leaves(a) / total; place(a, 0, at, at + span); at += span; }
   }
 
   function pos(a) {
-    const w = sky.width, h = sky.height, ring = Math.min(w, h) * 0.18;
+    const w = sky.width, h = sky.height, ring = Math.min(w, h) * 0.47 / (maxDepth + 0.6);
     const rad = a.depth === 0 && [...agents.values()].filter((b) => b.depth === 0).length === 1 ? 0 : (a.depth + 0.6) * ring;
     return [w / 2 + rad * Math.cos(a.angle) * (w / h) * 0.95, h / 2 + rad * Math.sin(a.angle)];
   }
@@ -74,7 +77,7 @@
       } else {
         const a = agents.get(e.from), b = agents.get(e.to); if (!a || !b) continue;
         const [x1, y1] = pos(a), [x2, y2] = pos(b);
-        ctx.strokeStyle = e.type === "handoff" ? gold : teal; ctx.globalAlpha = 0.6 * (1 - k);
+        ctx.strokeStyle = e.type === "handoff" || e.type === "move" ? gold : teal; ctx.globalAlpha = 0.6 * (1 - k);
         ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.globalAlpha = 1;
         ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(x1 + (x2 - x1) * k, y1 + (y2 - y1) * k, 3.5, 0, 2 * Math.PI); ctx.fill();
       }
@@ -102,7 +105,7 @@
     const commits = events.filter((x) => x.type === "commit" && x.r <= R).length;
     $("counts").textContent = `${shown} agents, ${commits} commits`;
     const who = e.agent || e.from || "";
-    const what = e.subject || e.note || e.topic || (e.type === "spawn" ? `starts ${e.to}` : e.type === "message" ? `to ${e.to}` : "");
+    const what = e.subject || e.note || e.topic || (e.type === "spawn" ? `starts ${e.to}` : e.type === "move" ? `moves to account A as ${e.to}` : e.type === "message" ? `to ${e.to}` : "");
     $("caption").textContent = `${who ? who + ": " : ""}${what}`;
     $("scrub").value = String(Math.round((R / total) * 1000));
     rows.forEach((tr, j) => { tr.className = j < i ? "past" : j === i ? "now" : ""; });
@@ -125,7 +128,8 @@
     for (const e of events) for (const id of [e.agent, e.from, e.to]) if (id && !agents.has(id)) agents.set(id, { id, parent: null, appear: null, commitsAt: [], account: (id.match(/\.([a-z])$/) || [])[1] });
     total = warp(events);
     for (const e of events) {
-      if (e.type === "spawn" && agents.get(e.to).appear === null) agents.get(e.to).appear = e.r;
+      if ((e.type === "spawn" || e.type === "move") && agents.get(e.to).appear === null) agents.get(e.to).appear = e.r;
+      if (e.type === "move") agents.get(e.to).parent = e.from;        // account A body hangs off the C role it replaces
       if (e.type === "commit" && agents.has(e.agent)) agents.get(e.agent).commitsAt.push(e.r);
     }
     layout();
@@ -133,7 +137,7 @@
     for (const e of events) {
       const tr = document.createElement("tr");
       cell(tr, hhmmss(e.ms).slice(0, 8)); cell(tr, e.type); cell(tr, e.agent || e.from); cell(tr, e.to);
-      cell(tr, e.subject || e.note || e.topic || (e.sha ? e.sha : ""));
+      cell(tr, e.subject || e.note || e.topic || (e.type === "move" ? "moves from account C to account A" : e.sha || ""));
       body.appendChild(tr); rows.push(tr);
     }
     update();
@@ -146,7 +150,7 @@
     picked = best; $("detail").hidden = !best; if (!best) return update();
     $("d-name").textContent = best.id;
     const dl = $("d-fields"); dl.replaceChildren();
-    for (const [k, v] of [["started by", best.parent], ["born", best.born], ["wake", best.cron], ["lane asked", (best.lane_requested || []).join(", ")], ["lane granted", (best.lane_granted || []).join(", ") || "none yet"], ["status at snapshot", best.status]]) {
+    for (const [k, v] of [["started by", best.moved_from ? null : best.parent], ["took over from", best.moved_from], ["born", best.born], ["wake", best.cron], ["lane asked", (best.lane_requested || []).join(", ")], ["lane granted", (best.lane_granted || []).join(", ") || "none yet"], ["status at snapshot", best.status]]) {
       if (!v) continue; const dt = document.createElement("dt"), dd = document.createElement("dd"); dt.textContent = k; dd.textContent = v; dl.append(dt, dd);
     }
     const ol = $("d-commits"); ol.replaceChildren();

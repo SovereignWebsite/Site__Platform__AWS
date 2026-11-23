@@ -366,6 +366,123 @@
    "lane_granted": [
     "docs/swarm/**"
    ]
+  },
+  {
+   "id": "billing.aws.a",
+   "session": "session_018yvwtQWFVjgGwshqcKkxUF",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "billing.aws.c"
+  },
+  {
+   "id": "boto3.aws.a",
+   "session": "session_018yvwtPzXKiXmcnoqEAvURG",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "boto3.aws.c"
+  },
+  {
+   "id": "cloudformation.aws.a",
+   "session": "session_018yvwtPgweggdc6AykBpQay",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "cloudformation.aws.c"
+  },
+  {
+   "id": "cloudtrail.aws.a",
+   "session": "session_018yvwtLsVZvQ5dyyKz8ndG2",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "cloudtrail.aws.c"
+  },
+  {
+   "id": "data.aws.a",
+   "session": "session_018yvwtNsU9Ax9WMn2h6EhHU",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "data.aws.c"
+  },
+  {
+   "id": "dev.2.aws.a",
+   "session": "session_018yvwtN79NSkFnwbV7UzFuc",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "dev.2.aws.c"
+  },
+  {
+   "id": "journalist.aws.a",
+   "session": "session_018yvwtMXhiyhhFHKYnwfw3q",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "journalist.aws.c"
+  },
+  {
+   "id": "lambda.aws.a",
+   "session": "session_018yvwtLeVUPVXDaPda9ugLD",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "lambda.aws.c"
+  },
+  {
+   "id": "ontology.aws.a",
+   "session": "session_018yvwtPTqbaais5DzZ2eaws",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "ontology.aws.c"
+  },
+  {
+   "id": "swarm.aws.a",
+   "session": "session_018yvwtMJYhTXmX6uJHBKqgJ",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "swarm.aws.c"
+  },
+  {
+   "id": "ux.aws.a",
+   "session": "session_018yvwtMeymXaphzvsVKJrcU",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "ux.aws.c"
+  },
+  {
+   "id": "vaults.aws.a",
+   "session": "session_018yvwtPEp1ze9LonhajhRdg",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "vaults.aws.c"
+  },
+  {
+   "id": "video.aws.a",
+   "session": "session_018yvwtNxNZuWP542UZVDUTa",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "video.aws.c"
   }
  ],
  "events": [
@@ -374,6 +491,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "9a79e83",
+   "branch": "dev",
    "subject": "docs: memo part 3, journalist and researcher, parity tracker, decision briefs, no blockers overnight",
    "signed": true,
    "files": [
@@ -400,6 +518,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "36a3674",
+   "branch": "dev",
    "subject": "docs/team: stage 1 start prompts and schedule for the AWS Platform programme",
    "signed": true,
    "files": [
@@ -418,6 +537,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "89d8698",
+   "branch": "dev",
    "subject": "Tests in the repository; the keeper may change test/** (site ABP)",
    "signed": true,
    "files": [
@@ -443,6 +563,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "e5f90f5",
+   "branch": "dev",
    "subject": "docs/team: stage 1 fitted to accountant.c's budget; questions for Dinis via pm.aws.c",
    "signed": true,
    "files": [
@@ -479,6 +600,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "ee8259c",
+   "branch": "dev",
    "subject": "docs/team: stage 1 sessions and wakes recorded; team log",
    "signed": true,
    "files": [
@@ -500,6 +622,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "e3d1266",
+   "branch": "dev",
    "subject": "docs/team/log: synthetic-first relayed to architect and s3",
    "signed": true,
    "files": [
@@ -514,6 +637,7 @@
    "type": "commit",
    "agent": "s3.aws.c",
    "sha": "7cc0dd4",
+   "branch": "dev",
    "subject": "docs/s3: first note on the S3 browser, and the next three steps",
    "signed": true,
    "files": [
@@ -534,6 +658,7 @@
    "type": "commit",
    "agent": "s3.aws.c",
    "sha": "4a2cff6",
+   "branch": "dev",
    "subject": "docs/team/log.md: s3.aws.c first wake",
    "signed": true,
    "files": [
@@ -568,6 +693,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "5371ed9",
+   "branch": "dev",
    "subject": "The twin v0: a synthetic AWS in the page, behind one transport",
    "signed": true,
    "files": [
@@ -590,6 +716,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "d4a63b1",
+   "branch": "dev",
    "subject": "docs/board: the AWS Platform board and the decisions page for Dinis (from pm.aws.c)",
    "signed": true,
    "files": [
@@ -613,6 +740,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "d67b560",
+   "branch": "dev",
    "subject": "Template v2.1: the change role can no longer make itself admin (R-001)",
    "signed": true,
    "files": [
@@ -628,6 +756,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "c8cece5",
+   "branch": "dev",
    "subject": "Twin fails closed; the PM's board, pipeline and decisions; s3's addendum",
    "signed": true,
    "files": [
@@ -651,6 +780,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "d1274c7",
+   "branch": "dev",
    "subject": "docs/security: risk register R-001 to R-008 (from security.aws.c); R-003 fixed",
    "signed": true,
    "files": [
@@ -677,6 +807,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "668cea1",
+   "branch": "dev",
    "subject": "docs/architecture: design 01, one transport, two back ends (from architect.aws.c)",
    "signed": true,
    "files": [
@@ -698,6 +829,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "f401359",
+   "branch": "dev",
    "subject": "S3 browser: drop stale answers after a newer click (from s3.aws.c)",
    "signed": true,
    "files": [
@@ -722,6 +854,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "c32279d",
+   "branch": "dev",
    "subject": "site/policy: the AWS team's agents and their paths (Dinis's yes)",
    "signed": true,
    "files": [
@@ -737,6 +870,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "87e7fa2",
+   "branch": "dev",
    "subject": "docs: memo part 4, the twin as the place everything is built",
    "signed": true,
    "files": [
@@ -751,6 +885,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "d686bd0",
+   "branch": "dev",
    "subject": "docs/team: stage 2 at Dinis's word; signing with own keys; budget cap lifted",
    "signed": true,
    "files": [
@@ -767,6 +902,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "4433914",
+   "branch": "dev",
    "subject": "docs/team: sherpa.aws.c and usability first (Dinis, 23 Nov ~03:25 UTC)",
    "signed": true,
    "files": [
@@ -878,6 +1014,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "d49102c",
+   "branch": "dev",
    "subject": "docs/team: swarm.aws.c, the team visualised (Dinis, 23 Nov ~03:30 UTC)",
    "signed": true,
    "files": [
@@ -899,6 +1036,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "2a1278a",
+   "branch": "dev",
    "subject": "docs/team: stage 2 roster with sessions and wakes",
    "signed": true,
    "files": [
@@ -914,6 +1052,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "9f89cc2",
+   "branch": "dev",
    "subject": "docs/team/log: first stage 2 runs; memo part 4 assigned",
    "signed": true,
    "files": [
@@ -945,6 +1084,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "56e0cf1",
+   "branch": "dev",
    "subject": "docs/team/log: more first runs; Amber watch",
    "signed": true,
    "files": [
@@ -959,6 +1099,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "2bdf2e4",
+   "branch": "dev",
    "subject": "docs/team/log: dev.2 first build",
    "signed": true,
    "files": [
@@ -973,6 +1114,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "af80334",
+   "branch": "dev",
    "subject": "docs/team/log: billing first run",
    "signed": true,
    "files": [
@@ -987,6 +1129,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "6ba1f14",
+   "branch": "dev",
    "subject": "docs/team/log: journalist first article",
    "signed": true,
    "files": [
@@ -1012,6 +1155,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "9df0977",
+   "branch": "dev",
    "subject": "docs/team/log: ux design 01",
    "signed": true,
    "files": [
@@ -1050,6 +1194,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "54f8173",
+   "branch": "dev",
    "subject": "docs/team/log: ux and design.c split agreed",
    "signed": true,
    "files": [
@@ -1064,6 +1209,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "6de93d3",
+   "branch": "dev",
    "subject": "Twin: demo packs (normal day, attack in progress, traffic surge)",
    "signed": true,
    "files": [
@@ -1094,6 +1240,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "0439523",
+   "branch": "dev",
    "subject": "docs/team: hand-overs for 16 roles moving to account A; cadences halved on C",
    "signed": true,
    "files": [
@@ -1125,6 +1272,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "b24a5ba",
+   "branch": "dev",
    "subject": "docs/team/handover: open items from boto3, journalist, dev.2, cloudtrail, lambda",
    "signed": true,
    "files": [
@@ -1143,6 +1291,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "4b955d2",
+   "branch": "dev",
    "subject": "docs/team/handover: open items from viz, video, ux, data, cloudformation",
    "signed": true,
    "files": [
@@ -1161,6 +1310,7 @@
    "type": "commit",
    "agent": "pm.aws.c",
    "sha": "b0ca72d",
+   "branch": "dev",
    "subject": "docs/board: 22 owners and first tasks, twin first; decisions down to six",
    "signed": true,
    "files": [
@@ -1178,6 +1328,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "3e0ffdf",
+   "branch": "dev",
    "subject": "docs/team: Red hold on account C until 06:20; vaults and ontology hand-over items",
    "signed": true,
    "files": [
@@ -1194,6 +1345,7 @@
    "type": "commit",
    "agent": "pm.aws.c",
    "sha": "9bd8fdc",
+   "branch": "dev",
    "subject": "docs/board: account C held until after 06:20 UTC (accountant.c RED)",
    "signed": true,
    "files": [
@@ -1209,6 +1361,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "5cc46d7",
+   "branch": "dev",
    "subject": "docs/team/handover: billing and swarm items",
    "signed": true,
    "files": [
@@ -1232,10 +1385,183 @@
    "note": "forecasts RED on C (60% of five-hour in ~2h15m; limit ~05:00 at that rate, reset ~06:20): s3, architect, sherpa held until after 06:20 (07:53, 08:38, 07:19); security 2 h; no new starts on C"
   },
   {
+   "t": "2026-11-23T03:36:19Z",
+   "type": "commit",
+   "agent": "video.aws.a",
+   "sha": "83bcb5c",
+   "branch": "work/video.aws.a",
+   "subject": "docs/team: video.aws.a key bundle and first note to account C",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/video.aws.a.md",
+    "docs/team/keys/video.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:36:19Z",
+   "type": "move",
+   "from": "video.aws.c",
+   "to": "video.aws.a",
+   "source": "docs/team/handover/video.aws.md"
+  },
+  {
+   "t": "2026-11-23T03:36:30Z",
+   "type": "commit",
+   "agent": "cloudformation.aws.a",
+   "sha": "2560137",
+   "branch": "work/cloudformation.aws.a",
+   "subject": "cloudformation.aws.a: public key bundle and first lines for account C",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/cloudformation.aws.a.md",
+    "docs/team/keys/cloudformation.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:36:30Z",
+   "type": "move",
+   "from": "cloudformation.aws.c",
+   "to": "cloudformation.aws.a",
+   "source": "docs/team/handover/cloudformation.aws.md"
+  },
+  {
+   "t": "2026-11-23T03:36:32Z",
+   "type": "commit",
+   "agent": "vaults.aws.a",
+   "sha": "92b80b7",
+   "branch": "work/vaults.aws.a",
+   "subject": "vaults.aws.a: public key bundle and first lines to account C",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/vaults.aws.a.md",
+    "docs/team/keys/vaults.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:36:32Z",
+   "type": "move",
+   "from": "vaults.aws.c",
+   "to": "vaults.aws.a",
+   "source": "docs/team/handover/vaults.aws.md"
+  },
+  {
+   "t": "2026-11-23T03:36:34Z",
+   "type": "commit",
+   "agent": "ontology.aws.a",
+   "sha": "9d4dd91",
+   "branch": "work/ontology.aws.a",
+   "subject": "docs/team: ontology.aws.a key bundle and first note to account C",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/ontology.aws.a.md",
+    "docs/team/keys/ontology.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:36:34Z",
+   "type": "move",
+   "from": "ontology.aws.c",
+   "to": "ontology.aws.a",
+   "source": "docs/team/handover/ontology.aws.md"
+  },
+  {
+   "t": "2026-11-23T03:36:35Z",
+   "type": "commit",
+   "agent": "data.aws.a",
+   "sha": "aa5dde2",
+   "branch": "work/data.aws.a",
+   "subject": "docs/team: data.aws.a key bundle and first requests to account C",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/data.aws.a.md",
+    "docs/team/keys/data.aws.a.factory-entry.json",
+    "docs/team/keys/data.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:36:35Z",
+   "type": "move",
+   "from": "data.aws.c",
+   "to": "data.aws.a",
+   "source": "docs/team/handover/data.aws.md"
+  },
+  {
+   "t": "2026-11-23T03:37:40Z",
+   "type": "commit",
+   "agent": "cloudtrail.aws.a",
+   "sha": "8138416",
+   "branch": "work/cloudtrail.aws.a",
+   "subject": "docs/cloudtrail: first note on account A; key bundle and requests to account C",
+   "signed": true,
+   "files": [
+    "docs/cloudtrail/2026-11-23__01-first-note.md",
+    "docs/team/from-a/cloudtrail.aws.a.md",
+    "docs/team/keys/cloudtrail.aws.a.json"
+   ],
+   "lanes_touched": [
+    "cloudtrail.aws.c",
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:37:40Z",
+   "type": "move",
+   "from": "cloudtrail.aws.c",
+   "to": "cloudtrail.aws.a",
+   "source": "docs/team/handover/cloudtrail.aws.md"
+  },
+  {
+   "t": "2026-11-23T03:37:55Z",
+   "type": "commit",
+   "agent": "swarm.aws.a",
+   "sha": "e302781",
+   "branch": "work/swarm.aws.a",
+   "subject": "docs/swarm: extractor rebuilt on account A; swarm.aws.a key and notes to account C",
+   "signed": true,
+   "files": [
+    "docs/swarm/README.md",
+    "docs/swarm/__pycache__/extract.cpython-313.pyc",
+    "docs/swarm/__pycache__/test_extract.cpython-313.pyc",
+    "docs/swarm/agents.json",
+    "docs/swarm/events.jsonl",
+    "docs/swarm/extract.py",
+    "docs/swarm/test_extract.py",
+    "docs/team/from-a/swarm.aws.a.md",
+    "docs/team/keys/swarm.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "swarm.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:37:55Z",
+   "type": "move",
+   "from": "swarm.aws.c",
+   "to": "swarm.aws.a",
+   "source": "docs/team/handover/swarm.aws.md"
+  },
+  {
    "t": "2026-11-23T03:38:51Z",
    "type": "commit",
    "agent": "aws.c",
    "sha": "62ec2d9",
+   "branch": "dev",
    "subject": "site/policy: docs folders for the 15 stage 2 agents (Dinis's yes)",
    "signed": true,
    "files": [
@@ -1251,6 +1577,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "063967d",
+   "branch": "dev",
    "subject": "zip: read the index from the tail already fetched when it is there",
    "signed": true,
    "files": [
@@ -1266,6 +1593,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "787735b",
+   "branch": "dev",
    "subject": "Twin: usability first, and S3 answers as AWS documents them",
    "signed": true,
    "files": [
@@ -1287,6 +1615,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "78d73b0",
+   "branch": "dev",
    "subject": "docs/team/handover: aws.c's 03:50 landing and first twin tasks for the .a agents",
    "signed": true,
    "files": [
@@ -1312,10 +1641,57 @@
    ]
   },
   {
+   "t": "2026-11-23T03:39:49Z",
+   "type": "commit",
+   "agent": "dev.2.aws.a",
+   "sha": "d7addc2",
+   "branch": "work/dev.2.aws.a",
+   "subject": "dev.2.aws.a: key bundle, S3Api OpenAPI contract and its test",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/dev.2.aws.a.md",
+    "docs/team/keys/dev.2.aws.a.json",
+    "site/api/s3.openapi.json",
+    "test/api/openapi.test.mjs"
+   ],
+   "lanes_touched": [
+    "architect.aws.c",
+    "conductor.aws.c",
+    "keeper"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:39:49Z",
+   "type": "move",
+   "from": "dev.2.aws.c",
+   "to": "dev.2.aws.a",
+   "source": "docs/team/handover/dev.2.aws.md"
+  },
+  {
+   "t": "2026-11-23T03:40:05Z",
+   "type": "commit",
+   "agent": "dev.2.aws.a",
+   "sha": "b934f50",
+   "branch": "work/dev.2.aws.a",
+   "subject": "dev.2.aws.a: S3 contract documents 416 InvalidRange, as the twin answers",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/dev.2.aws.a.md",
+    "site/api/s3.openapi.json",
+    "test/api/openapi.test.mjs"
+   ],
+   "lanes_touched": [
+    "architect.aws.c",
+    "conductor.aws.c",
+    "keeper"
+   ]
+  },
+  {
    "t": "2026-11-23T03:43:25Z",
    "type": "commit",
    "agent": "aws.c",
    "sha": "7b03e1b",
+   "branch": "dev",
    "subject": "docs/cloudtrail: first note (from cloudtrail.aws.c)",
    "signed": true,
    "files": [
@@ -1337,6 +1713,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "d08c3d2",
+   "branch": "dev",
    "subject": "docs/boto3: S3 from Boto3 to the browser (from boto3.aws.c)",
    "signed": true,
    "files": [
@@ -1358,6 +1735,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "360843b",
+   "branch": "dev",
    "subject": "docs/journal: README, parity tracker, first article (from journalist.aws.c)",
    "signed": true,
    "files": [
@@ -1381,6 +1759,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "db6cbbe",
+   "branch": "dev",
    "subject": "docs/video: README and the twin v0 narrative plan (from video.aws.c)",
    "signed": true,
    "files": [
@@ -1403,6 +1782,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "3cb7024",
+   "branch": "dev",
    "subject": "docs/cloudformation: first note (from cloudformation.aws.c)",
    "signed": true,
    "files": [
@@ -1424,6 +1804,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "8ea5151",
+   "branch": "dev",
    "subject": "docs/viz: storyboard 01, follow the packet (from viz.aws.c)",
    "signed": true,
    "files": [
@@ -1445,6 +1826,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "f48094f",
+   "branch": "dev",
    "subject": "docs/data: extract workflow, first design (from data.aws.c)",
    "signed": true,
    "files": [
@@ -1466,6 +1848,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "c9db399",
+   "branch": "dev",
    "subject": "docs/design: five consoles and the S3 browser's next level (from ux.aws.c)",
    "signed": true,
    "files": [
@@ -1487,6 +1870,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "f569b19",
+   "branch": "dev",
    "subject": "docs/vaults: three vaults and the capture store, design 01 (from vaults.aws.c)",
    "signed": true,
    "files": [
@@ -1508,6 +1892,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "b20b765",
+   "branch": "dev",
    "subject": "docs/ontology: resource ontology and twin graph (from ontology.aws.c)",
    "signed": true,
    "files": [
@@ -1530,6 +1915,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "151d342",
+   "branch": "dev",
    "subject": "docs/swarm: data model, extractor and storyboard (from swarm.aws.c)",
    "signed": true,
    "files": [
@@ -1557,6 +1943,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "86da1ce",
+   "branch": "dev",
    "subject": "docs/billing: price book v1, twin estimate and checks (from billing.aws.c)",
    "signed": true,
    "files": [
@@ -1581,6 +1968,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "8ba4906",
+   "branch": "dev",
    "subject": "docs/security: third review, e5f90f5..9df0977 (from security.aws.c)",
    "signed": true,
    "files": [
@@ -1603,6 +1991,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "774fc03",
+   "branch": "dev",
    "subject": "S3Api: the S3 browser's calls as plain objects, with a contract test over the twin",
    "signed": true,
    "files": [
@@ -1619,6 +2008,7 @@
    "type": "commit",
    "agent": "aws.c",
    "sha": "4a972d7",
+   "branch": "dev",
    "subject": "Security R-011, R-012, R-013: twin by link, YAML diffs, credential follow-ups",
    "signed": true,
    "files": [
@@ -1637,6 +2027,7 @@
    "type": "commit",
    "agent": "conductor.aws.c",
    "sha": "003976e",
+   "branch": "dev",
    "subject": "docs/team/handover: all hand-overs landed by aws.c; iam held, dev.1 empty",
    "signed": true,
    "files": [
@@ -1660,10 +2051,553 @@
    "lanes_touched": [
     "conductor.aws.c"
    ]
+  },
+  {
+   "t": "2026-11-23T03:46:43Z",
+   "type": "commit",
+   "agent": "ux.aws.a",
+   "sha": "5c193ed",
+   "branch": "work/ux.aws.a",
+   "subject": "docs/team: ux.aws.a key bundle and first requests to account C",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/ux.aws.a.md",
+    "docs/team/keys/ux.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:46:43Z",
+   "type": "move",
+   "from": "ux.aws.c",
+   "to": "ux.aws.a",
+   "source": "docs/team/handover/ux.aws.md"
+  },
+  {
+   "t": "2026-11-23T03:48:07Z",
+   "type": "commit",
+   "agent": "ux.aws.a",
+   "sha": "a6d082d",
+   "branch": "work/ux.aws.a",
+   "subject": "docs/design: design 02, one Try the twin link pattern (TW-2)",
+   "signed": true,
+   "files": [
+    "docs/design/2026-11-23__02-try-the-twin-link-pattern.md",
+    "docs/team/from-a/ux.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "ux.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:56:46Z",
+   "type": "commit",
+   "agent": "billing.aws.a",
+   "sha": "036fac2",
+   "branch": "work/billing.aws.a",
+   "subject": "docs/team: billing.aws.a key bundle and first note to account C",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/billing.aws.a.md",
+    "docs/team/keys/billing.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:56:46Z",
+   "type": "move",
+   "from": "billing.aws.c",
+   "to": "billing.aws.a",
+   "source": "docs/team/handover/billing.aws.md"
+  },
+  {
+   "t": "2026-11-23T03:58:10Z",
+   "type": "commit",
+   "agent": "billing.aws.a",
+   "sha": "c38ac3f",
+   "branch": "work/billing.aws.a",
+   "subject": "docs/billing: monthly forecast from the twin with cited free tiers, and tests",
+   "signed": true,
+   "files": [
+    "docs/billing/README.md",
+    "docs/billing/forecast.mjs",
+    "docs/billing/forecast.test.mjs",
+    "docs/team/from-a/billing.aws.a.md"
+   ],
+   "lanes_touched": [
+    "billing.aws.c",
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:04:29Z",
+   "type": "commit",
+   "agent": "video.aws.a",
+   "sha": "d77bad3",
+   "branch": "work/video.aws.a",
+   "subject": "docs/team: video.aws.a key bundle and first note to account C",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/video.aws.a.md",
+    "docs/team/keys/video.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:06:29Z",
+   "type": "commit",
+   "agent": "journalist.aws.a",
+   "sha": "7e907fc",
+   "branch": "work/journalist.aws.a",
+   "subject": "docs/team: journalist.aws.a key bundle and first note to account C",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/journalist.aws.a.md",
+    "docs/team/keys/journalist.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:06:29Z",
+   "type": "move",
+   "from": "journalist.aws.c",
+   "to": "journalist.aws.a",
+   "source": "docs/team/handover/journalist.aws.md"
+  },
+  {
+   "t": "2026-11-23T04:07:04Z",
+   "type": "commit",
+   "agent": "video.aws.a",
+   "sha": "4220426",
+   "branch": "work/video.aws.a",
+   "subject": "docs/video: capture script and seven twin v0 captures, 1080x1010, masked",
+   "signed": true,
+   "files": [
+    "docs/video/capture-twin-v0.js",
+    "docs/video/twin-v0/b1.png",
+    "docs/video/twin-v0/b2.png",
+    "docs/video/twin-v0/b3.png",
+    "docs/video/twin-v0/b4.png",
+    "docs/video/twin-v0/b5.png",
+    "docs/video/twin-v0/b6.png",
+    "docs/video/twin-v0/b7.png"
+   ],
+   "lanes_touched": [
+    "video.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:07:27Z",
+   "type": "commit",
+   "agent": "journalist.aws.a",
+   "sha": "019d3f1",
+   "branch": "work/journalist.aws.a",
+   "subject": "docs/journal: zip figures measured again after 063967d; 93 bytes, not 63",
+   "signed": true,
+   "files": [
+    "docs/journal/README.md",
+    "docs/journal/articles/2026-11-23__look-inside-a-zip-without-downloading-it.md",
+    "docs/journal/parity.md",
+    "docs/team/from-a/journalist.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "journalist.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:07:47Z",
+   "type": "commit",
+   "agent": "video.aws.a",
+   "sha": "54b80e7",
+   "branch": "work/video.aws.a",
+   "subject": "docs/video: twin v0 storyboard for studio.c, plan and README updated",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/video.aws.a.md",
+    "docs/video/2026-11-23__twin-v0-narrative-plan.md",
+    "docs/video/README.md",
+    "docs/video/twin-v0.storyboard.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "video.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:15:12Z",
+   "type": "commit",
+   "agent": "ontology.aws.a",
+   "sha": "d08ca3e",
+   "branch": "work/ontology.aws.a",
+   "subject": "docs/ontology: generate twin-graph.json from the twin; draft 01.1",
+   "signed": true,
+   "files": [
+    "docs/ontology/2026-11-23__01-resource-ontology.md",
+    "docs/ontology/build-twin-graph.mjs",
+    "docs/ontology/twin-graph.json",
+    "docs/team/from-a/ontology.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "ontology.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:22:05Z",
+   "type": "commit",
+   "agent": "lambda.aws.a",
+   "sha": "d2d8df5",
+   "branch": "work/lambda.aws.a",
+   "subject": "docs/lambda: first note on account A; key bundle and requests to account C",
+   "signed": true,
+   "files": [
+    "docs/lambda/2026-11-23__first-note.md",
+    "docs/team/from-a/lambda.aws.a.md",
+    "docs/team/keys/lambda.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "lambda.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:22:05Z",
+   "type": "move",
+   "from": "lambda.aws.c",
+   "to": "lambda.aws.a",
+   "source": "docs/team/handover/lambda.aws.md"
+  },
+  {
+   "t": "2026-11-23T04:24:38Z",
+   "type": "commit",
+   "agent": "lambda.aws.a",
+   "sha": "5f6f3eb",
+   "branch": "work/lambda.aws.a",
+   "subject": "Twin: Lambda and Firehose read calls, with a test",
+   "signed": true,
+   "files": [
+    "docs/lambda/status.md",
+    "docs/team/from-a/lambda.aws.a.md",
+    "site/twin.js",
+    "test/README.md",
+    "test/twin.e2e.cjs",
+    "test/twin/lambda-firehose.test.mjs"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "keeper",
+    "lambda.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:27:00Z",
+   "type": "commit",
+   "agent": "cloudformation.aws.a",
+   "sha": "9c38c23",
+   "branch": "work/cloudformation.aws.a",
+   "subject": "docs/cloudformation: reads the read role already grants, Route 53 region, CORS open",
+   "signed": true,
+   "files": [
+    "docs/cloudformation/2026-11-23__reads-and-cors.md",
+    "docs/team/from-a/cloudformation.aws.a.md"
+   ],
+   "lanes_touched": [
+    "cloudformation.aws.c",
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:27:01Z",
+   "type": "commit",
+   "agent": "vaults.aws.a",
+   "sha": "1620de3",
+   "branch": "work/vaults.aws.a",
+   "subject": "docs/vaults: design 02, the vault twin's contract",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/vaults.aws.a.md",
+    "docs/vaults/2026-11-23__02-vault-twin-contract.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "vaults.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:27:15Z",
+   "type": "commit",
+   "agent": "dev.2.aws.a",
+   "sha": "0f78e6e",
+   "branch": "work/dev.2.aws.a",
+   "subject": "dev.2.aws.a: S3 contract matches S3Api as landed (774fc03)",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/dev.2.aws.a.md",
+    "site/api/s3.openapi.json",
+    "test/api/openapi.test.mjs"
+   ],
+   "lanes_touched": [
+    "architect.aws.c",
+    "conductor.aws.c",
+    "keeper"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:27:57Z",
+   "type": "commit",
+   "agent": "data.aws.a",
+   "sha": "e459879",
+   "branch": "work/data.aws.a",
+   "subject": "data: EX-1 extract module (discover, read, normalise, summarise) with tests on the twin's three packs",
+   "signed": true,
+   "files": [
+    "docs/data/status.md",
+    "docs/team/from-a/data.aws.a.md",
+    "site/data/extract.js",
+    "test/data/extract.test.mjs"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "data.aws.c",
+    "keeper"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:28:50Z",
+   "type": "commit",
+   "agent": "cloudtrail.aws.a",
+   "sha": "f42f516",
+   "branch": "work/cloudtrail.aws.a",
+   "subject": "docs/cloudtrail: one first note; patch for a trail record on each twin change",
+   "signed": true,
+   "files": [
+    "docs/cloudtrail/2026-11-23__01-first-note.md",
+    "docs/cloudtrail/2026-11-23__first-note.md",
+    "docs/cloudtrail/patches/2026-11-23__01-live-trail.patch",
+    "docs/team/from-a/cloudtrail.aws.a.md"
+   ],
+   "lanes_touched": [
+    "cloudtrail.aws.c",
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:29:25Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "1be7f7f",
+   "branch": "dev",
+   "subject": "docs/security: 04:28 review; R-011, R-012 and R-013 (a, b) closed (from security.aws.c)",
+   "signed": true,
+   "files": [
+    "docs/security/last-reviewed.txt",
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:29:25Z",
+   "type": "handoff",
+   "from": "security.aws.c",
+   "to": "aws.c",
+   "sha": "1be7f7f"
+  },
+  {
+   "t": "2026-11-23T04:32:24Z",
+   "type": "commit",
+   "agent": "cloudtrail.aws.a",
+   "sha": "0f058c0",
+   "branch": "work/cloudtrail.aws.a",
+   "subject": "docs/cloudtrail: the event shape every view reads; fix wrong times",
+   "signed": true,
+   "files": [
+    "docs/cloudtrail/2026-11-23__02-event-shape.md",
+    "docs/cloudtrail/2026-11-23__first-note.md",
+    "docs/team/from-a/cloudtrail.aws.a.md"
+   ],
+   "lanes_touched": [
+    "cloudtrail.aws.c",
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:32:32Z",
+   "type": "commit",
+   "agent": "cloudtrail.aws.a",
+   "sha": "d0532f7",
+   "branch": "work/cloudtrail.aws.a",
+   "subject": "docs/team/from-a: cloudtrail.aws.a line times (04:32Z)",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/cloudtrail.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:37:07Z",
+   "type": "commit",
+   "agent": "swarm.aws.a",
+   "sha": "d790a49",
+   "branch": "work/swarm.aws.a",
+   "subject": "docs/swarm/view: first replay view over replay.json, not deployed",
+   "signed": true,
+   "files": [
+    "docs/swarm/README.md",
+    "docs/swarm/view/index.html",
+    "docs/swarm/view/view.css",
+    "docs/swarm/view/view.js",
+    "docs/team/from-a/swarm.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "swarm.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:41:28Z",
+   "type": "commit",
+   "agent": "boto3.aws.a",
+   "sha": "b901743",
+   "branch": "work/boto3.aws.a",
+   "subject": "docs/team: boto3.aws.a key bundle and first note to account C",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/boto3.aws.a.md",
+    "docs/team/keys/boto3.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:41:28Z",
+   "type": "move",
+   "from": "boto3.aws.c",
+   "to": "boto3.aws.a",
+   "source": "docs/team/handover/boto3.aws.md"
+  },
+  {
+   "t": "2026-11-23T04:41:29Z",
+   "type": "commit",
+   "agent": "boto3.aws.a",
+   "sha": "101fe19",
+   "branch": "work/boto3.aws.a",
+   "subject": "docs/team/from-a: boto3.aws.a correction, C work is on dev",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/boto3.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:43:22Z",
+   "type": "commit",
+   "agent": "boto3.aws.a",
+   "sha": "d2f7932",
+   "branch": "work/boto3.aws.a",
+   "subject": "docs/boto3: Cloud Control AWS::S3::Bucket handler permissions; S3 map item 1 answered",
+   "signed": true,
+   "files": [
+    "docs/boto3/2026-11-23__01-s3-map.md",
+    "docs/boto3/2026-11-23__02-cloud-control-s3-handlers.md",
+    "docs/team/from-a/boto3.aws.a.md"
+   ],
+   "lanes_touched": [
+    "boto3.aws.c",
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T04:54:07Z",
+   "type": "commit",
+   "agent": "data.aws.a",
+   "sha": "ed1ddb8",
+   "branch": "work/data.aws.a",
+   "subject": "data: Summarise these logs view (headline, hour strip with gaps, vault cards, link mode) with a Chromium test on the twin",
+   "signed": true,
+   "files": [
+    "docs/data/status.md",
+    "docs/team/from-a/data.aws.a.md",
+    "site/data/view.js",
+    "test/data/view.e2e.cjs",
+    "test/data/view.fixture.html",
+    "test/data/view.fixture.js"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "data.aws.c",
+    "keeper"
+   ]
+  },
+  {
+   "t": "2026-11-23T05:07:19Z",
+   "type": "commit",
+   "agent": "journalist.aws.a",
+   "sha": "755edd5",
+   "branch": "work/journalist.aws.a",
+   "subject": "docs/journal: parity evidence lines checked against dev at 1be7f7f",
+   "signed": true,
+   "files": [
+    "docs/journal/parity.md",
+    "docs/team/from-a/journalist.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "journalist.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T05:27:42Z",
+   "type": "commit",
+   "agent": "cloudformation.aws.a",
+   "sha": "d17c647",
+   "branch": "work/cloudformation.aws.a",
+   "subject": "docs/cloudformation: twin seed (four stacks, one zone) and read API sketch",
+   "signed": true,
+   "files": [
+    "docs/cloudformation/2026-11-23__seed-and-read-api.md",
+    "docs/cloudformation/seed/cloudformation.json",
+    "docs/cloudformation/seed/route53.json",
+    "docs/team/from-a/cloudformation.aws.a.md"
+   ],
+   "lanes_touched": [
+    "cloudformation.aws.c",
+    "conductor.aws.c"
+   ]
   }
  ],
  "sources": [
   "git origin/dev",
+  "git origin/work/billing.aws.a",
+  "git origin/work/boto3.aws.a",
+  "git origin/work/cloudformation.aws.a",
+  "git origin/work/cloudtrail.aws.a",
+  "git origin/work/data.aws.a",
+  "git origin/work/dev.2.aws.a",
+  "git origin/work/journalist.aws.a",
+  "git origin/work/lambda.aws.a",
+  "git origin/work/ontology.aws.a",
+  "git origin/work/swarm.aws.a",
+  "git origin/work/ux.aws.a",
+  "git origin/work/vaults.aws.a",
+  "git origin/work/video.aws.a",
+  "docs/team/handover/",
   "docs/team/schedule.json",
   "docs/team/log.md",
   "site/policy/abp.json",

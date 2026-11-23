@@ -64,10 +64,18 @@ def git(*args):
     return subprocess.run(["git", "-C", str(ROOT), *args], capture_output=True, text=True, check=True).stdout
 
 
-def commits(since):
+def work_branches():
+    """The account A agents' own branches (origin/work/<role>.aws.a), public like dev."""
+    refs = git("for-each-ref", "--format=%(refname:short)", "refs/remotes/origin/work/").split()
+    return sorted(r for r in refs if re.fullmatch(r"origin/work/[\w.]+\.aws\.a", r))
+
+
+def commits(since, ref="origin/dev"):
+    """Commits on dev, or on a work branch: only those not on dev, merges left out."""
     sep = "\x1e"
     fmt = sep + "%H%x1f%h%x1f%cI%x1f%s%x1f%(trailers:key=Agent,valueonly,separator=;)%x1f%(trailers:key=Claude-Session,valueonly,separator=;)"
-    raw = git("log", "--reverse", f"--since={since}", f"--format={fmt}", "--name-only", "origin/dev")
+    span = [ref] if ref == "origin/dev" else ["--no-merges", f"origin/dev..{ref}"]
+    raw = git("log", "--reverse", f"--since={since}", f"--format={fmt}", "--name-only", *span)
     for block in raw.split(sep)[1:]:
         head, _, files = block.partition("\n")
         full, sha, at, subject, agent, sess = head.split("\x1f")
@@ -77,7 +85,7 @@ def commits(since):
             "sha": sha, "at": at.replace("+00:00", "Z"), "subject": subject,
             "agent": short(agent), "session": sess.rsplit("/", 1)[-1] or None,
             "signed": signed, "files": [f for f in files.split("\n") if f],
-            "on_behalf_of": m.group(1) if m else None,
+            "on_behalf_of": m.group(1) if m else None, "branch": ref.replace("origin/", ""),
         }
 
 
@@ -114,22 +122,37 @@ def main():
         if a.get("born") and a["born"] >= since.replace("Z", ""):
             events.append({"t": a["born"], "type": "spawn", "from": a["parent"], "to": a["id"]})
     lanes = {k: [g.replace("**", "*") for g in v] for k, v in granted.items()}
-    for c in commits(since):
-        events.append({"t": c["at"], "type": "commit", "agent": c["agent"], "sha": c["sha"],
-                       "subject": c["subject"], "signed": c["signed"], "files": c["files"],
-                       "lanes_touched": sorted({lane_of(f, lanes) or "keeper" for f in c["files"]})})
+    branches = work_branches()
+    movers = {p.stem for p in (ROOT / "docs/team/handover").glob("*.aws.md")}      # e.g. swarm.aws: roles moving C to A
+    for ref in ["origin/dev", *branches]:
+        for c in commits(since, ref):
+            events.append({"t": c["at"], "type": "commit", "agent": c["agent"], "sha": c["sha"], "branch": c["branch"],
+                           "subject": c["subject"], "signed": c["signed"], "files": c["files"],
+                           "lanes_touched": sorted({lane_of(f, lanes) or "keeper" for f in c["files"]})})
+            if c["agent"] and c["agent"] not in agents:              # an agent seen only in git: its first commit
+                role = c["agent"][:-2]
+                agents[c["agent"]] = {"id": c["agent"], "session": c["session"], "parent": None, "born": None,
+                                      "programme": "aws.c", "account": account(c["agent"]),
+                                      "moved_from": f"{role}.c" if account(c["agent"]) == "a" and role in movers else None}
+            if c["on_behalf_of"]:
+                events.append({"t": c["at"], "type": "handoff", "from": c["on_behalf_of"], "to": c["agent"], "sha": c["sha"]})
+    for a in agents.values():                                        # scene 8: the role jumps from account C to account A
+        if a.get("moved_from"):
+            first = min(e["t"] for e in events if e.get("agent") == a["id"])
+            events.append({"t": first, "type": "move", "from": a["moved_from"], "to": a["id"],
+                           "source": f"docs/team/handover/{a['id'][:-2]}.md"})
         if c["on_behalf_of"]:
             events.append({"t": c["at"], "type": "handoff", "from": c["on_behalf_of"], "to": c["agent"], "sha": c["sha"]})
     events += log_events((ROOT / "docs/team/log.md").read_text())
     events.sort(key=lambda e: e["t"])
     out = {"schema": "swarm-replay/0.1", "since": since, "agents": sorted(agents.values(), key=lambda a: a.get("born") or "9"),
            "events": events,
-           "sources": ["git origin/dev", "docs/team/schedule.json", "docs/team/log.md", "site/policy/abp.json", "docs/swarm/data/sessions-snapshot.json"]}
+           "sources": ["git origin/dev", *[f"git {b}" for b in branches], "docs/team/handover/", "docs/team/schedule.json", "docs/team/log.md", "site/policy/abp.json", "docs/swarm/data/sessions-snapshot.json"]}
     OUT.write_text(json.dumps(out, indent=1) + "\n")
     # The same events in the wire's line schema (maestro.c's proposal,
     # PrompTugal__News__Website board/team/maestro.c/analysis/2026-11-23-the-wire/),
     # fields as relayed by conductor.aws.c; values for kind and channel are ours until checked.
-    chan = {"commit": "git", "handoff": "git", "spawn": "session", "wake": "team-log", "message": "team-log", "note": "team-log"}
+    chan = {"commit": "git", "handoff": "git", "spawn": "session", "wake": "team-log", "message": "team-log", "note": "team-log", "move": "handover"}
     with (ROOT / "docs/swarm/events.jsonl").open("w") as f:
         for e in events:
             f.write(json.dumps({
@@ -137,7 +160,7 @@ def main():
                 "account_from": account(e.get("from") or e.get("agent")), "account_to": account(e.get("to")) if e.get("to") else None,
                 "channel": chan[e["type"]], "kind": e["type"],
                 "text": e.get("subject") or e.get("note") or e.get("topic"), "hash": e.get("sha"),
-                "source": e.get("source") or {"git": "git origin/dev", "session": "sessions-snapshot.json"}.get(chan[e["type"]], "docs/team/log.md"),
+                "source": e.get("source") or {"git": f"git {e.get('branch', 'dev')}", "session": "sessions-snapshot.json"}.get(chan[e["type"]], "docs/team/log.md"),
                 "signed_by": e.get("agent") if e.get("signed") else None,
                 "visibility": "public"}) + "\n")
     print(f"{len(out['agents'])} agents, {len(events)} events -> {OUT.relative_to(ROOT)}")
