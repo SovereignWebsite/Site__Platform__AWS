@@ -9,7 +9,7 @@ const ctx = {
   TextEncoder, TextDecoder, Uint8Array, Uint32Array, DataView, ArrayBuffer, Blob, Response, Headers, URL, URLSearchParams,
   CompressionStream, DecompressionStream, Promise, Error, TypeError, JSON, Date, Math, Number, String, RegExp, Object, Array,
   setTimeout, crypto: globalThis.crypto, console,
-  location: { search: "?twin" },
+  location: { search: "?twin", origin: "https://example.test" },
   localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
   fetch: () => { throw new Error("a request left the page"); } // twin mode must never call the network
 };
@@ -58,6 +58,13 @@ ok(site.name === B.site && site.region === "eu-west-2" && site.cors === null, "g
 try { await api.listObjects(B.site, site.region); fail("listObjects without CORS should fail"); }
 catch (e) { ok(e instanceof TypeError && /Failed to fetch/.test(e.message), "CORS failure passes through: " + e); }
 
+const sortKeys = (v) => JSON.stringify(v, (k, x) => x && typeof x === "object" && !Array.isArray(x) ? Object.fromEntries(Object.entries(x).sort()) : x);
+// A bucket seeded with the site's full rule: S3's XML (ID, ExposeHeader, MaxAgeSeconds) reads back as Cloud Control's shape.
+const logsRegion = (await api.getBucket(B.logs)).region;
+const seededCors = await api.getBucketCors(B.logs, logsRegion);
+ok(sortKeys(seededCors) === sortKeys((await api.getBucket(B.logs)).cors) && seededCors.CorsRules[0].Id === "sws-aws-platform" && seededCors.CorsRules[0].MaxAge === 3000,
+  "getBucketCors full seeded rule " + JSON.stringify(seededCors));
+
 // Give the twin's buckets a CORS rule (what Approve does on the plan), with the change role, outside S3Api.
 const change = sender(await assume("sws-aws-platform-change"));
 for (const b of Object.values(B)) {
@@ -68,6 +75,14 @@ for (const b of Object.values(B)) {
   ok(r.ok, "CORS set on " + b);
 }
 ok((await api.getBucket(B.site)).cors.CorsRules[0].AllowedMethods.join() === "GET,HEAD", "getBucket shows CORS");
+
+// getBucketCors: S3 GetBucketCors, for a bucket already reachable; the same rules getBucket shows.
+const corsS3 = await api.getBucketCors(B.site, "eu-west-2");
+ok(sortKeys(corsS3) === sortKeys((await api.getBucket(B.site)).cors), "getBucketCors matches getBucket " + JSON.stringify(corsS3));
+const creq = seen[seen.length - 2];
+ok(creq.service === "s3" && creq.method === "GET" && /^https:\/\/[^/]+\.s3\.eu-west-2\.amazonaws\.com\/\?cors$/.test(creq.url), "GetBucketCors url " + creq.url);
+const creqTail = seen[seen.length - 1];
+ok(creqTail.headers["x-amz-target"] === "CloudApiService.GetResource", "getBucket came after GetBucketCors");
 
 // Folders and files at the root and under a prefix.
 const root = await api.listObjects(B.site, "eu-west-2");
@@ -120,7 +135,19 @@ ok(decodeURIComponent(sentPath.slice(1)) === oddKey, "odd key path decodes back 
 // Pure parts: URLs (path form for dotted names) and XML paging fields, against a fixed answer shaped like
 // the ListObjectsV2 example in AWS's S3 API reference.
 ok(S3Api.bucketUrl("a.b", "eu-west-1", "x y/z(1)", "") === "https://s3.eu-west-1.amazonaws.com/a.b/x%20y/z%281%29", "dotted bucket path form");
-ok(S3Api.bucketUrl("ab", "eu-west-1", "", "?list-type=2") === "https://ab.s3.eu-west-1.amazonaws.com/?list-type=2", "virtual-host form");
+ok(S3Api.bucketUrl("abc", "eu-west-1", "", "?list-type=2") === "https://abc.s3.eu-west-1.amazonaws.com/?list-type=2", "virtual-host form");
+// Names and regions go into a signed host: anything that is not one is refused before a request is made (security R-019).
+for (const [b, r] of [["ab", "eu-west-1"], ["evil.com/x", "eu-west-1"], ["Upper", "eu-west-1"], ["abc", "eu-west-1.evil.com"], ["abc", "../x"]]) {
+  let threw = false; try { S3Api.bucketUrl(b, r, "", ""); } catch (e) { threw = e instanceof TypeError; }
+  ok(threw, "refused " + b + " in " + r);
+}
+let calls = 0; const counting = S3Api(async () => { calls++; return new Response("", { status: 200 }); });
+for (const f of [() => counting.listObjects("abc", "evil.com"), () => counting.getObject("x/y", "eu-west-1", "k"), () => counting.getBucketCors("abc", "")]) {
+  try { await f(); fail("should reject"); } catch (e) { ok(e instanceof TypeError, "rejects " + e.message); }
+}
+ok(calls === 0, "no request made for a bad name or region");
+const big = S3Api(async () => new Response("<ListBucketResult><IsTruncated>false</IsTruncated><Contents><Key>a&#x110000;b&#99999999999;c</Key><Size>1</Size></Contents></ListBucketResult>", { status: 200 }));
+ok((await big.listObjects("abc", "eu-west-1")).files[0].key === "a&#x110000;b&#99999999999;c", "out-of-range entities stay as text");
 const paged = S3Api(async () => new Response(
   "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ListBucketResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\"><Name>bucket</Name><Prefix/><KeyCount>2</KeyCount>" +
   "<MaxKeys>2</MaxKeys><IsTruncated>true</IsTruncated><NextContinuationToken>1ueGcxLPRx1Tr/XYExHnhbYLgveDs2J/wm36Hy4vbOwM=</NextContinuationToken>" +
@@ -130,6 +157,18 @@ const paged = S3Api(async () => new Response(
 const pg = await paged.listObjects("bucket", "us-east-1", { maxKeys: 2 });
 ok(pg.next === "1ueGcxLPRx1Tr/XYExHnhbYLgveDs2J/wm36Hy4vbOwM=", "NextContinuationToken " + pg.next);
 ok(pg.files.map((f) => f.key).join("|") === "happy&face.jpg|café.txt" && pg.files[1].size === 1111, "entities decoded " + JSON.stringify(pg.files));
+
+// GetBucketCors parsing: entities, several rules, optional fields; NoSuchCORSConfiguration reads as null.
+const corsXml = S3Api(async () => new Response("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<CORSConfiguration xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" +
+  "<CORSRule><ID>one</ID><AllowedMethod>GET</AllowedMethod><AllowedMethod>HEAD</AllowedMethod><AllowedOrigin>https://a.example?x=1&amp;y=2</AllowedOrigin><MaxAgeSeconds>60</MaxAgeSeconds></CORSRule>" +
+  "<CORSRule><AllowedMethod>PUT</AllowedMethod><AllowedOrigin>*</AllowedOrigin><AllowedHeader>*</AllowedHeader><ExposeHeader>ETag</ExposeHeader></CORSRule></CORSConfiguration>", { status: 200 }));
+const cx = await corsXml.getBucketCors("bucket", "us-east-1");
+ok(JSON.stringify(cx) === JSON.stringify({ CorsRules: [{ Id: "one", AllowedOrigins: ["https://a.example?x=1&y=2"], AllowedMethods: ["GET", "HEAD"], MaxAge: 60 },
+  { AllowedOrigins: ["*"], AllowedMethods: ["PUT"], AllowedHeaders: ["*"], ExposedHeaders: ["ETag"] }] }), "GetBucketCors parsed " + JSON.stringify(cx));
+const noCors = S3Api(async () => new Response("<Error><Code>NoSuchCORSConfiguration</Code><Message>The CORS configuration does not exist</Message></Error>", { status: 404 }));
+ok((await noCors.getBucketCors("bucket", "us-east-1")) === null, "NoSuchCORSConfiguration is null");
+const noBucket = S3Api(async () => new Response("<Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist</Message></Error>", { status: 404 }));
+try { await noBucket.getBucketCors("bucket", "us-east-1"); fail("NoSuchBucket should reject"); } catch (e) { ok(e.code === "NoSuchBucket" && e.status === 404, "NoSuchBucket rejects " + e.message); }
 
 if (failures) { console.error(failures + " failed, " + passed + " passed"); process.exit(1); }
 console.log("OK (s3-api: " + passed + " checks over the twin; buckets, CORS failure, folders, ranges, zip tail, gzip, errors, odd keys, paging fields)");
