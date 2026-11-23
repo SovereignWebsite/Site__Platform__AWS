@@ -153,11 +153,19 @@ checks += 24;
   const del = e5.filter((e) => e.status === "DELETE_COMPLETE").map((e) => e.logical);
   assert.deepEqual(del, ["VaultFunction", "VaultFunctionRole", "VaultBucketPolicy", "VaultBoundary", "HealthFunction", "VaultLogs", "AccessToken", "VaultBucket"], "everything undone, in reverse creation order");
   assert.equal(e5.filter((e) => e.status === "DELETE_IN_PROGRESS").length, 7, "each made resource goes DELETE_IN_PROGRESS first (all but the failed function)");
+  // CloudFormation deletes by the dependency graph (cloudformation.aws.a, from memory, unconfirmed): nothing goes while
+  // a resource that references it is still there. The references in vault.yaml, referrer: [what it refers to].
+  const REFS = { VaultBucketPolicy: ["VaultBucket"], VaultFunctionRole: ["VaultBucket", "AccessToken", "VaultLogs", "VaultBoundary"],
+    VaultFunction: ["VaultFunctionRole", "AccessToken", "VaultLogs"], VaultFunctionUrl: ["VaultFunction"], VaultFunctionUrlPermission: ["VaultFunction"],
+    VaultFunctionInvokePermission: ["VaultFunction"], VaultDistribution: ["VaultFunctionUrl", "HealthFunction"], VaultRecordA: ["VaultDistribution"], VaultRecordAAAA: ["VaultDistribution"] };
+  Object.entries(REFS).forEach(([from, tos]) => tos.forEach((to) => {
+    if (del.includes(from) && del.includes(to)) assert.ok(del.indexOf(from) < del.indexOf(to), from + " is deleted before " + to + ", which it refers to");
+  }));
   assert.ok(!e5.some((e) => e.status === "DELETE_SKIPPED"), "RetainExceptOnCreate: nothing kept on a first create's rollback");
   assert.equal(o5.status, "ROLLBACK_COMPLETE"); assert.deepEqual(o5.out, {});
   const known = await create(fresh(), "sws-vault-" + ID, { VaultId: ID, ImageUri: "111122223333.dkr.ecr.eu-west-2.amazonaws.com/sws-vault@sha256:" + "0123456789abcdef".repeat(4) });
   assert.equal(known.status, 200, "the twin's published image is accepted");
-  checks += 9;
+  checks += 10;
 }
 // 3f. ListStacks: the region's stacks, newest first, filtered by status.
 {
@@ -187,5 +195,32 @@ checks += 24;
   assert.deepEqual(b.journal(), a.journal(), "one tick and many ticks with reads give the same journal");
   assert.ok(a.journal().filter((e) => e.op === "cloudformation.stackEvent").every((e) => e.actor === "aws:cloudformation" && e.settles), "the stack's steps are CloudFormation's, settled by the clock");
   checks += 3;
+}
+// 6. security.aws.a's R-025: the customer credential is answered by CloudFormation only; bounds; ImageUri's pattern;
+// a fold of a cut journal; ids per stack.
+{
+  const t6 = fresh();
+  const asCustomer = (url, body, extra = {}) => t6.handle(url, { method: "POST", headers: { ...CUST, ...extra }, body });
+  assert.equal((await asCustomer("https://logs." + R + ".amazonaws.com/", "{}", { "x-amz-target": "Logs_20140328.DescribeLogGroups" })).status, 403, "logs refuses the customer");
+  assert.equal((await t6.handle("https://" + "111122223333--demo-site--eu-west-2" + ".s3." + R + ".amazonaws.com/?list-type=2", { headers: CUST })).status, 403, "S3 refuses the customer");
+  assert.equal((await t6.handle("https://lambda." + R + ".amazonaws.com/2015-03-31/functions/", { headers: CUST })).status, 403, "Lambda refuses the customer");
+  const PLAT = { authorization: "AWS4-HMAC-SHA256 Credential=ASIATWINREAD/20261124/" + R + "/logs/aws4_request, SignedHeaders=host, Signature=twin", "x-amz-target": "Logs_20140328.FilterLogEvents" };
+  const lg = (q) => t6.handle("https://logs." + R + ".amazonaws.com/", { method: "POST", headers: PLAT, body: JSON.stringify(q) }).then((r) => r.text());
+  assert.match(await lg({ logGroupIdentifier: "arn:aws:logs:" + R + ":999999999999:log-group:/aws/lambda/demo-handler" }), /ResourceNotFoundException/, "another account's log group ARN is not found");
+  assert.match(await lg({ logGroupIdentifier: "arn:aws:logs:us-east-1:111122223333:log-group:/aws/lambda/demo-handler" }), /ResourceNotFoundException/, "another region's is not found");
+  assert.match(await lg({ logGroupName: "/aws/lambda/demo-handler", logStreamNames: Array.from({ length: 101 }, (_, i) => "s" + i) }), /InvalidParameterException.*between 1 and 100/, "at most 100 stream names");
+  const usEast = await t6.handle("https://cloudformation.us-east-1.amazonaws.com/", { method: "POST", headers: CUST, body: new URLSearchParams({ Action: "CreateStack", StackName: "sws-vault-" + ID, TemplateURL: "x", "Capabilities.member.1": "CAPABILITY_NAMED_IAM", "Parameters.member.1.ParameterKey": "VaultId", "Parameters.member.1.ParameterValue": ID }).toString() });
+  assert.match(await usEast.text(), /customer account is in eu-west-2 only/, "the twin's region only");
+  const before = t6.journal().length;
+  assert.match((await create(t6, "sws-vault-" + ID, { VaultId: ID, ImageUri: "not-an-image" })).text, /Parameter 'ImageUri' must match pattern/, "ImageUri is checked before anything is made");
+  assert.equal(t6.journal().length, before, "nothing recorded for a refused parameter");
+  for (let i = 0; i < 8; i++) assert.equal((await create(t6, "sws-vault-" + ("00000000000" + i) + "-access", { VaultId: "00000000000" + i })).status, 200);
+  assert.match((await create(t6, "sws-vault-000000000009-access", { VaultId: "000000000009" })).text, /LimitExceededException/, "at most 8 stacks");
+  t6.clock.tick(60 * 1000);
+  const ids = new Set(tag((await cfn(t6, { Action: "DescribeStacks" })).text, "StackId").map((x) => x.split("/").pop()));
+  assert.equal(ids.size, 8, "each stack its own id");
+  const cut = t6.journal().filter((e) => e.op !== "cloudformation.createStack");
+  assert.doesNotThrow(() => t6.fold(cut), "a journal cut before a create folds without throwing");
+  checks += 23;
 }
 console.log("OK (twin vault deploy: " + checks + " checks; one-stack and access-stack modes, the boundary collision rolled back, waves in order on the clock, the distribution slowest, outputs on completion, refusals, DNS elsewhere, accounts apart, one tick = many ticks with reads)");
