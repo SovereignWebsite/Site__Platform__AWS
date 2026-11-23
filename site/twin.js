@@ -423,7 +423,6 @@
   // and the error envelope (ErrorResponse > Error > Code, Message).
   // Looked up by request values: no prototype, so __proto__ or constructor is a missing entry (security.aws.a, 852c1fe).
   var AWS_MANAGED = Object.assign(Object.create(null), { "arn:aws:iam::aws:policy/SecurityAudit": "SecurityAudit", "arn:aws:iam::aws:policy/job-function/ViewOnlyAccess": "ViewOnlyAccess" });
-  function own(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
   function iamSeed() {
     var stmt = function (sid, action, resource, extra) { var o = { Sid: sid, Effect: "Allow", Action: action, Resource: resource }; for (var k in extra || {}) o[k] = extra[k]; return o; };
     var doc = function () { return { Version: "2012-10-17", Statement: [].slice.call(arguments) }; };
