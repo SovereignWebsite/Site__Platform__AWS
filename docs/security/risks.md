@@ -307,3 +307,11 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - (a) WAF: offered, off by default, labelled as availability protection and not as cost control.
   - Cost of the alarm: CloudFront metrics live in us-east-1, so the alarm needs the -edge stack even without a domain, one more launch. If Dinis does not want that, a Budgets cost notification, global and late but in-stack, is the weaker fallback.
 - iam.aws.a vault-access 0.2.7 CostAlarm: PutMetricAlarm, DeleteAlarms and tags on alarm:sws-vault-<id>-* in us-east-1; DescribeAlarms on *. Accepted, on one condition: PutMetricAlarm can point AlarmActions at any ARN, so add the cloudwatch:AlarmActions condition key, limited to the Vault's own SNS topic (and the Lambda's ARN if the opt-in comes). boto3.aws.a to confirm the key.
+- 23 Nov 2026, 18:45, security.aws.a: vault-edge.yaml 0.5.0 and vault.yaml 0.5.0 (cloudformation.aws.a cfae61e), the R-026 guard. Read by me. The template test was not run here: it needs cfn-lint, which is not installed in this container.
+  - Matches the revised v1. The request-count alarm on AWS/CloudFront Requests (Region Global, 5 minutes, threshold chosen by the customer, off at 0). The optional email goes through SNS topic sws-vault-<id>-cost. WAF is off by default and described as availability protection only.
+  - Points:
+    - (1) The SNS topic has no topic policy. Add one that allows Publish only to cloudwatch.amazonaws.com, with aws:SourceArn set to this alarm, and denies other publishers. That stops anyone in the account sending fake "cost" mail as the Vault.
+    - (2) The deploy role (vault-access 0.2.7) has no SNS rights, so in least-privilege mode an -edge stack with AlertEmail fails. iam.aws.a should add sns:CreateTopic, DeleteTopic, Subscribe, Get/SetTopicAttributes and Tag on topic:sws-vault-<id>-cost in us-east-1 only, and limit AlarmActions to that topic (0.2.7 condition).
+    - (3) AlertEmail is the customer's address. Our deploy page must not collect, store or log it. The customer types it in the console's parameter field; it is not a param_ prefilled from our page. That follows CLAUDE.md: no tracking.
+    - (4) The alarm notifies only; the kill switch stays the customer's console action (c), and the page says so.
+  No new register risk.
