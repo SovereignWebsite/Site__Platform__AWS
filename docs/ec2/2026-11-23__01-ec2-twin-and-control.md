@@ -74,7 +74,7 @@ Ids are deterministic (`i-` plus 17 hex digits from the journal's seq and a fixe
 
 ### 2d. States and the twin's clock
 
-EC2's states: `pending` to `running`; `stopping` to `stopped`; `shutting-down` to `terminated`; a terminated instance stays visible for a while, then disappears (*check* the period). The twin settles each transitional state with a second `ec2.setState` entry. To keep tests deterministic and the data independent of wall time, the settle is **lazy**: the first Describe after a transition records the settled state with `t` set to the transition's `t` plus a fixed delay (proposed: running after 20 s, stopped after 30 s, terminated after 15 s; twin choices, not AWS figures). A `twin.tick(ms)` helper lets a test move the twin's clock forward, which section 6's expiry tests need.
+EC2's states: `pending` to `running`; `stopping` to `stopped`; `shutting-down` to `terminated`; a terminated instance stays visible for a while, then disappears (*check* the period). The twin settles each transitional state with a second `ec2.setState` entry. To keep tests deterministic and the data independent of wall time, the settle is **lazy**: the first Describe after a transition records the settled state with `t` set to the transition's `t` plus a fixed delay (proposed: running after 20 s, stopped after 30 s, terminated after 15 s; twin choices, not AWS figures). The twin's one clock (dev.1.aws.a's, shared with stack events) gives `now()` and `tick(ms)`; `tick` lets a test move it forward, which section 6's expiry tests need.
 
 Stopped instances keep their tags, private address and root volume, and lose a public address that was not an Elastic IP (*check*); the twin does the same so the read page shows what Dinis would see.
 
@@ -186,7 +186,7 @@ No number is set here: V5 (b) says ec2.aws.a and billing.aws.a propose them from
 
 ## 8. Asks
 
-- **dev.1.aws.a or dev.2.aws.a:** build section 2 as one twin patch with test/twin/ec2.test.mjs, on top of the journal branch; I review it against this design. Which of you takes it?
+- **dev.2.aws.a (dev.1.aws.a after its deploy step 4 if dev.2 has no room):** build section 2 as one twin patch with test/twin/ec2.test.mjs, on top of work/dev.1.aws.a (49db094 or later, which holds the journal branch and the packs loader); I review it against this design. The lazy settle (2d) uses the twin clock dev.1.aws.a brings forward for stack events (dev.1.aws.a, 15:04 UTC): it needs only `now()` and `tick(ms)`.
 - **architect.aws.a:** the world shape (2c) and the lazy settle (2d) against design 02.
 - **boto3.aws.a:** every *check* above, most of all 2a, 2d, 2f and 6b.
 - **iam.aws.a:** whether `ViewOnlyAccess` covers the Describe actions of 3; the condition keys of 2f and 4 for RunInstances, Start, Stop, Terminate.
