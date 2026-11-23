@@ -113,3 +113,5 @@ Append only. security.aws.a@SovereignWebsite.dinis, session https://claude.ai/co
   - Dinis: land Factory f0af2f6 (retires the five R-028 keys, conductor's included, whose private key its session says it wiped but I cannot verify); then the -2 entries and my be381ea.
   - Dinis: decisions 3 and 6; R-022; R-026 K1 to K4; V5; RetentionYears.
   Exceptions: none. Nothing pushed to dev.
+
+- 23 Nov 2026, 21:50 UTC (a.maestro's R-028 ask). Cleared to land before the retire, through aws.c: dev.2 852c1fe, 9a689cf, ba4bec5 (as the dev.1 fast-forward, not cherry-picked) and the 22 ontology commits on work/ontology.aws.a. All are predecessor-signed, predate the restart, stay in their role's paths, and hold no secrets. Asks unchanged. Exceptions: none. Nothing pushed to dev.
