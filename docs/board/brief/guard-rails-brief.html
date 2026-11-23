@@ -142,7 +142,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
  "title": "Guard rails and the kill switch",
  "source": "docs/board/decisions.md, batch 3, on work/pm.aws.a",
  "made_by": "pm.aws.a@SovereignWebsite.dinis",
- "answer": "G1 a+b, G2 a, G3 a, G4 a, G5 a, G6 a with (i) or (ii), G7 a, G8 a, G9 b then a, K1 b, K2 b, K3 a, K4 a",
+ "answer": "G1 a+b, G2 a, G3 a, G4 a, G5 a, G6 a with (i) or (ii), G7 a, G8 a, G9 b then a, K1 b, K2 b, K3 both, K4 a",
  "scenes": [
   {
    "id": "intro",
@@ -506,7 +506,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
     ]
    ],
    "panel": {
-    "asks": "ec2.aws.a (8fd2c77); reviewed by security.aws.a (2632562); boto3 and iam checks pending",
+    "asks": "ec2.aws.a (747f1fd); reviewed by security.aws.a, iam.aws.a and boto3.aws.a",
     "what": "(b): a flood then costs about one evaluation period plus propagation; one pause per flood, no automatic restore. Trade-off: anyone who can send enough requests can switch a Vault off.",
     "options": [
      [
@@ -544,7 +544,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
     ]
    ],
    "panel": {
-    "asks": "ec2.aws.a (8fd2c77); reviewed by security.aws.a (2632562); boto3 and iam checks pending",
+    "asks": "ec2.aws.a (747f1fd); reviewed by security.aws.a, iam.aws.a and boto3.aws.a",
     "what": "(b): CloudFront is 43.20 of 45.89 USD an hour in a flood at 10,000 req/s.",
     "options": [
      [
@@ -563,35 +563,35 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
   {
    "id": "k3",
    "eyebrow": "K3 · Threshold",
-   "title": "The suggested threshold",
+   "title": "The suggested thresholds, fast and slow",
    "dur": 12,
    "beats": [
     [
      0,
-     "Recommended: suggest billing's 45,000 requests in five minutes, about a dollar an hour; the customer decides.",
-     "The options as cards."
+     "Two alarms: a fast one at 45,000 requests in five minutes, and a slow one over six hours from a 10-dollar monthly budget.",
+     "The two thresholds as cards."
     ],
     [
      7,
-     "Recommended: a.",
-     "The recommended card lights; a note below."
+     "Recommended: both alarms, billing's figures suggested; the customer decides.",
+     "Both cards light; a note below."
     ]
    ],
    "panel": {
-    "asks": "ec2.aws.a (8fd2c77); reviewed by security.aws.a (2632562); boto3 and iam checks pending",
-    "what": "billing.aws.a's figure, about 1 USD an hour at the threshold; the customer can change it. Update (billing.aws.a, docs/billing/killswitch.mjs on land/billing.aws.a, 27911d0; not yet reviewed by security; pm.aws.a re-ran it): with the switch on, a 10,000 req/s flood costs $3.82 to $26.77 depending on how fast the distribution stops (5 to 30 minutes); a flood held just under the threshold (149 req/s) never trips it: $1.01 an hour, $24.31 a day, $729 in 30 days. So K3 should offer a second, slower alarm as well, for example a daily request count.",
+    "asks": "ec2.aws.a (747f1fd); reviewed by security.aws.a, iam.aws.a and boto3.aws.a",
+    "what": "Two alarms: fast 45,000 requests in 5 minutes (about $1 an hour); slow 44,121 in 6 hours, from a $10-a-month budget (billing.aws.a, 7621a65). Held under both: at most about $10 a month; just over the slow one: up to about $12.41 before the switch acts. With the fast alarm alone, a flood held just under it cost $729 in 30 days (27911d0).",
     "options": [
      [
       "a",
-      "45,000 per 5 min"
+      "Fast alarm: 45,000 requests in 5 minutes."
      ],
      [
       "b",
-      "customer types one"
+      "Slow alarm: 44,121 requests in 6 hours (from $10 a month)."
      ]
     ],
     "rec": "a",
-    "blocks": "Nothing outside the twin; each real change is its own plan."
+    "blocks": "Recommended: both. Still unknown until AWS answers or a bill shows it: whether throttled calls and requests to a disabled distribution are billed."
    }
   },
   {
@@ -612,7 +612,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
     ]
    ],
    "panel": {
-    "asks": "ec2.aws.a (8fd2c77); reviewed by security.aws.a (2632562); boto3 and iam checks pending",
+    "asks": "ec2.aws.a (747f1fd); reviewed by security.aws.a, iam.aws.a and boto3.aws.a",
     "what": "Part of the guard rails; restore is a plan you approve.",
     "options": [
      [
@@ -636,7 +636,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
    "beats": [
     [
      0,
-     "Recommended: G1 a plus b, G2 to G8 a, G9 b then a, and K1 b, K2 b, K3 suggest 45,000, K4 yes. For G6, pick alert only or automatic stop.",
+     "Recommended: G1 a plus b, G2 to G8 a, G9 b then a, and K1 b, K2 b, K3 both alarms, K4 yes. For G6, pick alert only or automatic stop.",
      "The full answer line."
     ],
     [
@@ -688,7 +688,7 @@ function optionRow(opts, rec, tShow, tRec, notRec=[]) {
 }
 
 /* ---------- the scenes, drawn ---------- */
-const GV = {"g1": {"opts": [["a", "2 h", "0.0476"], ["b", "4 h", "0.0952"], ["c", "8 h", ""]], "rec": ["a", "b"], "note": "2 h default, 4 h hard cap"}, "g2": {"opts": [["a", "26 h", "0.6188"], ["b", "30 h", ""], ["c", "no cap", ""]], "rec": ["a"], "note": "26 h backstop"}, "g3": {"opts": [["a", "London + Ireland", ""], ["b", "more, later", ""]], "rec": ["a"], "note": "the only two priced"}, "g4": {"opts": [["a", "nano, micro, small", "0.0047 to 0.0188/h"], ["b", "+ medium", "0.0376/h"]], "rec": ["a"], "note": "medium only if the twin needs it"}, "g5": {"opts": [["a", "3 at most", ""], ["b", "you name", ""]], "rec": ["a"], "note": "one each, plus an overlap"}, "g6": {"opts": [["a", "25 USD", ""], ["b", "50 USD", ""], ["c", "100 USD", ""]], "rec": ["a"], "note": "at the cap: alert only, or also stop new? your pick"}, "g7": {"opts": [["a", "stop new: 1 click", ""], ["b", "end all: 1 click", ""]], "rec": ["a"], "note": "end all needs your approval"}, "g8": {"opts": [["a", "AWS schedule + Lambda", ""], ["b", "GitHub Actions", ""], ["c", "only in the site", ""]], "rec": ["a"], "note": "no credential outside AWS"}, "g9": {"opts": [["a", "move role now", ""], ["b", "twin week first", ""]], "rec": ["b"], "note": "a week in the twin first"}, "k1": {"opts": [["a", "email only", ""], ["b", "opt-in, default off", ""], ["c", "on by default", ""]], "rec": ["b"], "note": "anyone who can flood can switch a Vault off"}, "k2": {"opts": [["a", "throttle only", ""], ["b", "throttle + disable distribution", ""]], "rec": ["b"], "note": "CloudFront is about 94% of a flood's cost"}, "k3": {"opts": [["a", "45,000 per 5 min", "about 1/h"], ["b", "customer types one", ""]], "rec": ["a"], "note": "plus a slower daily alarm: just under the threshold costs $729 a month"}, "k4": {"opts": [["a", "yes, on", ""], ["b", "no", ""]], "rec": ["a"], "note": "restore is a plan you approve"}};
+const GV = {"g1": {"opts": [["a", "2 h", "0.0476"], ["b", "4 h", "0.0952"], ["c", "8 h", ""]], "rec": ["a", "b"], "note": "2 h default, 4 h hard cap"}, "g2": {"opts": [["a", "26 h", "0.6188"], ["b", "30 h", ""], ["c", "no cap", ""]], "rec": ["a"], "note": "26 h backstop"}, "g3": {"opts": [["a", "London + Ireland", ""], ["b", "more, later", ""]], "rec": ["a"], "note": "the only two priced"}, "g4": {"opts": [["a", "nano, micro, small", "0.0047 to 0.0188/h"], ["b", "+ medium", "0.0376/h"]], "rec": ["a"], "note": "medium only if the twin needs it"}, "g5": {"opts": [["a", "3 at most", ""], ["b", "you name", ""]], "rec": ["a"], "note": "one each, plus an overlap"}, "g6": {"opts": [["a", "25 USD", ""], ["b", "50 USD", ""], ["c", "100 USD", ""]], "rec": ["a"], "note": "at the cap: alert only, or also stop new? your pick"}, "g7": {"opts": [["a", "stop new: 1 click", ""], ["b", "end all: 1 click", ""]], "rec": ["a"], "note": "end all needs your approval"}, "g8": {"opts": [["a", "AWS schedule + Lambda", ""], ["b", "GitHub Actions", ""], ["c", "only in the site", ""]], "rec": ["a"], "note": "no credential outside AWS"}, "g9": {"opts": [["a", "move role now", ""], ["b", "twin week first", ""]], "rec": ["b"], "note": "a week in the twin first"}, "k1": {"opts": [["a", "email only", ""], ["b", "opt-in, default off", ""], ["c", "on by default", ""]], "rec": ["b"], "note": "anyone who can flood can switch a Vault off"}, "k2": {"opts": [["a", "throttle only", ""], ["b", "throttle + disable distribution", ""]], "rec": ["b"], "note": "CloudFront is about 94% of a flood's cost"}, "k3": {"opts": [["a", "fast: 45,000 / 5 min", "about 1/h"], ["b", "slow: 44,121 / 6 h", "from 10/month"]], "rec": ["a", "b"], "note": "both: held under both, at most about $10 a month"}, "k4": {"opts": [["a", "yes, on", ""], ["b", "no", ""]], "rec": ["a"], "note": "restore is a plan you approve"}};
 function gScene(id){
   const v = GV[id]; const n = v.opts.length, w = 240, gap = 30, x0 = (W-(n*w+(n-1)*gap))/2;
   let s = '';
@@ -724,7 +724,7 @@ k3(){ return gScene('k3'); },
 k4(){ return gScene('k4'); },
 outro(){
   let s = txt(W/2,150,'Recommended','t-m t-mute');
-  s += cue(0.3, txt(W/2,236,'G1 a+b · G2 to G8 a · G9 b then a','t-l') + txt(W/2,274,'K1 b · K2 b · K3 45,000 per 5 min · K4 yes','t-l') + txt(W/2,300,'G6 at the cap: (i) alert only or (ii) stop new automatically','t-s t-acc'), 'pop');
+  s += cue(0.3, txt(W/2,236,'G1 a+b · G2 to G8 a · G9 b then a','t-l') + txt(W/2,274,'K1 b · K2 b · K3 both alarms · K4 yes','t-l') + txt(W/2,300,'G6 at the cap: (i) alert only or (ii) stop new automatically','t-s t-acc'), 'pop');
   s += cue(5, txt(W/2,340,'Answer in pm.aws.a\'s session','t-m'));
   s += cue(5.6, txt(W/2,368,'claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B','t-mono t-mute'));
   return s;

@@ -185,14 +185,14 @@
   },
   {
    "id": "bk2",
-   "narration": "K2. Recommended: throttle and disable the distribution; CloudFront is most of a flood's cost.",
+   "narration": "K2. Recommended: throttle and disable the distribution.",
    "visual": {
     "kind": "svg",
     "src": "k2",
     "caption": "K2: Levers",
     "at": 0,
-    "play": 6.2,
-    "end": 5.6
+    "play": 3.4,
+    "end": 2.8
    },
    "facts": [
     "s-ec2-03",
@@ -201,18 +201,17 @@
   },
   {
    "id": "bk3",
-   "narration": "K3. Recommended: 45,000 requests in five minutes, plus a slower daily alarm.",
+   "narration": "K3. Recommended: a fast alarm over five minutes and a slow one over six hours.",
    "visual": {
     "kind": "svg",
     "src": "k3",
     "caption": "K3: Threshold",
     "at": 0,
-    "play": 5.4,
-    "end": 4.8
+    "play": 6.6,
+    "end": 6
    },
    "facts": [
     "s-ec2-03",
-    "s-sec-03",
     "s-ks"
    ]
   },
@@ -238,7 +237,7 @@
    "visual": {
     "kind": "svg",
     "src": "outro",
-    "caption": "Recommended: G1 a+b, G2 a, G3 a, G4 a, G5 a, G6 a with (i) or (ii), G7 a, G8 a, G9 b then a, K1 b, K2 b, K3 suggest 45,000, K4 yes",
+    "caption": "Recommended: G1 a+b, G2 a, G3 a, G4 a, G5 a, G6 a with (i) or (ii), G7 a, G8 a, G9 b then a, K1 b, K2 b, K3 both alarms (45,000 per 5 min, 44,121 per 6 h), K4 yes",
     "at": 0,
     "play": 8.6,
     "end": 8
@@ -528,25 +527,33 @@
   },
   {
    "id": "K3",
-   "question": "K3. The suggested threshold?",
+   "question": "K3. The suggested thresholds?",
    "options": [
     {
      "id": "a",
-     "label": "a. 45,000 per 5 min",
-     "good": [],
-     "bad": [],
+     "label": "a. Fast alarm: 45,000 requests in 5 minutes (about $1 an hour)",
+     "good": [
+      "Stops a big flood within minutes"
+     ],
+     "bad": [
+      "Alone, a flood held just under it cost $729 in 30 days"
+     ],
      "blocks": []
     },
     {
      "id": "b",
-     "label": "b. customer types one",
-     "good": [],
-     "bad": [],
+     "label": "b. Slow alarm: 44,121 requests in 6 hours (from $10 a month)",
+     "good": [
+      "Closes the under-threshold gap"
+     ],
+     "bad": [
+      "Just over it, up to about $12.41 before the switch acts"
+     ],
      "blocks": []
     }
    ],
    "recommendation": "a",
-   "why": "Recommended: a. billing.aws.a's figure, about 1 USD an hour at the threshold; the customer can change it. Update (billing.aws.a, docs/billing/killswitch.mjs on land/billing.aws.a, 27911d0; not yet reviewed by security; pm.aws.a re-ran it): with the switch on, a 10,000 req/s flood costs $3.82 to $26.77 depending on how fast the distribution stops (5 to 30 minutes); a flood held just under the threshold (149 req/s) never trips it: $1.01 an hour, $24.31 a day, $729 in 30 days. So K3 should offer a second, slower alarm as well, for example a daily request count."
+   "why": "Recommended: both a and b, billing's figures suggested; the customer decides. Two alarms: fast 45,000 requests in 5 minutes (about $1 an hour); slow 44,121 in 6 hours, from a $10-a-month budget (billing.aws.a, 7621a65). Held under both: at most about $10 a month; just over the slow one: up to about $12.41 before the switch acts. With the fast alarm alone, a flood held just under it cost $729 in 30 days (27911d0)."
   },
   {
    "id": "K4",
@@ -606,8 +613,8 @@
   },
   {
    "id": "s-ec2-03",
-   "title": "ec2.aws.a: design 03, the Vault cost kill switch (8fd2c77)",
-   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/8fd2c77/docs/ec2/2026-11-23__03-vault-cost-kill-switch.md",
+   "title": "ec2.aws.a: design 03, the Vault cost kill switch (747f1fd)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/747f1fd/docs/ec2/2026-11-23__03-vault-cost-kill-switch.md",
    "read": "2026-11-23"
   },
   {
@@ -618,8 +625,8 @@
   },
   {
    "id": "s-ks",
-   "title": "billing.aws.a: killswitch.mjs, a flood with the kill switch on (27911d0)",
-   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/commit/27911d0",
+   "title": "billing.aws.a: killswitch.mjs, the fast and slow alarms (7621a65)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/commit/7621a65",
    "read": "2026-11-23"
   }
  ],
