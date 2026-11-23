@@ -339,7 +339,7 @@
       var name = String(m.physicalId || "").toLowerCase().replace(/\.$/, ""), byZone = Object.create(null), zs = [];
       if (!name) return [];
       nodes.forEach(function (n) {
-        if (n.type !== "record" || n.record_name !== name || !n.zone_id) return;
+        if (n.type !== "record" || n.name !== name || !n.zone_id) return;
         // NS and SOA at a zone's apex are made with the zone, never by a record set (cloudformation.aws.a).
         var zn = nodes.get("arn:aws:route53:::hostedzone/" + n.zone_id);
         if ((n.record_type === "NS" || n.record_type === "SOA") && zn && zn.label === name) return;
@@ -429,7 +429,7 @@
         if (!r || typeof r.id !== "string" || !/^Z[A-Z0-9]{1,32}$/.test(r.zoneId || "")) return;
         var rm = /^urn:sws:route53-record:(Z[A-Z0-9]{1,32})\/([a-z0-9*_.-]{1,253})\/([A-Z]{1,10})(\/[^\s]{1,128})?$/.exec(r.id);
         if (!rm || rm[1] !== r.zoneId) return;
-        vouch(node(r.id, "record", "A2", rm[2] + " " + rm[3], { cfn_type: "AWS::Route53::RecordSet", record_name: rm[2], record_type: rm[3], zone_id: rm[1],
+        vouch(node(r.id, "record", "A2", rm[2] + " " + rm[3], { cfn_type: "AWS::Route53::RecordSet", name: rm[2], record_type: rm[3], zone_id: rm[1],
           set_identifier: r.setIdentifier || undefined }));
         edge(r.id, "in", "arn:aws:route53:::hostedzone/" + r.zoneId, "api", "Route 53 ListResourceRecordSets");
         if (r.alias && typeof r.alias.dnsName === "string") recordTargets.push({ id: r.id, host: r.alias.dnsName, how: "alias" });
