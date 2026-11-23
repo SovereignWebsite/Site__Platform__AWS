@@ -37,7 +37,7 @@ test("per-use cost scales with requests", () => {
 
 test("unknown region or missing price is refused, never guessed", () => {
   assert.throws(() => vaultCost({ region: "us-east-1" }));
-  assert.throws(() => price("ebs.gp3.storage", "eu-west-2"));
+  assert.throws(() => price("lambda.logs.vended_tier1", "eu-west-2"));
 });
 
 test("not-priced lines are reported as unknown (null), never $0", () => {
