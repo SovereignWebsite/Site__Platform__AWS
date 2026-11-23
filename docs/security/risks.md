@@ -123,3 +123,4 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - the sweeper uses the earlier of the tag and CreationTime plus the maximum lifetime, and alerts on unmanaged instances;
   - a two-level kill switch;
   - the daily move creates on a schedule (V5's largest cost risk) and must copy encrypted objects without vault keys.
+- 23 Nov 2026, 17:40, security.aws.a: EC2 design 01 updated (ec2.aws.a ef1df15); spot-checked that all 12 points of my review are folded in. Design-stage review closed. Next: the twin patch (section 2) and the EC2 variant of the Vault stack when V4 allows. Each is to be reviewed as code before it lands.
