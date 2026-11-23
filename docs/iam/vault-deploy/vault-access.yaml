@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.2.7 (iam.aws.a, deploy plan step 3; for review by
+  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.2.8 (iam.aws.a, deploy plan step 3; for review by
   security.aws.a and cloudformation.aws.a; not for any real account). Run first, by the customer, from their own
   console. Makes two things only: the deploy role that stacks sws-vault-<id> and sws-vault-<id>-edge run with, and
   the boundary that caps the Vault's own role. Nothing here can reach outside this one Vault's resources.
@@ -41,6 +41,11 @@ Parameters:
     Default: "false"
     AllowedValues: ["true", "false"]
     Description: true only if ImageRepositoryArn is in this account; then the role may set that repository's policy so Lambda can pull. For a repository in another account, its owner sets the policy.
+  UseWaf:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+    Description: true only if Dinis chooses the WAF option (vault-edge.yaml's web ACL sws-vault-<id>-waf); off by default.
   ReadTokenAtDeploy:
     Type: String
     Default: "true"
@@ -55,6 +60,7 @@ Conditions:
   HasImageRepo: !Not [!Equals [!Ref ImageRepositoryArn, ""]]
   SetsRepoPolicy: !And [!Condition HasImageRepo, !Equals [!Ref ImageRepositoryInThisAccount, "true"]]
   ReadsToken: !Equals [!Ref ReadTokenAtDeploy, "true"]
+  WithWaf: !Equals [!Ref UseWaf, "true"]
   HasDistribution: !Not [!Equals [!Ref DistributionId, ""]]
   HasCertificate: !And [!Condition HasDomain, !Not [!Equals [!Ref CertificateArn, ""]]]
 
@@ -287,6 +293,17 @@ Resources:
                 Effect: Allow
                 Action: cloudwatch:DescribeAlarms
                 Resource: "*"
+              # WAF option (cloudformation.aws.a c30353d), only if chosen: the one web ACL sws-vault-<id>-waf, scope
+              # CLOUDFRONT, us-east-1. GetWebACL also for associating it with the distribution (boto3.aws.a to confirm
+              # whether attaching needs more). Not granted: payments:GetConnectedAccount (paid marketplace rule groups).
+              - !If
+                - WithWaf
+                - Sid: TheVaultsWebAcl
+                  Effect: Allow
+                  Action: [wafv2:CreateWebACL, wafv2:GetWebACL, wafv2:UpdateWebACL, wafv2:DeleteWebACL,
+                    wafv2:TagResource, wafv2:UntagResource, wafv2:ListTagsForResource]
+                  Resource: !Sub "arn:aws:wafv2:us-east-1:${AWS::AccountId}:global/webacl/sws-vault-${VaultId}-waf/*"
+                - !Ref AWS::NoValue
               # security.aws.a point 5: the one zone by id, the Vault's name and the certificate's validation name only,
               # A, AAAA and CNAME only (no NS, no SOA, no delegation). ACM's validation name is "_" plus a fixed-length
               # token directly under the name (32 characters as security.aws.a recalls; boto3.aws.a to confirm), so 32 "?"
