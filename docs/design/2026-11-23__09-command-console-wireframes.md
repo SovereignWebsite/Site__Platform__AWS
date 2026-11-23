@@ -37,7 +37,7 @@ Each alias expands to exactly one row of commands.json, or to a console switch. 
 | `help` | the list of commands and aliases with their summaries | `help <command>` shows that row's usage |
 | `ls` | `s3 listBuckets` | |
 | `ls <bucket>[/<prefix>]` | `s3 listObjects <bucket> <region> --prefix <prefix> --delimiter /` | region from `s3 getBucket` |
-| `cat <bucket>/<key>` | `s3 getObject <bucket> <region> <key>` | the first 256 KiB, as the parser caps it |
+| `cat <bucket>/<key>` | `s3 getObject <bucket> <region> <key>` | the first 256 KiB, as the parser caps it, shown as text, never HTML |
 | `open <bucket>[/<path>]` | switch to Files at that place | no AWS call of its own |
 | `who <role>` | `iam role <role>`, then `iam attached <role>` | two rows, one card |
 | `roles` | `iam roles` | |
@@ -46,10 +46,10 @@ Each alias expands to exactly one row of commands.json, or to a console switch. 
 | `fns` | `lambda functions <region>` | |
 | `streams` | `firehose streams <region>` | |
 | `cdn` | `cloudfront distributions` | global, so no region |
-| `logs <group>` | `logs events <region> <group> --newest` | the options of `logs events` pass through |
+| `logs <group>` | `logs events <region> <group> --newest` | only the options `logs events` declares are accepted, checked by the parser as for a typed command |
 | `files`, `map`, `timeline`, `desk` | switch console | as in Ctrl+K |
 
-`who` is the only alias that runs two rows. It does so because a role without its attached policies answers half the question. Both rows are reads, and each keeps its own caps. An alias never loops, never takes a wildcard, and never spans accounts or regions (security.aws.a). A test should check that every alias expands to rows that exist in commands.json.
+`who` is the only alias that runs two rows. It does so because a role without its attached policies answers half the question. Both rows are reads, and each keeps its own caps. An alias never loops, never takes a wildcard, and never spans accounts or regions (security.aws.a). **Rules for the build** (security.aws.a, fb5ba0b): a generated command always wins over an alias when both match. For example `logs events ...` is the generated row, and `logs <group>` applies only when the second word is not a command. A test **must** check that every alias expands to rows that exist in commands.json, and that no alias shadows a generated row.
 
 **v1 is read only, because the API is.** All 28 commands are reads, and a test keeps it that way. Command has no verb that changes AWS. Typing `plan ...` (design 01's `plan cors <bucket>`) opens the matching Plan in Desk if one exists, and otherwise says "No plan for that yet. Plans are written by aws.c and approved in Desk." Command never runs a plan.
 
