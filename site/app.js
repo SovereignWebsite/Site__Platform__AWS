@@ -17,6 +17,17 @@
     return e;
   }
 
+  // ---- Tabs (the chosen one is remembered in this browser; a convenience only) ----
+  var currentTab = "accounts";
+  try { currentTab = localStorage.getItem("sws-aws-tab") || "accounts"; } catch (e) { /* none */ }
+  function setTab(name) {
+    currentTab = name;
+    try { localStorage.setItem("sws-aws-tab", name); } catch (e) { /* none */ }
+    Array.prototype.forEach.call(document.querySelectorAll("[data-tab]"), function (b) { b.setAttribute("aria-selected", b.getAttribute("data-tab") === name ? "true" : "false"); });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-panel]"), function (p) { p.classList.toggle("off", !!mem.idToken && p.getAttribute("data-panel") !== name); });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("[data-tab]"), function (b) { b.onclick = function () { setTab(b.getAttribute("data-tab")); }; });
+
   // ---- Step 1: Google sign-in (Google Identity Services; the ID token stays in memory) ----
   function decodeJwt(t) {
     var p = t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
@@ -44,9 +55,11 @@
     mem.idToken = token;
     mem.claims = decodeJwt(token);
     $("restored").hidden = !restored;
-    $("google-button").hidden = true;
+    $("signed-out-hero").hidden = true;
     scheduleRenew();
-    $("who").textContent = "Signed in with Google as " + (mem.claims.email || "your account") + ".";
+    $("who").textContent = (mem.claims.name ? mem.claims.name + " \u00b7 " : "") + (mem.claims.email || "your Google account");
+    $("avatar").textContent = ((mem.claims.name || mem.claims.email || "?").trim()[0] || "?").toUpperCase();
+    $("tabs").hidden = false; setTab(currentTab);
     $("sub").textContent = mem.claims.sub;
     $("step1-done").hidden = false;
     renderAccounts();
@@ -64,7 +77,7 @@
     if (renewTimer) clearTimeout(renewTimer);
     if (!mem.claims) return;
     var wait = mem.claims.exp * 1000 - Date.now() - 60 * 1000;
-    renewTimer = setTimeout(function () { mem.idToken = null; $("google-button").hidden = false; autoSignIn(); }, Math.max(wait, 0));
+    renewTimer = setTimeout(function () { mem.idToken = null; $("signed-out-hero").hidden = false; autoSignIn(); }, Math.max(wait, 0));
   }
   function initGoogle() {
     if (!cfg.googleClientId) { $("no-client").hidden = false; gisReady = Promise.resolve(); return; }
@@ -162,6 +175,7 @@
     } else {
       var dl = el("button", { type: "button", text: "1. Download this account's template" });
       dl.onclick = function () {
+        acct.sub = mem.claims.sub; saveAccounts(accounts);
         fetch("cloudformation/bootstrap.yaml").then(function (r) { return r.text(); }).then(function (t) {
           var a = el("a", { download: "sws-aws-platform.yaml", href: URL.createObjectURL(new Blob([templateWithDefaults(t)], { type: "text/yaml" })) });
           document.body.appendChild(a); a.click(); a.remove();
@@ -175,41 +189,80 @@
     return box;
   }
 
-  function readAccount(acct, out) {
-    say(out, "Asking STS for one-hour read-only credentials...");
+  function stat(k, v) { return el("div", { class: "stat" }, [el("span", { class: "k", text: k }), el("span", { class: "v", text: v })]); }
+  function wrongGoogle(acct) { return acct.sub && mem.claims && acct.sub !== mem.claims.sub; }
+  function readAccount(acct, out, onReady) {
+    out.textContent = ""; var st = el("p", { class: "status", text: "Asking STS for one-hour read-only credentials..." }); out.appendChild(st);
     assume(acct, "sws-aws-platform-read").then(function (c) {
       return queryCall(c, "sts.amazonaws.com", "sts", { Action: "GetCallerIdentity", Version: "2011-06-15" }).then(function (d) {
-        if (!acct.ready) { acct.ready = true; saveAccounts(accounts); }
-        var lines = ["Signed in to AWS as " + xmlText(d, "Arn") + ", until " + new Date(c.expiration).toLocaleTimeString() + "."];
+        if (!acct.ready || acct.sub !== mem.claims.sub) { acct.ready = true; acct.sub = mem.claims.sub; saveAccounts(accounts); if (onReady) onReady(); }
+        var arn = xmlText(d, "Arn"), stats = el("div", { class: "stats" }, [stat("Role", (arn.split(":assumed-role/")[1] || arn).split("/")[0]), stat("Until", new Date(c.expiration).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))]);
+        out.textContent = ""; out.appendChild(stats);
+        var line = el("p", { class: "small", text: "Signed in to AWS as " + arn + "." }); out.appendChild(line);
         var now = new Date(), start = now.toISOString().slice(0, 8) + "01", end = now.toISOString().slice(0, 10);
-        if (start === end) return say(out, lines.join(" "), "ok");
+        if (start === end) return;
         return jsonCall(c, "ce.us-east-1.amazonaws.com", "ce", "AWSInsightsIndexService.GetCostAndUsage",
           { TimePeriod: { Start: start, End: end }, Granularity: "MONTHLY", Metrics: ["UnblendedCost"] })
           .then(function (j) {
             var t = j.ResultsByTime && j.ResultsByTime[0] && j.ResultsByTime[0].Total.UnblendedCost;
-            if (t) lines.push("Cost this month so far: " + Number(t.Amount).toFixed(2) + " " + t.Unit + ".");
-            say(out, lines.join(" "), "ok");
-          }, function (e) { lines.push("Costs not read (" + e.message + ")."); say(out, lines.join(" "), "ok"); });
+            if (t) stats.appendChild(stat("Cost this month so far", Number(t.Amount).toFixed(2) + " " + t.Unit));
+          }, function (e) { stats.appendChild(stat("Cost this month", "not read (" + e.message + ")")); });
       });
-    }).catch(function (e) { say(out, e.message + (/AccessDenied|InvalidIdentityToken/.test(e.message) ? " Has this account been set up (step 2)?" : ""), "bad"); });
+    }).catch(function (e) {
+      var hint = "";
+      if (/AccessDenied|InvalidIdentityToken|not authorized/.test(e.message))
+        hint = wrongGoogle(acct) ? " This account trusts the Google account ID ending " + acct.sub.slice(-6) + "; you are signed in as the one ending " + mem.claims.sub.slice(-6) + ". Sign out and sign in with that account."
+          : " Has this account been set up with the Google account you are signed in with now (ID ending " + mem.claims.sub.slice(-6) + ")?";
+      say(st, e.message + hint, "bad");
+    });
   }
 
   function renderAccounts() {
     var list = $("accounts"); list.textContent = "";
     $("step2").hidden = !mem.idToken;
+    var other = accounts.filter(wrongGoogle);
+    $("identity-warning").hidden = !other.length;
+    if (other.length) $("identity-warning").textContent = other.map(function (a) { return a.label; }).join(", ") + (other.length === 1 ? " was" : " were") + " set up with another Google account (ID ending " + other[0].sub.slice(-6) + "). You are signed in as the one ending " + mem.claims.sub.slice(-6) + ": sign out and sign in with that account to use " + (other.length === 1 ? "it." : "them.");
     accounts.forEach(function (acct, i) {
-      var out = el("p", { class: "status" });
-      var read = el("button", { type: "button", text: "Read this account" }); read.onclick = function () { readAccount(acct, out); };
-      var rm = el("button", { type: "button", class: "quiet", text: "Forget on this device" });
+      var out = el("div", {});
+      var read = el("button", { type: "button", text: "Read this account" });
+      var rm = el("button", { type: "button", class: "quiet", text: "Forget" });
       rm.onclick = function () { accounts.splice(i, 1); saveAccounts(accounts); renderAccounts(); renderPlans(); };
       var setup = setupLinks(acct);
-      if (acct.ready) setup = el("details", {}, [el("summary", { class: "small", text: "Set up again (CloudFormation)" }), setup]);
-      list.appendChild(el("li", {}, [el("strong", { text: acct.label }), el("span", { class: "small", text: " (account ending " + acct.id.slice(-4) + (acct.ready ? ", set up" : "") + ")" }),
+      if (acct.ready) setup = el("details", { class: "setup-again" }, [el("summary", { text: "Set up again (CloudFormation)" }), setup]);
+      var badge = wrongGoogle(acct) ? el("span", { class: "badge warn", text: "other Google account" }) : acct.ready ? el("span", { class: "badge ok", text: "set up" }) : el("span", { class: "badge", text: "not set up yet" });
+      read.onclick = function () {
+        readAccount(acct, out, function () {
+          badge.className = "badge ok"; badge.textContent = "set up";
+          if (setup.tagName !== "DETAILS") { var d = el("details", { class: "setup-again" }, [el("summary", { text: "Set up again (CloudFormation)" })]); setup.replaceWith(d); d.appendChild(setup); setup = d; }
+          $("identity-warning").hidden = !accounts.filter(wrongGoogle).length;
+        });
+      };
+      list.appendChild(el("li", {}, [el("div", { class: "card-head" }, [el("strong", { text: acct.label }), badge]),
+        el("p", { class: "small", text: "Account ending " + acct.id.slice(-4) }),
         el("div", { class: "row" }, [read, rm]), out, setup]));
     });
     renderPlans();
     if (window.S3Browser) S3Browser.render();
+    setTab(currentTab);
   }
+  $("copy-accounts").onclick = function () {
+    var text = JSON.stringify(accounts.map(function (a) { return { label: a.label, id: a.id }; }));
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject(new Error("no clipboard")))
+      .then(function () { say($("move-status"), "Copied " + accounts.length + " account" + (accounts.length === 1 ? "" : "s") + ".", "ok"); })
+      .catch(function () { $("paste-accounts").value = text; say($("move-status"), "Copy it from the box below.", ""); });
+  };
+  $("import-accounts").onclick = function () {
+    var list; try { list = JSON.parse($("paste-accounts").value); } catch (e) { return say($("move-status"), "That is not a list copied from this site.", "bad"); }
+    if (!Array.isArray(list)) return say($("move-status"), "That is not a list copied from this site.", "bad");
+    var added = 0;
+    list.forEach(function (a) {
+      var id = String(a && a.id || "").replace(/\D/g, "");
+      if (id.length === 12 && !accounts.some(function (b) { return b.id === id; })) { accounts.push({ id: id, label: String(a.label || "AWS account").slice(0, 60) }); added++; }
+    });
+    saveAccounts(accounts); $("paste-accounts").value = ""; renderAccounts();
+    say($("move-status"), added + " account" + (added === 1 ? "" : "s") + " added.", "ok");
+  };
   $("add-account").onsubmit = function (ev) {
     ev.preventDefault();
     var id = $("acct-id").value.replace(/\D/g, ""), label = $("acct-label").value.trim() || "AWS account";
@@ -334,7 +387,7 @@
   $("sign-out").onclick = function () {
     mem.idToken = null; mem.claims = null; mem.creds = {};
     if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
-    $("step1-done").hidden = true; $("google-button").hidden = false; renderAccounts();
+    $("step1-done").hidden = true; $("signed-out-hero").hidden = false; $("tabs").hidden = true; renderAccounts();
     if (renewTimer) clearTimeout(renewTimer);
     if (window.SealedStore) SealedStore.forget("session");
   };

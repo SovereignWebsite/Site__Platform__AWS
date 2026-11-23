@@ -44,7 +44,8 @@
     }).then(function (names) {
       names.sort();
       names.forEach(function (n) {
-        var b = P.el("button", { type: "button", class: "linkish", text: n }); b.onclick = function () { openBucket(n); };
+        var b = P.el("button", { type: "button", text: n, "aria-pressed": "false" });
+        b.onclick = function () { Array.prototype.forEach.call(out.querySelectorAll("button"), function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); }); openBucket(n); };
         out.appendChild(P.el("li", {}, [b]));
       });
       P.say(st, names.length + " bucket" + (names.length === 1 ? "" : "s") + " in " + state.region + ".", "ok");
@@ -112,23 +113,32 @@
           crumbs.appendChild(document.createTextNode(" / ")); crumbs.appendChild(x);
         });
         box.appendChild(crumbs);
-        box.appendChild(P.el("ul", { id: "s3-list", class: "s3-list" }));
+        var filter = P.el("input", { type: "search", class: "filter", placeholder: "Filter this folder", "aria-label": "Filter this folder" });
+        filter.oninput = function () {
+          var q = filter.value.toLowerCase();
+          Array.prototype.forEach.call($("s3-list").rows, function (tr) { tr.hidden = q && tr.textContent.toLowerCase().indexOf(q) < 0; });
+        };
+        box.appendChild(P.el("div", { class: "toolbar" }, [filter]));
+        var table = P.el("table", { class: "s3-table" });
+        var head = P.el("thead", {}, [P.el("tr", {}, [P.el("th", { text: "Name" }), P.el("th", { text: "Size" }), P.el("th", { text: "Modified (UTC)" })])]);
+        table.appendChild(head); table.appendChild(P.el("tbody", { id: "s3-list" }));
+        box.appendChild(P.el("div", { class: "s3-wrap" }, [table]));
       }
       var list = $("s3-list");
       Array.prototype.forEach.call(d.getElementsByTagName("CommonPrefixes"), function (cp) {
         var pfx = cp.getElementsByTagName("Prefix")[0].textContent;
         var x = P.el("button", { type: "button", class: "linkish", text: pfx.slice(state.prefix.length) }); x.onclick = function () { state.prefix = pfx; listObjects(); };
-        list.appendChild(P.el("li", { class: "folder" }, [x]));
+        list.appendChild(P.el("tr", { class: "folder" }, [P.el("td", {}, [x]), P.el("td", { class: "n", text: "" }), P.el("td", { class: "n", text: "" })]));
       });
       Array.prototype.forEach.call(d.getElementsByTagName("Contents"), function (o) {
         var key = o.getElementsByTagName("Key")[0].textContent, size = +o.getElementsByTagName("Size")[0].textContent;
         var when = (o.getElementsByTagName("LastModified")[0] || {}).textContent || "";
         if (key === state.prefix) return;
         var x = P.el("button", { type: "button", class: "linkish", text: key.slice(state.prefix.length) }); x.onclick = function () { openFile(key, size); };
-        list.appendChild(P.el("li", {}, [x, P.el("span", { class: "small", text: "  " + human(size) + "  " + when.slice(0, 16).replace("T", " ") })]));
+        list.appendChild(P.el("tr", { class: "file" }, [P.el("td", {}, [x]), P.el("td", { class: "n", text: human(size) }), P.el("td", { class: "n", text: when.slice(0, 16).replace("T", " ") })]));
       });
       var nt = d.getElementsByTagName("NextContinuationToken")[0];
-      if (nt) { var more = P.el("button", { type: "button", class: "quiet", text: "More" }); more.onclick = function () { more.remove(); listObjects(nt.textContent); }; box.appendChild(more); }
+      if (nt) { var more = P.el("button", { type: "button", class: "quiet", text: "Load more" }); more.onclick = function () { more.remove(); listObjects(nt.textContent); }; box.appendChild(P.el("div", { class: "row" }, [more])); }
       P.say(st, b + "/" + state.prefix, "ok");
     }).catch(function (e) { P.say(st, e.message + (/Failed to fetch/.test(e.message) ? " (S3 refused the browser: check the bucket's CORS rule and region " + region + ".)" : ""), "bad"); });
   }
@@ -187,10 +197,11 @@
   function render() {
     var sec = $("step4"); if (!sec) return;
     var accts = P.accounts();
-    sec.hidden = !P.signedIn() || !accts.length;
+    sec.hidden = !P.signedIn();
     var sel = $("s3-account"), keep = sel.value; sel.textContent = "";
     accts.forEach(function (a) { sel.appendChild(P.el("option", { value: a.id, text: a.label })); });
     if (keep) sel.value = keep;
+    var lb = $("s3-list-buckets"); if (lb) lb.disabled = !accts.length;
   }
   function init() {
     var reg = $("s3-region");
