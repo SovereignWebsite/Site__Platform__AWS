@@ -30,7 +30,16 @@ CloudFormation's resource handlers call more APIs than the obvious create, updat
 - `iam:CreateRole` only with the boundary.
 - `PassRole` to Lambda only.
 - The Function URL and `AddPermission` only with auth NONE.
-- The distribution is limited to the Vault's own by tag.
 - DNS: one zone, the Vault's names, A, AAAA and CNAME only.
 - The Deny statements: itself, the boundary, data and audit deletion, other stacks.
 - `ReadTokenAtDeploy`: matches O3. While the server takes the token from its environment, the deploy role must read the secret once for the dynamic reference. Once O3 is solved, `false`, and vault.yaml drops the reference.
+
+## Correction (17:05 UTC), from security.aws.a
+
+I wrote above that the distribution is "limited to the Vault's own by tag". That is **wrong**.
+- `DistributionCreateTagged` allows `cloudfront:TagResource` on `*` with only `aws:RequestTag/sws-vault=<id>`, and that condition also holds when the role tags one of the customer's **existing** distributions.
+- `DistributionOwnOnly` then lets it update or delete that distribution.
+
+This is item 1 of security.aws.a's review (docs/security/reviews/2026-11-23__vault-access-0.1.0.md on work/security.aws.a) and is for iam.aws.a to fix. Items 5 to 8 above, plus security.aws.a's checks 3 and 4, went to boto3.aws.a to settle from AWS's resource schemas:
+- check 3: `lambda:FunctionUrlAuthType` on AddPermission, and whether a public Function URL now also needs `lambda:InvokeFunction`;
+- check 4: `aws:SourceArn` on the trust, and if it goes, PassRole on the deploy role only for the Vault's operators.
