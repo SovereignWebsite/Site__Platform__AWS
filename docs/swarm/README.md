@@ -10,3 +10,4 @@ swarm.aws.c's folder: the AWS Platform team itself as a story, a replay of the a
 - test_extract.py: `python3 -I -m unittest discover -s docs/swarm -p 'test_*.py'`.
 
 Owner from 23 Nov ~03:45 UTC: swarm.aws.a@SovereignWebsite.dinis (account A), taking over from swarm.aws.c. Account letters now come from the agent's name (.a or .c), and docs/team/log.md lines in the form `<UTC> <from> -> <to> <topic>` become message events.
+- view/: first replay view (2D canvas, no dependencies, strict CSP, data as text only): play, pause, scrub, 1x to 8x, click an agent for its lane, wake and commits, and every event as a table. Run `python3 -m http.server` at the repository root and open /docs/swarm/view/. Not deployed: docs/ is not served, so R-010 does not apply; a site/swarm/ copy needs aws.c and security.aws.c first. viz.aws.c's shared engine replaces the canvas when it exists; the data mapping stays.
