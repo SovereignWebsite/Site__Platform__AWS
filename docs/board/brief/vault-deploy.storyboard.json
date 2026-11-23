@@ -183,26 +183,28 @@
   },
   {
    "id": "b11a",
-   "narration": "V11. Security now accepts one stack by default, least-privilege mode opt-in. Recommended: yes.",
+   "narration": "V11. A quick-create link cannot carry a role. Recommended: b, one stack by default, least privilege opt-in.",
    "visual": {
     "kind": "svg",
     "src": "v11",
-    "caption": "V11: one launch by default",
+    "caption": "V11: one launch or two",
     "at": 0,
-    "play": 5.8,
-    "end": 5.2
+    "play": 7.4,
+    "end": 6.8
    },
    "facts": [
-    "s-sec-06"
+    "s-sec-06",
+    "s-iam-03",
+    "s-boto3-08"
    ]
   },
   {
    "id": "b12",
-   "narration": "All a, except V4 and V5, b, V7, c, and V11, yes. Answer in pm.aws.a's session.",
+   "narration": "All a, except V4 and V5, b, V7, c, and V11, b. Answer in pm.aws.a's session.",
    "visual": {
     "kind": "svg",
     "src": "outro",
-    "caption": "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a (if the official template settles nothing), V11 yes",
+    "caption": "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a (if the official template settles nothing), V11 b",
     "at": 0,
     "play": 7,
     "end": 6.4
@@ -555,34 +557,35 @@
   },
   {
    "id": "V11",
-   "question": "V11. One CloudFormation launch by default, with a least-privilege two-launch mode as an opt-in?",
+   "question": "V11. One CloudFormation launch or two?",
    "options": [
     {
-     "id": "yes",
-     "label": "Yes: one stack by default (seven conditions); least-privilege mode opt-in",
+     "id": "a",
+     "label": "a. Two launches for everyone: access stack (deploy role and boundary), then the Vault stack as that role",
      "good": [
-      "One step for most customers",
-      "Security accepts it (0affab1)"
+      "Every later update bounded by the deploy role"
      ],
      "bad": [
-      "R-022 (Low): later updates bounded only by the template"
+      "A second launch for every customer (a quick-create link cannot carry a role)"
      ],
      "blocks": []
     },
     {
-     "id": "no",
-     "label": "No: two launches for everyone",
+     "id": "b",
+     "label": "b. One stack by default; the two-launch least-privilege mode as an opt-in",
      "good": [
-      "A deploy role bounds every update"
+      "One launch for most customers",
+      "Boundary in the template; first create protected by the published sha256",
+      "Organisations that want it can opt in"
      ],
      "bad": [
-      "One extra step for every customer"
+      "R-022 (Low): later updates and teardown run with the presser's console rights"
      ],
      "blocks": []
     }
    ],
-   "recommendation": "yes",
-   "why": "security.aws.a, after boto3, cloudformation and iam answered (0affab1); its first view (d38c93b) had recommended two launches. Not unanimous: cloudformation.aws.a prefers two for the first version. vault.yaml 0.4.0 (08dbcf7) supports both through DeployMode."
+   "recommendation": "b",
+   "why": "Recommended by security.aws.a (seven conditions, 0affab1), iam.aws.a, ux.aws.a and cloudformation.aws.a; vault.yaml 0.4.1 (0f72f91) holds both modes."
   }
  ],
  "connections": {
@@ -656,6 +659,18 @@
    "id": "s-sec-06",
    "title": "security.aws.a: review of ux.aws.a's design 06, the Vault deploy page (0affab1)",
    "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/0affab1/docs/security/reviews/2026-11-23__ux-design-06-vault-deploy-page.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-iam-03",
+   "title": "iam.aws.a: one button by default, access stack opt-in (2ec2b93)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/2ec2b93/docs/iam/vault-deploy/03-one-button.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-boto3-08",
+   "title": "boto3.aws.a: quick-create links cannot carry the service role (3ce137a)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/commit/3ce137a",
    "read": "2026-11-23"
   }
  ],

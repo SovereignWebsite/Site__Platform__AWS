@@ -142,7 +142,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
  "title": "Deploy a Vault: eleven decisions",
  "source": "docs/board/decisions.md, batch 2, on work/pm.aws.a, 23 Nov 15:30 UTC",
  "made_by": "pm.aws.a@SovereignWebsite.dinis",
- "answer": "V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a, V11 yes",
+ "answer": "V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a, V11 b",
  "scenes": [
   {
    "id": "intro",
@@ -546,7 +546,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
   {
    "id": "v11",
    "eyebrow": "V11 · Launches",
-   "title": "One launch by default, least privilege opt-in",
+   "title": "One CloudFormation launch or two",
    "dur": 18,
    "beats": [
     [
@@ -556,30 +556,30 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
     ],
     [
      8,
-     "Security now accepts one stack as the default, with seven conditions, and the two-launch mode as an opt-in.",
+     "A quick-create link cannot carry a role, so that mode costs a second launch. One stack is the default, with it as an opt-in.",
      "A single launch path, marked default; the boundary path marked opt-in."
     ],
     [
      13,
-     "Recommended: yes. What remains is R-022, low: later updates bounded only by the template.",
-     "The yes chip lights as recommended."
+     "Recommended: b, by security, iam, ux and cloudformation. The risk accepted is R-022, low.",
+     "The b option chip lights as recommended."
     ]
    ],
    "panel": {
-    "asks": "security.aws.a (review of ux.aws.a's design 06, 0affab1)",
-    "what": "One stack, run as the customer's own console identity, as the default, with seven conditions; the two-launch least-privilege mode as an opt-in. Security's first view (d38c93b) had recommended two launches; boto3, cloudformation and iam answered since.",
+    "asks": "conductor.aws.a, from ux.aws.a's design 06 (c37aaf1)",
+    "what": "boto3.aws.a (3ce137a): a quick-create link cannot carry a role. iam.aws.a (2ec2b93): the separate role buys bounded later updates, not protection of the first create. vault.yaml 0.4.1 (0f72f91) holds both modes and defaults to one stack.",
     "options": [
      [
-      "yes",
-      "One stack by default; least-privilege mode opt-in."
+      "a",
+      "Two launches for everyone: access stack (deploy role and boundary), then the Vault stack as that role."
      ],
      [
-      "no",
-      "Two launches for everyone."
+      "b",
+      "One stack by default (boundary in the template, first create protected by the published sha256); the two-launch least-privilege mode as an opt-in."
      ]
     ],
-    "rec": "yes",
-    "blocks": "Screen 2 of the deploy page (the real link); the twin build starts either way. Remains: R-022 (Low), later updates in the default mode bounded only by the template. Not unanimous: cloudformation.aws.a would rather have two launches for the first version. vault.yaml 0.4.0 (08dbcf7) does both through DeployMode, so the answer can change later without a new template."
+    "rec": "b",
+    "blocks": "Screen 2 of the deploy page (the real link); the twin build starts either way. Accepted with b: R-022 (Low), later updates and teardown run with the presser's console rights, held only by the sha256 and the customer's review. security.aws.a's seven conditions (0affab1)."
    }
   },
   {
@@ -590,7 +590,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
    "beats": [
     [
      0,
-     "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a, V11 yes.",
+     "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a, V11 b.",
      "The full answer line, large."
     ],
     [
@@ -771,13 +771,13 @@ v11(){
   s += cue(8.6, lbox(710,280,200,64,'later updates','bx-acc','t-s','R-022 Low: template-bound'));
   s += cue(9, txt(545,95,'opt-in: least-privilege mode','t-s t-ok'));
   s += `<path d="M400 312 L708 312" class="ln dash"/>`;
-  s += optionRow(['yes','no'],'yes',12,13);
+  s += optionRow(['a','b'],'b',12,13);
   return s;
 },
 outro(){
   let s = txt(W/2,150,'Recommended','t-m t-mute');
   s += cue(0.3, txt(W/2,226,'V1 a · V2 a · V3 a · V4 b · V5 b','t-l'), 'pop');
-  s += cue(0.6, txt(W/2,266,'V6 a · V7 c · V8 a · V9 a · V10 a · V11 yes','t-l'), 'pop');
+  s += cue(0.6, txt(W/2,266,'V6 a · V7 c · V8 a · V9 a · V10 a · V11 b','t-l'), 'pop');
   s += cue(5, txt(W/2,330,'Answer in pm.aws.a\'s session','t-m'));
   s += cue(5.6, txt(W/2,358,'claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B','t-mono t-mute'));
   s += cue(6.2, txt(W/2,420,'Twin first: nothing real until you answer.','t-s t-ok'));

@@ -128,15 +128,15 @@ From your word at ~14:55 UTC (maestro.a's session); plan and owners in docs/team
 - **Recommended:** follow what the official Lambda template does (V9); if it settles nothing, (a), pm.aws.a's view: no customer credential and no role back to us.
 - **Blocks:** any real deploy (ImageUri is the one parameter the link must fill in); not the twin.
 
-### V11. One CloudFormation launch by default (yes or no)
-- **Asks:** security.aws.a (review of ux.aws.a's design 06, section 1a: docs/security/reviews/2026-11-23__ux-design-06-vault-deploy-page.md, 0affab1 on work/security.aws.a)
-- **What:** after boto3.aws.a, cloudformation.aws.a and iam.aws.a answered, security.aws.a accepts one stack, run as the customer's own console identity, as the first version's default, with seven conditions in the review; the two-launch mode (an access stack makes a deploy role with a boundary, then the Vault stack runs as that role) becomes an opt-in least-privilege mode. What remains: R-022 (Low), later updates in the default mode are bounded only by the template. (Security's first view, d38c93b, had recommended two launches.)
-- **Not unanimous:** iam.aws.a recommends one stack as the default and security.aws.a accepts it; cloudformation.aws.a would rather have two for the first version and one later if customers find it heavy, since a template that cannot exceed its role is easier to trust (docs/cloudformation/2026-11-23__vault-stack-04.md). vault.yaml 0.4.0 (08dbcf7) does both through a DeployMode parameter, so either answer needs no new template and can be changed later without one.
-- **Asks you:** yes or no to one stack by default.
-- **Recommended:** yes (pm.aws.a: security and iam agree, and the template keeps both modes).
+### V11. One CloudFormation launch or two
+- **Asks:** conductor.aws.a, from ux.aws.a's design 06 section 1a (land/ux.aws.a c37aaf1)
+- **What:** boto3.aws.a confirmed that a quick-create link cannot carry a role (note 08 addendum, 3ce137a), so a separate role means a separate launch. iam.aws.a (03-one-button.md, 2ec2b93): the separate role buys bounded later updates, not protection of the first create. vault.yaml 0.4.1 (0f72f91) holds both modes in one template and defaults to one stack.
+- **Options:** (a) two launches for everyone: an access stack creates a deploy role with a boundary, then the Vault stack runs as that role; (b) one stack by default (one launch, the boundary in the template, the first create protected by the published sha256), with the two-launch least-privilege mode as an opt-in for organisations that want a non-admin deployer and bounded updates.
+- **Recommended:** (b), by security.aws.a (on seven conditions, 0affab1), iam.aws.a, ux.aws.a and cloudformation.aws.a (which withdrew its earlier preference for two). security.aws.a first recommended (a) (d38c93b).
+- **Risk you accept with (b):** R-022 (Low, docs/security/risks.md on work/security.aws.a): in the default mode every later update and the teardown run with the console rights of whoever presses the button, usually an administrator, so a wrong or tampered later template is held only by the published sha256 and the customer's review.
 - **Blocks:** screen 2 of the deploy page (the real link); the twin build starts either way.
 
-Recommended answers for batch 2: "V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a, V11 yes" (V10 a only if the official template settles nothing; pm.aws.a's view).
+Recommended answers for batch 2: "V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a, V11 b" (V10 a only if the official template settles nothing; pm.aws.a's view).
 
 ## Not needed yet
 - **Which vault endpoint first** (vaults.aws.a): recommended, the twin now, then your own SG/Send in eu-west-2 (append routes exist only on dev.send.sgraph.ai today). Asked before any live vault write.
