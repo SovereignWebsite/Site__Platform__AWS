@@ -1,0 +1,87 @@
+{
+  "programme": "AWS Platform (aws.c), account C",
+  "owner": "conductor.aws.c@SovereignWebsite.dinis",
+  "authority": "Dinis Cruz, 'Lean start', maestro.c's session, 23 Nov 2026 02:39 UTC",
+  "updated": "2026-11-23T03:00Z",
+  "offsets_in_use_elsewhere_on_account_c": {
+    ":03": "router.a (account A)",
+    ":08": "router.c",
+    ":13": "older conductor wake (PrompTugal), avoided",
+    ":18": "maestro",
+    ":23": "maestro",
+    ":33": "maestro.c",
+    ":43": "design.c",
+    ":48": "maestro"
+  },
+  "stage": 1,
+  "agents": [
+    {
+      "name": "conductor.aws.c@SovereignWebsite.dinis",
+      "session": "session_01Kw9UwDiqvoswkZCuHe5GTt",
+      "cron": "58 */2 * * *",
+      "every": "2 h, even hours, :58",
+      "paths": [
+        "docs/team/**"
+      ]
+    },
+    {
+      "name": "pm.aws.c@SovereignWebsite.dinis",
+      "session": "session_01Kw9UwBZAwm6766jrG94uX1",
+      "cron": "proposed 58 1-23/2 * * * (pm.aws.c sets its own)",
+      "every": "2 h, odd hours, :58 (proposed)",
+      "paths": [
+        "docs/team/board.md"
+      ]
+    },
+    {
+      "name": "security.aws.c@SovereignWebsite.dinis",
+      "session": null,
+      "cron": "28 * * * *",
+      "every": "1 h, :28",
+      "paths": [
+        "docs/security/**"
+      ],
+      "sub_agents": [
+        "AppSec (Sonnet)",
+        "adversarial (Sonnet)"
+      ]
+    },
+    {
+      "name": "architect.aws.c@SovereignWebsite.dinis",
+      "session": null,
+      "cron": "38 0-23/2 * * *",
+      "every": "2 h, even hours, :38",
+      "paths": [
+        "docs/architecture/**",
+        "site/api/** (pending aws.c)",
+        "site/twin/** (pending aws.c)"
+      ],
+      "sub_agents": [
+        "developer"
+      ]
+    },
+    {
+      "name": "s3.aws.c@SovereignWebsite.dinis",
+      "session": null,
+      "cron": "53 1-23/2 * * *",
+      "every": "2 h, odd hours, :53",
+      "paths": [
+        "docs/s3/**",
+        "site/s3*.js (pending aws.c)"
+      ]
+    }
+  ],
+  "stage_2_waiting_on_dinis": [
+    "lambda (with Firehose)",
+    "iam",
+    "cloudformation (with Route 53)",
+    "cloudtrail (with CloudWatch)",
+    "vaults",
+    "boto3",
+    "design and UX",
+    "data",
+    "video with the studio",
+    "journalist and researcher"
+  ],
+  "back_off": "an agent with nothing to do asks conductor.aws.c to double its interval, up to 8 h"
+}
