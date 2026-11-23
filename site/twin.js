@@ -49,7 +49,7 @@
       ] }
   };
   var pack = "baseline";
-  try { var qp = new URLSearchParams(root.location.search).get("pack"); if (qp && PACKS[qp]) pack = qp; else { var sp = localStorage.getItem("sws-aws-twin-pack"); if (sp && PACKS[sp]) pack = sp; } } catch (e) { /* none */ }
+  try { var qp = new URLSearchParams(root.location.search).get("pack"); if (qp && own(PACKS, qp)) pack = qp; else { var sp = localStorage.getItem("sws-aws-twin-pack"); if (sp && own(PACKS, sp)) pack = sp; } } catch (e) { /* none */ }
   var enc = new TextEncoder();
 
   // ---- deterministic synthetic data: named random streams (design 02) ----
@@ -882,5 +882,5 @@
     ready: function () { return ready; }, loadError: function () { return loadError ? loadError.message : null; },
     fold: function (entries) { return fold(entries); },
     packs: PACKS, pack: function () { return pack; },
-    usePack: function (name) { if (!PACKS[name]) return; try { localStorage.setItem("sws-aws-twin-pack", name); } catch (e) { /* none */ } } };
+    usePack: function (name) { if (!own(PACKS, name)) return; try { localStorage.setItem("sws-aws-twin-pack", name); } catch (e) { /* none */ } } };
 })(window);

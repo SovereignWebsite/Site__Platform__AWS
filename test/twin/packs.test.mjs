@@ -74,4 +74,12 @@ for (const [why, spoil] of Object.entries(bad)) {
   assert.equal(twin.handle("https://example.com/", {}), null, "not AWS: no answer");
   assert.equal((await twin.handle("https://sqs.eu-west-2.amazonaws.com/", { method: "POST", body: "" })).status, 501, "an AWS service the twin lacks: 501"); checks += 2;
 }
-console.log("OK (twin packs: " + checks + " checks; given packs run field for field, 11 kinds of bad pack refused with a 503 and no request, non-AWS hosts unanswered)");
+// 3b. A pack name that is an Object.prototype property is not a pack: the twin stays on baseline (security.aws.a, 74c254d).
+for (const name of ["constructor", "__proto__", "toString", "hasOwnProperty"]) {
+  const { twin } = load(name, disk); await twin.ready();
+  assert.equal(twin.pack(), "baseline", name + ": not taken as a pack");
+  assert.equal(twin.loadError(), null, name + ": baseline loads");
+  assert.equal((await listBuckets(twin)).status, 200, name + ": the twin answers"); checks += 3;
+  twin.usePack(name); // ignored, as for any unknown name (no localStorage in this context either way)
+}
+console.log("OK (twin packs: " + checks + " checks; given packs run field for field, 11 kinds of bad pack refused with a 503 and no request, non-AWS hosts unanswered, prototype names not packs)");
