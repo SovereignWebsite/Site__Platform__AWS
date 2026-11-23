@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.2.10 (iam.aws.a, deploy plan step 3; for review by
+  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.2.11 (iam.aws.a, deploy plan step 3; for review by
   security.aws.a and cloudformation.aws.a; not for any real account). Run first, by the customer, from their own
   console. Makes two things only: the deploy role that stacks sws-vault-<id> and sws-vault-<id>-edge run with, and
   the boundary that caps the Vault's own role. Nothing here can reach outside this one Vault's resources.
@@ -422,6 +422,19 @@ Resources:
                 # Lifecycle rules could expire objects; versioning stays allowed (needed at create; suspending it deletes nothing).
                 Action: [s3:DeleteObject, s3:DeleteObjectVersion, s3:PutLifecycleConfiguration]
                 Resource: "*"
+              # Backstop for the alarm gap (security.aws.a): no documented key covers OKActions or InsufficientDataActions,
+              # which could name EC2 or SSM actions on a customer's resources. This role needs none of these, so deny
+              # them outright, and the service-linked roles those alarm actions use.
+              - Sid: NeverActOnInstancesOrSsm
+                Effect: Deny
+                Action: [ec2:StopInstances, ec2:TerminateInstances, ec2:RebootInstances, "ssm:*"]
+                Resource: "*"
+              - Sid: NeverAlarmActionServiceRoles
+                Effect: Deny
+                Action: iam:CreateServiceLinkedRole
+                Resource: "*"
+                Condition:
+                  StringEquals: { "iam:AWSServiceName": [events.amazonaws.com, ssm.amazonaws.com] }
               - Sid: NeverAnyOtherPrincipal
                 Effect: Deny
                 Action: lambda:AddPermission
