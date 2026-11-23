@@ -10,7 +10,10 @@
   "use strict";
   var P = window.Platform, $ = function (id) { return document.getElementById(id); };
   var MAX_SHOW = 5 * 1024 * 1024;
-  var state = { acct: null, region: "us-east-1", bucket: null, prefix: "" };
+  var state = { acct: null, region: "us-east-1", bucket: null, prefix: "", view: 0, file: 0 };
+  // Quick clicks: each new view (buckets, a bucket, a folder) and each file opened takes a number; an answer that
+  // comes back after a newer click is dropped, so a slow, older answer never lands under the newer one.
+  function newView(alsoFile) { if (alsoFile) state.file++; return ++state.view; }
 
   // Cloud Control: listing and reading work from us-east-1 for buckets in any region (checked 23 Nov 2026);
   // a change must go to the bucket's own region (S3 answers 301 otherwise).
@@ -31,7 +34,7 @@
 
   // ---- buckets ----
   function listBuckets() {
-    var out = $("s3-buckets"), st = $("s3-status");
+    var out = $("s3-buckets"), st = $("s3-status"), my = newView(true);
     out.textContent = ""; $("s3-objects").textContent = ""; $("s3-file").textContent = ""; P.say(st, "Listing buckets...");
     read().then(function (c) {
       var all = [];
@@ -44,6 +47,7 @@
       }
       return page(null);
     }).then(function (names) {
+      if (my !== state.view) return;
       names.sort();
       names.forEach(function (n) {
         var b = P.el("button", { type: "button", text: n, "aria-pressed": "false" });
@@ -51,22 +55,23 @@
         out.appendChild(P.el("li", {}, [b]));
       });
       P.say(st, names.length + " bucket" + (names.length === 1 ? "" : "s") + ".", "ok");
-    }).catch(function (e) { P.say(st, e.message + (/AccessDenied|not authorized/.test(e.message) ? " (The account needs template v2: see step 3.)" : ""), "bad"); });
+    }).catch(function (e) { if (my === state.view) P.say(st, e.message + (/AccessDenied|not authorized/.test(e.message) ? " (The account needs template v2: see step 3.)" : ""), "bad"); });
   }
 
   // ---- a bucket: check its CORS rule, offer the plan, then list ----
   function openBucket(name) {
     state.bucket = name; state.prefix = "";
-    var st = $("s3-status"), box = $("s3-objects"); box.textContent = ""; $("s3-file").textContent = "";
+    var my = newView(true), st = $("s3-status"), box = $("s3-objects"); box.textContent = ""; $("s3-file").textContent = "";
     P.say(st, "Reading " + name + "'s settings...");
     read().then(function (c) { return cc(c, "GetResource", { TypeName: "AWS::S3::Bucket", Identifier: name }); }).then(function (j) {
+      if (my !== state.view) return;
       var props = JSON.parse(j.ResourceDescription.Properties || "{}");
       var m = /\.s3\.([a-z0-9-]+)\.amazonaws\.com$/.exec(props.RegionalDomainName || "");
       state.bucketRegion = m ? m[1] : state.region;
       var plan = Plans.corsPlan(props, location.origin);
       if (plan.unchanged) return listObjects();
       showCorsPlan(name, plan);
-    }).catch(function (e) { P.say(st, e.message, "bad"); });
+    }).catch(function (e) { if (my === state.view) P.say(st, e.message, "bad"); });
   }
   function showCorsPlan(name, plan) {
     var box = $("s3-objects"), st = P.el("p", { class: "status" });
@@ -93,7 +98,7 @@
           }
           return poll(0);
         });
-      }).then(function () { P.say($("s3-status"), "Applied: " + name + " now answers this site.", "ok"); return openBucket(name); })
+      }).then(function () { if (state.bucket !== name) return; P.say($("s3-status"), "Applied: " + name + " now answers this site.", "ok"); return openBucket(name); })
         .catch(function (e) { go.disabled = false; P.say(st, e.message, "bad"); });
     };
     box.appendChild(go); box.appendChild(st);
@@ -102,6 +107,7 @@
 
   function listObjects(token) {
     var box = $("s3-objects"), st = $("s3-status"), b = state.bucket, region = state.bucketRegion;
+    var my = token ? state.view : newView(false);
     if (!token) box.textContent = "";
     P.say(st, "Listing " + b + "/" + state.prefix + "...");
     read().then(function (c) {
@@ -110,6 +116,7 @@
         return r.text().then(function (t) { var d = new DOMParser().parseFromString(t, "text/xml"); if (!r.ok) throw P.awsError(d, r.status); return d; });
       });
     }).then(function (d) {
+      if (my !== state.view) return;
       if (!token) {
         var crumbs = P.el("p", { class: "crumbs" }), parts = state.prefix.split("/").filter(Boolean), acc = "";
         var root = P.el("button", { type: "button", class: "linkish", text: b }); root.onclick = function () { state.prefix = ""; listObjects(); };
@@ -147,7 +154,7 @@
       var nt = d.getElementsByTagName("NextContinuationToken")[0];
       if (nt) { var more = P.el("button", { type: "button", class: "quiet", text: "Load more" }); more.onclick = function () { more.remove(); listObjects(nt.textContent); }; box.appendChild(P.el("div", { class: "row" }, [more])); }
       P.say(st, b + "/" + state.prefix, "ok");
-    }).catch(function (e) { P.say(st, e.message + (/Failed to fetch/.test(e.message) ? " (S3 refused the browser: check the bucket's CORS rule and region " + region + ".)" : ""), "bad"); });
+    }).catch(function (e) { if (my === state.view) P.say(st, e.message + (/Failed to fetch/.test(e.message) ? " (S3 refused the browser: check the bucket's CORS rule and region " + region + ".)" : ""), "bad"); });
   }
   function human(n) { return n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(1) + " MB"; }
 
@@ -184,15 +191,18 @@
   }
 
   function openFile(key, size) {
-    var box = $("s3-file"), st = $("s3-status"); box.textContent = "";
+    var box = $("s3-file"), st = $("s3-status"), my = ++state.file; box.textContent = "";
     var name = key.split("/").pop();
+    function current() { return my === state.file; }
     box.appendChild(P.el("h4", { text: key }));
-    if (window.Zip && Zip.isZip(key) && size > 22) return openZip(key, size, name, box, st);
+    if (window.Zip && Zip.isZip(key) && size > 22) return openZip(key, size, name, box, st, current);
     P.say(st, "Opening " + key + " (" + human(size) + ")...");
     read().then(function (c) { return s3get(c, bucketUrl(state.bucket, state.bucketRegion, "", key), state.bucketRegion); }).then(function (r) {
+      if (!current()) return;
       if (!r.ok) return r.text().then(function (t) { throw P.awsError(new DOMParser().parseFromString(t, "text/xml"), r.status); });
       var type = (r.headers.get("content-type") || "").split(";")[0];
       return r.arrayBuffer().then(function (ab) {
+        if (!current()) return;
         var u8 = new Uint8Array(ab);
         box.appendChild(P.el("p", { class: "row" }, [downloadLink(name, new Blob([u8], { type: type })), P.el("span", { class: "small", text: type + ", " + human(u8.length) })]));
         // .gz (or gzip bytes): unzip in the browser and show what is inside. If S3 already sent it
@@ -200,17 +210,18 @@
         if (isGzip(u8)) {
           var inner = name.replace(/\.gz$/i, "");
           return gunzip(u8).then(function (out) {
+            if (!current()) return;
             box.appendChild(P.el("p", { class: "small", text: "gzip: " + human(u8.length) + " unzipped to " + human(out.length) + " in this browser." }));
             show(box, inner, "", out, st);
           });
         }
         show(box, name, type, u8, st);
       });
-    }).catch(function (e) { P.say(st, e.message, "bad"); });
+    }).catch(function (e) { if (current()) P.say(st, e.message, "bad"); });
   }
 
   // ---- inside a zip, by byte ranges (zip.js) ----
-  function openZip(key, size, name, box, st) {
+  function openZip(key, size, name, box, st, current) {
     var url = bucketUrl(state.bucket, state.bucketRegion, "", key), region = state.bucketRegion, got = 0;
     function fetchRange(a, b) {
       got += b - a + 1;
@@ -229,23 +240,25 @@
     box.appendChild(P.el("p", { class: "row" }, [dl]));
     P.say(st, "Reading the index at the end of " + name + "...");
     Zip.list(fetchRange, size).then(function (entries) {
+      if (!current()) return;
       var files = entries.filter(function (e) { return !e.dir; });
       box.appendChild(P.el("p", { class: "small", text: files.length + " files inside; listed by reading " + human(got) + " of " + human(size) + "." }));
       var filter = P.el("input", { type: "search", class: "filter", placeholder: "Filter the files inside", "aria-label": "Filter the files inside" });
       var tbody = P.el("tbody", {});
-      var viewer = P.el("div", { class: "viewer" });
+      var viewer = P.el("div", { class: "viewer" }), inside = 0;
       filter.oninput = function () { var q = filter.value.toLowerCase(); Array.prototype.forEach.call(tbody.rows, function (tr) { tr.hidden = q && tr.textContent.toLowerCase().indexOf(q) < 0; }); };
       files.forEach(function (e) {
         var b = P.el("button", { type: "button", class: "linkish", text: e.name });
         b.onclick = function () {
           viewer.textContent = ""; viewer.appendChild(P.el("h4", { text: e.name }));
-          var before = got; P.say(st, "Opening " + e.name + " from inside " + name + "...");
+          var before = got, mine = ++inside; P.say(st, "Opening " + e.name + " from inside " + name + "...");
           Zip.read(fetchRange, e).then(function (u8) {
+            if (mine !== inside || !current()) return;
             var inner = e.name.split("/").pop();
             viewer.appendChild(P.el("p", { class: "row" }, [downloadLink(inner, new Blob([u8])), P.el("span", { class: "small", text: human(u8.length) + ", fetched " + human(got - before) + " of the zip" })]));
             show(viewer, inner, "", u8, st);
             viewer.scrollIntoView({ block: "nearest" });
-          }).catch(function (err) { P.say(st, err.message, "bad"); });
+          }).catch(function (err) { if (mine === inside && current()) P.say(st, err.message, "bad"); });
         };
         tbody.appendChild(P.el("tr", { class: "file" }, [P.el("td", {}, [b]), P.el("td", { class: "n", text: human(e.size) }), P.el("td", { class: "n", text: e.modified })]));
       });
@@ -254,7 +267,7 @@
       box.appendChild(P.el("div", { class: "s3-wrap" }, [table]));
       box.appendChild(viewer);
       P.say(st, name + ": " + files.length + " files inside.", "ok");
-    }).catch(function (e) { P.say(st, e.message, "bad"); });
+    }).catch(function (e) { if (current()) P.say(st, e.message, "bad"); });
   }
 
   // JSON, formatted and coloured, built from DOM nodes (never from HTML strings).
