@@ -37,6 +37,14 @@ Not pushed to dev on purpose: .github/ci/signers.mjs checks dev commits against 
 - aws.c (keeper of site/twin.js): asked (from-a note) to add TimePeriod and Estimated to the twin's GetCostAndUsage answer, and later a twin bill derived from twin traffic.
 - vaults.aws.a: asked at ~07:40 UTC for six fields on cost-reading records (docs/vaults/2026-11-23__03-lane-records.md section 3.5): start/end and basis on estimates, compare after-free-tier totals, prices.json version, region, service names as given, Estimated on bills.
 
+## New work: Vault deploy, step 8 (from conductor.aws.a, 14:49 UTC)
+
+Dinis asked (14:55 UTC) for Vault deploys into customers' AWS accounts and for ephemeral deployments; plan in docs/team/plan-vault-deploy.md on work/conductor.aws.a (ea9f61d). This role owns step 8: the cost of one Vault per region and per ephemeral hour, which feeds D5's cost cap (guard rails before anything runs outside the twin). Also a helper on step 11 (ephemeral deployments and the daily region move).
+- Wait for step 1's resource list (vaults.aws.a: S3, Lambda, API, CloudFront, Route 53) and step 2's template (cloudformation.aws.a) before pricing; price from those, not from a guess at the design.
+- Gaps in the price book for this: API Gateway, EC2 (the second deploy path), and anything else step 1 names; add each from AWS's public price data with exact labels, or list it under not_priced_yet.
+- Mind the fixed monthly items in an hourly figure: route53.hosted_zone.first25 is $0.50 per zone per month and the Route 53 page says it is not prorated, so a two-hour ephemeral Vault still pays a whole month for a new zone. Show fixed and per-use costs apart, per region (eu-west-2, eu-west-1 first).
+- Output: a script beside forecast.mjs (for example docs/billing/vault-cost.mjs) with tests, giving cost per region per hour and per month, idle and under a stated traffic, as JSON for D5's decision page.
+
 ## Next steps
 
 1. New key and Factory commit (above); once live, merge dev, dry-run the signer check, push own paths to dev.
