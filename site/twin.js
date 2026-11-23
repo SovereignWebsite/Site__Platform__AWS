@@ -10,10 +10,43 @@
   // Demo packs: each is a whole synthetic world; loading one changes what every view shows.
   // Dinis, 23 Nov 2026: "imagine like you can have multiple twins data sets"; "here's the attack ... or this
   // some extra traffic flying around".
+  // Design 02 step 2: a pack is data, not code, in the shape of site/twin/packs/<id>.json (a test keeps the two equal
+  // until the page loads the files): a seed, the generators to run in order with their parameters, and where it
+  // shows. The generators are code (G, in build()); a pack only names them, and an unknown name is an error.
   var PACKS = {
-    baseline: { title: "Normal day", about: "A small site behind CloudFront, its logs written by Firehose, two vaults in use.", perHour: 25, attack: false },
-    attack: { title: "Attack in progress", about: "One address scanning for secrets and admin pages, then trying path traversal on the vault API, among normal visitors.", perHour: 25, attack: true, see: { label: "the CloudFront logs of 22 Nov, 11:00", bucket: "logs", prefix: "cloudfront/2026/11/22/11/" } },
-    surge: { title: "Traffic surge", about: "Ten times the usual visitors, most of them on one vault's files.", perHour: 250, attack: false, hot: "/vault/vault-demo-001/files", see: { label: "the CloudFront logs of 22 Nov, 11:00", bucket: "logs", prefix: "cloudfront/2026/11/22/11/" } }
+    baseline: { id: "baseline", title: "Normal day", about: "A small site behind CloudFront, its logs written by Firehose, two vaults in use.", seed: 20261123,
+      generate: [
+      {"gen": "s3.cors"},
+      {"gen": "site.static"},
+      {"gen": "cloudfront.traffic", "days": [20, 21, 22], "hours": [9, 10, 11], "perHour": 25},
+      {"gen": "lambda.dependencies"},
+      {"gen": "cloudtrail.demo"},
+      {"gen": "site.archive", "pages": 1203},
+      {"gen": "site.dotted"},
+      {"gen": "iam.roles"}
+      ] },
+    attack: { id: "attack", title: "Attack in progress", about: "One address scanning for secrets and admin pages, then trying path traversal on the vault API, among normal visitors.", seed: 20261123, see: {"label": "the CloudFront logs of 22 Nov, 11:00", "bucket": "logs", "prefix": "cloudfront/2026/11/22/11/"},
+      generate: [
+      {"gen": "s3.cors"},
+      {"gen": "site.static"},
+      {"gen": "cloudfront.traffic", "days": [20, 21, 22], "hours": [9, 10, 11], "perHour": 25, "probe": {"day": 22, "ip": "203.0.113.66", "perHourStep": 15}},
+      {"gen": "lambda.dependencies"},
+      {"gen": "cloudtrail.demo"},
+      {"gen": "site.archive", "pages": 1203},
+      {"gen": "site.dotted"},
+      {"gen": "iam.roles"}
+      ] },
+    surge: { id: "surge", title: "Traffic surge", about: "Ten times the usual visitors, most of them on one vault's files.", seed: 20261123, see: {"label": "the CloudFront logs of 22 Nov, 11:00", "bucket": "logs", "prefix": "cloudfront/2026/11/22/11/"},
+      generate: [
+      {"gen": "s3.cors"},
+      {"gen": "site.static"},
+      {"gen": "cloudfront.traffic", "days": [20, 21, 22], "hours": [9, 10, 11], "perHour": 250, "hot": "/vault/vault-demo-001/files", "hotShare": 0.7},
+      {"gen": "lambda.dependencies"},
+      {"gen": "cloudtrail.demo"},
+      {"gen": "site.archive", "pages": 1203},
+      {"gen": "site.dotted"},
+      {"gen": "iam.roles"}
+      ] }
   };
   var pack = "baseline";
   try { var qp = new URLSearchParams(root.location.search).get("pack"); if (qp && PACKS[qp]) pack = qp; else { var sp = localStorage.getItem("sws-aws-twin-pack"); if (sp && PACKS[sp]) pack = sp; } } catch (e) { /* none */ }
@@ -29,7 +62,7 @@
     var s = seed;
     return (streams[name] = function () { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; });
   }
-  function rnd() { return rng("v0", 20261123)(); }
+  function rnd() { return rng("v0", PACKS[pack].seed)(); } // one stream for v0's generators, as before
   function pick(a) { return a[Math.floor(rnd() * a.length)]; }
   function lag() { return rng("latency", 7)(); }
   function pad(n, w) { n = String(n); while (n.length < (w || 2)) n = "0" + n; return n; }
@@ -161,47 +194,57 @@
       record({ t: modified, actor: source, source: source, why: why || "pack.seed", op: "s3.putObject", target: "arn:aws:s3:::" + bucket + "/" + key,
         data: { bucket: bucket, key: key, type: type, modified: modified, body: typeof body === "string" ? { text: body } : body } });
     }
+    var G = {};
+    G["s3.cors"] = function () {
     var origin = root.location ? root.location.origin : "http://localhost";
     [B.logs, B.deps, B.trail, B.dotted].forEach(function (b) {
       record({ t: "2026-11-18T09:00:00.000Z", actor: source, source: source, why: "pack.seed", op: "s3.putBucketCors", target: "arn:aws:s3:::" + b,
         data: { bucket: b, cors: { CorsRules: [{ Id: "sws-aws-platform", AllowedOrigins: [origin], AllowedMethods: ["GET", "HEAD"], AllowedHeaders: ["*"], ExposedHeaders: ["ETag", "Content-Type", "Content-Length", "Last-Modified"], MaxAge: 3000 }] } } });
     });
+    };
     // a small static site
+    G["site.static"] = function () {
     put(B.site, "index.html", "text/html", "<!doctype html>\n<html lang=\"en-GB\">\n<head><title>Demo site</title></head>\n<body><h1>Demo site</h1><p>Served from S3 through CloudFront.</p></body>\n</html>\n");
     put(B.site, "assets/site.css", "text/css", "body { font: 16px/1.5 system-ui; }\nh1 { color: #2456c7; }\n");
     put(B.site, "data/vaults.json", "application/json", JSON.stringify({ vaults: [{ id: "vault-demo-001", files: 42, region: REGION }, { id: "vault-demo-002", files: 7, region: "eu-west-1" }] }));
     put(B.site, "config/site.yaml", "application/x-yaml", "site: demo\nregion: eu-west-2\ncache:\n  ttl: 3600   # seconds\n  enabled: true\nlogs: s3://" + B.logs + "/\n");
+    };
     // CloudFront logs delivered by Firehose: one gzip of JSON lines per hour
+    G["cloudfront.traffic"] = function (P) {
     var paths = ["/", "/index.html", "/assets/site.css", "/data/vaults.json", "/vault/vault-demo-001/files", "/vault/vault-demo-002/files", "/favicon.ico"];
-    for (var day = 20; day <= 22; day++) for (var hour = 9; hour <= 11; hour++) {
-      var lines = [], P = PACKS[pack];
+    P.days.forEach(function (day) { P.hours.forEach(function (hour) {
+      var lines = [];
       for (var i = 0; i < P.perHour; i++) {
-        var p = P.hot && rnd() < 0.7 ? P.hot : pick(paths);
+        var p = P.hot && rnd() < P.hotShare ? P.hot : pick(paths);
         lines.push(JSON.stringify(enrich({ timestamp: "2026-11-" + day + "T" + pad(hour) + ":" + pad(Math.floor(rnd() * 60)) + ":" + pad(Math.floor(rnd() * 60)) + "Z",
           c_ip: "203.0.113." + Math.floor(rnd() * 250 + 1), cs_method: "GET", cs_uri_stem: p, sc_status: p === "/favicon.ico" ? 404 : 200,
           sc_bytes: Math.floor(rnd() * 9000 + 300), time_taken: +(rnd() * 0.2).toFixed(3), x_edge_location: pick(["LHR50-C1", "DUB2-C1", "AMS1-C1"]), cs_user_agent: pick(["Mozilla/5.0", "curl/8.5", "python-requests/2.32"]) })));
       }
-      if (P.attack && day === 22) {
+      if (P.probe && day === P.probe.day) {
         // One address (TEST-NET-3, documentation range) probing, getting louder each hour.
         var probes = ["/.env", "/.git/config", "/wp-admin/", "/admin", "/config.json", "/backup.zip", "/vault/../../etc/passwd", "/vault/vault-demo-001/files?key=../../secrets", "/api/vaults?id=1%27%20OR%20%271%27=%271"];
-        for (var a = 0; a < (hour - 8) * 15; a++) {
+        for (var a = 0; a < (hour - 8) * P.probe.perHourStep; a++) {
           var pr = pick(probes);
           lines.push(JSON.stringify(enrich({ timestamp: "2026-11-22T" + pad(hour) + ":" + pad(Math.floor(rnd() * 60)) + ":" + pad(Math.floor(rnd() * 60)) + "Z",
-            c_ip: "203.0.113.66", cs_method: pick(["GET", "GET", "POST"]), cs_uri_stem: pr, sc_status: pick([403, 404, 404, 400]), sc_bytes: Math.floor(rnd() * 400 + 100),
+            c_ip: P.probe.ip, cs_method: pick(["GET", "GET", "POST"]), cs_uri_stem: pr, sc_status: pick([403, 404, 404, 400]), sc_bytes: Math.floor(rnd() * 400 + 100),
             time_taken: +(rnd() * 0.05).toFixed(3), x_edge_location: "AMS1-C1", cs_user_agent: pick(["sqlmap/1.8", "Nuclei - Open-source project", "curl/8.5"]) })));
         }
         lines.sort();
       }
       put(B.logs, "cloudfront/2026/11/" + day + "/" + pad(hour) + "/demo-distribution-1-2026-11-" + day + "-" + pad(hour) + "-00-00.gz", "application/x-gzip", { gzipText: lines.join("\n") + "\n" }, "2026-11-" + day + "T" + pad(hour) + ":59:00.000Z", "cloudfront.traffic");
-    }
+    }); });
+    };
     // Lambda dependencies as zips
+    G["lambda.dependencies"] = function () {
     put(B.deps, "lambdas-dependencies/demo-handler==v1.0.0.zip", "application/zip", { zip: [
       ["demo_handler/__init__.py", "from .handler import run\n"],
       ["demo_handler/handler.py", "import json\n\n\ndef run(event, context):\n    # Return the vault ids in the request\n    body = json.loads(event.get('body') or '{}')\n    return {'statusCode': 200, 'body': json.dumps({'vaults': body.get('vaults', [])})}\n"],
       ["demo_handler-1.0.0.dist-info/METADATA", "Metadata-Version: 2.1\nName: demo-handler\nVersion: 1.0.0\n"],
       ["config.json", JSON.stringify({ timeout: 30, memory: 256, region: REGION })]
     ] }, "2026-11-18T16:54:00.000Z", "lambda.dependencies");
+    };
     // CloudTrail log files: one per region and five minutes. IAM is global, so its events are written under us-east-1.
+    G["cloudtrail.demo"] = function () {
     function trailEvent(n, e) {
       var role = e.write ? "sws-aws-platform-change" : "sws-aws-platform-read";
       return { eventVersion: "1.09", userIdentity: { type: "AssumedRole", principalId: "AROATWIN" + (e.write ? "CHANGE" : "READ") + ":sws-aws-platform",
@@ -218,11 +261,16 @@
     }
     trailFile(REGION, "20261122T1005Z", [trailEvent(1, { time: "2026-11-22T10:01:02Z", source: "s3.amazonaws.com", name: "GetObject", region: REGION, data: true, params: { bucketName: B.site, key: "data/vaults.json" } })], "2026-11-22T10:05:00.000Z");
     trailFile("us-east-1", "20261122T1005Z", [trailEvent(2, { time: "2026-11-22T10:04:40Z", source: "iam.amazonaws.com", name: "UpdateAssumeRolePolicy", region: "us-east-1", write: true, params: { roleName: "sovereignwebsite-factory-dns", policyDocument: "(the new trust policy)" } })], "2026-11-22T10:05:00.000Z");
+    };
     // A folder of more than 1000 keys, so listing pages (max-keys, continuation token) as S3 does.
-    for (var a = 1; a <= 1203; a++) put(B.site, "archive/2026/page-" + pad(a, 4) + ".json", "application/json", "{\"page\":" + a + "}");
+    G["site.archive"] = function (P) {
+    for (var a = 1; a <= P.pages; a++) put(B.site, "archive/2026/page-" + pad(a, 4) + ".json", "application/json", "{\"page\":" + a + "}");
+    };
     // A bucket with dots in its name: S3 is reached by the path form for these.
+    G["site.dotted"] = function () {
     put(B.dotted, "index.html", "text/html", "<!doctype html>\n<html lang=\"en-GB\"><head><title>Dotted bucket</title></head><body><p>A bucket whose name has dots.</p></body></html>\n");
-
+    };
+    G["iam.roles"] = function () {
     var K = "token.actions.githubusercontent.com:sub";
     function platformTrust() {
       return { Version: "2012-10-17", Statement: [{ Effect: "Allow", Principal: { Federated: "accounts.google.com" }, Action: "sts:AssumeRoleWithWebIdentity",
@@ -240,6 +288,12 @@
     var details = iamSeed();
     Object.keys(roles).forEach(function (name) {
       record({ t: "2026-11-18T09:00:00.000Z", actor: source, source: source, why: "pack.seed", op: "iam.createRole", target: "arn:aws:iam::" + ACCOUNT + ":role/" + name, data: { name: name, trust: roles[name], details: details[name] } });
+    });
+    };
+    // The pack's generators, in its order (the random stream is shared, so the order is part of the pack).
+    PACKS[pack].generate.forEach(function (g) {
+      if (!Object.prototype.hasOwnProperty.call(G, g.gen)) throw new Error("twin: pack " + pack + " names no generator " + g.gen);
+      G[g.gen](g);
     });
     return state;
   }

@@ -75,3 +75,18 @@ console.log("OK (twin golden: " + checks + " checks; 3 packs give v0's keys, siz
   assert.equal(Object.prototype.polluted, undefined, "no prototype touched");
   console.log("OK (twin golden: prototype names are missing entries for IAM and S3)");
 }
+// Design 02 step 2: the packs are data. site/twin/packs/<id>.json are the packs the twin runs, field for field,
+// and each names only generators the twin has (an unknown one would throw on build, so every pack is built above).
+{
+  const twin = loadTwin("baseline");
+  const dir = path.join(path.dirname(FIXTURES), "..", "..", "site", "twin", "packs");
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => f.slice(0, -5)).sort();
+  assert.deepEqual(files, Object.keys(twin.packs).sort(), "one JSON file per pack");
+  assert.deepEqual(PACKS.slice().sort(), files, "the golden covers every pack");
+  for (const id of files) {
+    const want = JSON.parse(fs.readFileSync(path.join(dir, id + ".json"), "utf8"));
+    assert.deepEqual(JSON.parse(JSON.stringify(twin.packs[id])), want, id + ".json is the pack the twin runs");
+    assert.equal(want.id, id, id + ": id matches the file name");
+  }
+  console.log("OK (twin golden: site/twin/packs/*.json are the packs the twin runs)");
+}

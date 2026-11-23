@@ -1,0 +1,16 @@
+{
+  "id": "baseline",
+  "title": "Normal day",
+  "about": "A small site behind CloudFront, its logs written by Firehose, two vaults in use.",
+  "seed": 20261123,
+  "generate": [
+    {"gen":"s3.cors"},
+    {"gen":"site.static"},
+    {"gen":"cloudfront.traffic","days":[20,21,22],"hours":[9,10,11],"perHour":25},
+    {"gen":"lambda.dependencies"},
+    {"gen":"cloudtrail.demo"},
+    {"gen":"site.archive","pages":1203},
+    {"gen":"site.dotted"},
+    {"gen":"iam.roles"}
+  ]
+}
