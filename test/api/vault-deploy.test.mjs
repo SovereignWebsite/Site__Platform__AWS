@@ -23,8 +23,9 @@ ok(V.newVaultId({ getRandomValues: (a) => a.fill(0x0a) }) === "0a0a0a0a0a0a", "n
 throws(() => V.newVaultId({}), "newVaultId needs getRandomValues");
 
 // ---- the quick-create link (AWS's documented form: templateURL, stackName, param_<Name>) ----
-const TPL = "https://sws-templates-eu-west-2.s3.eu-west-2.amazonaws.com/vault/0.4.4/vault.yaml";
-const index = { "0.4.4-draft": { url: TPL, sha256: "9c1e" + "0".repeat(60) }, "0.4.3": { url: "https://s3.eu-west-2.amazonaws.com/sws-templates/vault/0.4.3/vault.yaml?versionId=3HL4kqtJlcpXroDTDmJ.rmSpXd3dIbrHY", sha256: "ab".repeat(32) } };
+const SHA = "9c1e" + "0".repeat(60), SHA3 = "ab".repeat(32);
+const TPL = "https://sws-templates-eu-west-2.s3.eu-west-2.amazonaws.com/templates/vault/0.4.4-draft/vault-" + SHA.slice(0, 12) + ".yaml";
+const index = { "0.4.4-draft": { url: TPL, sha256: SHA }, "0.4.3": { url: "https://s3.eu-west-2.amazonaws.com/sws-templates/templates/vault/0.4.3/vault-" + SHA3.slice(0, 12) + ".yaml", sha256: SHA3 } };
 const good = { region: "eu-west-2", vaultId: "3f9a0c21b7d4", index, version: "0.4.4-draft",
   imageUri: "123456789012.dkr.ecr.eu-west-2.amazonaws.com/sgraph-send@sha256:" + "a".repeat(64), deployPageOrigin: "https://deploy.example.com" };
 const parse = (u) => { const url = new URL(u), [path, q] = url.hash.slice(1).split("?"); return { host: url.host, region: url.searchParams.get("region"), path, q: new URLSearchParams(q), raw: q }; };
@@ -36,13 +37,19 @@ ok(one.q.get("param_VaultId") === "3f9a0c21b7d4" && one.q.get("param_DeployMode"
 ok(!/param_(DomainName|HostedZoneId|CertificateArn)/.test(one.raw), "domain parameters stay empty on the first deploy");
 ok(/templateURL=https%3A%2F%2F/.test(one.raw) && /%40sha256%3A/.test(one.raw), "values are URL-encoded");
 ok(parse(V.vaultStackUrl({ ...good, mode: "access-stack" })).q.get("param_DeployMode") === "access-stack", "least-privilege mode: DeployMode access-stack");
-ok(parse(V.vaultStackUrl({ ...good, version: "0.4.3" })).q.get("templateURL") === index["0.4.3"].url, "the template URL comes from the index entry; path style pinned with ?versionId= accepted");
+ok(parse(V.vaultStackUrl({ ...good, version: "0.4.3" })).q.get("templateURL") === index["0.4.3"].url, "the template URL comes from the index entry; the path style is accepted too");
 ok(!("templateUrl" in good) && parse(V.vaultStackUrl({ ...good, templateUrl: "https://evil.s3.eu-west-2.amazonaws.com/x.yaml" })).q.get("templateURL") === TPL, "a templateUrl given by the caller is ignored: only the index decides");
-const badIdx = (url, sha) => ({ ...good, index: { v: { url, sha256: sha === undefined ? "0".repeat(64) : sha } }, version: "v" });
+const badIdx = (url, sha) => ({ ...good, index: { "0.4.4-draft": { url, sha256: sha === undefined ? SHA : sha } } });
+const key = "/templates/vault/0.4.4-draft/vault-" + SHA.slice(0, 12) + ".yaml";
 for (const [what, o] of [["a version not in the index", { ...good, version: "9.9.9" }], ["an inherited key", { ...good, version: "__proto__" }], ["no index", { ...good, index: undefined }],
-  ["an index url that is not S3", badIdx("https://example.com/vault.yaml")], ["an http index url", badIdx("http://b.s3.eu-west-2.amazonaws.com/v.yaml")],
-  ["an S3 look-alike host", badIdx("https://b.s3.eu-west-2.amazonaws.com.evil.example/v.yaml")], ["a query other than versionId", badIdx("https://b.s3.eu-west-2.amazonaws.com/v.yaml?x=1")],
-  ["a versionId with odd characters", badIdx("https://b.s3.eu-west-2.amazonaws.com/v.yaml?versionId=a&b=c")], ["a bad sha256", badIdx(TPL, "9C1E")]])
+  ["an index url that is not S3", badIdx("https://example.com" + key)], ["an http index url", badIdx("http://b.s3.eu-west-2.amazonaws.com" + key)],
+  ["an S3 look-alike host", badIdx("https://b.s3.eu-west-2.amazonaws.com.evil.example" + key)], ["a query", badIdx("https://b.s3.eu-west-2.amazonaws.com" + key + "?versionId=abc")],
+  ["a key not in the per-version form", badIdx("https://b.s3.eu-west-2.amazonaws.com/vault/0.4.4/vault.yaml")],
+  ["a key for another version", badIdx("https://b.s3.eu-west-2.amazonaws.com/templates/vault/0.4.3/vault-" + SHA.slice(0, 12) + ".yaml")],
+  ["a key whose hash prefix is not the index sha256's", badIdx("https://b.s3.eu-west-2.amazonaws.com/templates/vault/0.4.4-draft/vault-" + SHA3.slice(0, 12) + ".yaml")],
+  ["a key for another template", badIdx("https://b.s3.eu-west-2.amazonaws.com/templates/vault-access/0.4.4-draft/vault-access-" + SHA.slice(0, 12) + ".yaml")],
+  ["a key with a prefix before templates/", badIdx("https://b.s3.eu-west-2.amazonaws.com/x/templates/vault/0.4.4-draft/vault-" + SHA.slice(0, 12) + ".yaml")],
+  ["a bad sha256", badIdx(TPL, "9C1E")]])
   throws(() => V.vaultStackUrl(o), "refused: " + what);
 ok(parse(V.vaultStackUrl({ ...good, deployPageOrigin: "https://deploy.example.com:8443" })).q.get("param_DeployPageOrigin").endsWith(":8443"), "an origin with a port");
 for (const [field, bad] of [["region", "eu-west-2.evil.example/x"], ["region", "EU-WEST-2"], ["vaultId", "3F9A0C21B7D4"], ["vaultId", "3f9a0c21b7d"], ["vaultId", "3f9a0c21b7d4&param_X=1"],
@@ -52,13 +59,14 @@ for (const [field, bad] of [["region", "eu-west-2.evil.example/x"], ["region", "
 throws(() => V.vaultStackUrl(), "no options");
 
 // ---- least-privilege mode, screen 2-alt ----
-const accessIndex = { "0.2.0": { url: "https://sws-templates-eu-west-2.s3.eu-west-2.amazonaws.com/vault-access/0.2.0/vault-access.yaml", sha256: "cd".repeat(32) } };
+const accessIndex = { "0.2.0": { url: "https://sws-templates-eu-west-2.s3.eu-west-2.amazonaws.com/templates/vault-access/0.2.0/vault-access-" + "cd".repeat(6) + ".yaml", sha256: "cd".repeat(32) } };
 const acc = parse(V.accessStackUrl({ region: "eu-west-2", vaultId: "3f9a0c21b7d4", index: accessIndex, version: "0.2.0",
   params: { VaultId: "000000000000", Extra: "a&b=c", Skipped: undefined } }));
 ok(acc.q.get("templateURL") === accessIndex["0.2.0"].url && acc.q.get("stackName") === "sws-vault-3f9a0c21b7d4-access" && acc.q.get("param_VaultId") === "3f9a0c21b7d4" && acc.q.getAll("param_VaultId").length === 1, "the -access stack, VaultId always this page's");
 ok(acc.q.get("param_Extra") === "a&b=c" && !acc.q.has("param_Skipped"), "the access template's own parameters passed as given, encoded; undefined left out");
 throws(() => V.accessStackUrl({ region: "eu-west-2", vaultId: "3f9a0c21b7d4", index: accessIndex, version: "0.2.0", params: { "X&Y": "1" } }), "a bad parameter name");
 throws(() => V.accessStackUrl({ region: "eu-west-2", vaultId: "3f9a0c21b7d4", index: accessIndex, version: "0.1.0" }), "the access template's version must be in its index");
+throws(() => V.accessStackUrl({ region: "eu-west-2", vaultId: "3f9a0c21b7d4", index, version: "0.4.4-draft" }), "the vault template's index is not the access template's");
 ok(V.deployRoleName("3f9a0c21b7d4") === "sws-vault-3f9a0c21b7d4-deploy", "the role named under B");
 throws(() => V.deployRoleName("nope"), "deployRoleName checks the id");
 
@@ -81,8 +89,9 @@ const cases = [
   [JSON.stringify({ vault_id: "aaaaaaaaaaaa", template_version: "0.4.4-draft" }), { reason: "other-vault", vaultId: "aaaaaaaaaaaa" }],
   [JSON.stringify({ vault_id: "3f9a0c21b7d4", template_version: "0.3.2" }), { reason: "old-template", version: "0.3.2" }],
   [JSON.stringify({ vault_id: "3f9a0c21b7d4", template_version: "0.4.3" }), { reason: "other-template", version: "0.4.3" }],
-  [JSON.stringify({ vault_id: "3f9a0c21b7d4", template_version: "0.4.4-draft", template_sha256: "ab".repeat(32) }), { reason: "other-template", version: "0.4.4-draft" }],
-  [JSON.stringify({ vault_id: "3f9a0c21b7d4", template_version: "0.4.4-draft", template_sha256: null }), { reason: "other-template", version: "0.4.4-draft" }],
+  [JSON.stringify({ vault_id: "3f9a0c21b7d4", template_version: "0.4.4-draft", template_sha256: "ab".repeat(32) }), { reason: "template-mismatch", version: "0.4.4-draft" }],
+  [JSON.stringify({ vault_id: "3f9a0c21b7d4", template_version: "0.4.4-draft", template_sha256: null }), { reason: "template-mismatch", version: "0.4.4-draft" }],
+  [JSON.stringify({ vault_id: "3f9a0c21b7d4", template_version: "0.4.3", template_sha256: SHA }), { reason: "template-mismatch", version: "0.4.3" }],
   [JSON.stringify({ vault_id: "3f9a0c21b7d4" }), { reason: "old-template", version: "" }],
   [JSON.stringify({ vault_id: "3f9a0c21b7d4", template_version: "__proto__" }), { reason: "old-template", version: "__proto__" }],
   [JSON.stringify({ vault_id: "<img src=x onerror=1>", template_version: "0.4.4-draft" }), { reason: "not-a-vault" }],
