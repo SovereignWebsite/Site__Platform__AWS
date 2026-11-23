@@ -107,7 +107,7 @@ Same layout, but the header reads "Question · claimed, from a file or a name. C
 
 ## 5. Open questions
 
-- **"Accept" a finding for good.** Design 01 said an item ends in "a plan, or accept". Keeping an acceptance needs somewhere to keep it, and the site stores nothing. Options, for aws.c and security: (a) a reviewed file in the repository (for example site/findings/accepted.json, data only, under R-010's rule), which the page reads; (b) a tag on the resource itself, which is a change, so a plan; (c) no "accept" in v1, only "Not now". I recommend (c) for v1 and (a) later.
+- **"Accept" a finding for good.** Design 01 said an item ends in "a plan, or accept". Keeping an acceptance needs somewhere to keep it, and the site stores nothing. Options, for aws.c and security: (a) a reviewed file in the repository (for example site/findings/accepted.json, data only, under R-010's rule), which the page reads; (b) a tag on the resource itself, which is a change, so a plan; (c) no "accept" in v1, only "Not now". I recommend (c) for v1 and (a) later. **security.aws.a agrees on (c) for v1** (dbeca03 on work/security.aws.a). If (a) comes later: site/ is public, so the file would publish which risks the owner chose to accept. It may hold only rule codes and opaque item hashes, never resource names or account ids, and it lands under R-010's rule.
 - **Over-privilege findings** (design 01: "unused roles, wide policies") need iam.aws.a's rules and the IAM reads (Access Advisor, policy documents). Desk shows nothing for them until those rules exist, rather than guess.
 - **Drift** (template against live): the plan flow's before and after already shows it for the platform stack. Drift for other stacks waits on CloudFormation's drift detection in the API layer.
 
