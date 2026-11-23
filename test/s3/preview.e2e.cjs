@@ -51,7 +51,7 @@ const fail = (m) => { throw new Error(m); };
   g = await gets();
   if (g.length !== 1 || g[0].range !== null) fail("Download: want one whole read, got " + JSON.stringify(g));
 
-  // 2. gzip: the CloudFront log is 756 B; with show at 500 B and preview at 400 B, 400 B are fetched and unzipped
+  // 2. gzip: the twin's CloudFront log is a few hundred bytes (over 500); with show at 500 B and preview at 400 B, 400 B are fetched and unzipped
   //    to whole JSON Lines, though the gzip stream is cut.
   await pg.evaluate(() => { Object.assign(window.S3Browser.limits, { show: 500, preview: 400 }); });
   await pg.click("#s3-buckets button:has-text('demo-cloudfront-logs')");
@@ -59,16 +59,18 @@ const fail = (m) => { throw new Error(m); };
   await gets();
   await pg.click("#s3-list button:has-text('.gz')");
   await pg.waitForSelector("#s3-file .preview");
-  await pg.waitForFunction(() => /JSON Lines \(\d+\)/.test(document.querySelector("#s3-status").textContent));
+  // One or more whole log lines came out of the cut gzip (one line reads as a JSON value, more as JSON Lines).
+  await pg.waitForFunction(() => /JSON Lines \(\d+\)|: JSON, formatted/.test(document.querySelector("#s3-status").textContent), null, { timeout: 5000 })
+    .catch(async () => fail("gzip preview status: " + (await pg.textContent("#s3-status"))));
   g = await gets();
   if (g.length !== 1 || g[0].range !== "bytes=0-399") fail(".gz: want one read of bytes=0-399, got " + JSON.stringify(g));
-  if (!/first 400 B of 756 B \(gzip\)/.test(await pg.textContent("#s3-file .preview"))) fail("gzip preview note");
+  if (!/first 400 B of \d+ B \(gzip\)/.test(await pg.textContent("#s3-file .preview"))) fail("gzip preview note");
   if (!(await pg.textContent("#s3-file")).includes("cs_uri_stem")) fail("no log fields in the gzip preview");
 
   // 3. Under the limit, a file is still read whole and shown as before (no preview note).
   await pg.evaluate(() => { Object.assign(window.S3Browser.limits, { show: 5 * 1024 * 1024, preview: 256 * 1024 }); });
   await pg.click("#s3-list button:has-text('.gz')");
-  await pg.waitForFunction(() => /gzip: 756 B unzipped/.test(document.querySelector("#s3-file").textContent));
+  await pg.waitForFunction(() => /gzip: \d+ B unzipped/.test(document.querySelector("#s3-file").textContent));
   if (await pg.$("#s3-file .preview")) fail("a small file shows a preview note");
   g = await gets();
   if (g.length !== 1 || g[0].range !== null) fail("small file: want one whole read, got " + JSON.stringify(g));
@@ -76,4 +78,4 @@ const fail = (m) => { throw new Error(m); };
   if (errors.length) fail("page errors: " + errors.join(" | "));
   console.log("OK (s3 preview: large files by one Range request, cut gzip unzipped, whole lines, Download on click only)");
   await br.close(); srv.close();
-})().catch((e) => { console.error("FAIL", e.message); process.exit(1); });
+})().catch((e) => { console.error("FAIL", e.message, (e.stack.match(/preview.e2e.cjs:\d+/) || [""])[0]); process.exit(1); });
