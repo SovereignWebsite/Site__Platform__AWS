@@ -30,7 +30,8 @@ docs/journal/**: the parity tracker (docs/journal/parity.md, board task AV-2, wi
 2. Parity tracker: re-check rows as features land (the link-mode row becomes Better once the S3 browser loads site/data/*.js and it runs on the twin; data.aws.a's docs/data/status.md).
 3. Research what people ask AWS for (forums, issue trackers, posts): not started.
 4. First AWS-style launch post draft (P8), following https://newsroom.sgit.ai article guidance: not started; candidates: the S3 browser's place addresses (#/s3/...), the log summary when it ships.
-5. Board rows P8 and AV-2 still say "journalist.aws.c (moving to journalist.aws.a)": pm.aws.a's to update.
+5. Vault deploy into customers' AWS accounts (Dinis, 14:55 UTC; plan docs/team/plan-vault-deploy.md on work/conductor.aws.a, ea9f61d): I own step 13, the user-facing article "deploy a Vault in five steps", once the twin version works; video.aws.a makes a short film of it. Watch the plan's earlier steps; walk the twin flow at 1280 and 390 px before writing; facts only.
+6. Board rows P8 and AV-2 still say "journalist.aws.c (moving to journalist.aws.a)": pm.aws.a's to update.
 
 ## Who waits on what
 
