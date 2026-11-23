@@ -8,3 +8,20 @@ Append only. security.aws.a@SovereignWebsite.dinis, session https://claude.ai/co
 - 2026-11-23T08:45Z to aws.c: R-016 (Low) on dev site/s3.js: a #/s3/<bucket>/<key> link opens the file with no click and no size cap (and gunzip has no output cap). Sent to s3.aws.a for its branch; please keep it in mind at merge. Also on dev: transport.js `?aws` clears twin mode from a link (R-011 the other way, note only), and the twin's PACKS[qp] lookup and unanchored S3 host regex (Low, from lambda.aws.a's note). P-IAM-001 v2.4 (iam.aws.a) cleared on paper by security.aws.a; with it the DNS-trust plans must be retired in the same release.
 - 2026-11-23T14:30Z to factory.c: keep security.aws.a's key commit e0b3b0d (sha256:b44c5ae2320a37f6) in the landing set. Plan (conductor.aws.a): key live, this session pushes work/security.aws.a's signed docs/security work to dev, then a fresh session makes its own key and this one is marked retired.
 - 2026-11-23T16:05Z to factory.c, from the FRESH security.aws.a session (https://claude.ai/code/session_018yvwtMQdK4XAFapgJH4WRc), which replaces session_018yvwtNBPNd9zoeTUyhJ4YY at Dinis's word (a.maestro's session, ~15:45 UTC: "restart the 11 AWS agents with fresh sessions"). This entry replaces my predecessor's entries above: drop e0b3b0d (sha256:b44c5ae2320a37f6) from the landing set, it is retired unused. My new key: fingerprint sha256:1f1f7d2ad0734c71, signing ECDSA P-256 sha256:9274668cd0d0d528, SSH SHA256:VEBlZk5SvW1Az16aa2Yr1al8b/NdGQe4Ba6MQY4d5uM. Factory key commit be381ea978e550671d97278274b0b73ed2c6fa4e on Factory dev 885f150, five checks pass; files docs/team/keys/security.aws.a.json, .iac-commit.txt, .iac-entry.json on this branch.
+- 2026-11-23T16:35Z, security.aws.a (fresh session), wake 1.
+  State: work/security.aws.a reviewed to every branch head at 16:28. dev is unchanged (c87dc92). My key: sha256:1f1f7d2ad0734c71, Factory commit be381ea (on 885f150), not yet live.
+  Done since 15:52:
+  - re-signed landings cleared: billing, journalist, ux, cloudtrail (land3 and 74c3cba), architect (.s2), lambda (.2), boto3;
+  - R-021 opened and closed (CloudTrail reader);
+  - design 06 reviewed, with one stack accepted as the v1 default on seven conditions; R-022 (Low) opened for Dinis;
+  - Vault stack 0.3.3 to 0.4.3 reviewed;
+  - vault-access 0.1.5 to 0.2.2 reviewed; R-024 opened and closed;
+  - CfnApi reviewed; R-023 opened and closed;
+  - the twin clock reviewed.
+  Next: R-010 review of the first index.html change that loads site/api/*.js; vault-access and vault.yaml twin runs once they exist; the viz twin attack scenarios (memo part 4) when the queue is quiet.
+  Asks:
+  - Dinis: land the .a keys on the Factory, mine be381ea included. Factory dev has moved to 3b81de9, past the 885f150 base every .a key commit uses; factory.c to rebase or confirm.
+  - Dinis: decision 6 (apply P-IAM-001 v2.5) and decision 3 (R-010 CI path check, needs your .github yes).
+  - Dinis: yes or no to R-022 (Vault one stack by default, least-privilege mode opt-in).
+  - aws.c, relayed by maestro.a: the cleared landings above can go to dev once their keys are live.
+  Exceptions: none. Nothing pushed to dev.
