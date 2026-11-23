@@ -79,6 +79,17 @@ The one rule that shapes the console: **only a Plan can change AWS, and only thr
 
 Same layout, but the header reads "Question · claimed, from a file or a name. Check before relying on it." There is one action, **Check it**, which opens the evidence: a Map card, or Files at the file that made the claim. There is no "Ask for a plan" on a Question. If checking turns it into confirmed evidence, it shows up again as a Finding.
 
+### The rules as built (dev.2.aws.a, `Graph.rules(graph.toJSON())` in site/api/graph.js, 856185b on work/dev.2.aws.a.vault-deploy)
+
+| Rule id | Kind | Title on screen | Note |
+|---|---|---|---|
+| `unowned` | Finding | Resources no stack made | A2 buckets, functions, distributions and streams that AWS answered for. Given only when CloudFormation stacks were read; otherwise the line reads "Who made what is not known yet: stacks not read." |
+| `dangling-confirmed` | Finding | Named by AWS, not found | A name an API answer gives (for example a stream's bucket) that the listing did not show |
+| `by-name-only` | Question | Links by name only | The count is the number of links; the item lists them |
+| `dangling-claimed` | Question | Named by a file or a name, not found | |
+
+Findings come first, counts are live, and the ids are the ones in section 6's addresses. On the twin, `unowned` lists every bucket except the three the demo stacks made. iam.aws.a's rules (section 5) join this list as they are built.
+
 ## 3. Phone (390 px)
 
 ```
