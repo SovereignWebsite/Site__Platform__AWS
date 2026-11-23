@@ -195,6 +195,7 @@
   // ---- listing cache (item 11): going back up a folder, or between folders, answers from memory for a minute ----
   // Keyed by account, bucket, folder and page token; only successful answers are kept; Refresh asks S3 again.
   var LIST_CACHE = Object.create(null), LIST_CACHE_MS = 60000;
+  function clearListCache() { LIST_CACHE = Object.create(null); }
   function fetchList(b, region, prefix, token, fresh) {
     var k = [state.acct && state.acct.id, b, prefix, token || ""].join("\n"), hit = LIST_CACHE[k];
     // Answers only while signed in (the cache is in memory only, never stored, and gone on reload).
@@ -282,7 +283,7 @@
           clear.onclick = function () { state.search = ""; listObjects(); };
         }
         var refresh = P.el("button", { type: "button", class: "quiet", text: "Refresh", title: "List this folder from S3 again" });
-        refresh.onclick = function () { state.fresh = true; state.keepSearch = true; listObjects(); };
+        refresh.onclick = function () { clearListCache(); state.fresh = true; state.keepSearch = true; listObjects(); };
         box.appendChild(P.el("div", { class: "toolbar" }, [filter, search].concat(clear ? [clear] : []).concat([refresh])));
         var table = P.el("table", { class: "s3-table" });
         var head = P.el("thead", {}, [P.el("tr", {}, [sortHead("Name", "name"), sortHead("Size", "size"), sortHead("Modified (UTC)", "when")])]);
@@ -342,7 +343,17 @@
   var TEXT = /\.(txt|md|csv|tsv|log|yaml|yml|xml|html|htm|css|js|mjs|ts|py|sh|toml|ini|cfg|conf|sql|svg)$/i;
   var IMAGE = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp" };
   function isGzip(u8) { return u8.length > 2 && u8[0] === 0x1f && u8[1] === 0x8b; }
-  function downloadLink(name, blob) { return P.el("a", { class: "button", href: URL.createObjectURL(blob), download: name, text: "Download" }); }
+  // R-018: a download is always application/octet-stream (never S3's Content-Type: a text/html blob opened in a tab
+  // would be a document on this origin). Its blob URL is made on the click and revoked a minute later.
+  function downloadLink(name, blob) {
+    var bytes = new Blob([blob], { type: "application/octet-stream" });
+    var a = P.el("a", { class: "button", href: "#", download: name, text: "Download" });
+    a.addEventListener("click", function () {
+      var url = URL.createObjectURL(bytes); a.href = url;
+      setTimeout(function () { URL.revokeObjectURL(url); a.href = "#"; }, 60000);
+    });
+    return a;
+  }
 
   // Show bytes as JSON (formatted), JSON Lines, text, an image, or "use Download". Never runs anything.
   function show(box, name, type, u8, st) {
@@ -432,10 +443,12 @@
     return null;
   }
   // A table of the rows, TABLE_PAGE at a time, cells as text only; "Show as text" swaps in the raw file.
-  var TABLE_PAGE = 200;
+  var TABLE_PAGE = 200, MAX_COLS = 200;
   function tableView(tab, name, text) {
     var wrap = P.el("div", { class: "table-view" }), cols = tab.head ? tab.head.length : 0;
     tab.rows.forEach(function (r) { if (r.length > cols) cols = r.length; });
+    // R-017 (b): one row with a million separators must not become millions of cells.
+    var allCols = cols; if (cols > MAX_COLS) cols = MAX_COLS;
     var head = [];
     for (var c = 0; c < cols; c++) head.push(P.el("th", { text: tab.head && tab.head[c] != null ? tab.head[c] : String(c + 1) }));
     var tbody = P.el("tbody", {}), shown = 0;
@@ -460,7 +473,7 @@
       asText.textContent = t ? "Show as a table" : "Show as text";
     };
     var grid = P.el("div", { class: "s3-wrap" }, [table]);
-    wrap.appendChild(P.el("p", { class: "row" }, [asText, P.el("span", { class: "small", text: tab.rows.length + " rows, " + cols + " columns" + (tab.head ? "" : " (no header row: numbered)") })]));
+    wrap.appendChild(P.el("p", { class: "row" }, [asText, P.el("span", { class: "small", text: tab.rows.length + " rows, " + (allCols > cols ? "the first " + cols + " of " + allCols + " columns (Show as text has them all)" : cols + " columns") + (tab.head ? "" : " (no header row: numbered)") })]));
     wrap.appendChild(grid); wrap.appendChild(P.el("div", { class: "row" }, [more]));
     page();
     return wrap;
@@ -562,26 +575,33 @@
   // 2^32 (ISIZE); each candidate end is tried in order and kept only when the member unzips cleanly and its length
   // matches. Whatever cannot be read as whole members (a cut preview, a damaged file) is unzipped leniently, keeping
   // what comes out. Output stops at `max` bytes. Returns { out, members, capped, damaged }.
+  // R-017 (a): a crafted file full of 1f 8b 08 would make every candidate a full unzip of the prefix. At most
+  // GZ_TRIES candidates may fail and GZ_MEMBERS members be read; past either, the rest is unzipped leniently once.
+  // Each try waits for the next task, so the page stays responsive while a file is read.
+  var GZ_TRIES = 32, GZ_MEMBERS = 4096;
   function gunzipMembers(u8, max) {
     var ends = [];
     for (var i = 1; i + 2 < u8.length; i++) if (u8[i] === 0x1f && u8[i + 1] === 0x8b && u8[i + 2] === 8) ends.push(i);
     ends.push(u8.length);
-    var parts = [], got = 0, start = 0, members = 0, k = 0;
+    var parts = [], got = 0, start = 0, members = 0, k = 0, failed = 0;
+    function later(f) { return new Promise(function (ok) { setTimeout(ok, 0); }).then(f); }
+    function miss() { k++; failed++; return failed > GZ_TRIES ? rest() : later(member); }
     function result(capped, damaged) { return { out: join(parts).subarray(0, max), members: members, capped: capped, damaged: damaged }; }
     function isize(seg) { var n = seg.length; return n < 8 ? -1 : (seg[n - 4] | seg[n - 3] << 8 | seg[n - 2] << 16 | seg[n - 1] << 24) >>> 0; }
     function member() {
       if (start >= u8.length) return Promise.resolve(result(false, false));
       while (k < ends.length && ends[k] <= start) k++;
-      if (k >= ends.length) return rest();
+      if (k >= ends.length || members >= GZ_MEMBERS) return rest();
       var end = ends[k], seg = u8.subarray(start, end);
       return gunzipStrict(seg, max - got).then(function (r) {
-        if (!r.capped && isize(seg) !== r.out.length % 4294967296) { k++; return member(); }
+        if (!r.capped && isize(seg) !== r.out.length % 4294967296) return miss();
         parts.push(r.out); got += r.out.length; members++; start = end; k++;
-        return r.capped ? result(true, false) : member();
-      }, function () { k++; return member(); });
+        return r.capped ? result(true, false) : later(member);
+      }, miss);
     }
     // No whole member from here on: keep what a lenient unzip gives, and say the rest was damaged or cut.
     function rest() {
+      if (start >= u8.length) return Promise.resolve(result(false, false));
       return gunzipStart(u8.subarray(start), max - got).then(function (out) {
         parts.push(out); got += out.length; if (out.length) members++;
         return result(got >= max, true);
@@ -743,6 +763,7 @@
   // ---- the section ----
   function render() {
     var sec = $("step4"); if (!sec) return;
+    if (!P.signedIn()) clearListCache(); // signed out: nothing listed stays in memory
     var accts = P.accounts();
     sec.hidden = !P.signedIn();
     var sel = $("s3-account"), keep = sel.value; sel.textContent = "";
@@ -797,7 +818,9 @@
   function init() {
     $("step4").addEventListener("keydown", onKey);
     $("s3-list-buckets").onclick = function () {
+      var was = state.acct && state.acct.id;
       state.acct = P.accounts().filter(function (a) { return a.id === $("s3-account").value; })[0];
+      if (!state.acct || state.acct.id !== was) clearListCache();
       state.region = "us-east-1";
       if (state.acct) listBuckets();
     };
@@ -808,6 +831,12 @@
   function openAt(bucket, prefix) { var h = route(bucket, prefix || ""); if (location.hash !== h) location.hash = h; else apply(parse(h)); }
   // view: show bytes as the browser would (for tests and for other views over the same reader).
   function view(name, type, u8) { var box = P.el("div", {}), st = P.el("p", { class: "status" }); show(box, name, type || "", u8, st); return { box: box, status: st }; }
-  window.S3Browser = { render: render, jsonView: jsonView, openAt: openAt, view: view, limits: LIMITS };
+  // limits are read as a copy and changed only through setLimits, which takes known keys with positive numbers.
+  function setLimits(o) {
+    Object.keys(o || {}).forEach(function (k) { if (k in LIMITS && typeof o[k] === "number" && o[k] >= 0 && isFinite(o[k])) LIMITS[k] = o[k]; });
+    return Object.freeze(Object.assign({}, LIMITS));
+  }
+  window.S3Browser = { render: render, jsonView: jsonView, openAt: openAt, view: view, setLimits: setLimits,
+    get limits() { return Object.freeze(Object.assign({}, LIMITS)); } };
   init();
 })();

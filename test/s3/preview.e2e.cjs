@@ -30,7 +30,7 @@ const fail = (m) => { throw new Error(m); };
   await pg.click("#tab-s3");
 
   // 1. Plain text: index.html is 155 B; with show at 100 B and preview at 120 B it is previewed, cut at a line end.
-  await pg.evaluate(() => { Object.assign(window.S3Browser.limits, { show: 100, preview: 120 }); });
+  await pg.evaluate(() => { window.S3Browser.setLimits({ show: 100, preview: 120 }); });
   await pg.click("#s3-buckets button:has-text('demo-site')");
   await pg.click("text=Approve and add the rule to");
   await pg.waitForSelector("#s3-list >> text=index.html");
@@ -53,7 +53,7 @@ const fail = (m) => { throw new Error(m); };
 
   // 2. gzip: the twin's CloudFront log is a few hundred bytes (over 500); with show at 500 B and preview at 400 B, 400 B are fetched and unzipped
   //    to whole JSON Lines, though the gzip stream is cut.
-  await pg.evaluate(() => { Object.assign(window.S3Browser.limits, { show: 500, preview: 400 }); });
+  await pg.evaluate(() => { window.S3Browser.setLimits({ show: 500, preview: 400 }); });
   await pg.click("#s3-buckets button:has-text('demo-cloudfront-logs')");
   for (const f of ["cloudfront/", "2026/", "11/", "21/", "10/"]) await pg.click(`#s3-list >> text=${f}`);
   await gets();
@@ -68,7 +68,7 @@ const fail = (m) => { throw new Error(m); };
   if (!(await pg.textContent("#s3-file")).includes("cs_uri_stem")) fail("no log fields in the gzip preview");
 
   // 3. Under the limit, a file is still read whole and shown as before (no preview note).
-  await pg.evaluate(() => { Object.assign(window.S3Browser.limits, { show: 5 * 1024 * 1024, preview: 256 * 1024 }); });
+  await pg.evaluate(() => { window.S3Browser.setLimits({ show: 5 * 1024 * 1024, preview: 256 * 1024 }); });
   await pg.click("#s3-list button:has-text('.gz')");
   await pg.waitForFunction(() => /gzip: \d+ B unzipped/.test(document.querySelector("#s3-file").textContent));
   if (await pg.$("#s3-file .preview")) fail("a small file shows a preview note");

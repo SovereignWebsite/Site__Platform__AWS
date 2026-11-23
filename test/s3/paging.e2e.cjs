@@ -61,7 +61,7 @@ const fail = (m) => { throw new Error(m); };
   if ((await lists()).filter((x) => / \+page$/.test(x)).length > 2) fail("more page requests than pages");
 
   // 3. Search: with pages still in S3, typing a name start offers to ask S3; Enter lists only those names.
-  await pg.evaluate(() => { window.S3Browser.limits.autoPages = 0; }); // keep pages in S3 for this step
+  await pg.evaluate(() => { window.S3Browser.setLimits({ autoPages: 0 }); }); // keep pages in S3 for this step
   await pg.click("#s3-objects button:has-text('Refresh')");
   await pg.waitForFunction(() => document.querySelectorAll("#s3-list tr.file").length === 500);
   await lists();

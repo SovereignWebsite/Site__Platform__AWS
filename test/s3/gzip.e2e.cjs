@@ -50,7 +50,7 @@ const fail = (m) => { throw new Error(m); };
   });
   await pg.click("#tab-s3");
   const open = async (name, limits) => {
-    await pg.evaluate(async ([name, limits]) => { window.__body = await window.__case(name); Object.assign(window.S3Browser.limits, limits || { show: 5 * 1024 * 1024, preview: 256 * 1024 }); }, [name, limits]);
+    await pg.evaluate(async ([name, limits]) => { window.__body = await window.__case(name); window.S3Browser.setLimits(limits || { show: 5 * 1024 * 1024, preview: 256 * 1024 }); }, [name, limits]);
     await pg.click("#s3-buckets button:has-text('demo-cloudfront-logs')");
     for (const f of ["cloudfront/", "2026/", "11/", "21/", "10/"]) await pg.click(`#s3-list >> text=${f}`);
     // Each case changes the file under the same key, so list the folder from S3 again (the listing is cached).
