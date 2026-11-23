@@ -13,6 +13,7 @@ vm.runInContext(src, ctx, { filename: "decode.js" });
 const D = ctx.Decode;
 const enc = (s) => new TextEncoder().encode(s);
 const plain = (v) => JSON.parse(JSON.stringify(v)); // across the vm boundary, for deepEqual
+const names = (t) => plain(t.columns.map((c) => c.name));
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log("ok -", name); };
 
@@ -30,20 +31,23 @@ await test("sniff: magic bytes first, then names and types, then content", () =>
   assert.equal(D.sniff(enc("hello\n")), "text");
 });
 
-await test("gunzip: round trip, and the unpacked cap stops a bomb", async () => {
+await test("gunzip: round trip with sizes, and the unpacked cap stops a bomb and says so", async () => {
   const body = "line\n".repeat(1000);
-  assert.equal(D.text(await D.gunzip(new Uint8Array(gzipSync(body)))), body);
-  const bomb = new Uint8Array(gzipSync(Buffer.alloc(2 * 1024 * 1024)));
-  await assert.rejects(D.gunzip(bomb, { maxBytes: 1024 * 1024 }), (e) => e.code === "TooLarge");
+  const gz = new Uint8Array(gzipSync(body)), g = await D.gunzip(gz);
+  assert.equal(D.text(g.bytes), body);
+  assert.equal(g.packed, gz.length); assert.equal(g.unpacked, body.length); assert.equal(g.truncated.bytes, false);
+  // A bomb: 2 MB of zeros packs to a few KB; with a 1 MB cap it stops at exactly 1 MB and says so.
+  const bomb = new Uint8Array(gzipSync(Buffer.alloc(2 * 1024 * 1024))), b = await D.gunzip(bomb, { maxBytes: 1024 * 1024 });
+  assert.equal(b.bytes.length, 1024 * 1024); assert.equal(b.unpacked, 1024 * 1024); assert.equal(b.truncated.bytes, true);
 });
 
 await test("the twin-style CloudTrail fixture: gunzip, sniff, json, table", async () => {
   const gz = new Uint8Array(readFileSync(new URL("../fixtures/trail.json.gz", import.meta.url)));
   assert.equal(D.sniff(gz, { name: "trail.json.gz" }), "gzip");
-  const raw = await D.gunzip(gz);
+  const raw = (await D.gunzip(gz)).bytes;
   assert.equal(D.sniff(raw), "json");
   const t = D.table(D.json(D.text(raw)));
-  assert.ok(t.rows.length > 0 && t.columns.includes("eventName"), JSON.stringify(t.columns));
+  assert.ok(t.rows.length > 0 && names(t).includes("eventName"), JSON.stringify(t.columns));
 });
 
 await test("text: UTF-8, BOM dropped", () => {
@@ -67,20 +71,20 @@ await test("json: error positions for trailing commas, bad literals, trailing te
 
 await test("jsonLines: columns in first-seen order, aligned rows, bad lines as errors, CRLF", () => {
   const t = D.jsonLines('{"a":1,"b":"x"}\r\n\r\n{"c":true,"a":2}\nnot json\n42\n');
-  assert.deepEqual(plain(t.columns), ["a", "b", "c", "value"]);
+  assert.deepEqual(names(t), ["a", "b", "c", "value"]);
   assert.deepEqual(plain(t.rows), [[1, "x", null, null], [2, null, true, null], [null, null, null, 42]].map((r) => r.map((v) => v === null ? undefined : v)).map((r) => plain(r)));
   assert.equal(t.errors.length, 1); assert.equal(t.errors[0].line, 4);
-  assert.equal(t.truncated, false);
+  assert.deepEqual(plain(t.truncated), { rows: false, bytes: false }); assert.equal(t.rowsRead, 4);
 });
 
 await test("jsonLines: max rows, then truncated", () => {
   const t = D.jsonLines('{"n":1}\n{"n":2}\n{"n":3}\n', { max: 2 });
-  assert.equal(t.rows.length, 2); assert.equal(t.truncated, true);
+  assert.equal(t.rows.length, 2); assert.deepEqual(plain(t.truncated), { rows: true, bytes: false }); assert.equal(t.rowsRead, 2);
 });
 
 await test("csv: RFC 4180 quotes, embedded delimiter, \"\" and newlines, CRLF, BOM", () => {
   const t = D.csv('﻿name,note,n\r\n"Smith, J","said ""hi""",1\r\nplain,"two\nlines",2\r\n');
-  assert.deepEqual(plain(t.columns), ["name", "note", "n"]);
+  assert.deepEqual(names(t), ["name", "note", "n"]);
   assert.deepEqual(plain(t.rows), [["Smith, J", 'said "hi"', "1"], ["plain", "two\nlines", "2"]]);
   assert.deepEqual(plain(t.errors), []);
 });
@@ -94,20 +98,37 @@ await test("csv: ragged rows and an open quote are errors with the line where th
 
 await test("csv: tab delimiter, max rows", () => {
   const t = D.csv("a\tb\n1\t2\n3\t4\n5\t6\n", { delimiter: "\t", max: 2 });
-  assert.deepEqual(plain(t.rows), [["1", "2"], ["3", "4"]]); assert.equal(t.truncated, true);
+  assert.deepEqual(plain(t.rows), [["1", "2"], ["3", "4"]]); assert.deepEqual(plain(t.truncated), { rows: true, bytes: false });
+  assert.equal(D.csv("a\n1\n2\n", { max: 2 }).truncated.rows, false, "exactly max rows is not truncated");
 });
 
 await test("table: an array of objects, CloudTrail's { Records }, scalars", () => {
   const ct = D.table({ Records: [{ eventName: "GetObject", awsRegion: "eu-west-2" }, { eventName: "PutBucketCors", errorCode: "AccessDenied" }] });
-  assert.deepEqual(plain(ct.columns), ["eventName", "awsRegion", "errorCode"]);
+  assert.deepEqual(names(ct), ["eventName", "awsRegion", "errorCode"]);
   assert.equal(ct.rows[1][2], "AccessDenied");
-  assert.deepEqual(plain(D.table([1, 2]).columns), ["value"]);
-  assert.equal(D.table([{ a: 1 }, { a: 2 }, { a: 3 }], { max: 2 }).truncated, true);
+  assert.deepEqual(names(D.table([1, 2])), ["value"]);
+  assert.equal(D.table([{ a: 1 }, { a: 2 }, { a: 3 }], { max: 2 }).truncated.rows, true);
 });
 
-await test("limits: over the byte cap is TooLarge before any decoding", () => {
-  for (const f of ["json", "jsonLines", "csv"]) assert.throws(() => D[f]("x".repeat(2048), { maxBytes: 1024 }), (e) => e.code === "TooLarge", f);
+await test("limits: json() over the cap throws TooLarge; jsonLines and csv stop at the last whole line and say so", () => {
+  assert.throws(() => D.json("x".repeat(2048), { maxBytes: 1024 }), (e) => e.code === "TooLarge");
+  const jl = D.jsonLines('{"n":1}\n'.repeat(300), { maxBytes: 1000 });
+  assert.equal(jl.rows.length, 125); assert.deepEqual(plain(jl.errors), []); assert.deepEqual(plain(jl.truncated), { rows: false, bytes: true });
+  const c = D.csv("a,b\n" + "1,2\n".repeat(300), { maxBytes: 100 });
+  assert.equal(c.rows.length, 24); assert.deepEqual(plain(c.errors), []); assert.equal(c.truncated.bytes, true);
+  // The cap falls inside a quoted field: that record is partial, not malformed, and is dropped quietly.
+  const q = D.csv('a,b\n1,"x\ny"\n2,"' + "z".repeat(200) + '"\n', { maxBytes: 60 });
+  assert.deepEqual(plain(q.rows), [["1", "x\ny"]]); assert.deepEqual(plain(q.errors), []); assert.equal(q.truncated.bytes, true);
   assert.equal(D.limits.rows, 50000); assert.equal(D.limits.bytes, 50 * 1024 * 1024);
+});
+
+await test("column hints from the first 200 rows: number, time, text", () => {
+  const t = D.csv("n,t,s,mixed,empty\n1,2026-11-22T10:01:02Z,a,1,\n2.5,2026-11-22,b,x,\n-3e2,2026-11-22 10:01:02.123+01:00,c,2,\n");
+  assert.deepEqual(plain(t.columns.map((c) => c.hint)), ["number", "time", "text", "text", "text"]);
+  const j = D.jsonLines('{"bytes":10,"when":"2026-11-22T10:01:02Z","ok":true}\n{"bytes":20}\n');
+  assert.deepEqual(plain(j.columns), [{ name: "bytes", hint: "number" }, { name: "when", hint: "time" }, { name: "ok", hint: "text" }]);
+  const late = D.csv("v\n" + "1\n".repeat(200) + "word\n");
+  assert.equal(late.columns[0].hint, "number", "row 201 is past the hint window");
 });
 
 await test("hostile values come back as they are, and decode.js has no eval, Function or HTML", () => {

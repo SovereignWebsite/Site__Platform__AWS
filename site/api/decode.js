@@ -3,17 +3,23 @@
 // the same way and the limits are enforced once.
 //
 //   Decode.sniff(bytes, { name, contentType })  -> "gzip" | "zip" | "json" | "jsonl" | "csv" | "text" | "binary"
-//   Decode.gunzip(bytes, { maxBytes })          -> Promise<Uint8Array>   (DecompressionStream, as s3.js does)
+//   Decode.gunzip(bytes, { maxBytes })          -> Promise<{ bytes, packed, unpacked, truncated: { bytes } }>
 //   Decode.text(bytes)                          -> string (UTF-8, a leading BOM dropped)
 //   Decode.json(text)                           -> value; throws an Error with .line and .column
-//   Decode.jsonLines(text, { max })             -> { columns, rows, errors: [{ line, message }], truncated }
-//   Decode.csv(text, { max, delimiter })        -> { columns, rows, errors, truncated }   (RFC 4180)
-//   Decode.table(value, { max })                -> { columns, rows, errors, truncated }   (array of objects, or { Records })
+//   Decode.jsonLines(text, { max, maxBytes })   -> table
+//   Decode.csv(text, { max, maxBytes, delimiter }) -> table   (RFC 4180)
+//   Decode.table(value, { max })                -> table   (an array of objects, or CloudTrail's { Records })
 //
-// Tables are one form: columns is a list of names, rows a list of arrays aligned to it (a missing value is
-// undefined). A bad line is an errors entry, not a stop. Limits: max rows (default 50 000) and a byte cap
-// (default 50 MB, unpacked) checked before decoding; over the cap is an Error with .code "TooLarge".
-// Values are returned as they are: never evaluated, never turned into HTML. Callers write them with textContent.
+//   table = { columns: [{ name, hint: "number" | "time" | "text" }], rows: [[...]], errors: [{ line, message }],
+//             truncated: { rows, bytes }, rowsRead }
+//
+// Rows are arrays aligned to columns (a missing value is undefined); columns in order of first appearance, with
+// a hint from the first 200 rows. A bad line is an errors entry, not a stop. Limits (design 03, refinement 5):
+// max rows (default 50 000) and a byte cap (default 50 MB, unpacked). At either, gunzip, jsonLines and csv stop
+// and return what they have, with truncated saying which, so a page can say "showing the first 50 MB";
+// rowsRead counts the input rows looked at (good and bad). json() cannot be partial: over the cap it throws an
+// Error with .code "TooLarge". gunzip cut at the cap may end mid-line; a table read from it reports that last
+// line as an error. Values are returned as they are: never evaluated, never turned into HTML.
 (function (root) {
   "use strict";
   var MAX_ROWS = 50000, MAX_BYTES = 50 * 1024 * 1024, SAMPLE = 65536;
@@ -28,6 +34,13 @@
     if (n > max) throw fail("TooLarge", n + " bytes is over the " + max + " byte limit");
   }
   function capText(s, max) { capBytes(s.length, max); } // UTF-16 units: a lower bound on the UTF-8 size, close enough for a cap
+  // Text over the cap: keep what fits, up to its last whole line.
+  function cut(s, max) {
+    max = max || MAX_BYTES;
+    if (s.length <= max) return { text: s, cut: false };
+    var part = s.slice(0, max), nl = part.lastIndexOf("\n");
+    return { text: nl >= 0 ? part.slice(0, nl + 1) : part, cut: true };
+  }
 
   function text(bytes) {
     var s = new TextDecoder("utf-8").decode(bytes);
@@ -61,16 +74,20 @@
   function gunzip(bytes, opts) {
     var max = (opts && opts.maxBytes) || MAX_BYTES;
     var reader = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip")).getReader(), parts = [], size = 0;
+    function done(truncated) {
+      var out = new Uint8Array(size), at = 0;
+      parts.forEach(function (p) { out.set(p, at); at += p.length; });
+      return { bytes: out, packed: bytes.length, unpacked: size, truncated: { bytes: truncated } };
+    }
     function next() {
       return reader.read().then(function (r) {
-        if (r.done) {
-          var out = new Uint8Array(size), at = 0;
-          parts.forEach(function (p) { out.set(p, at); at += p.length; });
-          return out;
+        if (r.done) return done(false);
+        var room = max - size;
+        if (r.value.length > room) {
+          if (room > 0) { parts.push(r.value.subarray(0, room)); size += room; }
+          return reader.cancel().then(function () { return done(true); }, function () { return done(true); });
         }
-        size += r.value.length;
-        if (size > max) { reader.cancel(); throw fail("TooLarge", "unpacked size passed the " + max + " byte limit"); }
-        parts.push(r.value);
+        parts.push(r.value); size += r.value.length;
         return next();
       });
     }
@@ -120,37 +137,59 @@
     }
   }
 
+  // A column's hint from its first 200 rows: number, time (ISO 8601 date or date-time), or text.
+  var TIME = /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/, NUMBER = /^\s*-?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?\s*$/;
+  function hints(names, rows) {
+    return names.map(function (name, c) {
+      var seen = 0, num = 0, time = 0;
+      for (var r = 0; r < rows.length && r < 200; r++) {
+        var v = rows[r][c];
+        if (v === undefined || v === null || v === "") continue;
+        seen++;
+        if (typeof v === "number" || (typeof v === "string" && NUMBER.test(v))) num++;
+        else if (typeof v === "string" && TIME.test(v)) time++;
+      }
+      return { name: name, hint: seen && num === seen ? "number" : seen && time === seen ? "time" : "text" };
+    });
+  }
+  function result(names, rows, errors, truncRows, truncBytes, rowsRead) {
+    errors.sort(function (a, b) { return a.line - b.line; });
+    return { columns: hints(names, rows), rows: rows, errors: errors, truncated: { rows: !!truncRows, bytes: !!truncBytes }, rowsRead: rowsRead };
+  }
+
   // Objects to aligned rows; columns in order of first appearance. A value that is not a plain object is one
   // column, "value".
-  function tabulate(values, errors, truncated) {
-    var columns = [], index = {};
-    function col(k) { if (!(k in index)) { index[k] = columns.length; columns.push(k); } return index[k]; }
+  function tabulate(values) {
+    var names = [], index = {};
+    function col(k) { if (!(k in index)) { index[k] = names.length; names.push(k); } return index[k]; }
     var keyed = values.map(function (v) {
       if (v && typeof v === "object" && !Array.isArray(v)) { Object.keys(v).forEach(col); return v; }
       col("value"); return { value: v };
     });
-    var rows = keyed.map(function (v) { var r = new Array(columns.length); for (var k in v) r[index[k]] = v[k]; return r; });
-    return { columns: columns, rows: rows, errors: errors || [], truncated: !!truncated };
+    return { names: names, rows: keyed.map(function (v) { var r = new Array(names.length); for (var k in v) r[index[k]] = v[k]; return r; }) };
   }
 
   function jsonLines(s, opts) {
-    opts = opts || {}; capText(s, opts.maxBytes);
-    var max = opts.max || MAX_ROWS, values = [], errors = [], truncated = false, lines = s.split("\n");
+    opts = opts || {};
+    var c = cut(s, opts.maxBytes), max = opts.max || MAX_ROWS, values = [], errors = [], read = 0, truncRows = false, lines = c.text.split("\n");
     for (var i = 0; i < lines.length; i++) {
       var l = lines[i].replace(/\r$/, "");
       if (!l.trim()) continue;
-      if (values.length >= max) { truncated = true; break; }
+      if (values.length >= max) { truncRows = true; break; }
+      read++;
       try { values.push(JSON.parse(l)); } catch (e) { errors.push({ line: i + 1, message: e.message }); }
     }
-    return tabulate(values, errors, truncated);
+    var t = tabulate(values);
+    return result(t.names, t.rows, errors, truncRows, c.cut, read);
   }
 
   // RFC 4180: the first record names the columns; quoted fields may hold the delimiter, "" and newlines.
   function csv(s, opts) {
-    opts = opts || {}; capText(s, opts.maxBytes);
+    opts = opts || {};
     if (s.charCodeAt(0) === 0xfeff) s = s.slice(1);
+    var c = cut(s, opts.maxBytes); s = c.text;
     var d = opts.delimiter || ",", max = opts.max || MAX_ROWS;
-    var records = [], errors = [], field = "", rec = [], quoted = false, line = 1, start = 1, i = 0, n = s.length, truncated = false;
+    var records = [], errors = [], field = "", rec = [], quoted = false, line = 1, start = 1, i = 0, n = s.length, truncRows = false;
     function endField() { rec.push(field); field = ""; }
     function endRecord() {
       endField();
@@ -158,39 +197,44 @@
       rec = []; start = line;
     }
     while (i < n) {
-      var c = s[i];
+      var ch = s[i];
       if (quoted) {
-        if (c === "\"") { if (s[i + 1] === "\"") { field += "\""; i += 2; continue; } quoted = false; i++; continue; }
-        if (c === "\n") line++;
-        field += c; i++; continue;
+        if (ch === "\"") { if (s[i + 1] === "\"") { field += "\""; i += 2; continue; } quoted = false; i++; continue; }
+        if (ch === "\n") line++;
+        field += ch; i++; continue;
       }
-      if (c === "\"" && field === "") { quoted = true; i++; continue; }
-      if (c === d) { endField(); i++; continue; }
-      if (c === "\r" && s[i + 1] === "\n") { i++; continue; }
-      if (c === "\n") { line++; endRecord(); i++; if (records.length > max) break; continue; }
-      field += c; i++;
+      if (ch === "\"" && field === "") { quoted = true; i++; continue; }
+      if (ch === d) { endField(); i++; continue; }
+      if (ch === "\r" && s[i + 1] === "\n") { i++; continue; }
+      if (ch === "\n") { line++; endRecord(); i++; if (records.length > max) { truncRows = /\S/.test(s.slice(i)); break; } continue; }
+      field += ch; i++;
     }
-    if (quoted) errors.push({ line: start, message: "a quoted field is not closed" });
-    if (i >= n && (field !== "" || rec.length)) endRecord();
-    if (!records.length) return { columns: [], rows: [], errors: errors, truncated: false };
-    var columns = records[0].values, rows = [];
-    for (var r = 1; r < records.length; r++) {
-      if (rows.length >= max) { truncated = true; break; }
+    if (i >= n) {
+      // A record the byte cap cut inside a quoted field is partial, not malformed: drop it quietly.
+      if (quoted && c.cut) { rec = []; field = ""; }
+      else {
+        if (quoted) errors.push({ line: start, message: "a quoted field is not closed" });
+        if (field !== "" || rec.length) endRecord();
+      }
+    }
+    if (!records.length) return result([], [], errors, false, c.cut, 0);
+    var names = records[0].values, rows = [];
+    for (var r = 1; r < records.length && rows.length < max; r++) {
       var v = records[r].values;
-      if (v.length !== columns.length) errors.push({ line: records[r].line, message: v.length + " fields where the header has " + columns.length });
-      var row = new Array(columns.length);
-      for (var k = 0; k < columns.length; k++) row[k] = v[k];
+      if (v.length !== names.length) errors.push({ line: records[r].line, message: v.length + " fields where the header has " + names.length });
+      var row = new Array(names.length);
+      for (var k = 0; k < names.length; k++) row[k] = v[k];
       rows.push(row);
     }
-    if (i < n) truncated = true;
-    errors.sort(function (a, b) { return a.line - b.line; });
-    return { columns: columns, rows: rows, errors: errors, truncated: truncated };
+    if (records.length - 1 > max) truncRows = true;
+    return result(names, rows, errors, truncRows, c.cut, rows.length);
   }
 
   function table(value, opts) {
     var max = (opts && opts.max) || MAX_ROWS;
     var list = Array.isArray(value) ? value : value && Array.isArray(value.Records) ? value.Records : [value];
-    return tabulate(list.slice(0, max), [], list.length > max);
+    var t = tabulate(list.slice(0, max));
+    return result(t.names, t.rows, [], list.length > max, false, t.rows.length);
   }
 
   root.Decode = { sniff: sniff, gunzip: gunzip, text: text, json: json, jsonLines: jsonLines, csv: csv, table: table,
