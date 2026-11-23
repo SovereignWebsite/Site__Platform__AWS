@@ -168,7 +168,7 @@
       var d = e.data, st = w.accounts[d.account].stacks[d.region + "/" + d.name];
       st.events.unshift({ id: st.stackId.split("/").pop() + "-" + e.seq, t: e.t, logical: d.logical, physical: d.physical || "", type: d.type, status: d.status, reason: d.reason || "" });
       if (d.logical === d.name) { st.status = d.status; if (d.outputs) st.outputs = d.outputs; }
-      else st.resources[d.logical] = { type: d.type, physical: d.physical || "", status: d.status };
+      else st.resources[d.logical] = { type: d.type, physical: d.physical || (st.resources[d.logical] || {}).physical || "", status: d.status, t: e.t, reason: d.reason || "" };
     },
     // A marker a scenario or test can schedule (the clock's own op): the world keeps the labels in order.
     "clock.mark": function (w, e) { w.marks.push(e.data.label); }
@@ -825,6 +825,18 @@
           "</LogicalResourceId><PhysicalResourceId>" + esc(ev.physical) + "</PhysicalResourceId><ResourceType>" + ev.type + "</ResourceType><Timestamp>" + ev.t +
           "</Timestamp><ResourceStatus>" + ev.status + "</ResourceStatus>" + (ev.reason ? "<ResourceStatusReason>" + esc(ev.reason) + "</ResourceStatusReason>" : "") + "</member>";
       }).join("") + "</StackEvents></DescribeStackEventsResult></DescribeStackEventsResponse>");
+    }
+    if (A === "ListStackResources") {
+      var st3 = find(form.get("StackName"));
+      if (!st3) return cfnErr("ValidationError", "Stack with id " + (form.get("StackName") || "") + " does not exist");
+      // In creation order (the order the clock first touched them), as the stack's template lists them.
+      var order = st3.events.slice().reverse().map(function (ev) { return ev.logical; }).filter(function (l, i, a) { return l !== st3.name && a.indexOf(l) === i; });
+      return xml("<ListStackResourcesResponse" + NS + "><ListStackResourcesResult><StackResourceSummaries>" + order.map(function (l) {
+        var rs = st3.resources[l];
+        return "<member><LogicalResourceId>" + esc(l) + "</LogicalResourceId><PhysicalResourceId>" + esc(rs.physical) + "</PhysicalResourceId><ResourceType>" + rs.type +
+          "</ResourceType><LastUpdatedTimestamp>" + rs.t + "</LastUpdatedTimestamp><ResourceStatus>" + rs.status + "</ResourceStatus>" +
+          (rs.reason ? "<ResourceStatusReason>" + esc(rs.reason) + "</ResourceStatusReason>" : "") + "</member>";
+      }).join("") + "</StackResourceSummaries></ListStackResourcesResult></ListStackResourcesResponse>");
     }
     return cfnErr("InvalidAction", "Not in the twin's customer account yet: cloudformation " + A);
   }

@@ -117,6 +117,22 @@ checks += 24;
   checks += 6;
 }
 
+// 3d. ListStackResources: what was made, in creation order, with its physical id and status; DescribeStacks with no
+// name lists the region's stacks (how the page finds the -access stack).
+{
+  const t = (await cfn(twin, { Action: "ListStackResources", StackName: "sws-vault-" + ID })).text;
+  const logical = tag(t, "LogicalResourceId"), phys = tag(t, "PhysicalResourceId"), st = tag(t, "ResourceStatus");
+  assert.equal(logical[0], "VaultBucket", "creation order"); assert.ok(logical.indexOf("VaultDistribution") > logical.indexOf("VaultFunction"));
+  assert.ok(st.every((x) => x === "CREATE_COMPLETE"), "all made");
+  assert.equal(phys[logical.indexOf("VaultBucket")], "sws-vault-0a1b2c3d4e5f-data-444455556666-eu-west-2");
+  assert.match(phys[logical.indexOf("VaultDistribution")], /^E[A-Z0-9]{13}$/);
+  assert.ok(!logical.includes("sws-vault-" + ID), "the stack itself is not one of its resources");
+  assert.match((await cfn(twin, { Action: "ListStackResources", StackName: "nope" })).text, /ValidationError/);
+  const all = tag((await cfn(twin, { Action: "DescribeStacks" })).text, "StackName");
+  assert.deepEqual(all.sort(), ["sws-vault-" + ID, "sws-vault-" + ID + "-access"], "DescribeStacks with no name lists the region's stacks");
+  checks += 8;
+}
+
 // 4. The platform's credentials see the platform's stack, not the customer's.
 {
   const t = (await cfn(twin, { Action: "DescribeStacks" }, READ)).text;
