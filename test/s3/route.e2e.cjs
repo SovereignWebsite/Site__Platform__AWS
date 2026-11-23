@@ -77,7 +77,35 @@ const fail = (m) => { throw new Error(m); };
   if (changed) fail("an address changed a bucket");
   if (s3asks.length) fail("S3 asked before the rule: " + s3asks.join(" "));
 
+  // 7. A bucket address without the trailing slash (design 02, check 3) opens the bucket on a fresh load, and is
+  // tidied in place to the slash form with no extra Back step (sherpa walk 4, finding 1).
+  await pg.goto("about:blank");
+  await pg.goto(base + `#/s3/${deps}`);
+  await pg.waitForSelector("#s3-list >> text=lambdas-dependencies/");
+  if (await hash() !== `#/s3/${deps}/`) fail("slashless address not tidied: " + await hash());
+  const steps = await pg.evaluate(() => history.length);
+  await pg.click("#s3-list >> text=lambdas-dependencies/");
+  await pg.waitForSelector("#s3-list button:has-text('.zip')");
+  await pg.goBack();
+  await pg.waitForSelector("#s3-list >> text=lambdas-dependencies/");
+  if (await hash() !== `#/s3/${deps}/`) fail("back from folder to slashless bucket " + await hash());
+  if (await pg.evaluate(() => history.length) !== steps + 1) fail("tidying the address added a history step");
+
+  // 8. Click a bucket, then Back to an address with no bucket: the bucket closes and the list of buckets stays
+  // (sherpa walk 4, finding 2).
+  await pg.goto("about:blank");
+  await pg.goto(base);
+  await pg.waitForSelector("#step1-done:not([hidden])");
+  await pg.click("#tab-s3");
+  await pg.click(`#s3-buckets button:has-text('${deps}')`);
+  await pg.waitForSelector("#s3-list >> text=lambdas-dependencies/");
+  await pg.goBack();
+  await pg.waitForFunction(() => !document.querySelector("#s3-list"));
+  if ((await pg.textContent("#s3-file")).trim()) fail("file still shown after Back to no bucket");
+  if (await pg.$("#s3-buckets button[aria-pressed=true]")) fail("bucket still pressed after Back to no bucket");
+  if (!(await pg.$(`#s3-buckets button:has-text('${deps}')`))) fail("bucket list gone after Back");
+
   if (errors.length) fail("page errors: " + errors.join(" | "));
-  console.log("OK (s3 address: clicks write it, reload and links open it, Back steps back, only this account's buckets)");
+  console.log("OK (s3 address: clicks write it, reload and links open it, Back steps back, slashless bucket, Back to no bucket, only this account's buckets)");
   await br.close(); srv.close();
 })().catch((e) => { console.error("FAIL", e.message); process.exit(1); });

@@ -47,12 +47,18 @@
     el.scrollIntoView({ block: "start" }); el.focus({ preventScroll: true });
   }
   function route(bucket, path) { return "#/s3/" + bucket + "/" + path.split("/").map(encodeURIComponent).join("/"); }
-  function go(bucket, path) { var h = route(bucket, path); if (location.hash !== h) location.hash = h; }
+  // The same place written another way (#/s3/<bucket> without the slash): tidy it in place, adding no Back step.
+  function go(bucket, path) {
+    var h = route(bucket, path); if (location.hash === h) return;
+    var r = parse(location.hash);
+    if (r && !r.bad && r.bucket === bucket && r.prefix + r.key === path) history.replaceState(history.state, "", h); else location.hash = h;
+  }
   // The address already says where the page is (it was written by the page itself, or nothing moved).
   function here(r) { return !!r && !r.bad && r.bucket === state.bucket && r.prefix === state.prefix && r.key === state.key; }
   function parse(hash) {
-    var m = /^#\/s3\/([^/]*)\/(.*)$/.exec(hash || ""), path; if (!m) return null;
-    try { path = m[2].split("/").map(decodeURIComponent).join("/"); } catch (e) { return { bad: true }; }
+    // #/s3/<bucket> with or without the slash; #/s3 or #/s3/ alone names no bucket (the list of buckets).
+    var m = /^#\/s3\/([^/]+)(?:\/(.*))?$/.exec(hash || ""), path; if (!m) return null;
+    try { path = (m[2] || "").split("/").map(decodeURIComponent).join("/"); } catch (e) { return { bad: true }; }
     if (!BUCKET.test(m[1]) || path.length > 1024 || /(^|\/)\.\.?(\/|$)/.test(path)) return { bad: true };
     var cut = path.lastIndexOf("/") + 1;
     return { bucket: m[1], prefix: path.slice(0, cut), key: cut < path.length ? path : "" };
@@ -81,8 +87,14 @@
       press(r.bucket); openBucket(r.bucket, r);
     });
   }
+  // Back past the first bucket opened leaves an address with no bucket: show the list of buckets again.
+  function closeBucket() {
+    newView(true); state.bucket = null; state.prefix = ""; state.key = ""; state.bucketRegion = null;
+    $("s3-objects").textContent = ""; $("s3-file").textContent = ""; press(""); P.say($("s3-status"), "");
+  }
   window.addEventListener("hashchange", function () {
     var r = parse(location.hash);
+    if (!r && state.bucket && /^(#?|#\/s3\/?)$/.test(location.hash)) return closeBucket();
     if (!here(r)) apply(r);
   });
 

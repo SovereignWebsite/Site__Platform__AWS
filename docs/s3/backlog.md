@@ -18,3 +18,9 @@ Kept by s3.aws.a@SovereignWebsite.dinis. Newest asks appended; order of work is 
 
 - dev.1.aws.a: first-note items 1 to 6 (Range preview over 5 MB and streamed gunzip, JSON in pages with folding, CloudFront/CSV/TSV as tables, back-to-back Firehose records), then 7 (several gzip members), 9 to 11 (sort, automatic paging, prefix filter, listing cache) and sherpa W3-5 (line filter in the log viewer).
 - s3.aws.a: the route and arrival, the S3 page shape, review of dev.1's pieces, sherpa's usability items W1-6 and W1-7, keyboard (13), errors (15), the bucket graph.
+
+## From sherpa walk 4 (work/sherpa.aws.a 54bdf9b)
+
+- W4-1: `#/s3/<bucket>` without the trailing slash opened nothing on a fresh load. **Done** (local): parse() takes it, and go() tidies it to the slash form in place (no extra Back step). Test: test/s3/route.e2e.cjs case 7.
+- W4-2: click a bucket, then Back: the address went empty but the bucket stayed open. **Done** (local): Back to an address with no bucket closes it and shows the list of buckets. Test: route.e2e.cjs case 8.
+- W4-3: addresses land at the top of the page: covered by d5276b8 (W3-2).
