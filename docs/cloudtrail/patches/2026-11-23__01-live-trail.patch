@@ -1,0 +1,202 @@
+diff --git a/site/twin.js b/site/twin.js
+index 8dcf703..a9cc940 100644
+--- a/site/twin.js
++++ b/site/twin.js
+@@ -73,6 +73,39 @@
+     dotted: "demo.static.example"
+   };
+   var state = null;
++  // ---- CloudTrail records ----
++  // One record in the shape CloudTrail writes. e: time, source, name, region, params, write, data, and for live
++  // records the caller's role, address, user agent, response and error. Field list from AWS's record contents page.
++  function trailEvent(n, e) {
++    var role = e.role || (e.write ? "sws-aws-platform-change" : "sws-aws-platform-read"), k = role === "sws-aws-platform-change" ? "CHANGE" : "READ";
++    var who = e.identity || { type: "AssumedRole", principalId: "AROATWIN" + k + ":sws-aws-platform",
++      arn: "arn:aws:sts::" + ACCOUNT + ":assumed-role/" + role + "/sws-aws-platform", accountId: ACCOUNT, accessKeyId: "ASIATWIN" + k,
++      sessionContext: { sessionIssuer: { type: "Role", principalId: "AROATWIN" + k, arn: "arn:aws:iam::" + ACCOUNT + ":role/" + role, accountId: ACCOUNT, userName: role },
++        webIdFederationData: { federatedProvider: "accounts.google.com" }, attributes: { creationDate: e.session || "2026-11-22T10:00:00Z", mfaAuthenticated: "false" } } };
++    var r = { eventVersion: "1.09", userIdentity: who, eventTime: e.time, eventSource: e.source, eventName: e.name, awsRegion: e.region,
++      sourceIPAddress: e.ip || "203.0.113.7", userAgent: e.ua || "Mozilla/5.0" };
++    if (e.error) { r.errorCode = e.error[0]; r.errorMessage = e.error[1]; }
++    r.requestParameters = e.params; r.responseElements = e.response || null;
++    r.requestID = "TWIN-REQ-" + pad(n, 4); r.eventID = "00000000-0000-4000-8000-" + pad(n, 12);
++    r.readOnly = !e.write; r.eventType = "AwsApiCall"; r.managementEvent = !e.data; r.recipientAccountId = ACCOUNT; r.eventCategory = e.data ? "Data" : "Management";
++    return r;
++  }
++  // Live records: every change made in the twin (and every sign-in) is written to the trail bucket at once, in a
++  // file per region and five minutes, as CloudTrail does. Real CloudTrail delivers a few minutes late; the twin does
++  // not, so a user sees the change they just made. Times are the browser's clock.
++  function record(s, init, e) {
++    var a = /Credential=ASIATWIN(\w+)/.exec(hdr(init, "authorization") || ""), now = new Date(), t = now.toISOString().replace(/\.\d+Z$/, "Z");
++    if (!e.role && a) e.role = a[1] === "CHANGE" ? "sws-aws-platform-change" : "sws-aws-platform-read";
++    e.time = t; e.ua = (root.navigator && root.navigator.userAgent) || "Mozilla/5.0";
++    var ev = trailEvent(++s.trailSeq, e), m = Math.floor(now.getUTCMinutes() / 5) * 5;
++    var day = t.slice(0, 4) + "/" + t.slice(5, 7) + "/" + t.slice(8, 10), stamp = t.slice(0, 4) + t.slice(5, 7) + t.slice(8, 10) + "T" + t.slice(11, 13) + pad(m) + "Z";
++    var key = "AWSLogs/" + ACCOUNT + "/CloudTrail/" + e.region + "/" + day + "/" + ACCOUNT + "_CloudTrail_" + e.region + "_" + stamp + "_twin-live.json.gz";
++    var list = s.trailLive[key] = s.trailLive[key] || [];
++    list.push(ev);
++    var body = enc.encode(JSON.stringify({ Records: list.slice() }));
++    s.objects[B.trail][key] = { body: gzip(body), type: "application/x-gzip", modified: now.toISOString() };
++    return ev;
++  }
+   function seedCors() {
+     var o = {}, origin = root.location ? root.location.origin : "http://localhost";
+     [B.logs, B.deps, B.trail, B.dotted].forEach(function (b) { o[b] = { CorsRules: [{ Id: "sws-aws-platform", AllowedOrigins: [origin], AllowedMethods: ["GET", "HEAD"], AllowedHeaders: ["*"], ExposedHeaders: ["ETag", "Content-Type", "Content-Length", "Last-Modified"], MaxAge: 3000 }] }; });
+@@ -118,16 +151,6 @@
+       ["config.json", JSON.stringify({ timeout: 30, memory: 256, region: REGION })]
+     ]), "2026-11-18T16:54:00.000Z");
+     // CloudTrail log files: one per region and five minutes. IAM is global, so its events are written under us-east-1.
+-    function trailEvent(n, e) {
+-      var role = e.write ? "sws-aws-platform-change" : "sws-aws-platform-read";
+-      return { eventVersion: "1.09", userIdentity: { type: "AssumedRole", principalId: "AROATWIN" + (e.write ? "CHANGE" : "READ") + ":sws-aws-platform",
+-          arn: "arn:aws:sts::" + ACCOUNT + ":assumed-role/" + role + "/sws-aws-platform", accountId: ACCOUNT, accessKeyId: "ASIATWIN" + (e.write ? "CHANGE" : "READ"),
+-          sessionContext: { sessionIssuer: { type: "Role", principalId: "AROATWIN" + (e.write ? "CHANGE" : "READ"), arn: "arn:aws:iam::" + ACCOUNT + ":role/" + role, accountId: ACCOUNT, userName: role },
+-            webIdFederationData: { federatedProvider: "accounts.google.com" }, attributes: { creationDate: "2026-11-22T10:00:00Z", mfaAuthenticated: "false" } } },
+-        eventTime: e.time, eventSource: e.source, eventName: e.name, awsRegion: e.region, sourceIPAddress: "203.0.113.7", userAgent: "Mozilla/5.0",
+-        requestParameters: e.params, responseElements: null, requestID: "TWIN-REQ-" + pad(n, 4), eventID: "00000000-0000-4000-8000-" + pad(n, 12),
+-        readOnly: !e.write, eventType: "AwsApiCall", managementEvent: !e.data, recipientAccountId: ACCOUNT, eventCategory: e.data ? "Data" : "Management" };
+-    }
+     function trailFile(region, stamp, events, modified) {
+       put(B.trail, "AWSLogs/" + ACCOUNT + "/CloudTrail/" + region + "/2026/11/22/" + ACCOUNT + "_CloudTrail_" + region + "_" + stamp + "_demo.json.gz", "application/x-gzip",
+         gzip(enc.encode(JSON.stringify({ Records: events }))), modified);
+@@ -144,7 +167,7 @@
+       objects: objects, cors: seedCors(),
+       roles: { "sovereignwebsite-factory-dns": { Version: "2012-10-17", Statement: [{ Effect: "Allow", Principal: { Federated: "arn:aws:iam::" + ACCOUNT + ":oidc-provider/token.actions.githubusercontent.com" }, Action: "sts:AssumeRoleWithWebIdentity",
+         Condition: { StringEquals: { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com", [K]: ["repo:SovereignWebsite@358722364/SovereignWebsite__IaC@1464324035:environment:apply", "repo:SovereignWebsite@358722364/SovereignWebsite__Factory@1464324035:environment:apply"] } } }] } },
+-      template: null, stackStatus: "CREATE_COMPLETE", changeSets: {}, requests: {}
++      template: null, stackStatus: "CREATE_COMPLETE", changeSets: {}, requests: {}, trailSeq: 100, trailLive: {}
+     };
+     return state;
+   }
+@@ -168,7 +191,14 @@
+     var A = form.get("Action");
+     if (A === "AssumeRoleWithWebIdentity") {
+       var role = (form.get("RoleArn") || "").split(":role/")[1] || "", exp = new Date(Date.now() + 3600e3).toISOString();
+-      if (!/^sws-aws-platform-(read|change)$/.test(role)) return xmlErr("AccessDenied", "Not authorized to perform sts:AssumeRoleWithWebIdentity", 403);
++      var web = { type: "WebIdentityUser", principalId: "accounts.google.com:twin-client-id:twin-user", userName: "twin-user", identityProvider: "accounts.google.com" };
++      var asked = { roleArn: form.get("RoleArn"), roleSessionName: form.get("RoleSessionName"), durationSeconds: +(form.get("DurationSeconds") || 3600) };
++      if (!/^sws-aws-platform-(read|change)$/.test(role)) {
++        record(build(), init, { source: "sts.amazonaws.com", name: "AssumeRoleWithWebIdentity", region: "us-east-1", identity: web, params: asked, error: ["AccessDenied", "Not authorized to perform sts:AssumeRoleWithWebIdentity"] });
++        return xmlErr("AccessDenied", "Not authorized to perform sts:AssumeRoleWithWebIdentity", 403);
++      }
++      record(build(), init, { source: "sts.amazonaws.com", name: "AssumeRoleWithWebIdentity", region: "us-east-1", identity: web, params: asked,
++        response: { assumedRoleUser: { arn: "arn:aws:sts::" + ACCOUNT + ":assumed-role/" + role + "/sws-aws-platform" }, provider: "accounts.google.com" } });
+       return xml("<AssumeRoleWithWebIdentityResponse><AssumeRoleWithWebIdentityResult><Credentials><AccessKeyId>ASIATWIN" + (role === "sws-aws-platform-change" ? "CHANGE" : "READ") + "</AccessKeyId><SecretAccessKey>twin-secret</SecretAccessKey><SessionToken>twin-session-token</SessionToken><Expiration>" + exp + "</Expiration></Credentials><AssumedRoleUser><Arn>arn:aws:sts::" + ACCOUNT + ":assumed-role/" + role + "/sws-aws-platform</Arn></AssumedRoleUser></AssumeRoleWithWebIdentityResult></AssumeRoleWithWebIdentityResponse>");
+     }
+     if (!signed(init)) return xmlErr("MissingAuthenticationToken", "Request is missing Authentication Token", 403);
+@@ -183,19 +213,26 @@
+     var s = build(), A = form.get("Action"), name = form.get("RoleName");
+     if (!s.roles[name]) return xmlErr("NoSuchEntity", "The role with name " + name + " cannot be found.", 404);
+     if (A === "GetRole") return xml("<GetRoleResponse><GetRoleResult><Role><RoleName>" + esc(name) + "</RoleName><AssumeRolePolicyDocument>" + encodeURIComponent(JSON.stringify(s.roles[name])) + "</AssumeRolePolicyDocument></Role></GetRoleResult></GetRoleResponse>");
+-    if (A === "UpdateAssumeRolePolicy") { var p = JSON.parse(form.get("PolicyDocument")); p.Statement.forEach(function (st) { st.Condition = collapse(st.Condition); }); s.roles[name] = p; return xml("<UpdateAssumeRolePolicyResponse/>"); }
++    if (A === "UpdateAssumeRolePolicy") { var p = JSON.parse(form.get("PolicyDocument")); p.Statement.forEach(function (st) { st.Condition = collapse(st.Condition); }); s.roles[name] = p;
++      record(s, init, { source: "iam.amazonaws.com", name: "UpdateAssumeRolePolicy", region: "us-east-1", write: true, params: { roleName: name, policyDocument: JSON.stringify(p) } });
++      return xml("<UpdateAssumeRolePolicyResponse/>"); }
+     return xmlErr("InvalidAction", "Not in the twin yet: iam " + A);
+   }
+-  function cloudformation(form, init) {
++  function cloudformation(form, init, host) {
++    var cfnRegion = (host || "").split(".")[1] || REGION;
+     if (!signed(init)) return xmlErr("MissingAuthenticationToken", "Request is missing Authentication Token", 403);
+     var s = build(), A = form.get("Action");
+     var ready = s.template ? Promise.resolve(s.template) : fetch(new URL("cloudformation/bootstrap.yaml", document.baseURI)).then(function (r) { return r.text(); })
+       .then(function (t) { s.template = t.replace("Description: >-\n", "Description: >-\n  (twin: an older version)\n"); return s.template; });
+     return ready.then(function () {
+       if (A === "GetTemplate") return xml("<GetTemplateResponse><GetTemplateResult><TemplateBody>" + esc(s.template) + "</TemplateBody></GetTemplateResult></GetTemplateResponse>");
+-      if (A === "CreateChangeSet") { s.changeSets[form.get("ChangeSetName")] = form.get("TemplateBody"); return xml("<CreateChangeSetResponse><CreateChangeSetResult><Id>twin</Id></CreateChangeSetResult></CreateChangeSetResponse>"); }
++      if (A === "CreateChangeSet") { s.changeSets[form.get("ChangeSetName")] = form.get("TemplateBody");
++        record(s, init, { source: "cloudformation.amazonaws.com", name: "CreateChangeSet", region: cfnRegion, write: true, params: { stackName: form.get("StackName"), changeSetName: form.get("ChangeSetName"), changeSetType: form.get("ChangeSetType") || "UPDATE" }, response: { id: "twin", stackId: "sws-aws-platform" } });
++        return xml("<CreateChangeSetResponse><CreateChangeSetResult><Id>twin</Id></CreateChangeSetResult></CreateChangeSetResponse>"); }
+       if (A === "DescribeChangeSet") return xml("<DescribeChangeSetResponse><DescribeChangeSetResult><Status>CREATE_COMPLETE</Status><Changes><member><ResourceChange><Action>Modify</Action><LogicalResourceId>PlatformRead</LogicalResourceId><ResourceType>AWS::IAM::Role</ResourceType><Replacement>False</Replacement></ResourceChange></member><member><ResourceChange><Action>Modify</Action><LogicalResourceId>PlatformChange</LogicalResourceId><ResourceType>AWS::IAM::Role</ResourceType><Replacement>False</Replacement></ResourceChange></member></Changes></DescribeChangeSetResult></DescribeChangeSetResponse>");
+-      if (A === "ExecuteChangeSet") { s.template = s.changeSets[form.get("ChangeSetName")]; s.stackStatus = "UPDATE_COMPLETE"; return xml("<ExecuteChangeSetResponse/>"); }
++      if (A === "ExecuteChangeSet") { s.template = s.changeSets[form.get("ChangeSetName")]; s.stackStatus = "UPDATE_COMPLETE";
++        record(s, init, { source: "cloudformation.amazonaws.com", name: "ExecuteChangeSet", region: cfnRegion, write: true, params: { stackName: form.get("StackName"), changeSetName: form.get("ChangeSetName") } });
++        return xml("<ExecuteChangeSetResponse/>"); }
+       if (A === "DescribeStacks") return xml("<DescribeStacksResponse><DescribeStacksResult><Stacks><member><StackName>sws-aws-platform</StackName><StackStatus>" + s.stackStatus + "</StackStatus></member></Stacks></DescribeStacksResult></DescribeStacksResponse>");
+       return xmlErr("InvalidAction", "Not in the twin yet: cloudformation " + A);
+     });
+@@ -212,6 +249,7 @@
+       return json({ TypeName: q.TypeName, ResourceDescription: { Identifier: q.Identifier, Properties: JSON.stringify(props) } });
+     }
+     if (target === "UpdateResource") {
++      record(s, init, { source: "cloudcontrolapi.amazonaws.com", name: "UpdateResource", region: region, write: true, params: { typeName: q.TypeName, identifier: q.Identifier, patchDocument: q.PatchDocument } });
+       if (region !== REGION) { s.requests.bad = "The bucket you are attempting to access must be addressed using the specified endpoint."; return json({ ProgressEvent: { RequestToken: "bad", OperationStatus: "IN_PROGRESS" } }); }
+       JSON.parse(q.PatchDocument).forEach(function (op) {
+         if (op.path === "/CorsConfiguration") s.cors[q.Identifier] = op.value;
+@@ -279,7 +317,7 @@
+     try {
+       if (host === "sts.amazonaws.com" || /^sts\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = sts(new URLSearchParams(body), init);
+       else if (host === "iam.amazonaws.com") p = iam(new URLSearchParams(body), init);
+-      else if (/^cloudformation\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudformation(new URLSearchParams(body), init);
++      else if (/^cloudformation\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudformation(new URLSearchParams(body), init, host);
+       else if (/^ce\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = ce();
+       else if (/^cloudcontrolapi\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudcontrol((hdr(init, "x-amz-target") || "").split(".")[1], body, init, host);
+       else if (/\.?s3\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = s3(url, init);
+diff --git a/test/twin/cloudtrail-live.test.mjs b/test/twin/cloudtrail-live.test.mjs
+new file mode 100644
+index 0000000..9afe5fe
+--- /dev/null
++++ b/test/twin/cloudtrail-live.test.mjs
+@@ -0,0 +1,62 @@
++// The twin writes a CloudTrail record for every change it makes, and for every sign-in, into the trail bucket at once:
++// one .json.gz per region and five minutes, under AWSLogs/<account>/CloudTrail/<region>/yyyy/mm/dd/, with the fields a
++// real record has. IAM and STS (global) under us-east-1. Runs in Node 22; no network.
++import { readFileSync } from "node:fs";
++const fail = (m) => { console.error("FAIL", m); process.exit(1); };
++globalThis.window = globalThis;
++globalThis.location = { origin: "http://localhost", search: "" };
++// the twin's CloudFormation reads the page's own template; serve it from the repository
++globalThis.document = { baseURI: "http://localhost/" };
++globalThis.fetch = async (u) => new Response(readFileSync(new URL("../../site/" + new URL(u).pathname.slice(1), import.meta.url), "utf8"));
++new Function(readFileSync(new URL("../../site/twin.js", import.meta.url), "utf8"))();
++const T = globalThis.AwsTwin, A = T.account;
++const read = { authorization: "AWS4-HMAC-SHA256 Credential=ASIATWINREAD/x" }, change = { authorization: "AWS4-HMAC-SHA256 Credential=ASIATWINCHANGE/x" };
++const form = (o) => new URLSearchParams(o).toString();
++const post = (url, body, h) => T.handle(url, { method: "POST", headers: Object.assign({ "content-type": "application/x-www-form-urlencoded" }, h || {}), body });
++const trailHost = "https://" + T.buckets.trail + ".s3.eu-west-2.amazonaws.com/";
++const list = async (prefix) => { const x = await (await T.handle(trailHost + "?list-type=2&prefix=" + encodeURIComponent(prefix), { method: "GET", headers: read })).text(); return [...x.matchAll(/<Key>([^<]*)<\/Key>/g)].map((m) => m[1]); };
++const records = async (key) => { const b = await (await T.handle(trailHost + encodeURI(key), { method: "GET", headers: read })).arrayBuffer();
++  const t = await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream("gzip"))).text(); return JSON.parse(t).Records; };
++const live = async (region) => { const keys = (await list("AWSLogs/" + A + "/CloudTrail/" + region + "/")).filter((k) => k.includes("_twin-live")); let all = []; for (const k of keys) all = all.concat(await records(k)); return { keys, all }; };
++const FIELDS = ["eventVersion", "userIdentity", "eventTime", "eventSource", "eventName", "awsRegion", "sourceIPAddress", "userAgent", "requestParameters", "responseElements", "requestID", "eventID", "readOnly", "eventType", "managementEvent", "recipientAccountId", "eventCategory"];
++const shape = (r) => { for (const f of FIELDS) if (!(f in r)) fail(r.eventName + " lacks " + f); if (!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/.test(r.eventTime)) fail("eventTime " + r.eventTime); };
++
++T.reset();
++if ((await live("us-east-1")).keys.length) fail("live records before any call");
++
++// sign-in, allowed and refused
++await post("https://sts.amazonaws.com/", form({ Action: "AssumeRoleWithWebIdentity", RoleArn: "arn:aws:iam::" + A + ":role/sws-aws-platform-read", RoleSessionName: "sws-aws-platform", WebIdentityToken: "x" }));
++await post("https://sts.amazonaws.com/", form({ Action: "AssumeRoleWithWebIdentity", RoleArn: "arn:aws:iam::" + A + ":role/someone-else", RoleSessionName: "sws-aws-platform", WebIdentityToken: "x" }));
++// a trust change
++const trust = { Version: "2012-10-17", Statement: [{ Effect: "Allow", Principal: { Federated: "arn:aws:iam::" + A + ":oidc-provider/token.actions.githubusercontent.com" }, Action: "sts:AssumeRoleWithWebIdentity", Condition: { StringEquals: { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com" } } }] };
++await post("https://iam.amazonaws.com/", form({ Action: "UpdateAssumeRolePolicy", RoleName: "sovereignwebsite-factory-dns", PolicyDocument: JSON.stringify(trust) }), change);
++
++let g = await live("us-east-1");
++if (g.keys.length !== 1) fail("expected one live file for us-east-1, got " + g.keys.length);
++if (!new RegExp("^AWSLogs/" + A + "/CloudTrail/us-east-1/\\d{4}/\\d\\d/\\d\\d/" + A + "_CloudTrail_us-east-1_\\d{8}T\\d{2}[0-5][05]Z_twin-live\\.json\\.gz$").test(g.keys[0])) fail("key " + g.keys[0]);
++if (g.all.map((r) => r.eventName).join() !== "AssumeRoleWithWebIdentity,AssumeRoleWithWebIdentity,UpdateAssumeRolePolicy") fail("us-east-1 events: " + g.all.map((r) => r.eventName));
++g.all.forEach(shape);
++const [ok, denied, upd] = g.all;
++if (ok.userIdentity.type !== "WebIdentityUser" || ok.errorCode) fail("sign-in record");
++if (denied.errorCode !== "AccessDenied") fail("refused sign-in has no errorCode");
++if (upd.readOnly !== false || upd.userIdentity.sessionContext.sessionIssuer.userName !== "sws-aws-platform-change" || upd.requestParameters.roleName !== "sovereignwebsite-factory-dns") fail("trust change record");
++if (new Set(g.all.map((r) => r.eventID)).size !== 3) fail("eventID not unique");
++
++// a stack change through a change set, in the stack's region
++await post("https://cloudformation.eu-west-2.amazonaws.com/", form({ Action: "CreateChangeSet", StackName: "sws-aws-platform", ChangeSetName: "cs-1", TemplateBody: "Resources: {}" }), change);
++await post("https://cloudformation.eu-west-2.amazonaws.com/", form({ Action: "ExecuteChangeSet", StackName: "sws-aws-platform", ChangeSetName: "cs-1" }), change);
++// a CORS change through Cloud Control
++await T.handle("https://cloudcontrolapi.eu-west-2.amazonaws.com/", { method: "POST", headers: Object.assign({ "x-amz-target": "CloudApiService.UpdateResource" }, change),
++  body: JSON.stringify({ TypeName: "AWS::S3::Bucket", Identifier: T.buckets.site, PatchDocument: JSON.stringify([{ op: "add", path: "/CorsConfiguration", value: { CorsRules: [{ Id: "sws-aws-platform", AllowedOrigins: ["http://localhost"] }] } }]) }) });
++g = await live("eu-west-2");
++if (g.all.map((r) => r.eventName).join() !== "CreateChangeSet,ExecuteChangeSet,UpdateResource") fail("eu-west-2 events: " + g.all.map((r) => r.eventName));
++g.all.forEach(shape);
++if (g.all.some((r) => r.awsRegion !== "eu-west-2" || r.readOnly)) fail("eu-west-2 records region or readOnly");
++// reads leave no live record
++await T.handle(trailHost + "?list-type=2", { method: "GET", headers: read });
++if ((await live("eu-west-2")).all.length !== 3) fail("a read added a record");
++// the seeded files are still there
++if (!(await list("AWSLogs/" + A + "/CloudTrail/eu-west-2/2026/11/22/")).some((k) => k.endsWith("_demo.json.gz"))) fail("seeded file gone");
++T.reset();
++if ((await live("us-east-1")).keys.length) fail("reset kept live records");
++console.log("ok cloudtrail-live: sign-in, refused sign-in, trust change, change set, CORS change recorded per region; reads not recorded; reset clears");
