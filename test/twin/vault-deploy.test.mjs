@@ -76,7 +76,7 @@ assert.equal(v.status, "CREATE_COMPLETE");
 assert.deepEqual(Object.keys(v.out).sort(), ["AccountId", "BucketName", "DeployCheck", "DeployMode", "DistributionId", "Endpoint", "HealthCheck", "Region", "TemplateVersion", "TokenSecretArn", "VaultId"], "the eleven outputs (no DnsRecords: the zone is in this account)");
 assert.equal(v.out.DeployMode, "access-stack"); assert.ok(!ev.some((e) => e.logical === "VaultBoundary"), "access-stack mode: the boundary is the -access stack's");
 assert.equal(v.out.Endpoint, "https://vault.example.com"); assert.match(v.out.DeployCheck, /^https:\/\/d[a-z0-9]{13}\.cloudfront\.net\/health$/);
-assert.equal(v.out.BucketName, "sws-vault-0a1b2c3d4e5f-data-444455556666-eu-west-2"); assert.equal(v.out.TemplateVersion, "0.4.4-draft");
+assert.equal(v.out.BucketName, "sws-vault-0a1b2c3d4e5f-data-444455556666-eu-west-2"); assert.equal(v.out.TemplateVersion, "0.4.6-draft");
 assert.match(v.out.DistributionId, /^E[A-Z0-9]{13}$/); assert.match(v.out.TokenSecretArn, /:secret:sws-vault-0a1b2c3d4e5f-token-[A-Za-z]{6}$/);
 checks += 24;
 
@@ -116,11 +116,12 @@ checks += 24;
   assert.ok(!e4.some((e) => e.logical === "VaultDistribution"), "nothing after wave 1 was started");
   const last = (l) => e4.filter((e) => e.logical === l).pop().status;
   assert.equal(last("AccessToken"), "DELETE_COMPLETE", "a cancelled resource is DELETE_COMPLETE in the rollback");
-  assert.equal(last("VaultBucket"), "DELETE_SKIPPED", "Retain: the bucket is DELETE_SKIPPED");
-  assert.equal(last("VaultLogs"), "DELETE_SKIPPED", "Retain: the log group is DELETE_SKIPPED");
+  assert.equal(last("VaultBucket"), "DELETE_COMPLETE", "RetainExceptOnCreate: a first create's rollback deletes the bucket");
+  assert.equal(last("VaultLogs"), "DELETE_COMPLETE", "RetainExceptOnCreate: and the log group");
+  assert.ok(!e4.some((e) => e.logical === "VaultBucketPolicy"), "the policy (wave 2) was never started, so it is not in the events");
   assert.equal(e4.filter((e) => e.status === "CREATE_FAILED" && e.logical !== "VaultBoundary").length, 4, "the four in-progress siblings are CREATE_FAILED");
   assert.equal(((await cfn(t4, { Action: "DescribeStackEvents", StackName: "sws-vault-" + ID })).text.match(/Resource creation cancelled/g) || []).length, 4, "with the twin's wording");
-  checks += 11;
+  checks += 12;
 }
 
 // 3d. ListStackResources: what was made, in creation order, with its physical id and status; DescribeStacks with no
