@@ -98,8 +98,9 @@ Resources:
       Tags:
         - { Key: sws-vault, Value: !Ref VaultId }
 
-  # ---- cost alarm (R-026): CloudFront's request metrics are in us-east-1, dimension Region=Global. CHECK the namespace,
-  # metric name and dimensions against CloudFront's monitoring documentation. It notifies; the kill switch that would
+  # ---- cost alarm (R-026): CloudFront's request metrics are in us-east-1, namespace AWS/CloudFront, dimensions
+  # DistributionId and Region=Global, Requests a default metric at no extra charge (CloudFront developer guide, read by
+  # boto3.aws.a, note 16); the alarm itself bills as a CloudWatch alarm. It notifies; the kill switch that would
   # disable the distribution (an alarm-driven Lambda) is sketched in 2026-11-23__vault-flood-guard-01.md, not built. ----
   CostAlarmTopic:
     Type: AWS::SNS::Topic

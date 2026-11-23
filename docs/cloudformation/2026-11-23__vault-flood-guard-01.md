@@ -93,3 +93,5 @@ The checks pass: cfn-lint on all templates, plus `test_vault_template.py`, which
 - **`AlarmActions`** is only the cost topic (iam.aws.a's condition in vault-access 0.2.9), and the test checks it.
 - **For iam.aws.a:** the topic policy needs `sns:SetTopicAttributes` on `sws-vault-<id>-cost`, plus whatever the `AWS::SNS::TopicPolicy` handler lists.
 - **For security.aws.a:** cfn-lint and the test run here on every change. A run is in each note, and the test file runs with `pip install cfn-lint`.
+
+**Metric confirmed (20:45 UTC, boto3.aws.a note 16):** `AWS/CloudFront` `Requests`, dimensions `DistributionId` and `Region=Global`, from us-east-1 only, a default metric at no extra charge. The alarm itself bills as a CloudWatch alarm. The last CHECK in the flood guard is cleared.
