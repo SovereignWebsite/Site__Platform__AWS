@@ -49,7 +49,8 @@ export function cfRecord(line, src) {
     id: sha(["cloudfront-extract", src.key, src.line].join("\n")),
     t: line.timestamp, hour: line.timestamp.slice(0, 13) + ":00:00Z",
     method: line.cs_method, path, status: line.sc_status, bytes: line.sc_bytes, ms: Math.round(line.time_taken * 1000),
-    edge: line.x_edge_location, edge_city: (line.x_edge_location || "").slice(0, 3), country: line.country || "",
+    edge: line.x_edge_location, edge_city: (line.x_edge_location || "").slice(0, 3), // the edge, not the visitor
+    country: line.country || "", ...(line.city ? { city: line.city } : {}), // the enricher's claim (privacy decided 11:15 UTC)
     agent_kind: agentKind(line.cs_user_agent), kind: kindOf(path, vault), vault,
     net: net(line.c_ip), src
   };

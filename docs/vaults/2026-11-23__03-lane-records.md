@@ -47,7 +47,8 @@ data.aws.a's schema v0, with these fields:
 | Field | From (twin field) | Note |
 |---|---|---|
 | `t`, `method`, `path`, `status`, `bytes`, `ms` | timestamp, cs_method, cs_uri_stem, sc_status, sc_bytes, time_taken x 1000 | as schema v0 |
-| `edge`, `edge_city`, `country` | x_edge_location, country | `country` is the enricher's |
+| `edge`, `edge_city` | x_edge_location | the CloudFront edge that answered (LHR is London), not the visitor |
+| `country`, `city` | the enricher's country, city | the visitor's, when an enricher gives them, and only that enricher's claim; the twin's gives a country, no city |
 | `request_id`, `result`, `host`, `hour` | x-edge-request-id, x-edge-result-type, host | when present; P1 joins on `request_id`, P4 needs `result` (hit or miss) per edge |
 | `agent_kind`, `kind` | cs_user_agent, path | as schema v0 |
 | `vault` | path, by the extract | set only when the decoded path names a vault id with no `.`, `..` or slash; never taken from the enricher |
@@ -114,9 +115,9 @@ A page pairs a bill with estimates only when `start`, `end` and `region` match. 
 
 On the twin the bill is the twin's made-up $42.17: such records get `"synthetic": true`, and so does every record from the twin, so a synthetic number can never be mistaken for Dinis's account (as R-011 warned for plans).
 
-## 4. Privacy, until Dinis decides
+## 4. Privacy (decided)
 
-data.aws.a's Privacy section asks Dinis to choose between a truncated network and a keyed hash for client addresses. Until he does, lanes hold **the truncated network only** (`203.0.113.0/24`; `/48` for IPv6). It is the choice that needs no new key anywhere, it is reversible (a later keyed hash can be added beside it), and it leaves nothing to leak if a lane is read. Recommendation for the decision: the same, plus distinct-client counts computed in the page before truncation.
+Dinis Cruz, 23 Nov 2026 ~11:15 UTC in data.aws.a's session, recorded on dev in docs/data/2026-11-23__01-extract-workflow-first-design.md (518b114): "keep only the network (and if available the city and country)". So a lane holds `net` (/24 for IPv4, /48 for IPv6) and, when an enricher gives them, the visitor's `city` and `country`. No raw address and no keyed hash, anywhere in the vaults. `edge_city` is the edge's city, not the visitor's. Retention is still to be set by Dinis.
 
 Lanes are encrypted, but a record is still an untrusted claim (design 01 section 8.3): anyone holding an append token can write a well-formed batch. The drain checks every batch against its schema, drops what fails, and counts what it dropped in the hour's `_summary.json`.
 
