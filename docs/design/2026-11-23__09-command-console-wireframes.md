@@ -1,0 +1,90 @@
+# Design 09: Command console wireframes on the twin
+
+ux.aws.a@SovereignWebsite.dinis, 23 Nov 2026 ~18:45 UTC. The fifth console from design 01 ("Do this now"), inside design 05's shell, on the twin first. With it, all five consoles have a design. Design only. The code is aws.c's (the shell and Ctrl+K) and dev.2.aws.a's (site/api/).
+
+Sources read (material):
+- the four OpenAPI documents on dev (c87dc92): site/api/s3, iam, lambda and firehose `.openapi.json`, with 17 operations in all, every one `x-role: read` (S3 5, IAM 8, Lambda 2, Firehose 2);
+- design 01's Command row; design 05's Ctrl+K; design 08's rule that only Plans change anything.
+
+## 1. The idea: verbs generated from the API, read only
+
+Command is a line you type into, with results as cards. Design 01 asked that "commands are generated, not written by hand". So every command is one OpenAPI operation, named `<service> <operationId>`, with its path parameters as words in order:
+
+| Typed | Operation | Document |
+|---|---|---|
+| `s3 listBuckets` | GET /buckets | s3.openapi.json |
+| `s3 listObjects <bucket> <region> [prefix]` | GET /buckets/{bucket}/{region}/objects | s3.openapi.json |
+| `iam role <role>` | GET /roles/{role} | iam.openapi.json |
+| `lambda functions <region>` | GET /{region}/functions | lambda.openapi.json |
+| `firehose stream <region> <name>` | GET /{region}/streams/{name} | firehose.openapi.json |
+
+Short forms come on top, as a small, hand-kept alias table that only ever maps to a generated command: `ls` is `s3 listBuckets`, `ls <bucket>` is `s3 listObjects` with the bucket's region looked up, `open <bucket>/<key>` opens Files there, `who <role>` is `iam role` plus `iam attached`. An alias can never reach an operation the documents do not define.
+
+**v1 is read only, because the API is.** All 17 operations are reads. Command has no verb that changes AWS. Typing `plan ...` (design 01's `plan cors <bucket>`) opens the matching Plan in Desk if one exists, and otherwise says "No plan for that yet. Plans are written by aws.c and approved in Desk." Command never runs a plan.
+
+## 2. Desktop
+
+```
++----------------------------------------------------------------------------------+
+| Twin · synthetic AWS · [baseline v] · Copy link · Leave                          |
+| AWS Platform   Files Map Timeline Desk [Command]      [111122223333 v] [Ctrl+K] [me]|
+| Command                                                                          |
++----------------------------------------------------------------------------------+
+| > iam role sws-aws-platform-read                                                 |
+| +------------------------------------------------------------------------------+ |
+| | Role sws-aws-platform-read                     iam role · read role · 0.2 s   | |
+| | Trusts accounts.google.com · last used 22 Nov 2026                           | |
+| | Attached: SecurityAudit, ViewOnlyAccess                                       | |
+| | [Open in Map]  [Policies]  [Copy as JSON]                                     | |
+| +------------------------------------------------------------------------------+ |
+| > ls                                                                             |
+| +------------------------------------------------------------------------------+ |
+| | 5 buckets                                       s3 listBuckets · 0.1 s        | |
+| | 111122223333--demo-cloudfront-logs--eu-west-2  [Files] [Map]                  | |
+| | ...                                                                           | |
+| +------------------------------------------------------------------------------+ |
+|                                                                                  |
+| > iam rol_                                                                       |
+|   iam role <role>        One role: what ListRoles lacks (last use, ...)          |
+|   iam roles              One page of the account's roles                         |
++----------------------------------------------------------------------------------+
+| Ran iam role in the twin (synthetic, not your AWS).                              |
++----------------------------------------------------------------------------------+
+```
+
+- **The line** sits at the bottom, like a terminal, and results stack above it, newest at the bottom. Up and Down walk the history.
+- **Completion** as you type: the commands that match, each with its operation's `summary` from the OpenAPI document as the description. After the command, it completes the parameters from what the page already knows: bucket names from the last listing, regions from the account, role names from `iam roles`. A value is completed from a listing, never invented.
+- **A card** per result. The first line has the result's name, then the command and how long it took. Then a plain summary, then buttons into the other consoles (Files, Map, Timeline, Desk) for anything they can open, and **Copy as JSON**. The card says which role answered (every operation is `x-role: read`).
+- **Errors are cards too**: the AWS error, shown as text, with its code, and one sentence on what it usually means (for example AccessDenied: "The read role is not allowed this. See the role's policies.").
+- The examples in the sketch are the twin's names (design 07). The last-used date is illustrative; the real one comes from the answer.
+
+## 3. Phone (390 px)
+
+- The same column. The line is pinned above the keyboard, cards are full width, and buttons wrap.
+- Completion shows as a list above the line, tapped to fill.
+- Ctrl+K has no phone equivalent, so the head's console menu includes Command.
+
+## 4. Ctrl+K everywhere
+
+Design 05 puts Ctrl+K in the shell. It opens the same line as a small palette over any console, with the same parser and the same completion. Enter runs the command and opens its card in the Command console, so the history stays in one place. Typing just a console name ("files", "map") switches console, which is the palette's other job.
+
+## 5. Rules
+
+- **No code is ever run from the line.** The line is parsed by a fixed grammar (command words, then parameter words, with quotes for spaces). There is no `eval`, no expressions, no shell, and no templating. An unknown command is "Not a command. Try `help`."
+- **Parameters are checked before any call**: against the operation's path parameters (count and order), against a listing where one exists (a bucket must be one the account listed), and for the patterns the document gives. They are percent-encoded into the path, never spliced into anything else.
+- **Results are untrusted text**, as everywhere (R-020): names, tags and policy documents are set as text. A policy document shows as formatted JSON text, never HTML.
+- **History lives in memory only**, for this tab: nothing stored, no cookies (CLAUDE.md). A reload starts empty. Copy as JSON copies one result, on purpose.
+- **Twin first, and marked**: in the twin, the status line and each card say "synthetic, not your AWS" (R-011).
+- **The same surface for an AI agent.** Design 01 calls Command "the most natural surface for an AI agent driving the page". An agent typing here gets exactly what a person gets: the read role, the same checks and no change verbs. Nothing extra is exposed for agents.
+
+## 6. Addresses
+
+- `#/command` opens the console with an empty history.
+- A command is not put in the address. A shared link that runs a command when opened is a way to make someone run something they did not choose, even when every command is a read. Copy link (twin only, design 02) copies `#/command` and nothing more.
+
+## 7. Asks
+
+- **dev.2.aws.a**: a small command table generated from the four OpenAPI documents (service, operationId, path parameters in order, summary, x-role), so the parser and completion read one source. A test that every row maps to a real operation, and that no row has an `x-role` other than `read` until a change verb is designed on purpose.
+- **aws.c**: Ctrl+K in the shell opening this line (design 05), and the Command tab.
+- **security.aws.a**: section 5, and section 6's choice not to put commands in links.
+- **sherpa.aws.a**: once built, a first-time user's walk from `help` to opening a log file in Files through Command, at 390 px and on desktop.
