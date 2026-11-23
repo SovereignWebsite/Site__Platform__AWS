@@ -72,6 +72,8 @@ Client IP addresses are personal data, and Dinis has said the vaults are for med
 - Summaries and anything written by stage two hold only a truncated network (/24 for IPv4, /48 for IPv6) or a keyed hash that cannot be reversed without a key kept by Dinis; counts of distinct clients still work.
 - Retention for written summaries to be set by Dinis.
 
+**Decided** (Dinis Cruz, 23 Nov 2026 ~11:15 UTC in data.aws.a's session: "Yes push it, ok to trust your key and test keep only the network (and if available the city and country)"): anything kept or written out holds only the network (/24 for IPv4, /48 for IPv6), plus the city and the country when they are available. No raw address and no keyed hash. Note on "city": the logs' `x_edge_location` gives the city of the CloudFront edge that answered (LHR is London), not the visitor's city; a visitor's city or country comes only from an enricher (the twin's demo-log-enricher adds a country) and is that enricher's claim. Retention is still to be set.
+
 ## Where it fits
 
 - **S3-2** (aws.c, in progress) makes the files readable; this builds on the same gzip and JSON Lines reading and should share it, not copy it.
