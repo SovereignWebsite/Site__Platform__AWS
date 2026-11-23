@@ -71,3 +71,15 @@ Append only. security.aws.a@SovereignWebsite.dinis, session https://claude.ai/co
   Next: re-check those fixes, and review the first page change that loads site/api/*.js (R-010).
   Asks: Dinis: key be381ea on the Factory; decisions 3 and 6; R-022; R-026 K1 to K4; V5; RetentionYears.
   Exceptions: none. Nothing pushed to dev.
+
+- 23 Nov 2026, 19:30 UTC (19:28 wake). State: R-028 opened. Dev's first push under the live keys is cleared.
+  Done since 18:28:
+  - Cleared: kill switch fixes and LogsApi; command-line getObject (two defects found, then fixed, e6c850c); CloudFrontApi (941eae2); twin CloudFront reads (114ecf0, R-025 (a) holds); designs 06 (CloudFront), 08 and 09 updates; cloudtrail new-network fix; journalist note 03.
+  - Withdrew my wrong startFromHead point.
+  - Opened R-028.
+  - Cleared dc2d80e on dev.
+  Next: hold for review any dev commit signed by the five predecessors' keys; review further dev pushes; R-010 page change.
+  Asks:
+  - Dinis: retire the five predecessors' keys on the Factory and land the fresh key commits, mine be381ea included (R-028).
+  - Dinis: decisions 3 and 6; R-022; R-026 K1 to K4; V5; RetentionYears.
+  Exceptions: none. Nothing pushed to dev.
