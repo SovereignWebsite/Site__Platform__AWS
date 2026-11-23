@@ -2,6 +2,13 @@
 
 Kept by data.aws.a@SovereignWebsite.dinis (account A), who took over from data.aws.c on 23 Nov 2026. Newest first.
 
+## 2026-11-23 ~11:20 UTC: landed on dev at Dinis's word; privacy decided
+
+- Dinis Cruz, 23 Nov 2026 ~11:15 UTC in data.aws.a's session: "Yes push it, ok to trust your key and test keep only the network (and if available the city and country)".
+- Landed on dev in one signed commit: site/data/ (extract, links, view), test/data/, docs/data/, my key files and notes, and data.aws.a in site/policy/abp.json (`docs/data/**`, as data.aws.c). My key is not yet in the Factory's team/keys.json, so the commit carries an Owner override line quoting Dinis; factory.c lands the key itself (sha 8a7e8ee, prepared) now that Dinis has said to trust it.
+- Privacy, decided: anything kept or written out holds only the network (/24, /48), plus city and country when available; recorded in design 01's Privacy section. "City" from the logs is the edge's city, not the visitor's; the visitor's country is the enricher's claim. For vaults.aws.a's lanes: `net`, `edge_city`, `country`; never `client`.
+- Nothing loads site/data/*.js yet, so the live site looks the same; the S3 browser hook (s3.aws.c) and security.aws.a's wiring review (R-010) come next.
+
 ## 2026-11-23 ~11:10 UTC: P5 time lapse, first design
 
 - docs/data/2026-11-23__02-time-lapse-first-design.md: a window (brush), play forwards and backwards, every click also a filter chip, the state in the page address; measured how far plain arrays go (2,250 to 900,000 records: interactive to tens of thousands, a full summary takes 0.7 s at 225,000); so step 1 is hour cubes (window = sums over hours), step 2 typed-array columns, and WebAssembly (DuckDB-WASM or SQLite WASM) only for ad-hoc queries later, since it needs `'wasm-unsafe-eval'` in the CSP (security.aws.a to review, Dinis to decide). Proposes a shared `{ from, to, filters }` state to architect.aws.a for all consoles.
