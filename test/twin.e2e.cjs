@@ -23,12 +23,20 @@ const fail = (m) => { throw new Error(m); };
   await pg.waitForSelector("#twin-bar:not([hidden])");
   await pg.waitForSelector("#step1-done:not([hidden])");
   if (!(await pg.textContent("#who")).includes("Twin visitor")) fail("twin identity");
-  // the account
-  await pg.click("text=Read this account");
-  await pg.waitForSelector("text=Cost this month so far");
+  // the account: set up already and read on entry; no CloudFormation steps, no sign out or forget in the twin
+  await pg.waitForSelector("text=Cost this month so far (synthetic)");
+  if (!(await pg.textContent("#accounts .badge")).includes("set up")) fail("twin account not set up");
+  if ((await pg.textContent("#accounts")).includes("Open CloudFormation")) fail("CloudFormation steps shown in the twin");
+  if (!(await pg.isHidden("#sign-out")) || !(await pg.isHidden("#forget-device"))) fail("sign out or forget shown in the twin");
+  if (!/\d\d:\d\d [A-Z]/.test(await pg.textContent("#accounts .stats"))) fail("Until is not 24-hour with a zone");
+  // tabs by keyboard
+  await pg.focus("#tab-accounts"); await pg.keyboard.press("ArrowRight");
+  if ((await pg.evaluate(() => document.activeElement.id)) !== "tab-s3" || (await pg.getAttribute("#tab-s3", "aria-selected")) !== "true") fail("arrow key on tabs");
+  if ((await pg.getAttribute("#tab-accounts", "tabindex")) !== "-1") fail("roving tabindex");
   if (!(await pg.textContent("#accounts")).includes("sws-aws-platform-read")) fail("twin read role");
   // plans: the add is done, the removal and the stack update wait
   await pg.click("#tab-plans");
+  if (await pg.isHidden("#plans-twin-note")) fail("no twin note on the plans");
   await pg.waitForFunction(() => document.querySelectorAll("#plans .badge.warn").length === 2 && document.querySelectorAll("#plans-done .badge.ok").length === 1);
   await pg.click('li[data-plan="2026-11-23__iac-dns-trust-remove-factory"] button:has-text("Show the plan")');
   await pg.click('li[data-plan="2026-11-23__iac-dns-trust-remove-factory"] button.approve');
@@ -36,16 +44,14 @@ const fail = (m) => { throw new Error(m); };
   await pg.waitForFunction(() => document.querySelectorAll("#plans-done .badge.ok").length === 2);
   // S3
   await pg.click("#tab-s3");
-  await pg.click("#s3-list-buckets");
-  await pg.click("#s3-buckets button:has-text('demo-cloudfront-logs')");
-  await pg.click("text=Approve and add the rule to");
+  await pg.waitForSelector("#s3-buckets button:has-text('demo.static.example')"); // listed on entry
+  await pg.click("#s3-buckets button:has-text('demo-cloudfront-logs')"); // CORS already in place: only the demo site shows the plan
   await pg.waitForSelector("#s3-list >> text=cloudfront/");
   for (const f of ["cloudfront/", "2026/", "11/", "21/", "10/"]) await pg.click(`#s3-list >> text=${f}`);
   await pg.click("#s3-list button:has-text('.gz')");
   await pg.waitForSelector("text=JSON Lines");
   if (!(await pg.textContent("#s3-file")).includes("cs_uri_stem")) fail("log lines");
   await pg.click("#s3-buckets button:has-text('demo-lambda-deps')");
-  await pg.click("text=Approve and add the rule to");
   await pg.click("#s3-list >> text=lambdas-dependencies/");
   await pg.click("#s3-list button:has-text('.zip')");
   await pg.waitForSelector("#s3-file >> text=demo_handler/handler.py");
@@ -56,6 +62,20 @@ const fail = (m) => { throw new Error(m); };
   await pg.click("#s3-list >> text=config/");
   await pg.click("#s3-list >> text=site.yaml");
   await pg.waitForSelector("#s3-file pre.code.lang-yaml .t-key");
+  // more than 1000 keys: the first page and Load more
+  await pg.click("#s3-objects .crumbs button >> nth=0");
+  await pg.click("#s3-list >> text=archive/"); await pg.click("#s3-list >> text=2026/");
+  for (let i = 0; i < 2; i++) { // the page asks for 500 a time: three pages for 1203 keys
+    await pg.waitForSelector("#s3-objects button:has-text('Load more')");
+    await pg.click("#s3-objects button:has-text('Load more')");
+  }
+  await pg.waitForSelector("#s3-list >> text=page-1203.json");
+  // a small zip read whole: one request, the count honest
+  await pg.click("#s3-buckets button:has-text('demo-lambda-deps')");
+  await pg.click("#s3-list >> text=lambdas-dependencies/");
+  await pg.click("#s3-list button:has-text('.zip')");
+  await pg.waitForSelector("#s3-file >> text=read whole");
+  if (!(await pg.textContent("#s3-file")).includes("2026-11-18")) fail("zip entry dates");
   if (process.argv[2]) await pg.screenshot({ path: process.argv[2], fullPage: true });
   // demo packs: the attack pack shows the scanner in the logs of 22 Nov
   if (await pg.$eval("#twin-pack", (e) => e.value) !== "baseline") fail("default pack");
@@ -63,9 +83,7 @@ const fail = (m) => { throw new Error(m); };
   await pg.waitForSelector("#twin-bar:not([hidden])");
   if (!(await pg.textContent("#twin-pack-about")).includes("scanning")) fail("pack description");
   await pg.click("#tab-s3");
-  await pg.click("#s3-list-buckets");
   await pg.click("#s3-buckets button:has-text('demo-cloudfront-logs')");
-  await pg.click("text=Approve and add the rule to");
   for (const f of ["cloudfront/", "2026/", "11/", "22/", "11/"]) await pg.click(`#s3-list >> text=${f}`);
   await pg.click("#s3-list button:has-text('.gz')");
   await pg.waitForSelector("text=JSON Lines");

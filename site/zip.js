@@ -38,12 +38,15 @@
           return readIndex(fetchRange, u64(z, 48), u64(z, 40));
         });
       }
-      return readIndex(fetchRange, cdOffset, cdSize);
+      return readIndex(fetchRange, cdOffset, cdSize, buf, size - tailLen);
     });
   }
-  function readIndex(fetchRange, offset, length) {
+  // held/heldAt: bytes already fetched and where they start; if they cover the index, no second request.
+  function readIndex(fetchRange, offset, length, held, heldAt) {
     if (!length) return Promise.resolve([]);
-    return fetchRange(offset, offset + length - 1).then(function (buf) {
+    var got = held && offset >= heldAt && offset + length <= heldAt + held.byteLength
+      ? Promise.resolve(held.slice(offset - heldAt, offset - heldAt + length)) : fetchRange(offset, offset + length - 1);
+    return got.then(function (buf) {
       var dv = new DataView(buf), out = [], p = 0;
       while (p + 46 <= buf.byteLength && dv.getUint32(p, true) === CEN) {
         var flags = dv.getUint16(p + 8, true), method = dv.getUint16(p + 10, true);
