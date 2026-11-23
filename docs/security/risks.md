@@ -267,3 +267,7 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - NeverEmptyTheBucket denies DeleteObject, DeleteObjectVersion and PutLifecycleConfiguration, so only an empty bucket can go.
   - One tightening: the log group resource ends in `-api*`, which also matches longer names. Use exactly `log-group:/aws/lambda/sws-vault-<id>-api` and `...-api:*`.
   - What is left, recorded: a wrong template under the deploy role could delete the log group. This applies in least-privilege mode only; the pinned hash holds it, and the CloudTrail vault-deleted rule now covers it (asked of cloudtrail.aws.a).
+- 23 Nov 2026, 18:55, security.aws.a: the rollback pair, after crossed messages. Two pairs are on the table:
+  - vault.yaml 0.4.6, with the policy on plain Retain, plus vault-access 0.2.4, with DeleteBucketPolicy denied;
+  - 0.4.5-style RetainExceptOnCreate on the policy, plus a DeleteBucketPolicy grant on exactly the data bucket.
+  Both are acceptable to security, because the grant adds no power beyond the PutBucketPolicy the role already holds. boto3.aws.a finds that the Retain-policy rollback is not documented by AWS. So I recommend the documented path, the policy on RetainExceptOnCreate with the narrow grant, unless a real test stack confirms a clean ROLLBACK_COMPLETE with the Retain policy. cloudformation.aws.a and iam.aws.a decide which pair; I object to neither. boto3.aws.a land/boto3.aws.a after 804f87d: 3 docs commits, own paths, signatures verified.
