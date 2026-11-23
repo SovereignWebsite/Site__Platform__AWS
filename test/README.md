@@ -6,6 +6,7 @@ Run from the repository root (Node 22; the end-to-end test needs Playwright and 
     node test/page.e2e.cjs /tmp/e2e.png
     node test/twin.e2e.cjs
     node test/s3/stale.e2e.cjs
+    node test/s3/route.e2e.cjs
     node test/twin/s3-fidelity.test.mjs
     node test/twin/lambda-firehose.test.mjs
 
