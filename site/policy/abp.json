@@ -46,6 +46,63 @@
         "grant push to the agents' team",
         "protect the branches"
       ]
+    },
+    "aws_team": {
+      "who": "The agents of the AWS Platform programme, started by conductor.aws.c (docs/team/). Each may change only its own paths below; everything else stays the keeper's.",
+      "agents": {
+        "conductor.aws.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/team/**"
+          ]
+        },
+        "pm.aws.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/board/**",
+            "site/decisions/**"
+          ]
+        },
+        "security.aws.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/security/**"
+          ]
+        },
+        "architect.aws.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/architecture/**",
+            "site/api/**"
+          ]
+        },
+        "s3.aws.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/s3/**",
+            "site/s3.js",
+            "test/s3/**"
+          ]
+        }
+      },
+      "needs_owner_yes": [
+        "site/policy/**",
+        ".github/**",
+        "site/CNAME",
+        "CLAUDE.md"
+      ],
+      "branches": [
+        "dev"
+      ],
+      "every_commit": [
+        "signed with the agent's own key, published in the Factory's team/keys.json",
+        "an Agent: trailer naming the agent",
+        "a Claude-Session: trailer naming its session"
+      ],
+      "never": [
+        "push to main",
+        "print, commit or read a private key or token",
+        "name a private person without their consent",
+        "invent a fact, a price or a customer",
+        "add a server, cookies or tracking",
+        "change AWS itself (only the owner does, by Approve on the site)"
+      ],
+      "source": "Dinis Cruz, 23 Nov 2026 ~04:20 UTC in aws.c's session: \"Yes, to the team paths. So you can commit to their folders\". Paths as conductor.aws.c proposed; added by the keeper, aws.c."
     }
   },
   "pipelines": {
