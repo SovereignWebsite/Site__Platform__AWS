@@ -16,6 +16,9 @@
 //       mode, screen 2-alt); o = { region, vaultId, index, version, params: { Name: value } } (the access template's
 //       index and its own parameters, passed as given; VaultId is always set from o.vaultId). The page shows the
 //       DistributionId and CertificateArn it passes beside the change set, never filled silently (iam.aws.a 0.2.0).
+//   VaultDeploy.templateEntry(index, version, name) -> { url, sha256 }: the checked index entry for one of the three
+//       published templates, name "vault" | "vault-access" | "vault-edge" (the us-east-1 certificate stack for an own
+//       domain, design 06b, whose link comes later); throws a TypeError if the entry is missing or not in the form
 //   VaultDeploy.deployRoleName(vaultId)         -> "sws-vault-<id>-deploy", the role the customer picks in 2-alt
 //   VaultDeploy.cleanEndpoint(input)            -> { ok: true, endpoint } | { ok: false, reason: "empty" | "not-url" | "not-cloudfront" }
 //   VaultDeploy.checkHealth(fetch, endpoint, { vaultId, index, version, timeoutMs, maxBytes })
@@ -76,7 +79,9 @@
   }
   // An index entry for a version: own key only, a sha256, and an S3 object URL whose key names this template, this
   // version and the sha256's first 12 hex digits (cloudformation.aws.a's form).
+  var NAMES = { vault: true, "vault-access": true, "vault-edge": true };
   function entry(index, version, name) {
+    need(Object.prototype.hasOwnProperty.call(NAMES, name), "template name", name);
     var v = String(version);
     need(VERSION_RE.test(v) && index && typeof index === "object" && Object.prototype.hasOwnProperty.call(index, v), "version (not in the published index)", v);
     var e = index[v], url = e && String(e.url), sha = e && String(e.sha256);
@@ -175,5 +180,5 @@
   }
 
   root.VaultDeploy = { newVaultId: newVaultId, vaultStackUrl: vaultStackUrl, accessStackUrl: accessStackUrl, deployRoleName: deployRoleName,
-    cleanEndpoint: cleanEndpoint, checkHealth: checkHealth };
+    cleanEndpoint: cleanEndpoint, checkHealth: checkHealth, templateEntry: function (index, version, name) { return entry(index, version, String(name)); } };
 })(typeof window !== "undefined" ? window : globalThis);

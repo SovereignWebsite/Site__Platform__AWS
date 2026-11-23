@@ -67,6 +67,10 @@ ok(acc.q.get("param_Extra") === "a&b=c" && !acc.q.has("param_Skipped"), "the acc
 throws(() => V.accessStackUrl({ region: "eu-west-2", vaultId: "3f9a0c21b7d4", index: accessIndex, version: "0.2.0", params: { "X&Y": "1" } }), "a bad parameter name");
 throws(() => V.accessStackUrl({ region: "eu-west-2", vaultId: "3f9a0c21b7d4", index: accessIndex, version: "0.1.0" }), "the access template's version must be in its index");
 throws(() => V.accessStackUrl({ region: "eu-west-2", vaultId: "3f9a0c21b7d4", index, version: "0.4.4-draft" }), "the vault template's index is not the access template's");
+const edgeIndex = { "0.2.1": { url: "https://s3.us-east-1.amazonaws.com/sws-templates/templates/vault-edge/0.2.1/vault-edge-" + "ef".repeat(6) + ".yaml", sha256: "ef".repeat(32) } };
+ok(JSON.stringify(V.templateEntry(edgeIndex, "0.2.1", "vault-edge")) === JSON.stringify(edgeIndex["0.2.1"]), "templateEntry: vault-edge checked in the same form");
+throws(() => V.templateEntry(edgeIndex, "0.2.1", "vault"), "templateEntry: the name must match the key");
+throws(() => V.templateEntry(edgeIndex, "0.2.1", "other"), "templateEntry: only the three published names");
 ok(V.deployRoleName("3f9a0c21b7d4") === "sws-vault-3f9a0c21b7d4-deploy", "the role named under B");
 throws(() => V.deployRoleName("nope"), "deployRoleName checks the id");
 
