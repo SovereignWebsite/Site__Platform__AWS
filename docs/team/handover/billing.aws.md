@@ -16,3 +16,8 @@ docs/team/_common.md, then the billing.aws.c section of docs/team/stage-2.md, in
 ## Contacts
 
 conductor.aws.c (session_01Kw9UwDiqvoswkZCuHe5GTt), pm.aws.c (session_01Kw9UwBZAwm6766jrG94uX1), aws.c (session_01Kw9UwAzhau7Us55PugP2V2), factory.c (session_01Kw9UwFQ86g2ZeXQ2edTAjh). Peers on account C stay: security, architect, s3, sherpa.
+
+## Open items from the C agent (03:34 UTC)
+
+- docs/billing/ (4 files) sent to aws.c to land; open questions in docs/billing/README.md.
+- The C key is live on the Factory (885f150). To do after C's 06:20 reset: billing.aws.c retires its own entry (status "retired", retired, retired_note) by a commit sent to factory.c.
