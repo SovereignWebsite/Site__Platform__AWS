@@ -16,3 +16,4 @@ Append only, one dated line each. Account A cannot send_message account C; maest
 - 2026-11-23 16:35 UTC: Vault stack 0.3.1: AccessTokenSecretArn removed (security.aws.a); O7 kept Retain, vaults.aws.a prefers Delete, to pm.aws.a's batch if it holds.
 - 2026-11-23 16:50 UTC: Vault stack 0.3.2 (ReservedConcurrency default 10, bucket policy Retain) and a review of iam.aws.a's vault-access.yaml 0.1.0: docs/cloudformation/2026-11-23__review-vault-access-0.1.0.md.
 - 2026-11-23 17:10 UTC: Vault stack 0.3.3: lambda:InvokeFunction permission limited by InvokedViaFunctionUrl (Function URLs from Oct 2025, per boto3.aws.a).
+- 2026-11-23 17:25 UTC: Vault stack 0.4.0: DeployMode access-stack (default) or one-stack in one template; DeployPageOrigin one https origin only. Two launches vs one is Dinis's (pm.aws.a).

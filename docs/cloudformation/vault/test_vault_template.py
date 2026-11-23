@@ -47,7 +47,7 @@ for n in ("VaultBucket", "VaultBucketPolicy", "VaultLogs"):
     check(R[n].get("DeletionPolicy") == "Retain", f"{n} DeletionPolicy")
 
 # Names: every named resource is sws-vault-<id>-* (the deploy role's scope).
-name_keys = {"BucketName", "Name", "RoleName", "FunctionName", "LogGroupName"}
+name_keys = {"BucketName", "Name", "RoleName", "FunctionName", "LogGroupName", "ManagedPolicyName"}
 for n, r in R.items():
     if r["Type"] == "AWS::Route53::RecordSet":
         continue  # the customer's own domain
@@ -58,12 +58,20 @@ for n, r in R.items():
 
 # The role: a boundary from the -access stack, no wildcard actions or resources.
 role = R["VaultFunctionRole"]["Properties"]
-check("sws-vault-${VaultId}-boundary" in str(role["PermissionsBoundary"]), "role boundary")
+pb = role["PermissionsBoundary"]["Fn::If"]
+check(pb[0] == "OneStack" and pb[1] == {"Ref": "VaultBoundary"} and "sws-vault-${VaultId}-boundary" in str(pb[2]), "role boundary in both modes")
+check(R["VaultBoundary"].get("Condition") == "OneStack", "in-stack boundary only in one-stack mode")
+check(R["VaultBoundary"]["Properties"]["ManagedPolicyName"] == {"Fn::Sub": "sws-vault-${VaultId}-boundary"}, "boundary name")
+check(v["Parameters"]["DeployPageOrigin"]["AllowedPattern"].startswith("^https://") and "*" not in v["Parameters"]["DeployPageOrigin"]["AllowedPattern"].replace("[a-z0-9-]*", ""), "DeployPageOrigin pattern")
 for st in walk(role["Policies"]):
     if isinstance(st, dict) and "Effect" in st:
         acts = st["Action"] if isinstance(st["Action"], list) else [st["Action"]]
         check(all("*" not in a for a in acts), f"wildcard action {acts}")
         check(st.get("Resource") != "*", "Resource *")
+
+for st in walk(R["VaultBoundary"]["Properties"]["PolicyDocument"]):
+    if isinstance(st, dict) and "Effect" in st:
+        check(all("*" not in a for a in st["Action"]), f"wildcard action in boundary {st['Action']}")
 
 # No role trusts anything but lambda.amazonaws.com (no role back to us).
 for n, r in R.items():
