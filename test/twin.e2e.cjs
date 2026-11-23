@@ -23,6 +23,10 @@ const fail = (m) => { throw new Error(m); };
   await pg.waitForSelector("#twin-bar:not([hidden])");
   await pg.waitForSelector("#step1-done:not([hidden])");
   if (!(await pg.textContent("#who")).includes("Twin visitor")) fail("twin identity");
+  // the twin opens on S3; the account is read on entry
+  if ((await pg.getAttribute("#tab-s3", "aria-selected")) !== "true") fail("twin did not open on S3");
+  if (await pg.isVisible("#add-account")) fail("add-account form shown in the twin");
+  await pg.click("#tab-accounts");
   // the account: set up already and read on entry; no CloudFormation steps, no sign out or forget in the twin
   await pg.waitForSelector("text=Cost this month so far (synthetic)");
   if (!(await pg.textContent("#accounts .badge")).includes("set up")) fail("twin account not set up");
@@ -82,9 +86,9 @@ const fail = (m) => { throw new Error(m); };
   await Promise.all([pg.waitForNavigation(), pg.selectOption("#twin-pack", "attack")]);
   await pg.waitForSelector("#twin-bar:not([hidden])");
   if (!(await pg.textContent("#twin-pack-about")).includes("scanning")) fail("pack description");
-  await pg.click("#tab-s3");
-  await pg.click("#s3-buckets button:has-text('demo-cloudfront-logs')");
-  for (const f of ["cloudfront/", "2026/", "11/", "22/", "11/"]) await pg.click(`#s3-list >> text=${f}`);
+  // "See it in" opens the place the attack shows
+  await pg.click("#twin-pack-see");
+  await pg.waitForSelector("#s3-list button:has-text('.gz')");
   await pg.click("#s3-list button:has-text('.gz')");
   await pg.waitForSelector("text=JSON Lines");
   const attack = await pg.textContent("#s3-file");
