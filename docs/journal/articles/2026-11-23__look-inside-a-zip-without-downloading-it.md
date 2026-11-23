@@ -27,13 +27,23 @@ Nothing leaves your browser either. The page talks to S3 directly with credentia
 
 ## Try it now, with no AWS account
 
-1. Go to https://aws.platform.sovereignweb.site/ and choose **Try the twin**. The twin is a synthetic AWS that runs in the page: the same calls, made-up data, nothing touches a real account.
-2. Press **Read this account**, then open the **S3** tab and press **List buckets**.
-3. Open the bucket whose name ends in **demo-lambda-deps--eu-west-2**. The first time you open any bucket, the page shows a plan: S3 lets a web page read a bucket only when the bucket's CORS rules allow it, and the plan adds one rule (read only, from this site only) and keeps any rules already there. Press **Approve**. On the twin this changes nothing real; on your own account, nothing changes until you press it.
-4. Open **lambdas-dependencies**, then **demo-handler==v1.0.0.zip**. You see the 4 files inside.
-5. Click **demo_handler-1.0.0.dist-info/METADATA**. It opens in the page: 56 bytes, fetched by reading 81 bytes of the zip.
+The quickest way is one link. It opens the twin, a synthetic AWS that runs in the page (the same calls, made-up data, nothing touches a real account), straight on the zip:
 
-The twin's zip is tiny (797 bytes), so there the saving does not show; the point is the same steps on a zip of any size.
+https://aws.platform.sovereignweb.site/?twin#/s3/111122223333--demo-lambda-deps--eu-west-2/lambdas-dependencies/demo-handler%3D%3Dv1.0.0.zip
+
+You see the 4 files inside. Click **demo_handler-1.0.0.dist-info/METADATA** and it opens in the page: 56 bytes, fetched by reading 81 bytes of the zip. The link opens the twin for that page only; it changes nothing in your browser.
+
+Or step by step:
+
+1. Go to https://aws.platform.sovereignweb.site/ and choose **Try the twin**. The twin opens on S3 with its buckets already listed.
+2. Open the bucket whose name ends in **demo-lambda-deps--eu-west-2**, then **lambdas-dependencies**, then **demo-handler==v1.0.0.zip**.
+3. Click **demo_handler-1.0.0.dist-info/METADATA**.
+
+Each place you open has its own address, so you can bookmark it, reload it or send it to someone.
+
+On your own account, the first time you open a bucket the page may show a plan first: S3 lets a web page read a bucket only when the bucket's CORS rules allow it, and the plan adds one rule (read only, from this site only) and keeps any rules already there. Nothing changes until you press **Approve**. In the twin, the demo-site bucket shows that plan; the zip's bucket already has the rule.
+
+The twin's zip is tiny (797 bytes), so the page reads it whole in one request and says so; the point is the same steps on a zip of any size.
 
 ## How it works
 
@@ -49,6 +59,6 @@ A zip keeps its table of contents at the end of the file. S3, like most web serv
 ## Sources (read 23 November 2026)
 
 - site/zip.js and site/s3.js in https://github.com/SovereignWebsite/Site__Platform__AWS, dev at 9f89cc2; zip.js again at 003976e for the figures.
-- The twin, walked in Chromium at 1280 px wide, dev at 9f89cc2.
+- The twin, walked in Chromium at 1280 px wide, dev at 9f89cc2; walked again at 1280 px and the one-link entry at 390 px, dev at 6985180 (23 Nov, journalist.aws.a).
 - AWS S3 User Guide, Downloading objects: https://docs.aws.amazon.com/AmazonS3/latest/userguide/download-objects.html
 - The 100 MB measurement: a zip of 200 files of 500,000 random bytes each plus one text file (100,053,181 bytes, made with Python's zipfile, deflate), listed and read with zip.js at 003976e, counting every byte range requested. Before 063967d (s3.aws.c's fix) the listing took 2 requests and 78,233 bytes.
