@@ -37,6 +37,15 @@
   // An address is input from whoever sent the link: the bucket must be a valid S3 name and one of this account's
   // buckets before S3 is asked anything, and an address only ever reads; it cannot approve or change anything.
   var BUCKET = /^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/, pending = null;
+  // Arriving by an address (a link, the twin's "See it in", Back, reload) can leave the place below the fold, so the
+  // first listing after an arrival scrolls to it and moves the focus there (sherpa walk 3, finding 2). Clicks inside
+  // the browser do not set this: their address is the page's own, so apply() is not called for them.
+  var arrive = false;
+  function land(el) {
+    if (!el) return;
+    if (!/^(BUTTON|A|INPUT)$/.test(el.tagName) && !el.hasAttribute("tabindex")) el.setAttribute("tabindex", "-1");
+    el.scrollIntoView({ block: "start" }); el.focus({ preventScroll: true });
+  }
   function route(bucket, path) { return "#/s3/" + bucket + "/" + path.split("/").map(encodeURIComponent).join("/"); }
   function go(bucket, path) { var h = route(bucket, path); if (location.hash !== h) location.hash = h; }
   // The address already says where the page is (it was written by the page itself, or nothing moved).
@@ -58,12 +67,14 @@
     var st = $("s3-status");
     if (r.bad) return P.say(st, "This address does not name an S3 bucket and file; nothing was opened.", "bad");
     if (!P.signedIn() || !pickAccount()) { pending = r; return; }
+    arrive = true;
     var tab = $("tab-s3"); if (tab && tab.getAttribute("aria-selected") !== "true") tab.click();
     if (r.bucket === state.bucket && state.bucketRegion && $("s3-list")) {
       // Same bucket, already answering: only the folder or the file changes.
       if (r.prefix !== state.prefix) { state.prefix = r.prefix; return listObjects(null, r.key); }
-      if (r.key) return openFile(r.key, state.sizes[r.key]);
-      state.file++; state.key = ""; $("s3-file").textContent = ""; return;
+      arrive = false;
+      if (r.key) { openFile(r.key, state.sizes[r.key]); return land($("s3-file").firstChild); }
+      state.file++; state.key = ""; $("s3-file").textContent = ""; return land($("s3-objects").querySelector(".crumbs button:last-of-type"));
     }
     listBuckets(function (names) {
       if (names.indexOf(r.bucket) < 0) return P.say(st, r.bucket + " is not one of this account's buckets; nothing was opened.", "bad");
@@ -106,7 +117,7 @@
   // at: { prefix, key } when opened from an address; otherwise the bucket's top.
   function openBucket(name, at) {
     state.bucket = name; state.prefix = ""; state.key = ""; state.bucketRegion = null;
-    if (!at) go(name, "");
+    if (!at) { arrive = false; go(name, ""); }
     var my = newView(true), st = $("s3-status"), box = $("s3-objects"); box.textContent = ""; $("s3-file").textContent = "";
     P.say(st, "Reading " + name + "'s settings...");
     read().then(function (c) { return cc(c, "GetResource", { TypeName: "AWS::S3::Bucket", Identifier: name }); }).then(function (j) {
@@ -122,6 +133,7 @@
   function showCorsPlan(name, plan) {
     var box = $("s3-objects"), st = P.el("p", { class: "status" });
     P.say($("s3-status"), "");
+    var arrived = arrive; arrive = false;
     box.appendChild(P.el("p", { text: name + " does not answer this site yet. S3 lets a web page read a bucket only when the bucket's CORS rules allow it. This plan adds one rule: GET and HEAD, from " + location.origin + " only. Rules already there are kept." }));
     var now = plan.before ? JSON.stringify(plan.before, null, 2) : "", after = JSON.stringify(plan.after, null, 2);
     box.appendChild(P.el("h4", { text: "What changes (- removed, + added)" }));
@@ -149,12 +161,14 @@
     };
     box.appendChild(go); box.appendChild(st);
     P.say(st, "This is the plan. Nothing has changed yet.");
+    if (arrived) land(box.firstChild);
   }
 
   // openKey: a file to open once its folder is listed (from an address).
   function listObjects(token, openKey) {
     var box = $("s3-objects"), st = $("s3-status"), b = state.bucket, region = state.bucketRegion;
     var my = token ? state.view : newView(false);
+    var arriving = !token && arrive; if (!token) arrive = false;
     if (!token) { box.textContent = ""; state.sizes = {}; state.key = openKey || ""; go(b, openKey || state.prefix); if (!openKey) { state.file++; $("s3-file").textContent = ""; } }
     P.say(st, "Listing " + b + "/" + state.prefix + "...");
     read().then(function (c) {
@@ -203,6 +217,7 @@
       if (nt) { var more = P.el("button", { type: "button", class: "quiet", text: "Load more" }); more.onclick = function () { more.remove(); listObjects(nt.textContent); }; box.appendChild(P.el("div", { class: "row" }, [more])); }
       P.say(st, b + "/" + state.prefix, "ok");
       if (openKey) openFile(openKey, state.sizes[openKey]);
+      if (arriving) { land(openKey ? $("s3-file").firstChild : box.querySelector(".crumbs button:last-of-type")); }
     }).catch(function (e) { if (my === state.view) P.say(st, e.message + (/Failed to fetch/.test(e.message) ? " (S3 refused the browser: check the bucket's CORS rule and region " + region + ".)" : ""), "bad"); });
   }
   function human(n) { return n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(1) + " MB"; }
