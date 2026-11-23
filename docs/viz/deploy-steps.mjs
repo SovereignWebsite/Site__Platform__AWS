@@ -47,3 +47,25 @@ export function boardAt(steps, t) {
   for (const s of steps) if (s.t <= t) rows.set(s.to, { station: s.to, title: s.title, kind: s.kind, status: s.fields.status || null });
   return [...rows.values()];
 }
+
+// "How long is left", without guessing: count against the template's resources (expected logical ids, from
+// vaults.aws.a / cloudformation.aws.a), and estimate time left only from durations measured on earlier runs
+// (`history`: { [logicalId]: seconds }). With no history, `left` is null and the page says "N of M ready".
+export function progress(steps, t, expected = [], history = null) {
+  const board = boardAt(steps, t).filter((r) => r.station !== "stack" && r.station !== "dns");
+  const done = new Set(board.filter((r) => r.kind === "done").map((r) => r.station));
+  const failed = board.some((r) => r.kind === "failed");
+  const ids = expected.length ? expected : board.map((r) => r.station);
+  let left = null;
+  if (history && ids.every((id) => id in history)) {
+    const started = new Map(steps.filter((s) => s.t <= t && s.kind === "working" && s.to !== "stack").map((s) => [s.to, s.t]));
+    left = 0;
+    for (const id of ids) {
+      if (done.has(id)) continue;
+      const ran = started.has(id) ? t - started.get(id) : 0;
+      left = Math.max(left, Math.max(0, history[id] - ran));
+    }
+    left = Math.round(left);
+  }
+  return { ready: ids.filter((id) => done.has(id)).length, total: ids.length, failed, left };
+}

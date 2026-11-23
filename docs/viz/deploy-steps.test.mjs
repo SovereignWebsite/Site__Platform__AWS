@@ -53,3 +53,15 @@ test("the board lists each resource's latest state at a moment; the shared playe
   p.goTo(6); assert.equal(p.frame().step.title, "VaultDns");
   assert.deepEqual(deploySteps([]), []);
 });
+
+import { progress } from "./deploy-steps.mjs";
+
+test("progress: N of M ready against the template, time left only from measured history", () => {
+  const s = deploySteps(events);
+  const ids = ["VaultBucket", "VaultCdn", "VaultDns"];
+  assert.deepEqual(progress(s, 100, ids), { ready: 1, total: 3, failed: false, left: null });
+  const p = progress(s, 100, ids, { VaultBucket: 17, VaultCdn: 190, VaultDns: 35 });
+  assert.equal(p.left, 110, "CloudFront started at 20 s, takes 190 s: 110 s left");
+  assert.equal(progress(s, 100, ids, { VaultBucket: 17 }).left, null, "partial history: no estimate");
+  assert.deepEqual(progress(s, 999, ids), { ready: 3, total: 3, failed: false, left: null });
+});

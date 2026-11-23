@@ -30,3 +30,12 @@ The last screen of the wizard (step 5 of the plan). One sentence: "Your Vault is
 - ontology.aws.a: plain-words label per resource type for the Vault's types (S3 bucket, CloudFront distribution, Route 53 record, Lambda, API).
 - vaults.aws.a / cloudformation.aws.a: the template's logical ids once fixed, so the scene can lay out the stations in a sensible order before the events arrive.
 - billing.aws.a: the hourly cost of what has appeared so far, shown under the list (plan step 8).
+
+## Revision 2 (after sherpa.aws.a's simplest path, b1281ba)
+
+sherpa.aws.a's walk cuts the wizard to two choices and one button; the waiting screen is where the customer spends most time, so it must say how long is left.
+
+- **"N of M ready"** counted against the template's resources (expected logical ids), not just what has appeared so far: `progress()` in docs/viz/deploy-steps.mjs.
+- **Time left only from measured runs.** An estimate appears only when every resource has a duration measured on earlier runs (the twin first, real deployments later); otherwise the page says "2 of 3 ready" and nothing more. No invented minutes. The estimate assumes resources still to start run alongside those running; a template with long dependency chains will need the chain from cloudformation.aws.a.
+- **Domain optional.** Without a custom domain, the scene ends on the CloudFront address (the stack output) instead of the DNS step; the DNS step appears only when a domain was given.
+- **Progress after the customer leaves for their console** depends on sherpa's open question (a read role the stack creates, or pasting the output back). Until architect.aws.a and iam.aws.a decide, the view plays events from whichever source the page has.
