@@ -7,9 +7,11 @@
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import { loadTwin } from "../twin/golden.mjs";
+import { edgeCertificate } from "../twin/edge.mjs";
 
 const START = "2026-11-24T09:00:00.000Z", R = "eu-west-2", ACCT = "444455556666", PLATFORM = "111122223333";
 const CRED = (svc, region) => "AWS4-HMAC-SHA256 Credential=ASIATWINCUSTOMER/20261124/" + region + "/" + svc + "/aws4_request, SignedHeaders=host, Signature=twin";
+const READ = (svc, region) => "AWS4-HMAC-SHA256 Credential=ASIATWINREAD/20261124/" + region + "/" + svc + "/aws4_request, SignedHeaders=host, Signature=twin";
 const twin = loadTwin("baseline");
 twin.clock.pause(); twin.clock.at(START);
 
@@ -24,8 +26,8 @@ const ok = (c, m) => { if (c) passed++; else { failures++; console.error("FAIL",
 const plain = (v) => JSON.parse(JSON.stringify(v));
 
 // The page's signed requests; the twin's customer credential stands in for the customer's signature, and no credential
-// means the platform account's read role (as in test/twin/cloudfront.test.mjs).
-const sender = (customer) => (req) => twin.handle(req.url, { method: req.method, headers: Object.assign({}, req.headers, customer ? { authorization: CRED(req.service, req.region) } : {}), body: req.body });
+// the platform account's read credential: the twin refuses unsigned calls (dev.1.aws.a a550ee7, R-025 (a)).
+const sender = (customer) => (req) => twin.handle(req.url, { method: req.method, headers: Object.assign({}, req.headers, { authorization: (customer ? CRED : READ)(req.service, req.region) }), body: req.body });
 const plat = CloudFrontApi(sender(false), { account: PLATFORM }), cust = CloudFrontApi(sender(true), { account: ACCT });
 const cfn = CfnApi(sender(true), { account: ACCT });
 const create = (id, params = {}) => {
@@ -54,7 +56,9 @@ await rejects(plat.distribution("../function"), (e) => e instanceof TypeError, "
 // 2. The customer account: nothing before a Vault; the -health function once wave 1 settles; the distribution once the create does.
 ok((await cust.distributions()).items.length === 0, "no distributions before a Vault");
 const A = "0a1b2c3d4e5f", HEALTH = "arn:aws:cloudfront::" + ACCT + ":function/sws-vault-" + A + "-health";
-ok((await create(A, { DomainName: "vault.example.com", HostedZoneId: "Z0000000000EXAMPLE" })).status === 200, "the customer's console creates the Vault stack");
+// A Vault with a domain needs the -edge stack's certificate first (vault.yaml's DomainNeedsCertificate; dev.1.aws.a 0619279).
+const cert = await edgeCertificate(twin, A, "vault.example.com");
+ok((await create(A, { DomainName: "vault.example.com", HostedZoneId: "Z0000000000EXAMPLE", CertificateArn: cert })).status === 200, "the customer's console creates the Vault stack");
 twin.clock.tick(60 * 1000);
 let fns = plain((await cust.functions()).items);
 ok(fns.length === 2 && fns.every((f) => f.name === "sws-vault-" + A + "-health" && f.arn === HEALTH && f.runtime === "cloudfront-js-2.0" && f.status === "UNASSOCIATED") && fns.map((f) => f.stage).join() === "DEVELOPMENT,LIVE", "the -health function at both stages, not yet associated");
