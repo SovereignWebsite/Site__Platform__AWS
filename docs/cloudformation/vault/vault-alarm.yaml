@@ -6,11 +6,11 @@ Description: >-
   metric, so the deploy role is never allowed to create alarms (security.aws.a, R-027). Run it after the Vault stack
   exists, with its DistributionId output. Optional kill switch (KillSwitch, default off; ec2.aws.a's design 03): the
   alarm invokes a small inline function that throttles the Vault's function to 0 and disables its distribution, marks
-  both sws-vault-paused, and never deletes or restores. Twin only until Dinis decides (K1 to K4). DRAFT 0.4.0 by cloudformation.aws.a, 23 Nov 2026.
+  both sws-vault-paused, and never deletes or restores. Twin only until Dinis decides (K1 to K4). DRAFT 0.4.1 by cloudformation.aws.a, 23 Nov 2026.
 
 Metadata:
   SovereignWebsite:
-    TemplateVersion: 0.4.0-draft
+    TemplateVersion: 0.4.1-draft
 
 Parameters:
   VaultId:
@@ -24,10 +24,11 @@ Parameters:
     Description: The Vault's CloudFront distribution (output DistributionId of stack sws-vault-<id>).
   RequestAlarmThreshold:
     Type: Number
+    Default: 45000
     MinValue: 1
     Description: >-
-      Requests in 5 minutes above which the cost alarm fires. The customer chooses it; the page can suggest one from
-      billing.aws.a's model.
+      Requests in 5 minutes above which the cost alarm fires. The default, 45000, is about 1 USD an hour of CloudFront
+      requests at list prices (billing.aws.a's flood model); change it if your Vault is busier.
   SlowRequestThreshold:
     Type: Number
     Default: 0
