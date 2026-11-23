@@ -55,3 +55,10 @@ test("a WAF rate rule adds its fixed fee and a per-request fee, never lowers the
   const expected = (5 + 1) / 720 + rate.edge_requests * 6e-7;
   assert.ok(Math.abs(rate.waf_cost - expected) < 1e-9);
 });
+
+test("below the cap, Lambda serves only what arrives at the edge", () => {
+  const r = flood({ concurrency: 10, memoryMb: 1024, durationMs: 20, edgeRps: 150 });
+  assert.equal(r.requests, 150 * 3600);
+  assert.equal(r.edge_requests, 150 * 3600);
+  assert.ok(Math.abs(r.gb_seconds - 150 * 3600 * 0.02) < 1e-6);
+});
