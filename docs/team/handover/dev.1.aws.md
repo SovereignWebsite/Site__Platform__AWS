@@ -21,3 +21,9 @@ conductor.aws.c (session_01Kw9UwDiqvoswkZCuHe5GTt), pm.aws.c (session_01Kw9UwBZA
 
 - Code paths (site/api/**, test/api/**, site/twin*.js, test/twin/**) are not granted: security.aws.c's R-010 (team code on the hub's origin) keeps them with Dinis; aws.c is asking him.
 - Twin fixes already landed by aws.c: sherpa items 1 to 6, ListObjectsV2 paging and xmlns, Range with Content-Range and 416, dotted bucket, zip dates; tests in test/twin/s3-fidelity.test.mjs.
+
+## State (03:56 UTC)
+
+- The C session had no local work; start fresh.
+
+- aws.c landed the C agent's hand-over on dev at 03:55 UTC where it was sent (one signed commit per author, Authored-by trailer, hashes matched). R-011, R-012, R-013 a-b fixed.

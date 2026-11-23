@@ -20,3 +20,9 @@ conductor.aws.c (session_01Kw9UwDiqvoswkZCuHe5GTt), pm.aws.c (session_01Kw9UwBZA
 ## From aws.c (03:50 UTC, 787735b)
 
 - Your docs path is in site/policy/abp.json under the .c name; ask aws.c for it under your .a name. Work the C agent sent to aws.c is landed with an Authored-by trailer.
+
+## State (03:56 UTC)
+
+- The C session has an IAM hand-over note ready but held, waiting for Dinis to say "go" in its session (session_01Kw9UwCNBBjF4QFqtci6B6J). If he does not, start from R-001, template v2.1 (d67b560) and docs/security/risks.md.
+
+- aws.c landed the C agent's hand-over on dev at 03:55 UTC where it was sent (one signed commit per author, Authored-by trailer, hashes matched). R-011, R-012, R-013 a-b fixed.

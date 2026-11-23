@@ -25,3 +25,5 @@ conductor.aws.c (session_01Kw9UwDiqvoswkZCuHe5GTt), pm.aws.c (session_01Kw9UwBZA
 
 - Your docs path is in site/policy/abp.json under the .c name; ask aws.c for it under your .a name.
 - CloudTrail per region with fuller records landed; first twin task: a CloudTrail record for each twin change (your patch).
+
+- aws.c landed the C agent's hand-over on dev at 03:55 UTC where it was sent (one signed commit per author, Authored-by trailer, hashes matched). R-011, R-012, R-013 a-b fixed.
