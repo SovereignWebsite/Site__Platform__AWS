@@ -47,3 +47,11 @@ test("without edge or log inputs the total is the Lambda figure, as before", () 
   assert.equal(r.total, r.lambda_total);
   assert.equal(r.edge_requests, 0);
 });
+
+test("a WAF rate rule adds its fixed fee and a per-request fee, never lowers the bill", () => {
+  const base = { concurrency: 10, memoryMb: 1024, durationMs: 20, edgeRps: 1000 };
+  const none = flood(base), rate = flood({ ...base, waf: { rules: 1 } });
+  assert.ok(rate.total > none.total);
+  const expected = (5 + 1) / 720 + rate.edge_requests * 6e-7;
+  assert.ok(Math.abs(rate.waf_cost - expected) < 1e-9);
+});

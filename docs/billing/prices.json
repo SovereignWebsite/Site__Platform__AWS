@@ -22,7 +22,9 @@
     "secretsmanager_page": "https://aws.amazon.com/secrets-manager/pricing/",
     "secretsmanager_data": { "url": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/secretsmanager/USD/current/secretsmanager.json", "published": "2026-11-11T19:56:06Z", "note": "AWS's Secrets Manager price data. Read by billing.aws.a on 23 Nov 2026." },
     "acm_page": "https://aws.amazon.com/certificate-manager/pricing/",
-    "cloudwatch_page": "https://aws.amazon.com/cloudwatch/pricing/"
+    "cloudwatch_page": "https://aws.amazon.com/cloudwatch/pricing/",
+    "waf_page": "https://aws.amazon.com/waf/pricing/",
+    "waf_data": { "url": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/waf/USD/current/waf.json", "published": "2026-11-23T06:42:08Z", "note": "AWS's WAF price data. Read by billing.aws.a on 23 Nov 2026. A web ACL for CloudFront is made in US East (N. Virginia); its prices there are the same as in London and Ireland in this file." }
   },
   "regions": {
     "eu-west-2": "EU (London)",
@@ -82,7 +84,13 @@
     { "id": "cloudfront.transfer_from_aws_origin", "service": "CloudFront", "unit": "GB", "global": 0, "source": "cloudfront_payg_page", "quote": "Data Transfer Out (DTO) charges from AWS services to CloudFront are $0/GB.", "note": "Covers the Vault's Lambda Function URL origin behind its distribution." },
     { "id": "cloudwatch.logs.ingest.standard", "service": "CloudWatch Logs", "unit": "GB", "eu-west-2": 0.5985, "eu-west-1": 0.57, "source": "cloudwatch_data", "label": "Logs Collected Data Ingestion", "quote_source": "cloudwatch_page", "quote": "Collect (Data Ingestion) Standard ... per GB", "note": "Standard log class. Lambda's own logs may be billed on the page's vended-log tiers instead (see not_priced_yet); this row is the upper bound." },
     { "id": "cloudwatch.logs.storage", "service": "CloudWatch Logs", "unit": "GB-month", "eu-west-2": 0.0315, "eu-west-1": 0.03, "source": "cloudwatch_data", "label": "Stored Data", "quote_source": "cloudwatch_page", "quote": "Store (Archival)* Standard ... per GB compressed", "note": "Per GB compressed; the model counts ingested bytes as stored (no compression), an upper bound." },
-    { "id": "acm.public_certificate.integrated", "service": "Certificate Manager", "unit": "certificate", "global": 0, "source": "acm_page", "quote": "By default, ACM issues certificates at no cost for use with services integrated with ACM.", "note": "The Vault's certificate is used by CloudFront, an integrated service; exportable and ACME certificates are charged and are not used." }
+    { "id": "acm.public_certificate.integrated", "service": "Certificate Manager", "unit": "certificate", "global": 0, "source": "acm_page", "quote": "By default, ACM issues certificates at no cost for use with services integrated with ACM.", "note": "The Vault's certificate is used by CloudFront, an integrated service; exportable and ACME certificates are charged and are not used." },
+    { "id": "waf.web_acl", "service": "WAF", "unit": "web-ACL-month", "eu-west-2": 5.0, "eu-west-1": 5.0, "source": "waf_data", "label": "WebACL per month", "quote_source": "waf_page", "quote": "Monthly fees are prorated hourly.", "note": "A web ACL for CloudFront lives in US East (N. Virginia); the file gives it the same price there." },
+    { "id": "waf.rule", "service": "WAF", "unit": "rule-month", "eu-west-2": 1.0, "eu-west-1": 1.0, "source": "waf_data", "label": "Rules added per WebACL per month", "quote_source": "waf_page", "quote": "Monthly fees are prorated hourly.", "note": "A rate-based rule is one rule." },
+    { "id": "waf.request", "service": "WAF", "unit": "request", "eu-west-2": 6e-07, "eu-west-1": 6e-07, "source": "waf_data", "label": "Web Requests received per Request", "quote_source": "waf_page", "quote": "This includes requests inspected by AWS Managed Rules, custom rules, and rate-based rules associated with your web ACLs.", "note": "Charged whatever the rule action, blocked requests included (the page: regardless of the rule action taken), except requests blocked by the Anti-DDoS managed rule group." },
+    { "id": "waf.anti_ddos_amr.month", "service": "WAF", "unit": "month", "eu-west-2": 20.0, "eu-west-1": 20.0, "source": "waf_data", "label": "AMR Anti DDoS Activated per Month", "quote_source": "waf_page", "quote": "All requests blocked by the AWS WAF DDoS AWS Managed Rule (AMR) are not charged towards WAF requests." },
+    { "id": "waf.anti_ddos_amr.request", "service": "WAF", "unit": "request", "eu-west-2": 1.5e-07, "eu-west-1": 1.5e-07, "source": "waf_data", "label": "AMR Anti DDoS Request Processed per Request" },
+    { "id": "cloudwatch.alarm.standard", "service": "CloudWatch", "unit": "alarm-month", "eu-west-2": 0.1, "eu-west-1": 0.1, "source": "cloudwatch_data", "label": "Alarm Standard", "note": "One standard-resolution metric alarm, for example on the distribution's request count." }
   ],
   "not_priced_yet": [
     "EBS gp3 storage per GB-month (for EC2): not in the EC2 or VPC price data read; the EBS pricing page or its data file is still to be read.",
@@ -94,6 +102,7 @@
     "Data transfer out to the internet: the tiers are copied (transfer.internet_out.*), but any monthly free allowance is not in the price data read, so none is applied yet; the S3 pricing page's own wording on it is still to be read.",
     "Free tiers for S3 and the AWS account-level credits: not applied; the model shows costs before them.",
     "CloudWatch Logs for Lambda: whether a function's own logs are billed at the Standard ingestion rate (cloudwatch.logs.ingest.standard, used as the upper bound) or on the page's tiered vended-log rates is still to be read on the CloudWatch pricing page.",
-    "Amazon ECR (where a Lambda container image must live, vaults design 04 section 8 question 4): storage and transfer not read yet; depends on which account holds the image."
+    "Amazon ECR (where a Lambda container image must live, vaults design 04 section 8 question 4): storage and transfer not read yet; depends on which account holds the image.",
+    "CloudFront requests blocked by AWS WAF: whether CloudFront still bills its per-request charge for them is not stated on the pages read; the flood model keeps the CloudFront charge (upper bound)."
   ]
 }

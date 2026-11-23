@@ -24,7 +24,10 @@ const price = (id, region) => {
 //   throttled, so this line is NOT capped by concurrency. edgeRps below what Lambda serves is raised to it.
 // responseBytes: bytes CloudFront sends back per request (a 401 or 429 body and headers).
 // logBytesPerInvocation: CloudWatch Logs bytes the function writes per invocation (its own lines plus Lambda's).
-export function flood({ concurrency, memoryMb, durationMs, hours = 1, arch = "arm", region = "eu-west-2", edgeRps = 0, responseBytes = 0, logBytesPerInvocation = 0 }) {
+// waf: null, or { rules, antiDdos } for a web ACL on the distribution: { rules: 1 } is one rate-based rule;
+//   antiDdos: true adds the Anti-DDoS managed rule group, whose blocked requests WAF does not charge (its page).
+//   Fixed WAF fees are prorated hourly over monthHours. WAF never lowers the CloudFront request line in this model.
+export function flood({ concurrency, memoryMb, durationMs, hours = 1, arch = "arm", region = "eu-west-2", edgeRps = 0, responseBytes = 0, logBytesPerInvocation = 0, waf = null, monthHours = 720 }) {
   if (!(concurrency > 0 && memoryMb > 0 && durationMs >= 1 && hours > 0 && edgeRps >= 0 && responseBytes >= 0 && logBytesPerInvocation >= 0)) throw new Error("bad input");
   const seconds = hours * 3600;
   const busySeconds = concurrency * seconds;                       // the cap: never more than C at once
@@ -40,10 +43,16 @@ export function flood({ concurrency, memoryMb, durationMs, hours = 1, arch = "ar
   const edgeRequestCost = edgeRequests * price("cloudfront.request.https.europe", region);
   const edgeTransferCost = (edgeRequests * responseBytes / 1e9) * price("cloudfront.transfer_out.europe.next9tb", region); // past the free TB: a flood is when it runs out
   const logCost = (requests * logBytesPerInvocation / 1e9) * price("cloudwatch.logs.ingest.standard", region);
-  const extra = edgeRequestCost + edgeTransferCost + logCost;
+  let wafCost = 0;
+  if (waf) {
+    const fixedMonth = price("waf.web_acl", region) + (waf.rules || 0) * price("waf.rule", region) + (waf.antiDdos ? price("waf.anti_ddos_amr.month", region) : 0);
+    const perReq = waf.antiDdos ? price("waf.anti_ddos_amr.request", region) : price("waf.request", region); // with the AMR on, counted as if it blocks all
+    wafCost = fixedMonth * hours / monthHours + edgeRequests * perReq;
+  }
+  const extra = edgeRequestCost + edgeTransferCost + logCost + wafCost;
   return { concurrency, memoryMb, durationMs, hours, arch, region, requests, gb_seconds: gbSeconds,
     request_cost: requestCost, duration_cost: durationCost,
-    edge_requests: edgeRequests, edge_request_cost: edgeRequestCost, edge_transfer_cost: edgeTransferCost, log_cost: logCost,
+    edge_requests: edgeRequests, edge_request_cost: edgeRequestCost, edge_transfer_cost: edgeTransferCost, log_cost: logCost, waf_cost: wafCost,
     lambda_total: lambdaOnly, total: lambdaOnly + extra,
     price_ids: [reqId, durId].concat(extra ? ["cloudfront.request.https.europe", "cloudfront.transfer_out.europe.next9tb", "cloudwatch.logs.ingest.standard"] : []) };
 }
@@ -56,6 +65,7 @@ export const assumptions = [
   "Through CloudFront, every request is billed at the edge whether Lambda serves it or throttles it: that line grows with the attacker's rate, not with concurrency. CloudFront's per-request price is used past its free 10 million, and transfer at the 1 to 10 TB tier (a flood is when the free TB runs out). A request sent straight to the Function URL skips CloudFront and pays only the Lambda lines.",
   "Log bytes per invocation and the attacker's rate are inputs, not known: the table spans values. Logs at the Standard ingestion rate (an upper bound; whether Lambda's logs use the vended tiers is still to read).",
   "Stack defaults from cloudformation.aws.a's vault.yaml: 1024 MB, arm64, reserved concurrency 10, timeout 30 s.",
+  "AWS WAF bills every request it inspects whatever the action (its page), so a rate rule adds cost during a flood rather than removing it; with the Anti-DDoS managed rule group, blocked requests are not charged as WAF requests but its own per-request fee applies (counted on every request here, an upper bound). Whether CloudFront bills requests WAF blocks is not stated on the pages read, so the CloudFront line is kept.",
 ];
 
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
@@ -74,6 +84,11 @@ if (isMain) {
     for (const edgeRps of [0, 1000, 10000]) for (const logBytesPerInvocation of [300, 1000]) {
       const r = flood({ concurrency: 10, memoryMb: 1024, durationMs: 20, edgeRps, responseBytes: 500, logBytesPerInvocation });
       console.log(`${String(edgeRps).padStart(10)}  ${String(logBytesPerInvocation).padStart(9)}  ${"500".padStart(6)}  ${r.lambda_total.toFixed(2).padStart(9)}  ${r.edge_request_cost.toFixed(2).padStart(10)}  ${r.edge_transfer_cost.toFixed(2).padStart(10)}  ${r.log_cost.toFixed(2).padStart(7)}  ${r.total.toFixed(2).padStart(8)}`);
+    }
+    console.log("\nWith a web ACL, 10,000 req/s, 300 B logs: what WAF adds, not what it saves:");
+    for (const [name, waf] of [["no WAF", null], ["rate rule", { rules: 1 }], ["rate rule + Anti-DDoS AMR", { rules: 1, antiDdos: true }]]) {
+      const r = flood({ concurrency: 10, memoryMb: 1024, durationMs: 20, edgeRps: 10000, responseBytes: 500, logBytesPerInvocation: 300, waf });
+      console.log(`  ${name.padEnd(28)} waf $${r.waf_cost.toFixed(2).padStart(6)}  total $${r.total.toFixed(2)} an hour`);
     }
     for (const a of assumptions) console.log("- " + a);
   }
