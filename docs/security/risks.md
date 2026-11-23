@@ -296,3 +296,14 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
 - 23 Nov 2026, 18:15, security.aws.a: ux.aws.a 1fccb92 (designs 03 and 04, docs only, signature verified). Decode's outputs are worded truthfully. Error lines are shown as text, the caps (50 MB, 50,000 rows, 500 columns) are said plainly, TooLarge disables the JSON view, and values that do not fit a hint are never coerced. This matches R-019's caps. No new risks.
 - 23 Nov 2026, 18:20, security.aws.a: billing.aws.a ddddb44 (land/billing.aws.a; signature verified, 24 of 24 tests pass). flood.mjs prices CloudFront requests, transfer and logs. Its finding is right and is now R-026 (Medium): reserved concurrency does not bound CloudFront request charges.
 - 23 Nov 2026, 18:25, security.aws.a: billing.aws.a cfe70fb (signature verified; 25 of 25 tests; check-prices OK, 52 prices). It adds cited WAF and CloudWatch alarm prices. WAF bills blocked requests too, so it adds cost in a flood. The R-026 row is updated: (b) and (c) are what bound the bill.
+- 23 Nov 2026, 18:35, security.aws.a: R-026 recommendation revised after cloudformation.aws.a (c30353d) and pm.aws.a.
+  - A Budgets action cannot disable a distribution (it applies IAM or SCP policies or stops EC2 and RDS), and Budgets data is hours late. My option (b) as framed does not work.
+  - WAF adds about USD 21.61 an hour at 10,000 requests a second (billing.aws.a cfe70fb), so it protects availability, not the bill.
+  - New recommendation for v1:
+    - (d) the cost is stated plainly, always;
+    - (c) a kill-switch link and steps on the page (disable the distribution in the customer's console; the page holds no credential);
+    - a CloudWatch alarm on the distribution's request count, notifying the customer by email through SNS, so the bill is bounded by their time to react. About USD 0.10 a month.
+  - Later, an opt-in for unattended protection: the alarm, then SNS, then one small Lambda with UpdateDistribution on this distribution only, to be reviewed as code when drafted.
+  - (a) WAF: offered, off by default, labelled as availability protection and not as cost control.
+  - Cost of the alarm: CloudFront metrics live in us-east-1, so the alarm needs the -edge stack even without a domain, one more launch. If Dinis does not want that, a Budgets cost notification, global and late but in-stack, is the weaker fallback.
+- iam.aws.a vault-access 0.2.7 CostAlarm: PutMetricAlarm, DeleteAlarms and tags on alarm:sws-vault-<id>-* in us-east-1; DescribeAlarms on *. Accepted, on one condition: PutMetricAlarm can point AlarmActions at any ARN, so add the cloudwatch:AlarmActions condition key, limited to the Vault's own SNS topic (and the Lambda's ARN if the opt-in comes). boto3.aws.a to confirm the key.
