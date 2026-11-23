@@ -102,9 +102,14 @@ let checks = 0;
   t.clock.tick(20 * 60 * 1000);
   assert.equal(await status(t), "ROLLBACK_COMPLETE", "an unknown certificate rolls the Vault back");
   assert.match(await reasons(t), /InvalidViewerCertificate/, "with CloudFront's reason");
-  { // RetainExceptOnCreate: a failed create deletes the bucket and the log group, so the rollback shows them deleted.
-    const ev = (await cfn(t, { Action: "DescribeStackEvents", StackName: V }, VR)).text, last = (l) => [...ev.matchAll(/<member>(.*?)<\/member>/gs)].map((m) => m[1]).find((x) => x.includes("<LogicalResourceId>" + l + "<"));
-    ["VaultBucket", "VaultLogs"].forEach((l) => assert.match(last(l), /<ResourceStatus>DELETE_COMPLETE</, l + " deleted in the rollback, not retained"));
+  { // RetainExceptOnCreate (bucket, policy, log group) and no plain Retain: after the rollback no resource is retained,
+    // every resource the create made ends DELETE_COMPLETE (cloudformation.aws.a).
+    const ev = [...(await cfn(t, { Action: "DescribeStackEvents", StackName: V }, VR)).text.matchAll(/<member>(.*?)<\/member>/gs)].map((m) => m[1]);
+    const lid = (x) => (/<LogicalResourceId>([^<]*)</.exec(x) || [])[1], st = (x) => (/<ResourceStatus>([^<]*)</.exec(x) || [])[1];
+    const made = [...new Set(ev.filter((x) => lid(x) !== V && /^CREATE_/.test(st(x))).map(lid))];
+    ["VaultBucket", "VaultBucketPolicy", "VaultLogs"].forEach((l) => assert.ok(made.includes(l), l + " was made before the failure"));
+    assert.ok(!ev.some((x) => st(x) === "DELETE_SKIPPED"), "after the rollback no resource is retained");
+    made.forEach((l) => assert.equal(st(ev.find((x) => lid(x) === l)), "DELETE_COMPLETE", l + " deleted in the rollback"));
   }
   // A certificate for another domain.
   t = fresh();
@@ -127,7 +132,7 @@ let checks = 0;
   assert.equal(await status(t), "CREATE_COMPLETE", "with the -edge stack's outputs the Vault completes");
   const dist = await (await t.handle("https://cloudfront.amazonaws.com/2020-05-31/distribution", { headers: H("us-east-1") })).text();
   assert.deepEqual(tag(dist, "WebACLId"), [eo.WebAclArn], "and its distribution carries the web ACL");
-  checks += 13;
+  checks += 15;
 }
 
 console.log("OK (twin vault -edge stack: " + checks + " checks; us-east-1 only, certificate and web ACL by condition, their ARNs as outputs, DNS elsewhere waits with the validation record, refusals write nothing, teardown; the Vault takes its certificate and web ACL, and CloudFront refuses any other)");

@@ -51,7 +51,8 @@ checks += 15;
 for (const p of ["healthcheck", "hostedzone/Z0DEMOTWIN0001/rrset/extra", "hostedzonecount", "change/C1"]) { r = await get(p); assert.equal(r.status, 501, p); assert.equal(r.note, NOTE); }
 assert.equal((await get("hostedzone/Z0DEMOTWIN0001/rrset", READ, "POST")).status, 501, "ChangeResourceRecordSets is not in the twin");
 assert.equal((await get("hostedzone", CUST)).status, 403, "the customer account has no Route 53 in the twin");
+r = await get("hostedzone", {}); assert.equal(r.status, 403, "an unsigned call is refused, as by every other twin service"); assert.match(r.text, /MissingAuthenticationToken/);
 assert.equal(twin.journal().length, j0, "reads write nothing");
-checks += 11;
+checks += 13;
 
 console.log("OK (twin Route 53 reads: " + checks + " checks; three reads from the seed, paging, errors, 501 for the rest, customer refused, reads only)");

@@ -1136,6 +1136,7 @@
   function cfAliases(d) { return cfQty("Aliases", function (a) { return "<CNAME>" + esc(a) + "</CNAME>"; }, d.aliases); }
   function cfArn(account, id) { return "arn:aws:cloudfront::" + account + ":distribution/" + id; }
   function cloudfront(url, init, account) {
+    if (!signed(init)) return cfErr("MissingAuthenticationToken", "Request is missing Authentication Token", 403);
     var s = build(), u = new URL(url), m = /^\/2020-05-31\/(distribution|function)(?:\/([^\/]+))?$/.exec(u.pathname), q = u.searchParams;
     if (!m || (init.method || "GET").toUpperCase() !== "GET" || (m[1] === "function" && m[2] !== undefined))
       return cfErr("NotImplemented", "The twin answers three CloudFront reads only: ListDistributions, GetDistribution and ListFunctions. Twin mode never calls real AWS.", 501);
@@ -1542,6 +1543,7 @@
       : "<TTL>" + r.ttl + "</TTL><ResourceRecords>" + r.values.map(function (v) { return "<ResourceRecord><Value>" + esc(v) + "</Value></ResourceRecord>"; }).join("") + "</ResourceRecords>") + "</ResourceRecordSet>";
   }
   function route53(url, init) {
+    if (!signed(init)) return r53Err("MissingAuthenticationToken", "Request is missing Authentication Token", 403);
     var u = new URL(url), q = u.searchParams, m = /^\/2013-04-01\/hostedzone(?:\/([^\/]+)(\/rrset)?)?$/.exec(u.pathname);
     if (!m || (init.method || "GET").toUpperCase() !== "GET")
       return r53Err("NotImplemented", "The twin answers three Route 53 reads only: ListHostedZones, GetHostedZone and ListResourceRecordSets. Twin mode never calls real AWS.", 501);

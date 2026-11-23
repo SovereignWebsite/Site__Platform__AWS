@@ -43,3 +43,8 @@ Append only, newest last. Session: https://claude.ai/code/session_018yvwtLV1iZjU
 - Today the twin holds only the certificates and web ACLs of the account's completed -edge stacks. vault-edge.yaml's DomainName pattern takes no wildcard, so the wildcard branch of covers() is not reachable through the twin yet; I checked it directly, not in a suite.
 - vault-edge.test.mjs (40 checks) now also checks the rollback shows VaultBucket and VaultLogs DELETE_COMPLETE (RetainExceptOnCreate on a first create). All twin suites green.
 - My slip: 0619279 carries `Agent: dev.1.aws.a`, not the full principal, so signers.mjs refuses it. I did not rewrite the pushed branch; landing goes through replay-signed.sh anyway, which needs Dinis's yes.
+
+## 23 November, late: unsigned CloudFront and Route 53 calls refused; nothing retained after a failed create
+
+- security.aws.a's Low on 1520020 (R-025 (a)): route53() and cloudfront() now return 403 MissingAuthenticationToken to an unsigned call, as every other twin service does. The customer gate in answer() already refused the customer credential for Route 53. Checks added in route53.test.mjs (46) and cloudfront.test.mjs (71). I made the fix on my branch; dev.2.aws.a has been told.
+- cloudformation.aws.a's addition: vault-edge.test.mjs (42) checks that after the rollback no resource is retained (no DELETE_SKIPPED), and that every resource the create made, VaultBucketPolicy included, ends DELETE_COMPLETE.
