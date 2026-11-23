@@ -124,6 +124,13 @@ ok(listed.find((x) => x.name === "sws-vault-1a2b3c4d5e6f").status === "ROLLBACK_
   const live = (await ctx.CfnApi.all((next) => api.stacks(R, { next }))).items.map((x) => x.name);
   const all = (await ctx.CfnApi.all((next) => api.stacks(R, { next, deleted: true }))).items;
   ok(!live.includes(name) && all.some((x) => x.name === name && x.status === "DELETE_COMPLETE"), "teardown: stacks() leaves it out; stacks({ deleted: true }) shows it DELETE_COMPLETE");
+  // Reusing the removed Vault's id fails: its log group was kept, so the new stack rolls back (why the page always makes
+  // a fresh id; cloudformation.aws.a, dev.1.aws.a c23815c).
+  ok((await create(name, { VaultId: "0f1e2d3c4b5a", DeployMode: "one-stack" })).status === 200, "reuse: the same id created again in the console");
+  let st2 = "", j = 0;
+  for (; j < 40 && !/_COMPLETE$|_FAILED$/.test(st2); j++) { st2 = (await api.stack(R, name)).status; twin.clock.tick(30 * 1000); }
+  const ev2 = (await ctx.CfnApi.all((next) => api.events(R, name, { next }))).items, why = ev2.filter((e) => e.status === "CREATE_FAILED").pop(); // the oldest: events are newest first, and siblings are cancelled after it
+  ok(st2 === "ROLLBACK_COMPLETE" && why && why.logicalId === "VaultLogs" && /already exists/.test(why.reason), "reuse: ROLLBACK_COMPLETE, VaultLogs CREATE_FAILED (" + (why && why.reason) + ")");
 }
 
 // CfnApi only read.
