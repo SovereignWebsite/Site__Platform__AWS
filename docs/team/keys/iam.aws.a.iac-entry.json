@@ -1,0 +1,23 @@
+{
+  "id": "iam-aws-a-sovereignwebsite",
+  "agent": "iam.aws.a@SovereignWebsite.dinis",
+  "role": "IAM on account A (AWS Platform programme, Site__Platform__AWS docs/iam/): the platform's roles, permission boundaries and least-privilege proposals, written for Dinis to apply. Restarted by maestro.a at Dinis Cruz's word (23 Nov 2026, about 23:00 UTC); the previous session's key was never published here. Conductor conductor.aws.a. A session key: it ends with its session.",
+  "how": "Made by the agent in its own session on 23 November 2026 with sgit pki keygen; public bundle from sgit pki export. Only the public half is here.",
+  "created": "2026-11-23",
+  "status": "active",
+  "session": "https://claude.ai/code/session_018yvwtNPmVvCFyGifHJeMv5",
+  "fingerprint": "sha256:9c828dc09276e039",
+  "signing_fingerprint": "sha256:cf44e76deda12e0e",
+  "bundle": {
+    "v": 1,
+    "encrypt": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAsV5Pk6gAUqX3rW1zCEFf\nPqPYRmAAuPtSgUZ6kv9adSTODdirs2VE7Gb/i4VI+bgkZneN6pIPMhiuVvP044aI\n4ua5hPrQr/3m1CS7bhWLRiOun9RAM8Y4DcHQhdu86C4vIYi3/N/4bWuws47MyOXV\nLrqlMm4j/4U8zqCfUOcctzoVUTGI6jyeTZ63JucFYVlmOmh3kMdK+OyzWyD9FNAT\n5+wRuWkE2RJqkwtCM9VR9xRneKQEa0eYs8KfNdZSe9Rqgomfa0WI3jcbvkmcicKk\nVe89V+o0aQsjXBya8jInlrGpRiRaBS3ROvOzTYh71M8Yzaap0Ld2Vr5xezZH+Gea\nZf9eicmmSnGe6EPVzirIM8kbIAMBzg6ux9/1eZLRgxD6i1I7Mjca4HGSanFIR53j\ngeNVJHn3v+u5JIyip7cjeqbrACUoQEZKakeKzunKu9rTTVylcfH64mjtqbzla+t9\nprPCMcScDD6L4JnsHgIev0D55ypGqLOYUcQnqVGkwdmxJ+Xd52bgylYjztSFuyiS\naagvVCl8hcHzX+hcxgcJtuNXsq2GjWZ/AgOe3D+APJfdeFV9lC+bnsNrwMTBfJg6\njRN4eKq61r3XL3FzK+wTS+o6iY3FqPUh7Mh6wf5ULJn45NeI5D0nrxx31GG71i+N\noDS5ayfoWpXMJMw2REumXpUCAwEAAQ==\n-----END PUBLIC KEY-----\n",
+    "sign": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDOi5ImYv7fKl0I9Wg0fcorlo12Ql\niEaSdaZ2u9gtfnsdRpJoyyKyebWIeTphsXvY6vMbfOE74dceDlN3NY4oaw==\n-----END PUBLIC KEY-----\n",
+    "label": "iam.aws.a@SovereignWebsite.dinis",
+    "fingerprint": "sha256:9c828dc09276e039",
+    "signing_fingerprint": "sha256:cf44e76deda12e0e"
+  },
+  "ssh_signing": {
+    "from": "bundle.sign",
+    "note": "build/check-signatures.mjs derives the OpenSSH form from bundle.sign and verifies each commit with git verify-commit."
+  }
+}

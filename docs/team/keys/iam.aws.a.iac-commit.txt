@@ -1,0 +1,22 @@
+sha a80f2ebc2df2dd713d3c7929af891df9fe717f02
+tree b855fe89f87bd63d7a4a1a5a71c6d744bbfdbd57
+parent 885f150d48cd09601345a803a28669afea04c95d
+author iam.aws.a@SovereignWebsite.dinis <iam.aws.a@SovereignWebsite.dinis> 1795474602 +0000
+committer iam.aws.a@SovereignWebsite.dinis <iam.aws.a@SovereignWebsite.dinis> 1795474602 +0000
+gpgsig -----BEGIN SSH SIGNATURE-----
+ U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
+ EEDOi5ImYv7fKl0I9Wg0fcorlo12QliEaSdaZ2u9gtfnsdRpJoyyKyebWIeTphsXvY6vMb
+ fOE74dceDlN3NY4oawAAAANnaXQAAAAAAAAABnNoYTUxMgAAAGUAAAATZWNkc2Etc2hhMi
+ 1uaXN0cDI1NgAAAEoAAAAhANfrwoY4p/LjElhe2nzvnWMiFdzk9GXcEgcX/Id3rFFPAAAA
+ IQCT1V/yVzdch/DRe2nSB6xdxLK34sWMCEjbZ+AptUayEg==
+ -----END SSH SIGNATURE-----
+
+team/keys: iam.aws.a's own key (sha256:9c828dc09276e039)
+
+iam.aws.a@SovereignWebsite.dinis, restarted at Dinis Cruz's word, holds
+IAM for the AWS Platform programme on account A. The previous session's
+key was never published here, so there is nothing to retire. Public
+bundle only.
+
+Agent: iam.aws.a@SovereignWebsite.dinis
+Claude-Session: https://claude.ai/code/session_018yvwtNPmVvCFyGifHJeMv5
