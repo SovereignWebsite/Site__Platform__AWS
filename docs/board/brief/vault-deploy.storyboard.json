@@ -8,14 +8,14 @@
  "beats": [
   {
    "id": "b1",
-   "narration": "Ten decisions on deploying a Vault into a customer's AWS account. Nothing runs outside the twin until you answer.",
+   "narration": "Ten decisions on deploying a Vault into a customer's AWS account. Nothing real runs until you answer.",
    "visual": {
     "kind": "svg",
     "src": "intro",
     "caption": "Batch 2: deploy a Vault",
     "at": 0,
-    "play": 8.2,
-    "end": 7.6
+    "play": 7.4,
+    "end": 6.8
    },
    "facts": [
     "s-plan"
@@ -183,14 +183,14 @@
   },
   {
    "id": "b12",
-   "narration": "All a, except V4 and V5, which are b, and V7, which is c. V10 depends on V9. Answer in pm.aws.a's session.",
+   "narration": "All a, except V4 and V5, b, and V7, c. V10 depends on V9. Answer in pm.aws.a's session.",
    "visual": {
     "kind": "svg",
     "src": "outro",
     "caption": "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a (if the official template settles nothing)",
     "at": 0,
-    "play": 9.4,
-    "end": 8.8
+    "play": 7.8,
+    "end": 7.2
    },
    "facts": [
     "s-plan"
