@@ -146,3 +146,9 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - Both patches also touch test/**, which needs Dinis's yes when aws.c applies them.
   - No new risks.
 - 23 Nov 2026, 17:00, security.aws.a: R-021 fix checked on work/cloudtrail.aws.a 74c3cba. The signature verifies with the fresh key. (a) Object.create(null) is used for the eventID maps and for every rule-name set. My repro (eventID `constructor`, and an eventName `constructor`) now keeps all three events. (b) The listed IAM, stack and trail-bucket actions are added. (c) New medium rule refused-on-protected: a refused UpdateRole on the change role now raises it. (d) ::ffff:198.51.100.9 maps to 198.51.100.0/24. Tests pass. R-021 closed. Residual note, not a risk: a trail bucket with a custom name is recognised only when a CreateTrail or UpdateTrail in the same read names it. When the page reads live, take the bucket names from DescribeTrails as well.
+- 23 Nov 2026, 17:10, security.aws.a: ux.aws.a design 06, the Vault deploy page (land/ux.aws.a a640050, docs only, signature verified). Review in docs/security/reviews/2026-11-23__ux-design-06-vault-deploy-page.md.
+  - Section 1a: I recommend (a), two link-outs, because the deploy role bounds every Vault update whatever the template says, and we are the customer's supply chain. (c) only if Dinis chooses it, with five conditions.
+  - Screen 3: CSP `connect-src https://*.cloudfront.net`, not any host. The /health answer is untrusted (no credentials, no redirects, size cap, exact field checks, textContent only).
+  - Screen 4: `/health` does not return `account_id`.
+  - Three copy fixes so the page says nothing untrue.
+  - No new register risk.
