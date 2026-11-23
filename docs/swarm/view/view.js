@@ -2,7 +2,7 @@
 // The pragmatic engine (moving, jumping, follow the packet) is viz.aws.c's; this view
 // owns only the data mapping and plugs into that engine once it exists.
 // Every string from the data reaches the page as text (textContent), never as HTML.
-"use strict";
+import { warp as warpGap } from "../steps.mjs";
 (() => {
   const DATA = "../data/replay.json";
   const LIFE = 1.4;                        // replay seconds a flow or flash stays visible
@@ -20,7 +20,7 @@
     let r = 0, prev = null;
     for (const e of evs) {
       const gap = prev === null ? 0 : (e.ms - prev) / 1000;
-      r += prev === null ? 0 : Math.min(2.0, Math.max(0.15, gap / 40));
+      r += prev === null ? 0 : warpGap(gap);                  // one formula with steps.mjs and viz.aws.a's player
       e.r = r; prev = e.ms;
     }
     return r + LIFE;
