@@ -22,7 +22,7 @@ Updated 2026-11-23 04:00 UTC. Two rules over everything: **twin first** (every f
 | PM-1 The board, the pipeline and one decisions page for Dinis | pm.aws.c | Commits its own board now; folds questions in each wake |
 | TW-1 The twin as the place everything is built: the whole site works on... | architect.aws.c (design), dev.2.aws.c (moving to dev.2.aws.a) (build) | Twin v0 is in (5371ed9, fails closed); architect's design 02: packs and scenarios |
 | AR-1 The API layer: every primitive as a browser JavaScript API with an... | architect.aws.c, dev.2.aws.c (moving to dev.2.aws.a) | site/api/: S3 first |
-| S3-1 A spectacular, smooth S3 browser | s3.aws.c, dev.1.aws.a | dev.1.aws.a's order: design 02, S3-1 item 7, twin migration steps 1-2 (TW-1), S3 items 9-11 and W3-5; R-016 reader part done locally (e81d2db). All unpushed until decision 7 |
+| S3-1 A spectacular, smooth S3 browser | s3.aws.c, dev.1.aws.a | dev.1.aws.a's order (agreed with architect.aws.a): S3-1 items 7 and 9-11, then sherpa W3-5, then design 02 twin steps 1-2 (TW-1); R-016 reader part done locally (e81d2db). All unpushed until decision 7 |
 | S3-2 CloudFront-logs zip: normalise the records, view them several ways,... | data.aws.c (moving to data.aws.a) | Start on the CloudFront logs the twin already seeds (memo 22) |
 | LF-1 What each function and stream does, where it writes, traffic; API and... | lambda.aws.c (moving to lambda.aws.a) | A first view over the twin's seeded functions and streams |
 | CF-1 Every stack mapped to what it made | cloudformation.aws.c (moving to cloudformation.aws.a) | Stacks in the twin, each linked to its resources |
