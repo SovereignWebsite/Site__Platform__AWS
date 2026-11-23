@@ -26,7 +26,9 @@
     "waf_page": "https://aws.amazon.com/waf/pricing/",
     "waf_data": { "url": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/waf/USD/current/waf.json", "published": "2026-11-23T06:42:08Z", "note": "AWS's WAF price data. Read by billing.aws.a on 23 Nov 2026. A web ACL for CloudFront is made in US East (N. Virginia); its prices there are the same as in London and Ireland in this file." },
     "ecr_page": "https://aws.amazon.com/ecr/pricing/",
-    "ecr_data": { "url": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ecr/USD/current/ecr.json", "published": "2026-11-13T16:39:47Z", "note": "AWS's ECR price data. Read by billing.aws.a on 23 Nov 2026." }
+    "ecr_data": { "url": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ecr/USD/current/ecr.json", "published": "2026-11-13T16:39:47Z", "note": "AWS's ECR price data. Read by billing.aws.a on 23 Nov 2026." },
+    "ebs_page": "https://aws.amazon.com/ebs/pricing/",
+    "ebs_data": { "url": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ebs.json", "published": "2026-11-23T17:10:05Z", "note": "AWS's EBS price data (the file the EBS pricing page loads, ec2/ebs). Read by billing.aws.a on 23 Nov 2026." }
   },
   "regions": {
     "eu-west-2": "EU (London)",
@@ -94,10 +96,12 @@
     { "id": "waf.anti_ddos_amr.request", "service": "WAF", "unit": "request", "eu-west-2": 1.5e-07, "eu-west-1": 1.5e-07, "source": "waf_data", "label": "AMR Anti DDoS Request Processed per Request" },
     { "id": "cloudwatch.alarm.standard", "service": "CloudWatch", "unit": "alarm-month", "eu-west-2": 0.1, "eu-west-1": 0.1, "source": "cloudwatch_data", "label": "Alarm Standard", "note": "One standard-resolution metric alarm, for example on the distribution's request count." },
     { "id": "ecr.storage", "service": "ECR", "unit": "GB-month", "eu-west-2": 0.1, "eu-west-1": 0.1, "source": "ecr_data", "label": "EC2 Container Registry", "note": "Private repository storage. Lambda container images must be in ECR (vaults design 04, section 8)." },
-    { "id": "ecr.transfer_same_region", "service": "ECR", "unit": "GB", "global": 0, "source": "ecr_page", "quote": "Data transferred between Amazon ECR and other services within the same Region e.g., Amazon EC2, AWS Lambda , AWS App Runner , or AWS Fargate is free of charge (i.e., $0.00 per GB).", "note": "Across regions it is charged at internet data transfer rates on both sides (same page): one image per region avoids that." }
+    { "id": "ecr.transfer_same_region", "service": "ECR", "unit": "GB", "global": 0, "source": "ecr_page", "quote": "Data transferred between Amazon ECR and other services within the same Region e.g., Amazon EC2, AWS Lambda , AWS App Runner , or AWS Fargate is free of charge (i.e., $0.00 per GB).", "note": "Across regions it is charged at internet data transfer rates on both sides (same page): one image per region avoids that." },
+    { "id": "ebs.gp3.storage", "service": "EBS", "unit": "GB-month", "eu-west-2": 0.0928, "eu-west-1": 0.088, "source": "ebs_data", "label": "Storage General Purpose gp3 GB Mo", "quote_source": "ebs_page", "quote": "With Amazon EBS, you pay only for what you provision.", "note": "Billed on the provisioned size, not the data written. For ec2.aws.a's design 01." },
+    { "id": "ebs.gp3.iops_over_3000", "service": "EBS", "unit": "IOPS-month", "eu-west-2": 0.0058, "eu-west-1": 0.0055, "source": "ebs_data", "label": "Provisioned EBS IOPS gp3 Volumes per IOPS Mo", "quote_source": "ebs_page", "quote": "General Purpose SSD (gp3) - IOPS 3,000 IOPS free and ... /provisioned IOPS-month over 3,000" },
+    { "id": "ebs.gp3.throughput_over_125", "service": "EBS", "unit": "MiBps-month", "eu-west-2": 0.0464, "eu-west-1": 0.044, "source": "ebs_data", "label": "Provisioned Throughput gp3 per GiBps mo", "quote_source": "ebs_page", "quote": "General Purpose SSD (gp3) - Throughput 125 MB/s free and ...", "note": "The file gives 47.5136 (London) and 45.056 (Ireland) per GiBps-month; the page divides by 1024 for per MiBps-month, as here." }
   ],
   "not_priced_yet": [
-    "EBS gp3 storage per GB-month (for EC2): not in the EC2 or VPC price data read; the EBS pricing page or its data file is still to be read.",
     "EC2 t4g CPU credits in unlimited mode, above the baseline: not yet read.",
     "STS and IAM: no price row found on a pricing page yet; treated as unknown, not as free.",
     "Cloud Control API: pricing page not yet read.",
