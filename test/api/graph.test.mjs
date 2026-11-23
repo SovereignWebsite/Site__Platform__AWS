@@ -1,8 +1,8 @@
 // Graph (site/api/graph.js) over the twin, built as a page would: S3Api for buckets and objects (after the CORS fix
 // a user's Approve would make), Activity.fromBytes for the trail files, then the golden test of design 03,
 // refinement 7: against ontology.aws.a's twin-graph.json, compare node id, type, altitude and edge from, rel, to,
-// evidence, on the part of the graph the adapters built so far cover (S3, CloudTrail files, what files say, Lambda, Firehose). The rest of the golden
-// graph (IAM, CloudFormation, zip contents, serves_from, curated) waits for its adapters and is counted.
+// evidence, on the part of the graph the adapters built so far cover (S3, CloudTrail files, what files say, Lambda, Firehose, zips). The rest of the golden
+// graph (IAM, CloudFormation, serves_from, curated) waits for its adapters and is counted.
 // Node 22, no network. Run: node test/api/graph.test.mjs
 import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -31,7 +31,7 @@ const ctx = {
 };
 ctx.window = ctx; ctx.globalThis = ctx;
 vm.createContext(ctx);
-for (const f of ["sigv4.js", "twin.js", "transport.js", "api/all.js", "api/s3-api.js", "api/lambda-api.js", "api/firehose-api.js", "api/decode.js", "api/activity.js", "api/graph.js"])
+for (const f of ["sigv4.js", "twin.js", "transport.js", "zip.js", "api/all.js", "api/s3-api.js", "api/lambda-api.js", "api/firehose-api.js", "api/decode.js", "api/activity.js", "api/graph.js"])
   vm.runInContext(readFileSync(new URL("../../site/" + f, import.meta.url), "utf8"), ctx, { filename: f });
 const here = (p) => new URL(p, import.meta.url);
 // Pinned copies (golden/README.md): dev's docs/ontology/ still has the older twin: ids until bb9cac9 lands.
@@ -90,6 +90,12 @@ const lam = ctx.LambdaApi(readSend), fh = ctx.FirehoseApi(readSend, { account: A
 g.add.lambda((await ctx.LambdaApi.all((next) => lam.functions(R, { next }))).items);
 const names = (await ctx.FirehoseApi.all((next) => fh.streams(R, { next }))).items;
 g.add.firehose(await Promise.all(names.map((s) => fh.stream(R, s.name))));
+// Deployment packages: every zip the graph shows, its facts read in memory.
+const zipFacts = [];
+for (const b of buckets) for (const o of b.objects.filter((o) => ctx.Zip.isZip(o.key) && !(o.key.includes("/") && grouped(b, o.key))))
+  zipFacts.push(Object.assign({ bucket: b.name, key: o.key }, await ctx.Graph.zipFacts((await api.getObject(b.name, b.region, o.key)).bytes)));
+ok(zipFacts.length > 0 && zipFacts.every((z) => /^[A-Za-z0-9+/]{43}=$/.test(z.sha256)), "zip facts: " + JSON.stringify(zipFacts.map((z) => [z.key, z.packageName, z.entries])));
+g.add.zips(zipFacts);
 const mine = JSON.parse(JSON.stringify(g.toJSON()));
 
 // ---- schema: enums, required fields, id form, every edge end a node, counts ----
@@ -115,6 +121,7 @@ const covered = (e, typeOf) => {
   if (e.rel === "in" && e.evidence === "api" && (ft === "function" || ft === "stream")) return true;
   if (["runs_as", "writes_to", "transforms_with"].includes(e.rel) && e.evidence === "api") return true;
   if (e.rel === "logs_to" && e.evidence === "naming" && ft === "distribution") return true;
+  if (e.rel === "packages") return true;
   // content adapter
   if (e.rel === "refers_to" && e.evidence === "content") return true;
   if ((e.rel === "in" || e.rel === "part_of") && e.evidence === "content" && ft === "vault") return true;
@@ -176,7 +183,16 @@ ok(!/\beval\s*\(|new Function|innerHTML|document\.|localStorage|fetch\(/.test(re
   ok(has("urn:sws:cloudfront-distribution:d1") && !has("urn:sws:cloudfront-distribution:d4"), "a distribution only from files with log lines");
 }
 
+// ---- packages: by SHA-256 (api), else by METADATA name (naming), whichever order adapters run ----
+{
+  const z = ctx.Graph({ account: A }), fnArn = (n) => "arn:aws:lambda:eu-west-2:" + A + ":function:" + n;
+  z.add.zips([{ bucket: "deps", key: "a.zip", sha256: "S1", packageName: "other" }, { bucket: "deps", key: "b.zip", sha256: "nope", packageName: "f2" }, { bucket: "deps", key: "c.zip", sha256: "nope", packageName: null }]);
+  z.add.lambda([{ name: "f1", arn: fnArn("f1"), region: "eu-west-2", codeSha256: "S1" }, { name: "f2", arn: fnArn("f2"), region: "eu-west-2", codeSha256: "S2" }]);
+  const pk = JSON.parse(JSON.stringify(z.toJSON())).edges.filter((e) => e.rel === "packages").map((e) => e.from.split("/").pop() + ">" + e.to.split(":").pop() + ":" + e.evidence);
+  ok(JSON.stringify(pk) === JSON.stringify(["a.zip>f1:api", "b.zip>f2:naming"]), "packages rules " + JSON.stringify(pk));
+}
+
 const uncovered = golden.edges.length - gs.edges.size - golden.edges.filter((e) => e.evidence === "curated" || e.evidence === "comment").length;
 if (failures) { console.error(failures + " failed, " + passed + " passed"); process.exit(1); }
 if (ctx.AwsTwin.pack() !== PACK) { console.error("FAIL the twin loaded pack " + ctx.AwsTwin.pack() + ", not " + PACK); process.exit(1); }
-console.log("OK (graph, pack " + PACK + ": " + passed + " checks; " + mine.nodes.length + " nodes, " + mine.edges.length + " edges; golden slice " + gs.nodes.size + " nodes and " + gs.edges.size + " edges equal; " + uncovered + " golden edges wait for the IAM and CloudFormation adapters, zip contents and serves_from)");
+console.log("OK (graph, pack " + PACK + ": " + passed + " checks; " + mine.nodes.length + " nodes, " + mine.edges.length + " edges; golden slice " + gs.nodes.size + " nodes and " + gs.edges.size + " edges equal; " + uncovered + " golden edges wait for the IAM and CloudFormation adapters and serves_from)");

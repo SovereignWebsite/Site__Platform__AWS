@@ -11,6 +11,8 @@
 //                                            optionally which bucket serves a site: { name, bucket }
 //   g.add.lambda(functions)                  LambdaApi functions (items of functions(), or function())
 //   g.add.firehose(streams)                  FirehoseApi stream() results
+//   g.add.zips([{ bucket, key, sha256, packageName, entries }])   deployment packages; the facts come from
+//                                            Graph.zipFacts(bytes) -> Promise<{ sha256, packageName, entries }>
 //   g.toJSON()                               -> { about, evidence_levels, counts, nodes, edges } (schema shape)
 //
 // Ids: the ARN where AWS defines one, otherwise urn:sws:<kind>:<name>. An edge seen twice keeps the stronger
@@ -230,6 +232,29 @@
         });
       });
     }
+    // Deployment packages: a zip whose SHA-256 is a function's CodeSha256 packages that function (Lambda's own
+    // identity for a package: evidence api); failing that, a zip whose dist-info METADATA names a function by name
+    // (naming). Decided in toJSON, so zips and functions can be added in either order.
+    var zips = [];
+    function addZips(list) {
+      list.forEach(function (z) {
+        if (!z || !z.bucket || !z.key) return;
+        var oid = ids.object(z.bucket, z.key);
+        if (nodes.has(oid) && typeof z.entries === "number") nodes.get(oid).entries = z.entries;
+        zips.push(z);
+      });
+    }
+    function packagesFunctions() {
+      var fns = Array.from(nodes.values()).filter(function (n) { return n.type === "function"; });
+      zips.forEach(function (z) {
+        var oid = ids.object(z.bucket, z.key);
+        var bySha = z.sha256 && fns.filter(function (f) { return f.code_sha256 === z.sha256; })[0];
+        if (bySha) return edge(oid, "packages", bySha.id, "api", "Lambda CodeSha256 equals the zip's SHA-256");
+        var byName = z.packageName && fns.filter(function (f) { return f.label === z.packageName; })[0];
+        if (byName) edge(oid, "packages", byName.id, "naming", "zip name and dist-info METADATA (Name: " + z.packageName + "); CodeSha256 differs");
+      });
+    }
+
     // A distribution whose log files sit under a stream's prefix in that stream's bucket logs through that stream.
     function logsThroughStreams() {
       var dists = Array.from(nodes.values()).filter(function (n) { return n.type === "distribution"; });
@@ -251,6 +276,7 @@
 
     function toJSON() {
       logsThroughStreams();
+      packagesFunctions();
       var nodeList = Array.from(nodes.values()).map(function (n) { return Object.assign({}, n); });
       var edgeList = Array.from(edges.values()).map(function (e) { return Object.assign({}, e); });
       var have = new Set(nodeList.map(function (n) { return n.id; }));
@@ -267,8 +293,28 @@
         evidence_levels: EVIDENCE.slice(), counts: { nodes: nodeList.length, edges: edgeList.length, by_evidence: by }, nodes: nodeList, edges: edgeList };
     }
 
-    return { add: { s3: s3, activity: activity, content: content, lambda: lambda, firehose: firehose }, toJSON: toJSON, ids: ids };
+    return { add: { s3: s3, activity: activity, content: content, lambda: lambda, firehose: firehose, zips: addZips }, toJSON: toJSON, ids: ids };
   }
+
+  // A zip's facts for add.zips: its SHA-256 (base64, as Lambda's CodeSha256), the package name its
+  // *.dist-info/METADATA gives, and how many entries it has. Reads the bytes in memory with zip.js (site/zip.js).
+  Graph.zipFacts = function (bytes) {
+    var Z = root.Zip, u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+    if (!Z) return Promise.reject(new Error("Graph.zipFacts needs Zip (site/zip.js)"));
+    var range = function (a, b) { return Promise.resolve(u8.slice(a, b + 1).buffer); };
+    var sha = root.crypto.subtle.digest("SHA-256", u8).then(function (h) {
+      var v = new Uint8Array(h), s = ""; for (var i = 0; i < v.length; i++) s += String.fromCharCode(v[i]); return root.btoa(s);
+    });
+    var meta = Z.list(range, u8.length).then(function (entries) {
+      var m = entries.filter(function (e) { return /\.dist-info\/METADATA$/.test(e.name) && !e.dir; })[0];
+      if (!m || m.size > 1048576) return { entries: entries.length, packageName: null };
+      return Z.read(range, m).then(function (b) {
+        var n = /^Name:\s*(.+)$/m.exec(new TextDecoder().decode(new Uint8Array(b)));
+        return { entries: entries.length, packageName: n ? n[1].trim() : null };
+      });
+    });
+    return Promise.all([sha, meta]).then(function (r) { return { sha256: r[0], packageName: r[1].packageName, entries: r[1].entries }; });
+  };
 
   root.Graph = Graph;
 })(typeof window !== "undefined" ? window : globalThis);
