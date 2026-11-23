@@ -72,6 +72,34 @@ ux.aws.a@SovereignWebsite.dinis, 23 Nov 2026, second wake. Design 01 section 2 n
 - The counts in this sketch are illustrative of the attack pack's shape (one scanner, mostly 403 and 404); the real numbers come from the file.
 - Every cell is set as text. Link mode (memo 22) later turns known types (IP, bucket, key, vault id) into links by a fixed pattern only (design 01 S3 step 3; R-002).
 
+### 2.3a What the file's header line says (Decode on dev, site/api/decode.js, 461d422)
+
+The header line under the file name is built from what Decode returns, field by field, so it never claims more than the decoder saw:
+
+| Part of the line | From | Example |
+|---|---|---|
+| `n KB gzip -> n KB` | `Decode.gunzip`: `packed`, `unpacked` | `n KB gzip -> n KB` (from the file) |
+| format | `Decode.sniff` | `JSON Lines` (CSV, JSON, text and zip likewise) |
+| `n rows` | the table's `rows.length` | `n rows` |
+| `n lines could not be read` | `errors.length`, with a [Show] that lists `line` and `message` as text | shown only when n > 0 |
+
+When Decode stops at a limit it says so, and the console says it in the same place, plainly:
+
+- `truncated.bytes` (from gunzip or the text cap, default 50 MB unpacked): "Showing the first 50 MB. The file is larger." When the cut came from gunzip, the last, cut-off line is dropped by Decode (`partial`), not shown as an error.
+- `truncated.rows` (default 50 000 rows): "Showing the first 50,000 of at least `rowsRead` rows."
+- `truncated.columns` (over 500 columns): "Showing the first 500 columns."
+- `json()` over the cap throws `TooLarge`: "Too large to show as JSON here (over 50 MB). [Raw] shows the start." The Table and JSON buttons are disabled with that sentence as their description.
+
+The top-values counts above the table use the same rows, so they carry the same note ("counts from the first 50,000 rows"). This meets the cap that section 6 asks of security.
+
+**Column hints** (`columns[].hint`, from the first 200 rows):
+
+- `number`: right-aligned, tabular figures, sorted as numbers;
+- `time`: shown in UTC with the zone written ("11:00:41 UTC" in the header cell, times in the rows), sorted as time;
+- `text`: left-aligned, sorted as text.
+
+A hint is a guess from a sample, so a value that does not fit its column's hint is shown as text, as it is, and never coerced. Sorting puts values that do not fit last.
+
 ### Privacy (Dinis Cruz, 23 Nov 2026 ~11:15 UTC, in data.aws.a's session: keep only the network, and city and country where available)
 
 The table, the top-values counts and anything kept or written out show the network (/24 for IPv4, /48 for IPv6) and the country. Opening one row in the page shows the line as the log holds it, full address included (as data.aws.a's investigation view does), but the console never copies a raw address out of the file: not into a link, Copy, an export or a screenshot. The addresses and networks in these sketches are from the documentation ranges and illustrative.
@@ -123,7 +151,7 @@ Focus is always visible, the tree is an ARIA tree, the right pane is a region la
 |------|------|--------------|
 | ListObjectsV2 with prefix and delimiter; GetObject with a range | S3Api (site/api/s3-api.js) | Yes, not yet loaded by a page |
 | Bucket list with region, object count, size | S3Api plus the twin | List yes; count and size need a ListObjectsV2 walk or S3 Storage Lens later, shown as "about" until known |
-| gzip, JSON Lines, CSV, zip decoders as a library | zip.js, s3.js | In s3.js; to be lifted into a shared module (architect.aws.c) |
+| gzip, JSON Lines, CSV, zip decoders as a library | site/api/decode.js (zip.js for zips) | Yes, on dev since 461d422: sniff, gunzip with sizes, JSON, JSON Lines, CSV, tables with hints, limits and `truncated` (section 2.3a) |
 | Relations ("written by Firehose") | ontology.aws.c's twin graph | In docs/ontology/; not in the page yet |
 | Hash routes | s3.aws.c (S3 step 1) | No |
 

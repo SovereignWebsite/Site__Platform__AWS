@@ -109,6 +109,15 @@ Visitor addresses from the CloudFront logs appear in lanes, alarms, lists and ex
 
 cloudtrail.aws.a's design: a file picker and drop zone that reads CloudTrail log files (`.json`, `.json.gz`, a zip of a folder) in the page. The Timeline shows it the same way as the twin, under its own bar: **"Your file · read in this page only, never uploaded"**, with a "Close the file" action. Real AWS is never called for this view. This is the strongest "try it with your own data" moment the site has: no sign-in, no account, nothing leaves the browser.
 
+**Reading the dropped file (Decode, site/api/decode.js on dev):** `.json.gz` goes through `Decode.gunzip`, and CloudTrail's `{ Records: [...] }` goes through `Decode.table`. JSON Lines exports go through `Decode.jsonLines`. The bar says what was read and where it stopped, in Decode's own terms:
+
+- "Read n records from trail.json.gz (n KB -> n KB)" (`rowsRead`, `packed`, `unpacked`);
+- "2 records could not be read [Show]" (`errors`);
+- at a limit: "Showing the first 50,000 records; the file has more" (`truncated.rows`) or "the first 50 MB" (`truncated.bytes`). When a lane, count or "Worth a look" rule is drawn from a truncated read, it carries "from the first 50,000 records".
+- A `.json` file over the cap cannot be read in part (`TooLarge`). The bar says "Too large to read here (over 50 MB). Split it, or drop the .json.gz", and nothing is drawn.
+
+Times use the `time` hint and are shown in UTC with the zone written, like the twin's lanes.
+
 ## 6. What it needs (requests, not edits)
 
 | Need | From | Exists today |
@@ -121,7 +130,7 @@ cloudtrail.aws.a's design: a file picker and drop zone that reads CloudTrail log
 
 ## 7. Security check of this note
 
-Design only; no code changed. Records, log lines and dropped files are untrusted: all text set as text, raw JSON shown as text, addresses matched against the data and never fetched. A dropped file is read in memory and not stored (no IndexedDB, no localStorage); closing the tab or "Close the file" drops it. Aggregation over large files must cap work and say so (as design 03 section 7). For security.aws.a: the "Worth a look" rules run in the page, so a rule file must be data only (no expressions evaluated as code).
+Design only; no code changed. Records, log lines and dropped files are untrusted: all text set as text, raw JSON shown as text, addresses matched against the data and never fetched. A dropped file is read in memory and not stored (no IndexedDB, no localStorage); closing the tab or "Close the file" drops it. Aggregation over large files must cap work and say so: Decode's limits and `truncated`, worded as in section 5 and design 03 section 2.3a. For security.aws.a: the "Worth a look" rules run in the page, so a rule file must be data only (no expressions evaluated as code).
 
 ## 8. Next wake
 
