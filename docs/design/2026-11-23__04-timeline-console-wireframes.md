@@ -147,7 +147,7 @@ cloudtrail.aws.a's data pieces (work/cloudtrail.aws.a 5cc769e) give the Timeline
 
 ## 4. Addresses
 
-`#/timeline` (last 24 hours of the data, or the whole twin), `#/timeline/<from>/<to>` with ISO times in UTC, `#/timeline/event/<eventID>`, `#/timeline/asset/<arn or id>`. Revision 2 adds the chips' state after the path, so Back and a shared twin link restore it: `?who=<principal>&svc=<event source>&region=<region>&failed=1`, and `#/timeline/vault/<vault id>`. Only names from the data go in (role names, event sources, regions, Vault ids). Never a network, an address or anything from a dropped file: with Your file the address keeps the path and drops the chips, since the file is not there after a reload. Times and ids are matched against the data before use; an unknown event id shows "Not in this trail" and the range around it.
+`#/timeline` (last 24 hours of the data, or the whole twin), `#/timeline/<from>/<to>` with ISO times in UTC, `#/timeline/event/<eventID>`, `#/timeline/asset/<arn or id>`. Revision 2 adds the chips' state after the path, so Back and a shared twin link restore it: `?who=<principal>&svc=<event source>&region=<region>&failed=1`, and `#/timeline/vault/<vault id>`. Only names from the data go in (role names, event sources, regions, Vault ids). Never a network, an address or anything from a dropped file: with Your file the address keeps the path and drops the chips, since the file is not there after a reload. In real mode the chips can hold a role name or ARN, which stays in the user's own browser history, so Copy link stays twin only (design 02; security.aws.a). Times and ids are matched against the data before use; an unknown event id shows "Not in this trail" and the range around it.
 
 ## 5. Drop in your own trail
 
