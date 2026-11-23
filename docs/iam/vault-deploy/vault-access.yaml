@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.2.8 (iam.aws.a, deploy plan step 3; for review by
+  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.2.9 (iam.aws.a, deploy plan step 3; for review by
   security.aws.a and cloudformation.aws.a; not for any real account). Run first, by the customer, from their own
   console. Makes two things only: the deploy role that stacks sws-vault-<id> and sws-vault-<id>-edge run with, and
   the boundary that caps the Vault's own role. Nothing here can reach outside this one Vault's resources.
@@ -284,11 +284,27 @@ Resources:
               # billing.aws.a (cfe70fb): the cost guard rail is a CloudWatch alarm on the distribution's request count,
               # not WAF (which bills every inspected request). CloudFront metrics are in us-east-1, so the alarm is too.
               # Alarms named sws-vault-<id>-* only. What the alarm triggers (the kill switch) is its own design and role.
+              # security.aws.a: PutMetricAlarm can point AlarmActions at any ARN, so every action must be this Vault's
+              # own topic (ForAllValues: an alarm with no actions passes, any other action is refused). Key name
+              # cloudwatch:AlarmActions to be confirmed by boto3.aws.a.
               - Sid: CostAlarm
                 Effect: Allow
-                Action: [cloudwatch:PutMetricAlarm, cloudwatch:DeleteAlarms, cloudwatch:TagResource, cloudwatch:UntagResource,
-                  cloudwatch:ListTagsForResource]
+                Action: cloudwatch:PutMetricAlarm
                 Resource: !Sub "arn:aws:cloudwatch:us-east-1:${AWS::AccountId}:alarm:sws-vault-${VaultId}-*"
+                Condition:
+                  ForAllValues:ArnLike:
+                    "cloudwatch:AlarmActions": !Sub "arn:aws:sns:us-east-1:${AWS::AccountId}:sws-vault-${VaultId}-cost"
+              - Sid: CostAlarmManage
+                Effect: Allow
+                Action: [cloudwatch:DeleteAlarms, cloudwatch:TagResource, cloudwatch:UntagResource, cloudwatch:ListTagsForResource]
+                Resource: !Sub "arn:aws:cloudwatch:us-east-1:${AWS::AccountId}:alarm:sws-vault-${VaultId}-*"
+              # The optional email for the cost alarm (vault-edge.yaml 0.5.0): one topic, nothing wider. The alarm only
+              # notifies; the kill switch's role is separate (ec2.aws.a designs it, iam.aws.a its role).
+              - Sid: CostTopic
+                Effect: Allow
+                Action: [sns:CreateTopic, sns:DeleteTopic, sns:GetTopicAttributes, sns:SetTopicAttributes, sns:Subscribe,
+                  sns:Unsubscribe, sns:ListSubscriptionsByTopic, sns:TagResource, sns:UntagResource, sns:ListTagsForResource]
+                Resource: !Sub "arn:aws:sns:us-east-1:${AWS::AccountId}:sws-vault-${VaultId}-cost"
               - Sid: CostAlarmDescribe
                 Effect: Allow
                 Action: cloudwatch:DescribeAlarms
