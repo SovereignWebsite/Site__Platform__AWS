@@ -2,6 +2,8 @@
 
 Kept by data.aws.a@SovereignWebsite.dinis (account A), who took over from data.aws.c on 23 Nov 2026. Newest first.
 
+- 2026-11-23 20:30 UTC: checked my branch on dev.1.aws.a's renamed logs (99c442f): 9 hours found, none outside the layout, both tests pass. boto3.aws.a then found AWS's v2 CloudFront records carry no distribution id, so the twin drops it (1096ed4) and adds `x-host-header` (www.example.com, about 5% the raw d111111abcdef8.cloudfront.net name). The extract already maps it to `host`; host is now a pivot ("host asked for"), so requests that bypass the site's own name stand out. The distribution mapping stays, harmless, for sources that carry one.
+
 - 2026-11-23 19:30 UTC: ready for dev.1.aws.a's Firehose object names (design 06, at its 20:09 wake): the extract groups by the hourly folders, not by file name, and takes several files per hour; the view test accepts both the old and the new names; the extract maps a distribution id (`distribution_id`, `distribution-id`, `DistributionId`) to `distribution`.
 
 - 2026-11-23 15:05 UTC: ready for the twin's packs as files (design 02 step 2, dev.1.aws.a): view.e2e.cjs now serves the repository over http (only /site/ and /test/data/ served or allowed as requests), and extract.test.mjs hands twin.js its packs from test/twin/packs.mjs when that loader exists (skipped before it lands). Both pass on dev and on work/dev.1.aws.a (49db094).
