@@ -1,9 +1,9 @@
 diff --git a/site/twin.js b/site/twin.js
-index 05f4d43..fc3a492 100644
+index 9274521..7560489 100644
 --- a/site/twin.js
 +++ b/site/twin.js
-@@ -235,7 +235,10 @@
-     if (!signed(init)) return xml("<Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>", 403);
+@@ -350,7 +350,10 @@
+     }
      if (!key) {
        // ListObjectsV2: keys and common prefixes in key order, max-keys of them (default 1000) a page.
 -      var q = u.searchParams, prefix = q.get("prefix") || "", delim = q.get("delimiter"), max = Math.min(+(q.get("max-keys") || 1000), 1000);
@@ -14,7 +14,7 @@ index 05f4d43..fc3a492 100644
        var after = q.get("continuation-token") ? fromToken(q.get("continuation-token")) : q.get("start-after") || "";
        var all = Object.keys(s.objects[bucket]).sort().filter(function (k) { return k.indexOf(prefix) === 0; }), items = [], seen = {};
        all.forEach(function (k) {
-@@ -253,7 +256,7 @@
+@@ -368,7 +371,7 @@
          var last = pageItems.length ? pageItems[pageItems.length - 1] : null;
          return xml("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ListBucketResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\"><Name>" + esc(bucket) + "</Name><Prefix>" + esc(prefix) + "</Prefix>" +
            (q.get("continuation-token") ? "<ContinuationToken>" + esc(q.get("continuation-token")) + "</ContinuationToken>" : "") +
