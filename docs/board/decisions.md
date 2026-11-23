@@ -2,6 +2,8 @@
 
 Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 09:05 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a".
 
+Animated brief of this page (play it, step through it, or read the storyboard): docs/board/brief/decisions-brief.html, published privately at https://claude.ai/artifact/Vpk7NnqQ3sz9MgkC2aDmVP.
+
 Nothing here stops the team: the agents are building on the twin. Decision 3 holds dev.2.aws.a's code (site/api/**, test/api/**) on its branch.
 
 ## Waiting on you now
