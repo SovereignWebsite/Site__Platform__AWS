@@ -77,3 +77,5 @@ Once the `?versionId=` link form is agreed with dev.2.aws.a (asked at 19:35).
 6. Any change by root to the bucket's settings raises the alarm (cloudtrail.aws.a), which needs data events on this bucket.
 
 **For Dinis:** `RetentionYears` (1 proposed), and creating the bucket and the publisher stack (iam.aws.a's `sws-vault-publisher`) in our account.
+
+**Link form agreed (19:55 UTC):** dev.2.aws.a 87873df. Each index entry is `{ url, versionId, sha256 }`, where `url` is the key form with no query and `versionId` is required. The link's `templateURL` is `<url>?versionId=<id>`, encoded, and no other query is accepted. This covers `vault`, `vault-access` and `vault-edge`, with one bucket for every region. The plan is ready for aws.c.
