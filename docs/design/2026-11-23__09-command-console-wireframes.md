@@ -72,6 +72,8 @@ Design 05 puts Ctrl+K in the shell. It opens the same line as a small palette ov
 
 - **No code is ever run from the line.** The line is parsed by a fixed grammar (command words, then parameter words, with quotes for spaces). There is no `eval`, no expressions, no shell, and no templating. An unknown command is "Not a command. Try `help`."
 - **Parameters are checked before any call**: against the operation's path parameters (count and order), against a listing where one exists (a bucket must be one the account listed), and for the patterns the document gives. They are percent-encoded into the path, never spliced into anything else.
+- **Every command keeps the API layer's caps** (items and pages, as site/api/all.js sets them). The grammar has no repeat, no loop and no wildcard across accounts or regions, so one line is one bounded call (security.aws.a).
+- **Aliases are a fixed table in code**, reviewed like any code. A user cannot define one.
 - **Results are untrusted text**, as everywhere (R-020): names, tags and policy documents are set as text. A policy document shows as formatted JSON text, never HTML.
 - **History lives in memory only**, for this tab: nothing stored, no cookies (CLAUDE.md). A reload starts empty. Copy as JSON copies one result, on purpose.
 - **Twin first, and marked**: in the twin, the status line and each card say "synthetic, not your AWS" (R-011).
