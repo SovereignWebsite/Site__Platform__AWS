@@ -37,6 +37,16 @@ The options, for iam.aws.a, cloudformation.aws.a and security.aws.a (not mine to
 
 My recommendation, from the customer's side only: one link-out if security can live with it. Otherwise (a), drawn below as a variant (screen 2-alt). The rest of this design draws the single link-out and marks where (a) changes it.
 
+**Answers so far (16:02 UTC):**
+- **boto3.aws.a (b): no.** A quick-create link takes only `templateURL` (an S3 URL), `stackName` and `param_<Name>`; the service role is a choice on AWS's page ("Permissions"), and a template cannot set its own RoleARN. Sources: AWS CloudFormation User Guide, quick-create links and service role pages, read 23 Nov 2026 (docs/boto3/2026-11-23__08-vault-deploy-design-check.md addendum, 3ce137a on work/boto3.aws.a).
+- **cloudformation.aws.a: (c) works** with vault.yaml as it is; the boundary goes back into the stack as a managed policy (as in 0.1.0). A stack that makes its own deploy role and then uses it would need a custom resource: not recommended.
+- **iam.aws.a: (c) as the v1 default**, with the `-access` stack kept as an opt-in "least-privilege mode" for organisations whose deployers are not administrators, drawn as screen 2-alt (docs/iam/vault-deploy/03-one-button.md, 2ec2b93 on work/iam.aws.a). The separate role buys a non-admin deployer and bounded later updates; it does not protect the first create, which the published sha256 does.
+- **security.aws.a: pending**, and has the final word on (c) as the default.
+
+If (c) holds, screen 2 stays as drawn, and screen 1 gains one quiet link under the button: "Your organisation does not let you create IAM roles? Use least-privilege mode", which leads to screen 2-alt.
+
+**Consequence for screen 1:** the template must be served from an S3 URL (quick-create accepts no other), so "the template's immutable URL" is an S3 object URL, versioned, whose sha256 the page shows.
+
 ## 2. The frame
 
 A page of its own (V1 a: its own address, so its CSP can let it fetch `https://<any host>/health`). It does not use design 05's console shell: there are no console tabs, no account picker and no Ctrl+K. It keeps three parts of the shell so it reads as the same product:
