@@ -13,7 +13,11 @@ The old session's private key lived only in its container (~/.sg-send, ~/.ssh-si
 - The old entry (Factory commit a997bd7, key sha256:cd5b29f632b02d3a) was kept in the landing set (conductor.aws.a, 14:28 UTC) so the old session could push before restart. Once your key is live, ask factory.c to mark the old entry retired (status "retired", retired, retired_note).
 - When signing on the Factory clone, set gpg.ssh.program=ssh-keygen locally: the container's global git config points at another signer, and the first attempt was signed by the wrong key because of it.
 
-## State (23 Nov ~14:30 UTC)
+## Final status of the old session (2026-11-23T15:52Z)
+
+Stopped at Dinis's word (relayed by maestro.a, ~15:45 UTC: fresh sessions for the AWS agents). The old key (a997bd7) was not yet live on the Factory, so nothing was pushed to dev from this session: everything in "only on work/billing.aws.a" below is still to land. Branch tip includes flood.mjs (denial of wallet) and the EC2 and public IPv4 rows (39 prices). Since the old key never went live, factory.c may drop a997bd7 from the landing set or land it as retired; your new key replaces it either way.
+
+## State (23 Nov ~14:30 UTC, plus later items below)
 
 On dev already: price book v1 (billing.aws.c, 86da1ce), twin-estimate.mjs, check-prices.mjs, and from this role forecast.mjs + forecast.test.mjs + the internet data transfer tiers (landed by the keeper as 6402d82).
 
