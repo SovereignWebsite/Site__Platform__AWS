@@ -242,7 +242,7 @@
     Zip.list(fetchRange, size).then(function (entries) {
       if (!current()) return;
       var files = entries.filter(function (e) { return !e.dir; });
-      box.appendChild(P.el("p", { class: "small", text: files.length + " files inside; listed by reading " + human(got) + " of " + human(size) + "." }));
+      box.appendChild(P.el("p", { class: "small", text: files.length + " files inside; " + (got >= size ? "a small zip, so it was read whole (" + human(size) + ")." : "listed by reading " + human(got) + " of " + human(size) + ".") }));
       var filter = P.el("input", { type: "search", class: "filter", placeholder: "Filter the files inside", "aria-label": "Filter the files inside" });
       var tbody = P.el("tbody", {});
       var viewer = P.el("div", { class: "viewer" }), inside = 0;
@@ -300,6 +300,8 @@
     accts.forEach(function (a) { sel.appendChild(P.el("option", { value: a.id, text: a.label })); });
     if (keep) sel.value = keep;
     var lb = $("s3-list-buckets"); if (lb) lb.disabled = !accts.length;
+    // In the twin, open with the buckets listed: there is one synthetic account and nothing to choose.
+    if (window.AwsTransport && AwsTransport.isTwin() && P.signedIn() && accts.length && !state.acct && lb && lb.onclick) lb.onclick();
   }
   function init() {
     $("s3-list-buckets").onclick = function () {

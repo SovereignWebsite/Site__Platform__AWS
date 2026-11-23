@@ -23,6 +23,9 @@
   var seed = 20261123;
   function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
   function pick(a) { return a[Math.floor(rnd() * a.length)]; }
+  // Latency has its own generator, so the data never depends on how many calls came first.
+  var lseed = 7;
+  function lag() { lseed = (lseed * 1103515245 + 12345) & 0x7fffffff; return lseed / 0x7fffffff; }
   function pad(n, w) { n = String(n); while (n.length < (w || 2)) n = "0" + n; return n; }
 
   function gzip(bytes) {
@@ -33,6 +36,8 @@
   }
   var CRC = (function () { var t = new Uint32Array(256); for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
   function crc32(b) { var c = 0xffffffff; for (var i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+  // Entry times in DOS form: 18 Nov 2026 16:50, just before the object's own LastModified.
+  var DOS_DATE = ((2026 - 1980) << 9) | (11 << 5) | 18, DOS_TIME = (16 << 11) | (50 << 5);
   // A real zip (deflate entries, central directory at the end), so the page reads it by byte ranges.
   function makeZip(files) {
     return Promise.all(files.map(function (f) { var raw = enc.encode(f[1]); return deflateRaw(raw).then(function (d) { return { name: enc.encode(f[0]), raw: raw, data: d, crc: crc32(raw) }; }); }))
@@ -41,12 +46,12 @@
         es.forEach(function (e) {
           var h = new DataView(new ArrayBuffer(30));
           h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x800, true); h.setUint16(8, 8, true);
-          h.setUint16(10, 0x6000, true); h.setUint16(12, 0x5b77, true); h.setUint32(14, e.crc, true);
+          h.setUint16(10, DOS_TIME, true); h.setUint16(12, DOS_DATE, true); h.setUint32(14, e.crc, true);
           h.setUint32(18, e.data.length, true); h.setUint32(22, e.raw.length, true); h.setUint16(26, e.name.length, true);
           parts.push(new Uint8Array(h.buffer), e.name, e.data);
           var c = new DataView(new ArrayBuffer(46));
           c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x800, true); c.setUint16(10, 8, true);
-          c.setUint16(12, 0x6000, true); c.setUint16(14, 0x5b77, true); c.setUint32(16, e.crc, true); c.setUint32(20, e.data.length, true);
+          c.setUint16(12, DOS_TIME, true); c.setUint16(14, DOS_DATE, true); c.setUint32(16, e.crc, true); c.setUint32(20, e.data.length, true);
           c.setUint32(24, e.raw.length, true); c.setUint16(28, e.name.length, true); c.setUint32(42, off, true);
           central.push(new Uint8Array(c.buffer), e.name);
           off += 30 + e.name.length + e.data.length;
@@ -64,9 +69,15 @@
     site: ACCOUNT + "--demo-site--" + REGION,
     logs: ACCOUNT + "--demo-cloudfront-logs--" + REGION,
     deps: ACCOUNT + "--demo-lambda-deps--" + REGION,
-    trail: "aws-cloudtrail-logs-" + ACCOUNT + "-demo"
+    trail: "aws-cloudtrail-logs-" + ACCOUNT + "-demo",
+    dotted: "demo.static.example"
   };
   var state = null;
+  function seedCors() {
+    var o = {}, origin = root.location ? root.location.origin : "http://localhost";
+    [B.logs, B.deps, B.trail, B.dotted].forEach(function (b) { o[b] = { CorsRules: [{ Id: "sws-aws-platform", AllowedOrigins: [origin], AllowedMethods: ["GET", "HEAD"], AllowedHeaders: ["*"], ExposedHeaders: ["ETag", "Content-Type", "Content-Length", "Last-Modified"], MaxAge: 3000 }] }; });
+    return o;
+  }
   function build() {
     if (state) return state;
     var objects = {}; // bucket -> key -> { body: Promise<Uint8Array>, type, modified }
@@ -106,15 +117,31 @@
       ["demo_handler-1.0.0.dist-info/METADATA", "Metadata-Version: 2.1\nName: demo-handler\nVersion: 1.0.0\n"],
       ["config.json", JSON.stringify({ timeout: 30, memory: 256, region: REGION })]
     ]), "2026-11-18T16:54:00.000Z");
-    // CloudTrail digest-style records
-    put(B.trail, "AWSLogs/" + ACCOUNT + "/CloudTrail/" + REGION + "/2026/11/22/" + ACCOUNT + "_CloudTrail_" + REGION + "_20261122T1000Z_demo.json.gz", "application/x-gzip",
-      gzip(enc.encode(JSON.stringify({ Records: [
-        { eventTime: "2026-11-22T10:01:02Z", eventSource: "s3.amazonaws.com", eventName: "GetObject", awsRegion: REGION, sourceIPAddress: "203.0.113.7", userIdentity: { type: "AssumedRole", arn: "arn:aws:sts::" + ACCOUNT + ":assumed-role/sws-aws-platform-read/sws-aws-platform" }, requestParameters: { bucketName: B.site, key: "data/vaults.json" } },
-        { eventTime: "2026-11-22T10:04:40Z", eventSource: "iam.amazonaws.com", eventName: "UpdateAssumeRolePolicy", awsRegion: "us-east-1", userIdentity: { type: "AssumedRole", arn: "arn:aws:sts::" + ACCOUNT + ":assumed-role/sws-aws-platform-change/sws-aws-platform" }, requestParameters: { roleName: "demo-dns-role" } }
-      ] }))), "2026-11-22T10:05:00.000Z");
+    // CloudTrail log files: one per region and five minutes. IAM is global, so its events are written under us-east-1.
+    function trailEvent(n, e) {
+      var role = e.write ? "sws-aws-platform-change" : "sws-aws-platform-read";
+      return { eventVersion: "1.09", userIdentity: { type: "AssumedRole", principalId: "AROATWIN" + (e.write ? "CHANGE" : "READ") + ":sws-aws-platform",
+          arn: "arn:aws:sts::" + ACCOUNT + ":assumed-role/" + role + "/sws-aws-platform", accountId: ACCOUNT, accessKeyId: "ASIATWIN" + (e.write ? "CHANGE" : "READ"),
+          sessionContext: { sessionIssuer: { type: "Role", principalId: "AROATWIN" + (e.write ? "CHANGE" : "READ"), arn: "arn:aws:iam::" + ACCOUNT + ":role/" + role, accountId: ACCOUNT, userName: role },
+            webIdFederationData: { federatedProvider: "accounts.google.com" }, attributes: { creationDate: "2026-11-22T10:00:00Z", mfaAuthenticated: "false" } } },
+        eventTime: e.time, eventSource: e.source, eventName: e.name, awsRegion: e.region, sourceIPAddress: "203.0.113.7", userAgent: "Mozilla/5.0",
+        requestParameters: e.params, responseElements: null, requestID: "TWIN-REQ-" + pad(n, 4), eventID: "00000000-0000-4000-8000-" + pad(n, 12),
+        readOnly: !e.write, eventType: "AwsApiCall", managementEvent: !e.data, recipientAccountId: ACCOUNT, eventCategory: e.data ? "Data" : "Management" };
+    }
+    function trailFile(region, stamp, events, modified) {
+      put(B.trail, "AWSLogs/" + ACCOUNT + "/CloudTrail/" + region + "/2026/11/22/" + ACCOUNT + "_CloudTrail_" + region + "_" + stamp + "_demo.json.gz", "application/x-gzip",
+        gzip(enc.encode(JSON.stringify({ Records: events }))), modified);
+    }
+    trailFile(REGION, "20261122T1005Z", [trailEvent(1, { time: "2026-11-22T10:01:02Z", source: "s3.amazonaws.com", name: "GetObject", region: REGION, data: true, params: { bucketName: B.site, key: "data/vaults.json" } })], "2026-11-22T10:05:00.000Z");
+    trailFile("us-east-1", "20261122T1005Z", [trailEvent(2, { time: "2026-11-22T10:04:40Z", source: "iam.amazonaws.com", name: "UpdateAssumeRolePolicy", region: "us-east-1", write: true, params: { roleName: "sovereignwebsite-factory-dns", policyDocument: "(the new trust policy)" } })], "2026-11-22T10:05:00.000Z");
+    // A folder of more than 1000 keys, so listing pages (max-keys, continuation token) as S3 does.
+    for (var a = 1; a <= 1203; a++) put(B.site, "archive/2026/page-" + pad(a, 4) + ".json", "application/json", "{\"page\":" + a + "}");
+    // A bucket with dots in its name: S3 is reached by the path form for these.
+    put(B.dotted, "index.html", "text/html", "<!doctype html>\n<html lang=\"en-GB\"><head><title>Dotted bucket</title></head><body><p>A bucket whose name has dots.</p></body></html>\n");
+
     var K = "token.actions.githubusercontent.com:sub";
     state = {
-      objects: objects, cors: {},
+      objects: objects, cors: seedCors(),
       roles: { "sovereignwebsite-factory-dns": { Version: "2012-10-17", Statement: [{ Effect: "Allow", Principal: { Federated: "arn:aws:iam::" + ACCOUNT + ":oidc-provider/token.actions.githubusercontent.com" }, Action: "sts:AssumeRoleWithWebIdentity",
         Condition: { StringEquals: { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com", [K]: ["repo:SovereignWebsite@358722364/SovereignWebsite__IaC@1464324035:environment:apply", "repo:SovereignWebsite@358722364/SovereignWebsite__Factory@1464324035:environment:apply"] } } }] } },
       template: null, stackStatus: "CREATE_COMPLETE", changeSets: {}, requests: {}
@@ -128,6 +155,8 @@
   function json(o, status) { return new Response(JSON.stringify(o), { status: status || 200, headers: { "content-type": "application/x-amz-json-1.0" } }); }
   function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
   function hdr(init, name) { var h = init.headers || {}; for (var k in h) if (k.toLowerCase() === name) return h[k]; return null; }
+  // A stable synthetic ETag: 32 hex digits like S3's (S3's is an MD5 for a single-part upload; this one is not).
+  function etag(b) { var h = "", c = crc32(b); for (var i = 0; i < 4; i++) { c = (Math.imul(c ^ (c >>> 15), 2246822507) ^ i) >>> 0; h += ("0000000" + c.toString(16)).slice(-8); } return h; }
   function signed(init) { var a = hdr(init, "authorization"); return a && /Credential=ASIATWIN/.test(a); }
   function collapse(v) { return Array.isArray(v) ? (v.length === 1 ? collapse(v[0]) : v.map(collapse)) : v && typeof v === "object" ? Object.keys(v).reduce(function (o, k) { o[k] = collapse(v[k]); return o; }, {}) : v; }
 
@@ -198,23 +227,43 @@
     if (!s.cors[bucket]) return Promise.reject(new TypeError("Failed to fetch")); // a real browser sees a CORS failure
     if (!signed(init)) return xml("<Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>", 403);
     if (!key) {
-      var prefix = u.searchParams.get("prefix") || "", delim = u.searchParams.get("delimiter"), seen = {}, contents = [], prefixes = [];
-      var all = Object.keys(s.objects[bucket]).sort().filter(function (k) { return k.indexOf(prefix) === 0; });
-      return Promise.all(all.map(function (k) { return s.objects[bucket][k].body; })).then(function (bodies) {
-        all.forEach(function (k, i) {
-          var rest = k.slice(prefix.length), cut = delim ? rest.indexOf(delim) : -1;
-          if (cut >= 0) { var cp = prefix + rest.slice(0, cut + 1); if (!seen[cp]) { seen[cp] = 1; prefixes.push("<CommonPrefixes><Prefix>" + esc(cp) + "</Prefix></CommonPrefixes>"); } }
-          else contents.push("<Contents><Key>" + esc(k) + "</Key><Size>" + bodies[i].length + "</Size><LastModified>" + s.objects[bucket][k].modified + "</LastModified></Contents>");
+      // ListObjectsV2: keys and common prefixes in key order, max-keys of them (default 1000) a page.
+      var q = u.searchParams, prefix = q.get("prefix") || "", delim = q.get("delimiter"), max = Math.min(+(q.get("max-keys") || 1000), 1000);
+      var after = q.get("continuation-token") ? atob(q.get("continuation-token")) : q.get("start-after") || "";
+      var all = Object.keys(s.objects[bucket]).sort().filter(function (k) { return k.indexOf(prefix) === 0; }), items = [], seen = {};
+      all.forEach(function (k) {
+        var rest = k.slice(prefix.length), cut = delim ? rest.indexOf(delim) : -1;
+        if (cut >= 0) { var cp = prefix + rest.slice(0, cut + 1); if (!seen[cp]) { seen[cp] = 1; items.push({ prefix: cp }); } }
+        else items.push({ key: k });
+      });
+      items = items.filter(function (it) { return (it.key || it.prefix) > after; });
+      var pageItems = items.slice(0, max), more = items.length > max;
+      return Promise.all(pageItems.map(function (it) { return it.key ? s.objects[bucket][it.key].body : null; })).then(function (bodies) {
+        var parts = pageItems.map(function (it, i) {
+          return it.prefix ? "<CommonPrefixes><Prefix>" + esc(it.prefix) + "</Prefix></CommonPrefixes>"
+            : "<Contents><Key>" + esc(it.key) + "</Key><LastModified>" + s.objects[bucket][it.key].modified + "</LastModified><ETag>&quot;" + etag(bodies[i]) + "&quot;</ETag><Size>" + bodies[i].length + "</Size><StorageClass>STANDARD</StorageClass></Contents>";
         });
-        return xml("<ListBucketResult><Name>" + esc(bucket) + "</Name><Prefix>" + esc(prefix) + "</Prefix>" + prefixes.join("") + contents.join("") + "</ListBucketResult>");
+        var last = pageItems.length ? pageItems[pageItems.length - 1] : null;
+        return xml("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ListBucketResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\"><Name>" + esc(bucket) + "</Name><Prefix>" + esc(prefix) + "</Prefix>" +
+          (q.get("continuation-token") ? "<ContinuationToken>" + esc(q.get("continuation-token")) + "</ContinuationToken>" : "") +
+          (more ? "<NextContinuationToken>" + esc(btoa(last.key || last.prefix)) + "</NextContinuationToken>" : "") +
+          "<KeyCount>" + pageItems.length + "</KeyCount><MaxKeys>" + max + "</MaxKeys>" + (delim ? "<Delimiter>" + esc(delim) + "</Delimiter>" : "") +
+          "<IsTruncated>" + more + "</IsTruncated>" + parts.join("") + "</ListBucketResult>");
       });
     }
     var o = s.objects[bucket][key];
     if (!o) return xml("<Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message></Error>", 404);
     return o.body.then(function (b) {
-      var r = /bytes=(\d+)-(\d+)/.exec(hdr(init, "range") || "");
-      if (r) return new Response(b.slice(+r[1], +r[2] + 1), { status: 206, headers: { "content-type": o.type } });
-      return new Response(b, { status: 200, headers: { "content-type": o.type } });
+      var h = { "content-type": o.type, "etag": "\"" + etag(b) + "\"", "last-modified": new Date(o.modified).toUTCString(), "accept-ranges": "bytes" };
+      var range = hdr(init, "range"), r = range && /^bytes=(\d*)-(\d*)$/.exec(range);
+      if (r && (r[1] || r[2])) {
+        // bytes=a-b, bytes=a- (to the end) and bytes=-n (the last n bytes), as S3 answers them.
+        var from = r[1] ? +r[1] : Math.max(b.length - +r[2], 0), to = r[1] && r[2] ? Math.min(+r[2], b.length - 1) : b.length - 1;
+        if (from >= b.length || (r[1] && r[2] && +r[2] < +r[1])) return xml("<Error><Code>InvalidRange</Code><Message>The requested range is not satisfiable</Message><RangeRequested>" + esc(range) + "</RangeRequested><ActualObjectSize>" + b.length + "</ActualObjectSize></Error>", 416);
+        h["content-range"] = "bytes " + from + "-" + to + "/" + b.length;
+        return new Response(b.slice(from, to + 1), { status: 206, headers: h });
+      }
+      return new Response(b, { status: 200, headers: h });
     });
   }
 
@@ -233,10 +282,10 @@
       else if (/\.?s3\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = s3(url, init);
       else return null;
     } catch (e) { p = xmlErr("InternalFailure", e.message, 500); }
-    return Promise.resolve(p).then(function (r) { return new Promise(function (res) { setTimeout(function () { res(r); }, 60 + rnd() * 120); }); });
+    return Promise.resolve(p).then(function (r) { return new Promise(function (res) { setTimeout(function () { res(r); }, 60 + lag() * 120); }); });
   }
 
-  root.AwsTwin = { handle: handle, account: ACCOUNT, buckets: B, reset: function () { state = null; seed = 20261123; },
+  root.AwsTwin = { handle: handle, account: ACCOUNT, buckets: B, reset: function () { state = null; seed = 20261123; lseed = 7; },
     packs: PACKS, pack: function () { return pack; },
     usePack: function (name) { if (!PACKS[name]) return; try { localStorage.setItem("sws-aws-twin-pack", name); } catch (e) { /* none */ } } };
 })(window);
