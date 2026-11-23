@@ -102,6 +102,8 @@ The edit UI (browse the world, change a field, run a generator) writes entries w
 
 A feed turns outside records into entries: a CloudTrail dump (cloudtrail.aws.a's normalised event shape maps one event to one entry, `actor` from `userIdentity`, `op` from `eventSource` and `eventName`), a CloudFront log file, a vault's append lane. The three ways in (section 20) are then just three starting journals: empty plus feed; pack plus feed; or a feed only, watched as it arrives (instrument).
 
+Fields a CloudTrail event keeps in its journal entry (cloudtrail.aws.a, 10:42): `eventID` (de-duplication and the node id), `eventTime`, who (kind and name), `errorCode` (refused calls drive the alarms), `readOnly`, the targets' ids and `awsRegion`, besides `eventSource` + `eventName`. `sourceIPAddress` is kept too, as `data.from.ip`, so the "new address" alarm can run on the journal and not only on full records; the journal never leaves the page (security notes). Dropped: `userAgent`, `accessKeyId`, policy text and the rest of the raw record, which stays with the feed's file for the detail panel.
+
 ### More back ends
 
 vaults.aws.a's vault twin contract is one more service twin behind the same router (its host, its routes), answering from the same world (`vault.*` ops), so a vault write and the CloudFront request that carried it are one journal story. The batch body stays open until the SG/Send browser library's source is in hand, as vaults.aws.a says; the twin answers 501 for it until then (fail closed, design 01).
