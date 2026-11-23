@@ -411,3 +411,7 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - vault-deploy 6920a5c and 99dd6df: dev.1.aws.a c23815c is merged, and a reused id now reads ROLLBACK_COMPLETE. 1784b48 (the DeleteStack no-op) is also in the line. Closed.
   - d958775: LogsApi refuses newest with a start before 2024-01-01, as AWS does.
 - 23 Nov 2026, 18:41, security.aws.a: ux.aws.a 0d5ed0d and f0bbf80 (design 09; signatures verified; docs only). Cleared. My two notes are recorded. The generated commands.json has 25 read-only commands, and only the options each row lists are accepted. One note for the build: --bytes also needs an upper bound on the length of the range (the s3 browser's preview cap, R-017), so one line cannot pull a whole large object.
+- 23 Nov 2026, 18:42, security.aws.a: architect.aws.a fe4e2ad, design 06 (CloudFront reads; signature verified; docs only). Agreed. Covers: origin custom-header values dropped while parsing, with a planted-value test; no function code (DescribeFunction and GetFunction are not in the contract); origin domains shown as text and never fetched; no CSP change; twin-only until aws.c checks CORS. Notes for the build:
+  - The planted-value test also checks error paths and anything kept for Decode or debug. The raw XML body is never retained.
+  - The distribution Comment and alias fields are text set by the account owner: render them as text.
+  - The value still crosses the browser's own network panel for the person signed in with the read role. That is accepted: it is their account.
