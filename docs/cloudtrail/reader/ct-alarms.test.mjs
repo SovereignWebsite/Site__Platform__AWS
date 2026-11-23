@@ -23,7 +23,7 @@ eq(ids(quiet), [], "quiet day");
 // trust change on the DNS role (R-005) and on a platform role
 eq(ids([...quiet, rec({ eventName: "UpdateAssumeRolePolicy", requestParameters: { roleName: "sovereignwebsite-factory-dns" } })]), ["iam-trust-or-permissions"], "DNS trust change");
 eq(ids([...quiet, rec({ eventName: "PutRolePolicy", requestParameters: { roleName: "sws-aws-platform-change", policyName: "p" } })]), ["iam-trust-or-permissions"], "platform role policy");
-eq(ids([...quiet, rec({ eventName: "PutRolePolicy", requestParameters: { roleName: "sws-aws-platform-change" }, errorCode: "AccessDenied" })]), [], "refused change does not fire the change rule");
+eq(ids([...quiet, rec({ eventName: "PutRolePolicy", requestParameters: { roleName: "sws-aws-platform-change" }, errorCode: "AccessDenied" })]).includes("iam-trust-or-permissions"), false, "refused change does not fire the change rule");
 
 // R-008: change set applied to the hub's stack, not just prepared
 const cs = (name) => rec({ eventSource: "cloudformation.amazonaws.com", awsRegion: "eu-west-2", eventName: name, requestParameters: { stackName: "sws-aws-platform", changeSetName: "c" } });
@@ -44,6 +44,23 @@ eq(ids([...quiet, rec({ eventName: "UpdateAssumeRolePolicy", eventTime: "2026-11
 eq(ids([...quiet, rec({ eventName: "GetRole", readOnly: true, eventTime: "2026-11-22T11:00:00Z", sourceIPAddress: "198.51.100.66", requestParameters: { roleName: "x" } })]), [], "read from a new network");
 eq(ids([...quiet, rec({ eventName: "UpdateAssumeRolePolicy", eventTime: "2026-11-22T11:00:00Z", sourceIPAddress: "cloudformation.amazonaws.com", requestParameters: { roleName: "someone-elses-role" } })]), [], "service, not an address");
 
+// R-021: eventID and action names that are Object properties; the wider IAM, stack and trail-bucket lists;
+// one refused attempt on a protected thing; IPv4-mapped IPv6 counts as its IPv4 network
+eq(ids([...quiet, rec({ eventID: "constructor", eventName: "PutRolePolicy", requestParameters: { roleName: "sws-aws-platform-change" } })]), ["iam-trust-or-permissions"], "eventID constructor is not dropped");
+eq(ids([...quiet, rec({ eventName: "constructor", requestParameters: { roleName: "sws-aws-platform-change" } })]), [], "action constructor is not an IAM change");
+for (const a of ["UpdateRole", "PutRolePermissionsBoundary", "DeleteRolePermissionsBoundary", "CreateRole", "DeleteRole", "TagRole", "UntagRole"])
+  eq(ids([...quiet, rec({ eventName: a, requestParameters: { roleName: "sws-aws-platform-change" } })]), ["iam-trust-or-permissions"], a);
+for (const a of ["UpdateStack", "DeleteStack"]) eq(ids([...quiet, cs(a)]), ["hub-stack-change-applied"], a);
+const s3 = (name, b, o) => rec(Object.assign({ eventSource: "s3.amazonaws.com", eventName: name, requestParameters: { bucketName: b } }, o));
+for (const a of ["PutBucketPolicy", "PutBucketLifecycle", "DeleteBucket"]) eq(ids([...quiet, s3(a, "aws-cloudtrail-logs-" + A + "-demo")]), ["trail-changed"], a + " on the trail bucket");
+eq(ids([...quiet, s3("PutBucketPolicy", "some-site")]), [], "bucket policy on another bucket");
+eq(ids([...quiet, rec({ eventSource: "cloudtrail.amazonaws.com", eventName: "CreateTrail", readOnly: false, requestParameters: { name: "t2", s3BucketName: "my-own-logs" } }), s3("DeleteBucket", "my-own-logs")]), ["trail-changed"], "a bucket named by CreateTrail is a trail bucket");
+eq(ids([...quiet, rec({ eventName: "PutRolePolicy", requestParameters: { roleName: "sws-aws-platform-change" }, errorCode: "AccessDenied" })]), ["refused-on-protected"], "one refused change on a hub role");
+eq(ids([...quiet, Object.assign(cs("ExecuteChangeSet"), { errorCode: "AccessDenied" })]), ["refused-on-protected"], "one refused change set on the hub stack");
+eq(ids([...quiet, rec({ eventSource: "cloudtrail.amazonaws.com", eventName: "StopLogging", requestParameters: { name: "demo" }, errorCode: "AccessDenied" })]), ["refused-on-protected"], "one refused StopLogging");
+eq(ids([...quiet, rec({ eventName: "UpdateAssumeRolePolicy", eventTime: "2026-11-22T11:00:00Z", sourceIPAddress: "::ffff:198.51.100.66", requestParameters: { roleName: "someone-elses-role" } })]), ["new-network"], "IPv4-mapped change from a new network");
+eq(ids([...quiet, rec({ eventName: "UpdateAssumeRolePolicy", eventTime: "2026-11-22T11:00:00Z", sourceIPAddress: "::ffff:203.0.113.99", requestParameters: { roleName: "someone-elses-role" } })]), [], "IPv4-mapped address in a known /24");
+
 // the R-008 story as the attack pack would play it: three alarms, newest first, each with its events and words
 const story = [...quiet,
   rec({ eventSource: "cloudformation.amazonaws.com", awsRegion: "eu-west-2", eventName: "CreateChangeSet", eventTime: "2026-11-22T12:00:00Z", sourceIPAddress: "198.51.100.66", requestParameters: { stackName: "sws-aws-platform", changeSetName: "x" } }),
@@ -53,5 +70,5 @@ const got = alarms(story);
 eq(got.map((a) => a.rule), ["iam-trust-or-permissions", "hub-stack-change-applied", "new-network"], "R-008 story, newest first");
 if (got.some((a) => !a.words || !a.events.length || !a.level)) fail("alarm without words, events or level");
 eq(got[2].events[0].action, "CreateChangeSet", "new-network names the first call from that network");
-eq(AL.rules.length, 5, "five rules listed");
-console.log("ok ct-alarms: 5 rules, 17 cases, R-008 story gives 3 alarms newest first");
+eq(AL.rules.length, 6, "six rules listed");
+console.log("ok ct-alarms: 6 rules, 38 cases (21 for R-021), R-008 story gives 3 alarms newest first");

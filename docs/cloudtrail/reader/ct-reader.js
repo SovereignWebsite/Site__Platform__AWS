@@ -27,6 +27,8 @@
   // from.service, since it is not a person's address.
   function network(a) {
     if (!a) return null;
+    var mapped = /^(?:::|(?:0{1,4}:){5})ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(a); // IPv4-mapped IPv6 is the IPv4 address (R-021 d)
+    if (mapped) return network(mapped[1]);
     var m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.\d{1,3}$/.exec(a);
     if (m) return m[1] + "." + m[2] + "." + m[3] + ".0/24";
     if (a.indexOf(":") >= 0) {
@@ -114,7 +116,7 @@
     else if (input && Array.isArray(input.Events)) { format = "lookup-events"; records = input.Events.map(function (x) { return typeof x.CloudTrailEvent === "string" ? JSON.parse(x.CloudTrailEvent) : null; }); }
     else if (Array.isArray(input)) { format = "array"; records = input; }
     else return { events: [], skipped: 0, format: null };
-    var seen = {}, events = [], skipped = 0;
+    var seen = Object.create(null), events = [], skipped = 0;
     records.forEach(function (r) {
       if (!r || typeof r !== "object" || !r.eventName) { skipped++; return; }
       if (r.eventID) { if (seen[r.eventID]) { skipped++; return; } seen[r.eventID] = 1; }
@@ -126,7 +128,7 @@
 
   // Merge several reads (several files), dropping duplicates across them, newest first.
   function merge(reads) {
-    var seen = {}, out = [], skipped = 0;
+    var seen = Object.create(null), out = [], skipped = 0;
     reads.forEach(function (rd) { skipped += rd.skipped; rd.events.forEach(function (e) { if (e.id && seen[e.id]) { skipped++; return; } if (e.id) seen[e.id] = 1; out.push(e); }); });
     out.sort(function (a, b) { return (b.time || 0) - (a.time || 0); });
     return { events: out, skipped: skipped };

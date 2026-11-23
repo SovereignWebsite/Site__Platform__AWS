@@ -48,6 +48,11 @@ eq(R.normalise(noRO).change, true, "missing readOnly counts as a change");
 // privacy: network only, never the address
 eq([R.network("203.0.113.66"), R.network("2001:db8:85a3::8a2e:370:7334"), R.network("2001:DB8:0:1::1"), R.network("cloudformation.amazonaws.com"), R.network("nonsense")],
   ["203.0.113.0/24", "2001:db8:85a3::/48", "2001:db8:0::/48", null, null], "network()");
+// R-021 (d): IPv4-mapped IPv6 is the IPv4 network
+eq([R.network("::ffff:203.0.113.66"), R.network("0:0:0:0:0:FFFF:198.51.100.9"), R.network("::ffff:1.2.3")], ["203.0.113.0/24", "198.51.100.0/24", null], "IPv4-mapped IPv6");
+// R-021 (a): an eventID that names an Object property is an event, not a duplicate
+eq(R.read({ Records: ["constructor", "__proto__", "toString", "hasOwnProperty"].map((id) => base({ eventID: id, eventName: "GetRole", userIdentity: assumed("sws-aws-platform-read") })) }).events.length, 4, "eventIDs named like Object properties");
+eq(R.merge([R.read({ Records: [base({ eventID: "constructor", eventName: "GetRole", userIdentity: assumed("x") })] })]).events.length, 1, "merge keeps eventID constructor");
 e = one({ eventName: "GetRole", sourceIPAddress: "203.0.113.66" });
 eq(e.from, { net: "203.0.113.0/24", service: null, city: null, country: null, agent: "test" }, "from holds the network");
 if (JSON.stringify(R.forGraph(e)).includes("203.0.113.66")) fail("the raw address reaches the graph");
