@@ -1,0 +1,280 @@
+{
+ "agents": [
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T03:27Z",
+   "name": "accountant.c"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T02:44Z",
+   "lane": [
+    "docs/architecture/**",
+    "site/api/**"
+   ],
+   "name": "architect.aws.c",
+   "paths": [
+    "docs/architecture/**",
+    "site/api/** (pending aws.c)",
+    "site/twin/** (pending aws.c)"
+   ],
+   "session": "session_01Kw9UwDZKwJdnC3eTunM4uS",
+   "started": "2026-11-23T02:44Z",
+   "wake": "38 */4 * * *"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T02:40Z",
+   "name": "aws.c",
+   "session": "session_01Kw9UwAzhau7Us55PugP2V2"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T03:22Z",
+   "name": "billing.aws.c",
+   "paths": [
+    "docs/billing/**"
+   ],
+   "session": "session_01Kw9UwEcR1KCF6y3dTPP5vr",
+   "started": "2026-11-23T03:22Z",
+   "wake": "56 1-23/2 * * *"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T03:22Z",
+   "name": "boto3.aws.c",
+   "paths": [
+    "docs/boto3/**"
+   ],
+   "session": "session_01Kw9UwF18EchMPCKP9cWeJY",
+   "started": "2026-11-23T03:22Z",
+   "wake": "41 */2 * * *"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T03:22Z",
+   "name": "cloudformation.aws.c",
+   "paths": [
+    "docs/cloudformation/**"
+   ],
+   "session": "session_01Kw9UwBfr3eaLwdWsDzwpVT",
+   "started": "2026-11-23T03:22Z",
+   "wake": "26 1-23/2 * * *"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T03:22Z",
+   "name": "cloudtrail.aws.c",
+   "paths": [
+    "docs/cloudtrail/**"
+   ],
+   "session": "session_01Kw9UwCr3jpB8Chr1HszjPD",
+   "started": "2026-11-23T03:22Z",
+   "wake": "31 */2 * * *"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T02:43Z",
+   "lane": [
+    "docs/team/**"
+   ],
+   "name": "conductor.aws.c",
+   "paths": [
+    "docs/team/**"
+   ],
+   "session": "session_01Kw9UwDiqvoswkZCuHe5GTt",
+   "started": "2026-11-23T02:44Z",
+   "wake": "58 2-23/4 * * *"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T03:22Z",
+   "name": "data.aws.c",
+   "paths": [
+    "docs/data/**"
+   ],
+   "session": "session_01Kw9UwDiMew98cTowNY73Xj",
+   "started": "2026-11-23T03:22Z",
+   "wake": "51 */2 * * *"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T03:22Z",
+   "name": "dev.1.aws.c",
+   "paths": [
+    "code as granted"
+   ],
+   "session": "session_01Kw9UwDM5jdQ2PcHFhrY69L",
+   "started": "2026-11-23T03:22Z",
+   "wake": "09 * * * *"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T03:22Z",
+   "name": "dev.2.aws.c",
+   "paths": [
+    "code as granted"
+   ],
+   "session": "session_01Kw9UwF2SsRwvdTFB77PyjW",
+   "started": "2026-11-23T03:22Z",
+   "wake": "39 * * * *"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T03:22Z",
+   "name": "iam.aws.c",
+   "paths": [
+    "docs/iam/**"
+   ],
+   "session": "session_01Kw9UwCNBBjF4QFqtci6B6J",
+   "started": "2026-11-23T03:22Z",
+   "wake": "16 * * * *"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T03:22Z",
+   "name": "journalist.aws.c",
+   "paths": [
+    "docs/journal/**"
+   ],
+   "session": "session_01Kw9UwFKRKfwjNjABzDxUhg",
+   "started": "2026-11-23T03:22Z",
+   "wake": "06 * * * *"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T03:22Z",
+   "name": "lambda.aws.c",
+   "paths": [
+    "docs/lambda/**"
+   ],
+   "session": "session_01Kw9UwFBZ4H4hZJjPwVxwkG",
+   "started": "2026-11-23T03:22Z",
+   "wake": "21 */2 * * *"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T03:22Z",
+   "name": "ontology.aws.c",
+   "paths": [
+    "docs/ontology/**"
+   ],
+   "session": "session_01Kw9UwE3CyWyiWSWZt54DGg",
+   "started": "2026-11-23T03:22Z",
+   "wake": "11 */2 * * *"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T03:34Z",
+   "lane": [
+    "docs/board/**",
+    "site/decisions/**"
+   ],
+   "name": "pm.aws.c",
+   "paths": [
+    "docs/board/**"
+   ],
+   "session": "session_01Kw9UwBZAwm6766jrG94uX1",
+   "wake": "15 * * * * (pm.aws.c sets its own)"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T02:44Z",
+   "lane": [
+    "docs/s3/**",
+    "site/s3.js",
+    "test/s3/**"
+   ],
+   "name": "s3.aws.c",
+   "paths": [
+    "docs/s3/**",
+    "site/s3*.js (pending aws.c)"
+   ],
+   "session": "session_01Kw9UwD9A8Ev6Ktgofqj9Y6",
+   "started": "2026-11-23T02:44Z",
+   "wake": "53 1-23/2 * * *"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T02:44Z",
+   "lane": [
+    "docs/security/**"
+   ],
+   "name": "security.aws.c",
+   "paths": [
+    "docs/security/**"
+   ],
+   "session": "session_01Kw9UwDzABFfbMk8PV34a7J",
+   "started": "2026-11-23T02:44Z",
+   "wake": "28 */2 * * *"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T03:22Z",
+   "name": "sherpa.aws.c",
+   "paths": [
+    "docs/sherpa/**"
+   ],
+   "session": "session_01Kw9UwCF7nZyeKXUtFHiy7K",
+   "started": "2026-11-23T03:22Z",
+   "wake": "19 1-23/2 * * *"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T03:22Z",
+   "name": "swarm.aws.c",
+   "paths": [
+    "docs/swarm/**"
+   ],
+   "session": "session_01Kw9UwCUzTn6tV616HZcjmz",
+   "started": "2026-11-23T03:22Z",
+   "wake": "34 * * * *"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T03:22Z",
+   "name": "ux.aws.c",
+   "paths": [
+    "docs/design/**"
+   ],
+   "session": "session_01Kw9UwE6VR9TTCLmpmytWvG",
+   "started": "2026-11-23T03:22Z",
+   "wake": "46 1-23/2 * * *"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T03:22Z",
+   "name": "vaults.aws.c",
+   "paths": [
+    "docs/vaults/**"
+   ],
+   "session": "session_01Kw9UwCfsZCBz1rXEx4QmRP",
+   "started": "2026-11-23T03:22Z",
+   "wake": "36 1-23/2 * * *"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T03:22Z",
+   "name": "video.aws.c",
+   "paths": [
+    "docs/video/**"
+   ],
+   "session": "session_01Kw9UwFgph7DemcF4Kh9ww8",
+   "started": "2026-11-23T03:22Z",
+   "wake": "04 */4 * * *"
+  },
+  {
+   "account": "c",
+   "first_seen": "2026-11-23T03:22Z",
+   "name": "viz.aws.c",
+   "paths": [
+    "docs/viz/**"
+   ],
+   "session": "session_01Kw9UwDDKfdXVnkWK6uEL3v",
+   "started": "2026-11-23T03:22Z",
+   "wake": "01 1-23/2 * * *"
+  }
+ ],
+ "since": "2026-11-23T02:40Z",
+ "v": 1
+}
