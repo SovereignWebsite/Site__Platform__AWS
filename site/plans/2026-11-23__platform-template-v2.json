@@ -1,7 +1,7 @@
 {
   "id": "2026-11-23__platform-template-v2",
-  "title": "This platform's own stack: run the site's latest template",
-  "why": "Template v2 (23 Nov 2026) adds the S3 browser (read role: list and open files; change role: add a bucket's CORS rule through Cloud Control) and lets the change role update this stack, so later changes need no console visit (Dinis: \"for now [allow] a lot of updates on [the] CloudFormation stack. We'll tighten that a bit later\"). The first move to v2 is made in the console, because v1 cannot update itself; every later version is applied here.",
+  "title": "This platform's own stack: run the site's latest template (v2.1: the change role narrowed)",
+  "why": "Template v2.1 (23 Nov 2026): fixes security.aws.c's R-001 (Critical). The change role had iam:* on the platform roles, so it could make itself account admin. Now it may only make the IAM changes CloudFormation needs to update its two roles, only through CloudFormation (a change set you approve), with no CreateRole, DeleteRole or PassRole, and may attach only AWS's ViewOnlyAccess and SecurityAudit. Also: the template's descriptions no longer name the owner. v2 (same night) added the S3 browser and let the stack update itself; its first move was made in the console.",
   "summary": "Shows the template AWS holds beside the site's; then AWS's own change set; then executes it. Parameters keep their values.",
   "role": "sws-aws-platform-change",
   "action": "cloudformation.update_stack",

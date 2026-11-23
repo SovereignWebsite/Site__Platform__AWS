@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SovereignWebsite AWS platform v2, bootstrap (the last console log-in). Two roles that
+  SovereignWebsite AWS platform v2.1, bootstrap (the last console log-in). Two roles that
   the account owner's own Google sign-in, in their browser on aws.platform.sovereignweb.site, may
   assume through STS AssumeRoleWithWebIdentity for at most one hour. No IAM user, no
   access key, nothing stored. Written by aws.c@SovereignWebsite.dinis, 22 Nov 2026; the site fills in both parameters.
@@ -107,10 +107,28 @@ Resources:
                 Effect: Allow
                 Action: cloudformation:ValidateTemplate
                 Resource: "*"
-              - Sid: ThePlatformRoles
+              # v2.1, 23 Nov 2026: security.aws.c's R-001 (Critical): iam:* let this role make itself account admin
+              # directly. Now: only the actions CloudFormation needs to update these two roles, only when the call
+              # comes through CloudFormation (a change set the owner approved), no CreateRole, DeleteRole or
+              # PassRole, and only AWS's ViewOnlyAccess and SecurityAudit policies may be attached.
+              - Sid: ThePlatformRolesThroughCloudFormationOnly
                 Effect: Allow
-                Action: "iam:*"
+                Action: [iam:GetRole, iam:GetRolePolicy, iam:ListRolePolicies, iam:ListAttachedRolePolicies, iam:ListRoleTags,
+                  iam:UpdateRole, iam:UpdateRoleDescription, iam:PutRolePolicy, iam:DeleteRolePolicy, iam:DetachRolePolicy,
+                  iam:UpdateAssumeRolePolicy, iam:TagRole, iam:UntagRole]
                 Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/sws-aws-platform-*
+                Condition:
+                  ForAnyValue:StringEquals:
+                    aws:CalledVia: cloudformation.amazonaws.com
+              - Sid: AttachOnlyTheseManagedPolicies
+                Effect: Allow
+                Action: iam:AttachRolePolicy
+                Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/sws-aws-platform-*
+                Condition:
+                  ForAnyValue:StringEquals:
+                    aws:CalledVia: cloudformation.amazonaws.com
+                  ArnEquals:
+                    iam:PolicyARN: [arn:aws:iam::aws:policy/job-function/ViewOnlyAccess, arn:aws:iam::aws:policy/SecurityAudit]
 
 Outputs:
   ReadRoleArn: { Value: !GetAtt PlatformRead.Arn }
