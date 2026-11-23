@@ -157,6 +157,9 @@
   function hdr(init, name) { var h = init.headers || {}; for (var k in h) if (k.toLowerCase() === name) return h[k]; return null; }
   // A stable synthetic ETag: 32 hex digits like S3's (S3's is an MD5 for a single-part upload; this one is not).
   function etag(b) { var h = "", c = crc32(b); for (var i = 0; i < 4; i++) { c = (Math.imul(c ^ (c >>> 15), 2246822507) ^ i) >>> 0; h += ("0000000" + c.toString(16)).slice(-8); } return h; }
+  // Continuation tokens are opaque to the caller: here, the last key returned, as hex.
+  function toToken(k) { return Array.prototype.map.call(enc.encode(k), function (b) { return (b < 16 ? "0" : "") + b.toString(16); }).join(""); }
+  function fromToken(t) { var b = new Uint8Array((t.match(/../g) || []).map(function (h) { return parseInt(h, 16); })); return new TextDecoder().decode(b); }
   function signed(init) { var a = hdr(init, "authorization"); return a && /Credential=ASIATWIN/.test(a); }
   function collapse(v) { return Array.isArray(v) ? (v.length === 1 ? collapse(v[0]) : v.map(collapse)) : v && typeof v === "object" ? Object.keys(v).reduce(function (o, k) { o[k] = collapse(v[k]); return o; }, {}) : v; }
 
@@ -229,7 +232,7 @@
     if (!key) {
       // ListObjectsV2: keys and common prefixes in key order, max-keys of them (default 1000) a page.
       var q = u.searchParams, prefix = q.get("prefix") || "", delim = q.get("delimiter"), max = Math.min(+(q.get("max-keys") || 1000), 1000);
-      var after = q.get("continuation-token") ? atob(q.get("continuation-token")) : q.get("start-after") || "";
+      var after = q.get("continuation-token") ? fromToken(q.get("continuation-token")) : q.get("start-after") || "";
       var all = Object.keys(s.objects[bucket]).sort().filter(function (k) { return k.indexOf(prefix) === 0; }), items = [], seen = {};
       all.forEach(function (k) {
         var rest = k.slice(prefix.length), cut = delim ? rest.indexOf(delim) : -1;
@@ -246,7 +249,7 @@
         var last = pageItems.length ? pageItems[pageItems.length - 1] : null;
         return xml("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ListBucketResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\"><Name>" + esc(bucket) + "</Name><Prefix>" + esc(prefix) + "</Prefix>" +
           (q.get("continuation-token") ? "<ContinuationToken>" + esc(q.get("continuation-token")) + "</ContinuationToken>" : "") +
-          (more ? "<NextContinuationToken>" + esc(btoa(last.key || last.prefix)) + "</NextContinuationToken>" : "") +
+          (more ? "<NextContinuationToken>" + esc(toToken(last.key || last.prefix)) + "</NextContinuationToken>" : "") +
           "<KeyCount>" + pageItems.length + "</KeyCount><MaxKeys>" + max + "</MaxKeys>" + (delim ? "<Delimiter>" + esc(delim) + "</Delimiter>" : "") +
           "<IsTruncated>" + more + "</IsTruncated>" + parts.join("") + "</ListBucketResult>");
       });

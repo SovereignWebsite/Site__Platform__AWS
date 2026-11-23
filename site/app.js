@@ -62,7 +62,8 @@
     return SealedStore.open(rec("session")).then(function (s) {
       if (!s) return;
       var now = Date.now();
-      Object.keys(s.creds || {}).forEach(function (k) { if (s.creds[k].expiration - now > 60 * 1000) mem.creds[k] = s.creds[k]; });
+      // Change-role credentials are never restored, even from a record an older build sealed (security R-013 a).
+      Object.keys(s.creds || {}).forEach(function (k) { if (!/\/sws-aws-platform-change$/.test(k) && s.creds[k].expiration - now > 60 * 1000) mem.creds[k] = s.creds[k]; });
       if (s.idToken && decodeJwt(s.idToken).exp * 1000 - now > 60 * 1000) showSignedIn(s.idToken, true);
       else if (Object.keys(mem.creds).length) { $("who").textContent = "Your Google sign-in has expired; AWS credentials still valid are kept until they end. Sign in again for new ones."; $("step1-done").hidden = false; renderAccounts(); }
     }).catch(function () {});
@@ -155,12 +156,15 @@
       Action: "AssumeRoleWithWebIdentity", Version: "2011-06-15", RoleArn: roleArn(acct, role),
       RoleSessionName: "sws-aws-platform", WebIdentityToken: mem.idToken, DurationSeconds: "3600"
     }).toString();
+    var asked = mem.idToken;
     return AwsTransport.fetch("https://sts.amazonaws.com/", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: body })
       .then(function (r) { return r.text().then(function (t) { return { ok: r.ok, status: r.status, doc: new DOMParser().parseFromString(t, "text/xml") }; }); })
       .then(function (x) {
         if (!x.ok) throw awsError(x.doc, x.status);
         c = { accessKeyId: xmlText(x.doc, "AccessKeyId"), secretAccessKey: xmlText(x.doc, "SecretAccessKey"),
               sessionToken: xmlText(x.doc, "SessionToken"), expiration: Date.parse(xmlText(x.doc, "Expiration")) };
+        // Signed out (or signed in as someone else) while STS answered: drop them (security R-013 b).
+        if (mem.idToken !== asked) throw new Error("Signed out while AWS was answering; nothing kept.");
         mem.creds[key] = c;
         persist();
         return c;
@@ -357,9 +361,12 @@
     count();
   }
   // A diff: changed lines in colour with a few lines of context; long unchanged runs fold to "...".
-  function diffView(a, b) {
+  // norm: how two lines are compared. JSON diffs ignore a trailing comma; templates (YAML) compare lines exactly,
+  // because there a comma can change meaning (security R-012).
+  function jsonLine(l) { return l.replace(/,\s*$/, ""); }
+  function diffView(a, b, norm) {
     // a line that differs only by its trailing comma (JSON lists) counts as unchanged
-    var d = Plans.lineDiff(a, b, function (l) { return l.replace(/,\s*$/, ""); }), pre = el("pre", { class: "diff" }), CTX = 3;
+    var d = Plans.lineDiff(a, b, norm), pre = el("pre", { class: "diff" }), CTX = 3;
     var near = d.map(function () { return false; });
     d.forEach(function (x, i) { if (x.op !== " ") for (var k = Math.max(0, i - CTX); k <= Math.min(d.length - 1, i + CTX); k++) near[k] = true; });
     var skipped = 0;
@@ -380,7 +387,7 @@
         var r = Plans.apply(before, plan);
         if (r.unchanged) return say(st, "Nothing to do: " + plan.target_role + " already " + (plan.add ? "trusts " + plan.add.join(", ") : "no longer trusts " + plan.remove.join(", ")) + ".", "ok");
         out.appendChild(el("h4", { text: "What changes (- removed, + added)" }));
-        out.appendChild(diffView(JSON.stringify(before, null, 2), JSON.stringify(r.after, null, 2)));
+        out.appendChild(diffView(JSON.stringify(before, null, 2), JSON.stringify(r.after, null, 2), jsonLine));
         out.appendChild(el("details", { class: "full" }, [el("summary", { text: "The whole policy, now and after" }),
           el("h4", { text: "Now" }), el("pre", { text: JSON.stringify(before, null, 2) }),
           el("h4", { text: "After you approve" }), el("pre", { text: JSON.stringify(r.after, null, 2) })]));
@@ -405,7 +412,7 @@
           }).then(function (now) {
             var ok = Plans.same(now, r.after);
             if (ok && onApplied) setTimeout(onApplied, 1500);
-            say(st, ok ? "Applied and checked: " + plan.target_role + (r.added ? " now trusts " + r.added.join(", ") : " no longer trusts " + r.removed.join(", ")) + "." : "Applied, but the role read back differs from the plan. Read it again.", ok ? "ok" : "bad");
+            say(st, ok ? (TWIN ? "Applied and checked in the twin (synthetic, not your AWS): " : "Applied and checked: ") + plan.target_role + (r.added ? " now trusts " + r.added.join(", ") : " no longer trusts " + r.removed.join(", ")) + "." : "Applied, but the role read back differs from the plan. Read it again.", ok ? "ok" : "bad");
           }).catch(function (e) { go.disabled = false; say(st, e.message, "bad"); });
         };
         out.appendChild(go);
@@ -463,7 +470,7 @@
               run.disabled = true; say(st, "Executing...");
               cfn(c, { Action: "ExecuteChangeSet", StackName: plan.stack, ChangeSetName: name })
                 .then(function () { return pollStack(c, plan, st, 0); })
-                .then(function (status) { if (/_COMPLETE$/.test(status) && !/ROLLBACK/.test(status) && onApplied) setTimeout(onApplied, 1500); say(st, /_COMPLETE$/.test(status) && !/ROLLBACK/.test(status) ? "Applied and checked: " + plan.stack + " is " + status + "." : "Stack ended " + status + ": see its events in CloudFormation.", /ROLLBACK|FAILED/.test(status) ? "bad" : "ok"); })
+                .then(function (status) { if (/_COMPLETE$/.test(status) && !/ROLLBACK/.test(status) && onApplied) setTimeout(onApplied, 1500); say(st, /_COMPLETE$/.test(status) && !/ROLLBACK/.test(status) ? (TWIN ? "Applied and checked in the twin (synthetic, not your AWS): " : "Applied and checked: ") + plan.stack + " is " + status + "." : "Stack ended " + status + ": see its events in CloudFormation.", /ROLLBACK|FAILED/.test(status) ? "bad" : "ok"); })
                 .catch(function (e) { run.disabled = false; say(st, e.message, "bad"); });
             };
             out.appendChild(run);
@@ -504,7 +511,7 @@
     // A pack is a whole world: loading one reloads the page on it.
     ps.onchange = function () { AwsTwin.usePack(ps.value); location.href = location.pathname + "?twin&pack=" + ps.value; };
   }
-  window.Platform = { diffView: diffView, assume: assume, jsonCall: jsonCall, xmlText: xmlText, awsError: awsError, el: el, say: say,
+  window.Platform = { diffView: diffView, jsonLine: jsonLine, assume: assume, jsonCall: jsonCall, xmlText: xmlText, awsError: awsError, el: el, say: say,
     accounts: function () { return accounts; }, signedIn: function () { return !!mem.idToken; } };
   initGoogle();
   loadAccounts().then(restore).then(renderAccounts).then(function () { return gisReady; }).then(autoSignIn);
