@@ -64,4 +64,20 @@ assert.throws(() => one.clock.schedule("x", [{ at: T(90), op: "s3.deleteEverythi
 assert.throws(() => one.clock.at(START), /back past the journal/);
 assert.throws(() => one.clock.tick("10"), /number of ms/);
 checks += 3;
-console.log("OK (twin clock: " + checks + " checks; t = at in at order with ties by seq, chains, one tick = many ticks with reads = a read on a running clock, reads never write while paused, refold rebuilds what is owed)");
+// 6. architect.aws.a's review of 4aca0ee: a schedule is checked whole before anything is appended.
+{
+  const tw = loadTwin("baseline"); tw.clock.pause(); tw.clock.at(T(100));
+  const n0 = tw.journal().length;
+  assert.throws(() => tw.clock.schedule("past", [{ at: T(50), op: "clock.mark", data: { label: "P" } }]), /before the entry that schedules it/, "a step before its scheduling entry is refused");
+  assert.throws(() => tw.clock.schedule("chain", [{ at: T(120), op: "clock.mark", data: { label: "Q" }, schedule: [{ at: T(110), op: "clock.mark", data: { label: "Q2" } }] }]),
+    /before the entry that schedules it/, "a chained step before its parent step is refused");
+  assert.throws(() => tw.clock.schedule("deep", [{ at: T(120), op: "clock.mark", data: { label: "R" }, schedule: [{ at: T(130), op: "s3.nothing", data: {} }] }]),
+    /no operation s3\.nothing/, "an unknown op deep in a chain is refused at schedule time");
+  assert.equal(tw.journal().length, n0, "the journal is unchanged by the refusals");
+  tw.clock.tick(60 * 1000); await read(tw);
+  assert.equal(settled(tw.journal()).length, 0, "and the twin is not wedged: ticks and reads go on");
+  tw.clock.schedule("ok", [{ at: T(170), op: "clock.mark", data: { label: "S" } }]); tw.clock.tick(20 * 1000);
+  assert.deepEqual(settled(tw.journal()), [["S", T(170)]], "a good schedule still settles");
+  checks += 6;
+}
+console.log("OK (twin clock: " + checks + " checks; t = at in at order with ties by seq, chains, one tick = many ticks with reads = a read on a running clock, reads never write while paused, refold rebuilds what is owed, schedules checked whole up front)");

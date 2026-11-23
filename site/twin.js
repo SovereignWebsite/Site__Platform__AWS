@@ -215,14 +215,24 @@
       }
     } finally { settling = false; }
   }
+  // A schedule tree is checked whole before anything is appended (architect.aws.a's review of 4aca0ee): every op known,
+  // every at a time and never before the entry (or step) that schedules it. Otherwise refused, journal unchanged.
+  function checkSchedule(list, notBefore, depth) {
+    if (!Array.isArray(list) || depth > 16) throw new Error("twin: a schedule is a list, at most 16 deep");
+    return list.map(function (x) {
+      if (!x || !own(OPS, x.op)) throw new Error("twin: no operation " + (x && x.op));
+      var at = Date.parse(x.at);
+      if (!isFinite(at)) throw new Error("twin: a scheduled step needs a time");
+      if (at < notBefore) throw new Error("twin: a step cannot be scheduled before the entry that schedules it (" + new Date(at).toISOString() + " < " + new Date(notBefore).toISOString() + ")");
+      return { at: new Date(at).toISOString(), op: x.op, target: x.target || null, data: x.data, actor: x.actor || null, why: x.why || null,
+        schedule: x.schedule ? checkSchedule(x.schedule, at, depth + 1) : undefined };
+    });
+  }
   function append(e) {
     var full = { seq: journal.length + 1, t: e.t || nowIso(), actor: e.actor || "twin", op: e.op, target: e.target || null,
       data: e.data, why: e.why || null, source: e.source || "twin" };
     if (e.settles) full.settles = e.settles;
-    if (e.schedule) full.schedule = e.schedule.map(function (x) {
-      if (!own(OPS, x.op)) throw new Error("twin: no operation " + x.op);
-      return { at: new Date(Date.parse(x.at)).toISOString(), op: x.op, target: x.target || null, data: x.data, actor: x.actor || null, why: x.why || null, schedule: x.schedule };
-    });
+    if (e.schedule) full.schedule = checkSchedule(e.schedule, Date.parse(full.t), 0);
     journal.push(full);
     if (state) apply(state, full);
     return full;
@@ -725,8 +735,9 @@
   };
   function vaultIds(account, region, name) {
     // Each stack its own stream, seeded from its name, so two stacks do not share ids (R-025 (d)).
-    var seed = 20261124; for (var c = 0; c < name.length; c++) seed = (seed * 31 + name.charCodeAt(c)) & 0x7fffffff;
-    var r = rng("vault.ids:" + account + "/" + region + "/" + name, seed), pick = function (abc, n) { var o = ""; for (var i = 0; i < n; i++) o += abc[Math.floor(r() * abc.length)]; return o; };
+    var seed = 20261124 + journal.length; for (var c = 0; c < name.length; c++) seed = (seed * 31 + name.charCodeAt(c)) & 0x7fffffff;
+    // Its own stream per create (name and the journal position), so a stack made again under the same name gets new ids.
+    var r = rng("vault.ids:" + account + "/" + region + "/" + name + "@" + journal.length, seed), pick = function (abc, n) { var o = ""; for (var i = 0; i < n; i++) o += abc[Math.floor(r() * abc.length)]; return o; };
     var lower = "abcdefghijklmnopqrstuvwxyz0123456789", upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     return { stack: pick("0123456789abcdef", 8) + "-" + pick("0123456789abcdef", 4) + "-11ef-" + pick("0123456789abcdef", 4) + "-" + pick("0123456789abcdef", 12),
       url: pick(lower, 32), distribution: "E" + pick(upper, 13), cfDomain: "d" + pick(lower, 13) + ".cloudfront.net", secret: pick("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 6) };
