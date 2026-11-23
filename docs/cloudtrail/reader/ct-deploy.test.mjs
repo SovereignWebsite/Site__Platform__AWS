@@ -94,5 +94,15 @@ check(rules(D.alarms(add({ userIdentity: { type: "Root", arn: "arn:aws:iam::" + 
 // vault.yaml 0.4.5: the deploy role may delete the Vault's log group on rollback; still the audit trail going away
 check(rules(D.alarms(add({ userIdentity: deployId, sourceIPAddress: "cloudformation.amazonaws.com", eventSource: "logs.amazonaws.com", eventName: "DeleteLogGroup", requestParameters: { logGroupName: "/aws/lambda/sws-vault-" + V + "-api" } }))), ["vault-deleted"], "log group deleted on rollback");
 check(rules(D.alarms(add({ userIdentity: deployId, sourceIPAddress: "cloudformation.amazonaws.com", eventSource: "logs.amazonaws.com", eventName: "DeleteLogGroup", requestParameters: { logGroupName: "/aws/lambda/sws-vault-" + V + "-api" }, errorCode: "AccessDenied" }))), ["vault-deploy-refused"], "refused log group delete");
-check(D.rules.length, 8, "eight rules");
-console.log("ok ct-deploy: 8 rules, " + cases + " cases over the vault-deploy scenario (clean, out of band, refused, teardown, approvals, two Vaults, security review)");
+// the alarm stack (vault-alarm.yaml), run as the customer even in access-stack mode, and its kill switch
+ds = D.group(events({ alarm: true }));
+check(Object.keys(ds[0].stacks).sort(), ["sws-vault-" + V, "sws-vault-" + V + "-access", "sws-vault-" + V + "-alarm"], "three stacks");
+check([ds[0].counts.outOfBand, D.alarms(ds)], [0, []], "the alarm stack's own calls are CloudFormation's, not out of band");
+ds = D.group(events({ paused: true }));
+check(rules(D.alarms(ds)), ["vault-paused", "vault-paused"], "the kill switch pausing the Vault is a notice, not an out-of-band change");
+check(ds[0].counts.outOfBand, 0, "kill switch not counted out of band");
+const ksRole = { type: "AssumedRole", sessionContext: { sessionIssuer: { type: "Role", userName: "sws-vault-" + V + "-killswitch", arn: "arn:aws:iam::" + A + ":role/sws-vault-" + V + "-killswitch" } } };
+check(rules(D.alarms(add({ userIdentity: ksRole, eventSource: "lambda.amazonaws.com", eventName: "DeleteFunction20150331", requestParameters: { functionName: "sws-vault-" + V + "-api" }, errorCode: "AccessDeniedException" }))), ["vault-direct-change-refused"], "kill switch refused outside its job");
+check(rules(D.alarms(add({ userIdentity: customerId, eventSource: "monitoring.amazonaws.com", eventName: "DisableAlarmActions", requestParameters: { alarmNames: ["sws-vault-" + V + "-requests"] } }))), ["vault-out-of-band-change"], "the customer disabling the cost alarm by hand");
+check(D.rules.length, 9, "nine rules");
+console.log("ok ct-deploy: 9 rules, " + cases + " cases over the vault-deploy scenario (clean, out of band, refused, teardown, approvals, two Vaults, security review)");

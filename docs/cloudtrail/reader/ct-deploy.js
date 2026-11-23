@@ -12,7 +12,7 @@
   "use strict";
   var CFN = "cloudformation.amazonaws.com";
   var VAULT = /sws-vault-([0-9a-f]{12})(?![0-9a-f])/;
-  var STACK = /^sws-vault-([0-9a-f]{12})(-access)?$/;
+  var STACK = /^sws-vault-([0-9a-f]{12})(-access|-alarm)?$/; // -alarm: vault-alarm.yaml, run by the customer in us-east-1
   function set(names) { var o = Object.create(null); names.forEach(function (n) { o[n] = 1; }); return o; }
   var CONTROL = set(["CreateStack", "UpdateStack", "DeleteStack", "CreateChangeSet", "ExecuteChangeSet", "ContinueUpdateRollback", "CancelUpdateStack"]);
   var APPLY = set(["CreateStack", "UpdateStack", "DeleteStack", "ExecuteChangeSet", "ContinueUpdateRollback"]); // calls that change resources
@@ -38,12 +38,17 @@
   // A call CloudFormation made for this Vault. Always needs CloudFormation's sign (invokedBy or source); the deploy
   // role's name alone is not enough (security.aws.a). In access-stack mode the Vault stack's calls must also run as
   // the deploy role. Stated limit: in one-stack mode another stack touching this Vault's resources looks the same.
-  function byCloudFormation(e, id, access) { return viaCfn(e) && (!access || isDeployRole(e, id) || accessStackResource(e, id)); }
+  // The alarm stack's resources (vault-alarm.yaml 0.4.3): its cost topic, alarms, kill switch role, function and log
+  // group. That stack is always run with the customer's own identity, never the deploy role (R-027).
+  function alarmStackResource(e, id) { var p = e.raw && e.raw.requestParameters; return !!p && new RegExp("sws-vault-" + id + "-(cost|requests|killswitch)(?![0-9a-z])").test(JSON.stringify(p)); }
+  function byCloudFormation(e, id, access) { return viaCfn(e) && (!access || isDeployRole(e, id) || accessStackResource(e, id) || alarmStackResource(e, id)); }
+  // The kill switch doing its one job: throttle the function to 0, disable the distribution, tag both sws-vault-paused.
+  function killSwitch(e, id) { return e.who.name === "sws-vault-" + id + "-killswitch" && !e.failed && /^(PutFunctionConcurrency|UpdateDistribution|TagResource)/.test(e.action || ""); }
   function isControl(e) { return e.service === "cloudformation" && CONTROL[e.action] === 1 && !!stackOf(e); }
   // A management change to the Vault's resources made by someone, not by CloudFormation. The Vault's own API role
   // writing its data is the Vault working, not a change to it; data events are left out for the same reason.
   function direct(e, id, access) {
-    return e.change && e.category !== "Data" && e.service !== "cloudformation" && !byCloudFormation(e, id, access) && e.who.name !== "sws-vault-" + id + "-api";
+    return e.change && e.category !== "Data" && e.service !== "cloudformation" && !byCloudFormation(e, id, access) && e.who.name !== "sws-vault-" + id + "-api" && !killSwitch(e, id);
   }
   function isOutOfBand(e, id, access) { return !e.failed && direct(e, id, access); }
   // Reads that reveal the Vault's token: the secret, or the function's configuration where O3 keeps it.
@@ -119,6 +124,9 @@
     { id: "vault-direct-change-refused", level: "medium",
       words: "Someone tried, and was refused, to change a Vault's resources directly.",
       match: function (e, id, opts, access) { return !!e.failed && direct(e, id, access); } },
+    { id: "vault-paused", level: "medium",
+      words: "The Vault's kill switch paused it: its function was throttled to 0 or its distribution disabled, after the cost alarm fired.",
+      match: function (e, id) { return killSwitch(e, id) && /^(PutFunctionConcurrency|UpdateDistribution)/.test(e.action); } },
     { id: "vault-token-read", level: "medium",
       words: "A Vault's token, or the function configuration that holds it, was read by someone other than CloudFormation or the Vault itself.",
       match: function (e, id) { return tokenRead(e, id); } }

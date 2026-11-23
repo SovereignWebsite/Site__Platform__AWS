@@ -26,7 +26,7 @@
       x = x || {};
       var cfn = who.invokedBy === "cloudformation.amazonaws.com";
       out.push(Object.assign({ eventVersion: "1.09", userIdentity: who, eventTime: new Date(t0 + sec * 1000).toISOString().replace(/\.000Z$/, "Z"),
-        eventSource: source, eventName: name, awsRegion: source === "iam.amazonaws.com" || source === "cloudfront.amazonaws.com" ? "us-east-1" : R, // global services
+        eventSource: source, eventName: name, awsRegion: x.region || (source === "iam.amazonaws.com" || source === "cloudfront.amazonaws.com" ? "us-east-1" : R), // global services
         sourceIPAddress: cfn ? "cloudformation.amazonaws.com" : (x.ip || "198.51.100.23"), userAgent: cfn ? "cloudformation.amazonaws.com" : "Mozilla/5.0 (console)",
         requestParameters: params, responseElements: null, eventID: "vd-" + V + "-" + String(++n).padStart(3, "0"),
         readOnly: false, eventType: "AwsApiCall", managementEvent: true, recipientAccountId: A, eventCategory: "Management" },
@@ -48,6 +48,22 @@
     rec(130, deployer, "lambda.amazonaws.com", "CreateFunctionUrlConfig", { functionName: stack + "-api" });
     rec(140, deployer, "cloudfront.amazonaws.com", "CreateDistributionWithTags", { distributionConfigWithTags: { distributionConfig: { comment: stack }, tags: { items: [{ key: "sws-vault", value: V }] } } });
     if (o.refused) rec(150, deployer, "route53.amazonaws.com", "ChangeResourceRecordSets", { hostedZoneId: "Z0EXAMPLE", changeBatch: { comment: stack } }, { error: "AccessDenied", message: "not allowed by the boundary" });
+    // 2b. the optional alarm stack (vault-alarm.yaml 0.4.3), always run as the customer, in us-east-1
+    if (o.alarm || o.paused) {
+      var G = "us-east-1", alarmStack = stack + "-alarm", ks = stack + "-killswitch";
+      rec(200, customer, "cloudformation.amazonaws.com", "CreateStack", { stackName: alarmStack, parameters: [{ parameterKey: "VaultId", parameterValue: V }, { parameterKey: "KillSwitch", parameterValue: "true" }] }, { region: G });
+      rec(210, viaCfn, "sns.amazonaws.com", "CreateTopic", { name: stack + "-cost" }, { region: G });
+      rec(214, viaCfn, "monitoring.amazonaws.com", "PutMetricAlarm", { alarmName: stack + "-requests" }, { region: G });
+      rec(220, viaCfn, "iam.amazonaws.com", "CreateRole", { roleName: ks });
+      rec(226, viaCfn, "lambda.amazonaws.com", "CreateFunction20150331", { functionName: ks }, { region: G });
+    }
+    // 2c. the cost alarm fires and the kill switch pauses the Vault (its role, not CloudFormation)
+    if (o.paused) {
+      var kRole = { type: "AssumedRole", arn: "arn:aws:sts::" + A + ":assumed-role/" + stack + "-killswitch/" + stack + "-killswitch",
+        sessionContext: { sessionIssuer: { type: "Role", arn: "arn:aws:iam::" + A + ":role/" + stack + "-killswitch", userName: stack + "-killswitch", accountId: A } } };
+      rec(5400, kRole, "lambda.amazonaws.com", "PutFunctionConcurrency20171031", { functionName: stack + "-api", reservedConcurrentExecutions: 0 }, { ip: "lambda.amazonaws.com" });
+      rec(5402, kRole, "cloudfront.amazonaws.com", "UpdateDistribution", { id: "E2EXAMPLEVAULT", distributionConfig: { comment: stack, enabled: false } }, { region: "us-east-1", ip: "lambda.amazonaws.com" });
+    }
     // 3. a direct change from the console: the customer edits the bucket policy by hand
     if (o.outOfBand) rec(3600, customer, "s3.amazonaws.com", "PutBucketPolicy", { bucketName: bucket }, { ip: "203.0.113.50" });
     // 4. teardown: the stacks go; Retain keeps the bucket, its policy and the logs

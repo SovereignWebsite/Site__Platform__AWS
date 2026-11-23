@@ -19,7 +19,7 @@ Who deployed what, where and when, for each Vault in a customer's account, read 
 - **Mode:** access-stack when the Vault stack names the deploy role as its service role; otherwise one-stack.
 - **Counts:** calls, refused, made by CloudFormation, and made out of band.
 
-## Eight alarms
+## Nine alarms
 
 | Rule | Level | Fires on |
 |---|---|---|
@@ -30,11 +30,14 @@ Who deployed what, where and when, for each Vault in a customer's account, read 
 | vault-deploy-role-outside-cloudformation | high | The role sws-vault-<id>-deploy acting without CloudFormation's sign. It trusts only CloudFormation, so its credentials are loose or its trust was changed. |
 | vault-root-activity | high | The account root acting on any Vault resource, reads included. |
 | vault-direct-change-refused | medium | A refused direct change to a Vault's resources. |
+| vault-paused | medium | The Vault's kill switch (vault-alarm.yaml 0.4.3) throttled its function to 0 or disabled its distribution, as its role sws-vault-<id>-killswitch. Shown as a notice, not as an out-of-band change. Anything else that role tries is refused by its policy, and raises vault-direct-change-refused. |
 | vault-token-read | medium | GetSecretValue on sws-vault-<id>-token, or GetFunction / GetFunctionConfiguration on its function (the token is in its configuration, O3), by anyone other than CloudFormation or the Vault's API role. |
 
 The four rules after the first four come from security.aws.a's review of 7eda626.
 
 **What counts as CloudFormation:** a call with CloudFormation's sign (`invokedBy`, or `sourceIPAddress` cloudformation.amazonaws.com). The deploy role's name alone is not enough. In access-stack mode (the Vault stack was given the deploy role), the Vault stack's calls must also run as that role; only the access stack's own two resources (the deploy role and its boundary) may be made as the customer.
+
+**The alarm stack.** sws-vault-<id>-alarm (vault-alarm.yaml, in us-east-1) is always run with the customer's own identity, never the deploy role (R-027). So in access-stack mode, CloudFormation's calls made as the customer are still the Vault's own when they name the alarm stack's resources: sws-vault-<id>-cost, -requests*, -killswitch. A hand change to those, such as DisableAlarmActions on the cost alarm, is out of band.
 
 **Stated limit:** in one-stack mode, a call that another stack makes on this Vault's resources looks the same as one by the Vault's own stack. The trail does not carry the stack's name on those calls.
 
@@ -44,7 +47,7 @@ The platform alarms (ct-alarms.js) still run on the same events. Example: a chan
 
 - `docs/cloudtrail/reader/ct-deploy.js`: `group(events)` and `alarms(deployments, { approvals })` over the reader's events.
 - `docs/cloudtrail/scenarios/vault-deploy.js`: the twin-first scenario. It gives the records one access-stack deployment leaves, with options for out of band, refused and teardown. dev.1.aws.a uses it as the expected output: the twin derives its customer account's trail from its journal, and a test compares the two (step 4).
-- `docs/cloudtrail/reader/ct-deploy.test.mjs`: 37 cases (run: `node docs/cloudtrail/reader/ct-deploy.test.mjs`).
+- `docs/cloudtrail/reader/ct-deploy.test.mjs`: 45 cases (run: `node docs/cloudtrail/reader/ct-deploy.test.mjs`).
 
 ## Checked by boto3.aws.a (note 09 addendum, work/boto3.aws.a b2a8e2c; AWS's pages, 23 Nov 2026)
 
@@ -54,6 +57,7 @@ The platform alarms (ct-alarms.js) still run on the same events. Example: a chan
   - `sourceIPAddress`: the service's DNS name.
 - **Event names:**
   - CreateFunction20150331: confirmed.
+- *To check* (asked 23 Nov 22:50): PutFunctionConcurrency20171031 and UpdateDistribution, the kill switch's two calls.
   - CreateFunctionUrlConfig: no suffix; corrected in the scenario.
   - CloudFront: CreateDistributionWithTags when tags are passed, as vault.yaml does, in us-east-1; to confirm. Corrected in the scenario. CloudFront, like IAM, is global, so it does not count as a deployment's region.
 

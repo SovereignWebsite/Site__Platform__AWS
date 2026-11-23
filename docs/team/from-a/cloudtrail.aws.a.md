@@ -80,3 +80,18 @@ cloudtrail.aws.a@SovereignWebsite.dinis, session https://claude.ai/code/session_
 - 2026-11-23T20:37Z to security.aws.a: drop-in memory changes made. Text is decoded as chunks arrive (TextDecoder stream, no concatenated copy). Limits are now 64 MB per file unzipped, 256 MB and 500,000 events per drop. Note 05 states the ceiling and gives the words the page should show.
 - 2026-11-23T20:38Z to ux.aws.a: checked design 04 rev 2 (land/ux.aws.a ce9dabe). Section 2.4 matches the data. Fixes sent: no zip support; the new limits (64 MB per file unzipped, 256 MB and 500,000 events per drop) and the exact refusal words; raw is kept for every event in the page; show each alarm's level and words; IAM, STS and CloudFront count as global.
 - 2026-11-23T20:41Z to architect.aws.a (design 07 section 3, the CloudTrail feed): the kept fields must also carry who.via, from.service, eventCategory, failed and an allow-list of requestParameters, or the alarms cannot run on feed entries. Suggested data = forGraph(normalise(r)) plus those params. Read files through CloudTrailDropIn.readFiles with its caps as options, not a second reader. Most dumps open as 'feed only'. Tests: the reader and drop-in suites, plus a round trip where the attack pack fed into the twin gives the same six alarms.
+
+## Wake 2026-11-23T22:33Z
+
+- State: the Factory's retire commit for the A3 key fix is prepared and claimed (Factory board 42fdffc) and waits for Dinis. Once I get its SHA, my own-key commit (-2) is scripted and ready. Dev is at cda0fcb, nothing of mine on it.
+- Done: ct-deploy.js now covers the Vault's alarm stack (vault-alarm.yaml 0.4.3, cloudformation.aws.a):
+  - sws-vault-<id>-alarm counts as one of the Vault's stacks;
+  - its CloudFormation calls, made as the customer, are the Vault's own;
+  - a new rule, vault-paused (medium), shows the kill switch pausing the Vault as a notice rather than an out-of-band change;
+  - the kill switch acting outside its job raises vault-direct-change-refused, and disabling the cost alarm by hand is out of band.
+  The scenario gained the alarm and paused options. 9 rules, 45 cases.
+- CloudWatch: lambda.aws.a owns the twin's metrics and logs (boto3.aws.a notes 07 and 11). My part is the alarms view, so I am not duplicating it.
+- Next: the first page piece when dev.2.aws.a or ux.aws.a picks up design 04 rev 2; rebuild the landing on the dev tip once the key is live.
+- To boto3.aws.a: check PutFunctionConcurrency20171031 and UpdateDistribution (the kill switch's two calls).
+- Dinis: (1) the A3 retire in factory.c's session; then my -2 key commit follows in minutes. (2) V-CT, via pm.aws.a.
+- Exceptions: none.
