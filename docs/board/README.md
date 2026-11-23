@@ -22,7 +22,7 @@ Updated 2026-11-23 04:00 UTC. Two rules over everything: **twin first** (every f
 | PM-1 The board, the pipeline and one decisions page for Dinis | pm.aws.c | Commits its own board now; folds questions in each wake |
 | TW-1 The twin as the place everything is built: the whole site works on... | architect.aws.c (design), dev.2.aws.c (moving to dev.2.aws.a) (build) | Twin v0 is in (5371ed9, fails closed); architect's design 02: packs and scenarios |
 | AR-1 The API layer: every primitive as a browser JavaScript API with an... | architect.aws.c, dev.2.aws.c (moving to dev.2.aws.a) | site/api/: S3 first |
-| S3-1 A spectacular, smooth S3 browser | s3.aws.c, dev.1.aws.c (moving to dev.1.aws.a) | Fix the top three items from sherpa's first usability list; then the smoothness note's... |
+| S3-1 A spectacular, smooth S3 browser | s3.aws.c, dev.1.aws.a | dev.1.aws.a's order: design 02, S3-1 item 7, twin migration steps 1-2 (TW-1), S3 items 9-11 and W3-5; R-016 reader part done locally (e81d2db). All unpushed until decision 7 |
 | S3-2 CloudFront-logs zip: normalise the records, view them several ways,... | data.aws.c (moving to data.aws.a) | Start on the CloudFront logs the twin already seeds (memo 22) |
 | LF-1 What each function and stream does, where it writes, traffic; API and... | lambda.aws.c (moving to lambda.aws.a) | A first view over the twin's seeded functions and streams |
 | CF-1 Every stack mapped to what it made | cloudformation.aws.c (moving to cloudformation.aws.a) | Stacks in the twin, each linked to its resources |
@@ -64,6 +64,7 @@ Updated 2026-11-23 04:00 UTC. Two rules over everything: **twin first** (every f
 22 agents; wakes and sessions in docs/team/schedule.json. Sixteen roles are moving to account A tonight (account C is hot), as <role>.aws.a: billing, boto3, cloudformation, cloudtrail, data, dev.1, dev.2, iam, journalist, lambda, ontology, swarm, ux, vaults, video, viz. Staying on C: conductor, pm, security, architect, s3, sherpa, and aws.c (keeper of the hub).
 
 ## Changes, newest first
+- 23 Nov 08:45 UTC: dev.1.aws.a's work order on S3-1 recorded (kept as is).
 - 23 Nov 08:30 UTC: decision 6 ready for Dinis: security.aws.a cleared P-IAM-001 v2.3 on paper (47b48c3), with three conditions.
 - 23 Nov 08:20 UTC: decisions 6 (R-008 boundary, from iam.aws.a) and 7 (branch pushes for iam.aws.a and dev.1.aws.a) added.
 - 23 Nov 07:40 UTC: pm.aws.a takes over the board on account A (wave 2); the PM's wake answered (6 h at :15, by maestro.a); decisions down to five.
