@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  Stack sws-vault-publisher, in OUR account, DRAFT 0.1.0 (iam.aws.a, for cloudformation.aws.a's templates bucket
+  Stack sws-vault-publisher, in OUR account, DRAFT 0.1.1 (iam.aws.a, for cloudformation.aws.a's templates bucket
   7eb0f1d; for review by security.aws.a and aws.c; a plan for Dinis, applied by console since the hub's change role
   may not create roles). One role: the only writer of published Vault templates. Assumed only by one GitHub Actions
   environment of one repository; may add new files under templates/ and nothing else.
@@ -22,6 +22,23 @@ Parameters:
       The GitHub environment the release job runs in. Give it a required reviewer (Dinis) and limit it to protected
       tags, so every publication is approved by a person before AWS will hand out credentials.
 
+  GitHubRepositoryId:
+    Type: String
+    Default: ""
+    AllowedPattern: "^$|^[0-9]{1,20}$"
+    Description: Optional. The repository's numeric id (immutable, unlike its name); pinned when given.
+  ReleaseWorkflowRef:
+    Type: String
+    Default: ""
+    AllowedPattern: "^$|^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/\\.github/workflows/[A-Za-z0-9_.-]+\\.ya?ml@[A-Za-z0-9_./*-]+$"
+    Description: >-
+      Optional. The job_workflow_ref allowed to publish, for example owner/name/.github/workflows/release.yml@refs/tags/*
+      (StringLike). Empty until the first run shows the claim's value for this workflow (security.aws.a, optional).
+
+Conditions:
+  PinRepositoryId: !Not [!Equals [!Ref GitHubRepositoryId, ""]]
+  PinWorkflow: !Not [!Equals [!Ref ReleaseWorkflowRef, ""]]
+
 Resources:
   PublisherRole:
     Type: AWS::IAM::Role
@@ -36,10 +53,20 @@ Resources:
             Principal: { Federated: !Ref GitHubOidcProviderArn }
             Action: sts:AssumeRoleWithWebIdentity
             Condition:
-              StringEquals:
-                "token.actions.githubusercontent.com:aud": sts.amazonaws.com
-                # An environment subject, exact: not a branch wildcard, not a pull request.
-                "token.actions.githubusercontent.com:sub": !Sub "repo:${GitHubRepository}:environment:${GitHubEnvironment}"
+              StringEquals: !If
+                - PinRepositoryId
+                - "token.actions.githubusercontent.com:aud": sts.amazonaws.com
+                  # An environment subject, exact: not a branch wildcard, not a pull request.
+                  "token.actions.githubusercontent.com:sub": !Sub "repo:${GitHubRepository}:environment:${GitHubEnvironment}"
+                  "token.actions.githubusercontent.com:repository_id": !Ref GitHubRepositoryId
+                - "token.actions.githubusercontent.com:aud": sts.amazonaws.com
+                  "token.actions.githubusercontent.com:sub": !Sub "repo:${GitHubRepository}:environment:${GitHubEnvironment}"
+              # job_workflow_ref is an IAM condition key for GitHub tokens (IAM condition keys page, GitHub tab;
+              # trust policy only). Pinned when given, so no other workflow in the same environment can publish.
+              StringLike: !If
+                - PinWorkflow
+                - "token.actions.githubusercontent.com:job_workflow_ref": !Ref ReleaseWorkflowRef
+                - !Ref AWS::NoValue
       Policies:
         - PolicyName: publish-new-templates-only
           PolicyDocument:
