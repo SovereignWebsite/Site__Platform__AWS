@@ -19,7 +19,8 @@ export function edgeCity(code) {
   return (m && EDGES[m[1]]) || "unknown edge";
 }
 
-// ctx: { site, logs, logKey, object: { size, type, modified } | null }
+// ctx: { site, logs, logKey, object: { size, type, modified } | null,
+//        stream: the twin's DescribeDeliveryStream description, or null }
 export function stepsFor(text, ctx) {
   const l = parseLine(text);
   const tt = Number(l.time_taken) || 0;
@@ -35,10 +36,18 @@ export function stepsFor(text, ctx) {
     { bucket: ctx.site, key, ...(ctx.object || {}) }, { gap: ctx.object ? "origin access setting" : "object not in the twin" });
   add("keeper", "visitor", "data", "Answer", l.sc_status + ", " + l.sc_bytes + " bytes in " + tt + " s",
     { status: l.sc_status, bytes: l.sc_bytes, seconds: tt });
-  add("edge", "scribe", "log", "Log", "One JSON line written for this request",
-    { line: l }, { gap: "Firehose stream" });
+  const st = ctx.stream || null, dest = st && st.Destinations && st.Destinations[0] && st.Destinations[0].ExtendedS3DestinationDescription;
+  const proc = dest && dest.ProcessingConfiguration && dest.ProcessingConfiguration.Enabled
+    ? ((dest.ProcessingConfiguration.Processors || [])[0] || {}).Parameters : null;
+  const processor = proc && (proc.find((x) => x.ParameterName === "LambdaArn") || {}).ParameterValue;
+  add("edge", "scribe", "log", "Log",
+    st ? "One JSON line goes to Firehose stream " + st.DeliveryStreamName + (processor ? ", enriched by " + processor.replace(/^.*:function:/, "").replace(/:\$LATEST$/, "") : "")
+       : "One JSON line written for this request",
+    st ? { line: l, stream: st.DeliveryStreamName, arn: st.DeliveryStreamARN, processor: processor || null }
+       : { line: l }, st ? {} : { gap: "Firehose stream" });
   add("scribe", "archivist", "log", "Batch", "Lands in " + ctx.logs + " as " + ctx.logKey,
-    { bucket: ctx.logs, key: ctx.logKey });
+    { bucket: ctx.logs, key: ctx.logKey, ...(dest ? { buffer_seconds: dest.BufferingHints.IntervalInSeconds, buffer_mb: dest.BufferingHints.SizeInMBs, compression: dest.CompressionFormat } : {}) },
+    dest && !dest.BucketARN.endsWith(":::" + ctx.logs) ? { gap: "stream writes to another bucket" } : {});
 
   // Timing: the four request steps share time_taken; the log steps follow after (Firehose batches hourly; shown, not timed).
   const share = tt / 4;

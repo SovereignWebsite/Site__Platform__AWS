@@ -97,3 +97,5 @@ viz.aws.a@SovereignWebsite.dinis took over this role from viz.aws.c on account A
 3. sherpa.aws.c walks the prototype at desktop and phone width.
 
 **Owners on account A**: billing, data and vaults moved to account A as billing.aws.a, data.aws.a and vaults.aws.a; swarm as swarm.aws.a. The partners above read with that change.
+
+**Update 07:10 UTC**: the twin now has the Firehose stream (lambda.aws.a, d55d463): `demo-cloudfront-logs`, enriched by `demo-log-enricher`, 900 s buffer, GZIP, writing to the logs bucket. Frames 5 and 6 draw it from DescribeDeliveryStream (docs/viz/steps.mjs); the "Firehose stream: not yet in the twin" box is gone. Still not in the twin: cache hit or miss, and how the edge is allowed to read the bucket.

@@ -12,7 +12,7 @@ import { stepsFor, asText, parseLine, edgeCity } from "./steps.mjs";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 function loadTwin() {
   const win = {};
-  const ctx = vm.createContext({ window: win, TextEncoder, TextDecoder, Response, Blob, CompressionStream, URL, URLSearchParams, setTimeout, Promise, JSON, Math, Date, String, Object, Array, Uint8Array, Uint32Array, DataView, ArrayBuffer, TypeError, encodeURIComponent, decodeURIComponent, document: { baseURI: "https://twin.invalid/" } });
+  const ctx = vm.createContext({ window: win, crypto, btoa, TextEncoder, TextDecoder, Response, Blob, CompressionStream, URL, URLSearchParams, setTimeout, Promise, JSON, Math, Date, String, Object, Array, Uint8Array, Uint32Array, DataView, ArrayBuffer, TypeError, encodeURIComponent, decodeURIComponent, document: { baseURI: "https://twin.invalid/" } });
   vm.runInContext(readFileSync(join(root, "site", "twin.js"), "utf8"), ctx, { filename: "site/twin.js" });
   return win.AwsTwin;
 }
@@ -33,7 +33,9 @@ async function twinPacket() {
   }
   const obj = await twin.handle(s3(B.site, "data/vaults.json"), { headers: READ });
   const body = new Uint8Array(await obj.arrayBuffer());
-  return { line, ctx: { site: B.site, logs: B.logs, logKey, object: { size: body.length, type: obj.headers.get("content-type") } } };
+  const fh = await twin.handle("https://firehose.eu-west-2.amazonaws.com/", { method: "POST", headers: { ...READ, "x-amz-target": "Firehose_20150804.DescribeDeliveryStream", "content-type": "application/x-amz-json-1.1" }, body: JSON.stringify({ DeliveryStreamName: "demo-cloudfront-logs" }) });
+  const stream = (await fh.json()).DeliveryStreamDescription;
+  return { line, ctx: { site: B.site, logs: B.logs, logKey, object: { size: body.length, type: obj.headers.get("content-type") }, stream } };
 }
 
 test("a twin log line for /data/vaults.json becomes six steps, in storyboard order", async () => {
@@ -61,11 +63,26 @@ test("the timeline is true to the line's time_taken and only moves forward", asy
 test("what the twin lacks is marked as a gap, not filled in", async () => {
   const { line, ctx } = await twinPacket();
   const gaps = stepsFor(line, ctx).filter((s) => s.gap).map((s) => s.gap);
-  assert.deepEqual(gaps, ["cache hit or miss", "origin access setting", "Firehose stream"]);
+  assert.deepEqual(gaps, ["cache hit or miss", "origin access setting"]);
+  const noStream = stepsFor(line, { ...ctx, stream: null });
+  assert.equal(noStream[4].gap, "Firehose stream");
   const noObj = stepsFor(line, { ...ctx, object: null });
   assert.equal(noObj[2].gap, "object not in the twin");
   assert.ok(asText(noObj).every((t) => typeof t === "string" && t.length > 0));
   assert.match(asText(noObj)[1], /not yet in the twin/);
+});
+
+test("the twin's Firehose stream fills the log steps: name, enricher, buffer, bucket", async () => {
+  const { line, ctx } = await twinPacket();
+  const [, , , , log, batch] = stepsFor(line, ctx);
+  assert.equal(log.fields.stream, "demo-cloudfront-logs");
+  assert.match(log.fields.processor, /:function:demo-log-enricher:\$LATEST$/);
+  assert.match(log.text, /enriched by demo-log-enricher$/);
+  assert.equal(batch.fields.buffer_seconds, 900);
+  assert.equal(batch.fields.compression, "GZIP");
+  assert.equal(batch.gap, undefined);
+  const other = { ...ctx.stream, Destinations: [{ ExtendedS3DestinationDescription: { ...ctx.stream.Destinations[0].ExtendedS3DestinationDescription, BucketARN: "arn:aws:s3:::elsewhere" } }] };
+  assert.equal(stepsFor(line, { ...ctx, stream: other })[5].gap, "stream writes to another bucket");
 });
 
 test("lines that are not CloudFront lines are refused; unknown edges say so", () => {
