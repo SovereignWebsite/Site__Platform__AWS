@@ -12,6 +12,7 @@ Everything here is a reading of files in this repository. No AWS call was made; 
 - [vault-deploy/04-templates-publisher.md](vault-deploy/04-templates-publisher.md): the role that publishes Vault templates (GitHub OIDC, new files only).
 - [vault-deploy/05-killswitch-role.md](vault-deploy/05-killswitch-role.md): the Vault cost kill switch's role (one distribution, one function, never deletes).
 - [vault-deploy/vault-access.yaml](vault-deploy/vault-access.yaml): the access stack (deploy role and Vault boundary); [check_handlers.py](vault-deploy/check_handlers.py) compares it with the resource handlers.
+- [overprivilege-rules-v1.md](overprivilege-rules-v1.md): the first over-privilege rules for Desk, with evidence levels and reads.
 - [ec2-01-answer.md](ec2-01-answer.md): EC2 reads and condition keys for ec2.aws.a's design 01.
 - [review-design-04.md](review-design-04.md): on architect.aws.a's IAM reads design (boundary in the view; v3 and the read boundary).
 - [proposals/P-IAM-001-boundary.md](proposals/P-IAM-001-boundary.md): a permissions boundary on both roles, an IAM-side answer to R-008, with a draft v2.2 template and check_boundary.py.
