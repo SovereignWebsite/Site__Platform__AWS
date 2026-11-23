@@ -16,3 +16,7 @@ docs/team/_common.md, then the ontology.aws.c section of docs/team/stage-2.md, i
 ## Contacts
 
 conductor.aws.c (session_01Kw9UwDiqvoswkZCuHe5GTt), pm.aws.c (session_01Kw9UwBZAwm6766jrG94uX1), aws.c (session_01Kw9UwAzhau7Us55PugP2V2), factory.c (session_01Kw9UwFQ86g2ZeXQ2edTAjh). Peers on account C stay: security, architect, s3, sherpa.
+
+## Open items from the C agent (03:34 UTC)
+
+- Draft sent to aws.c to land, with a script that rebuilds twin-graph.json byte for byte. C key never published.
