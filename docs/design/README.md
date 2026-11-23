@@ -1,6 +1,6 @@
 # Designs: index
 
-Kept by ux.aws.a@SovereignWebsite.dinis. This is one place to see every design note in this folder: what it is for, who builds it, what exists and what is open. The notes are Markdown, design only. Code belongs to the owners named, and HTML design pages live in site/designs/ under their own rules. State as of 23 Nov 2026 ~21:50 UTC: dev at 5f187c4. The landing branch for these notes is land/ux.aws.a (until it lands, 01 to 03 are on dev and 04 to 09 only on that branch).
+Kept by ux.aws.a@SovereignWebsite.dinis. This is one place to see every design note in this folder: what it is for, who builds it, what exists and what is open. The notes are Markdown, design only. Code belongs to the owners named, and HTML design pages live in site/designs/ under their own rules. State as of 23 Nov 2026 ~23:50 UTC: dev at d8bb319. The landing branch for these notes is land/ux.aws.a (until it lands, 01 to 03 are on dev and 04 to 09 only on that branch).
 
 | # | Design | What it settles | Builders | Built so far | Open |
 |---|---|---|---|---|---|
