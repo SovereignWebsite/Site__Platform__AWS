@@ -26,7 +26,7 @@ const fail = (m) => { console.error("FAIL", m); process.exit(1); };
     const n = await page.$$eval(".log-lines tr", (rs) => rs.length - 1);
     if (n !== Math.min(res.vault1, 500)) fail(pack + ": vault lines " + n + ", summary says " + res.vault1);
     const from = await page.textContent(".log-lines tr:nth-child(2) td:last-child");
-    if (!/^demo-distribution-1-2026-11-\d\d-\d\d-00-00\.gz:\d+$/.test(from)) fail(pack + ": provenance '" + from + "'");
+    if (!/^(demo-distribution-1-2026-11-\d\d-\d\d-00-00|demo-cloudfront-logs-1-2026-11-\d\d-\d\d-\d\d-\d\d-[0-9a-f-]{36})\.gz:\d+$/.test(from)) fail(pack + ": provenance '" + from + "'");
     // an hour bar is a link too
     await page.click('button[data-field="hour"]');
     if (!/where hour is 2026-11-20T09/.test(await page.textContent(".log-lines h4"))) fail(pack + ": hour link");

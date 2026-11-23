@@ -20,8 +20,12 @@ try { await get(site("index.html")); fail("the demo site answered before its COR
 await cors();
 
 // data first, before any other call: the same bytes as after many calls (latency has its own generator)
-const logKey = "cloudfront/2026/11/21/10/demo-distribution-1-2026-11-21-10-00-00.gz";
-const first = new Uint8Array(await (await get("https://" + T.buckets.logs + ".s3.eu-west-2.amazonaws.com/" + logKey)).arrayBuffer());
+// (the hour's one file is found by listing its folder: Firehose's names end in a uuid, design 06; a listing draws nothing)
+const logKey = tag(await (await get("https://" + T.buckets.logs + ".s3.eu-west-2.amazonaws.com/?list-type=2&prefix=" + encodeURIComponent("cloudfront/2026/11/21/10/"))).text(), "Key");
+if (!/^cloudfront\/2026\/11\/21\/10\/demo-cloudfront-logs-1-2026-11-21-10-00-00-[0-9a-f-]{36}\.gz$/.test(logKey || "")) fail("the hour's Firehose-named file: " + logKey);
+const firstRes = await get("https://" + T.buckets.logs + ".s3.eu-west-2.amazonaws.com/" + logKey);
+if (firstRes.status !== 200) fail("log file status " + firstRes.status);
+const first = new Uint8Array(await firstRes.arrayBuffer());
 T.reset(); await cors();
 for (let i = 0; i < 5; i++) await get(site("?list-type=2&delimiter=%2F"));
 const again = new Uint8Array(await (await get("https://" + T.buckets.logs + ".s3.eu-west-2.amazonaws.com/" + logKey)).arrayBuffer());
