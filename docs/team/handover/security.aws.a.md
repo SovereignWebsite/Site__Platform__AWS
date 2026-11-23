@@ -1,6 +1,6 @@
 # Hand-over: security.aws.a to the next security.aws.a session
 
-From security.aws.a@SovereignWebsite.dinis (session https://claude.ai/code/session_018yvwtNBPNd9zoeTUyhJ4YY), 23 Nov 2026 ~14:30 UTC, because the context passed 500k (team rule: hand over above 300k). Read this, then docs/team/_common.md, docs/team/security.aws.c.md (the role), CLAUDE.md, and docs/security/risks.md on branch work/security.aws.a (the newest copy; dev has an older one until this branch lands).
+From security.aws.a@SovereignWebsite.dinis (session https://claude.ai/code/session_018yvwtNBPNd9zoeTUyhJ4YY), 23 Nov 2026 ~14:30 UTC, updated ~15:55 UTC for Dinis's restart of the 11 AWS agents (relayed by maestro.a). Read this, then docs/team/_common.md, docs/team/security.aws.c.md (the role), CLAUDE.md, and docs/security/risks.md on branch work/security.aws.a (the newest copy; dev has an older one until this branch lands).
 
 ## Who instructs
 
@@ -23,7 +23,7 @@ Hourly at :28 UTC, created by maestro.a (do not create schedules). Each wake: gi
 
 ## State at hand-over
 
-- dev reviewed to c87dc92 (last-reviewed.txt). Branch work/security.aws.a head: see `git log -1` (risks.md up to date).
+- dev reviewed to c87dc92 (last-reviewed.txt). Every work/*.aws.a branch reviewed to the 15:28 wake (last code commits reviewed: dev.1.aws.a 21d8a08, dev.2.aws.a fb11774, s3.aws.a ee5f074). Branch work/security.aws.a head: see `git log -1` (risks.md up to date).
 - Open risks: R-002 High (Approve is a page button), R-004 Medium, R-005 Medium (closed by P-IAM-001 v2.5 once applied), R-006 Medium, R-007 Low (by design), R-008 High (closed by v2.5 once applied and read back), R-009 High (signer check bypass via "Owner override:" line, no path check), R-010 High (widened 23 Nov by 6ab7233: six non-keeper agents hold paths to code index.html loads), R-011 note, R-013 (c) Low (connect-src *.amazonaws.com), R-001 Critical fixed in template, waiting on the same apply.
 - Closed today on dev: R-014, R-015 (518b114); R-016, R-017, R-018 (c0c0d0b); R-019, R-020 (461d422).
 - P-IAM-001 v2.5 (iam.aws.a, ee7f7b9 on work/iam.aws.a, file sha256 d3051d6eb1894c8b...) cleared on paper, reviewed text in docs/security/reviews/2026-11-23__P-IAM-001-v2.3-as-reviewed.md. Conditions all met except Dinis's console apply; keep the UpdateRole Deny; after apply run one harmless tag change set on the read role with Dinis watching; aws.c retires the two DNS-trust plans in the same release; then get the read-back of both roles and boundaries from iam.aws.a and close R-001, R-005, R-008. Note for Dinis: GetFunctionConfiguration exposes Lambda environment variables to the read role and the page.
@@ -49,6 +49,28 @@ Positions given so far (23 Nov), for the reviews to hold to:
 - DNS: teardown and region moves must delete the DNS record before (or with) the target it points at, so no name is left dangling (subdomain takeover). The record is in the stack, never made by hand.
 - Ephemeral and daily moves: no schedule creates or destroys anything real until Dinis approves the decision page (D5); the guard rails are a maximum lifetime, an allow list of regions, a cost cap and a kill switch, and the scheduler's role can delete only stacks it tagged.
 
+Review status at ~15:55 (details in docs/security/reviews/ and the risks.md log):
+- docs/security/reviews/2026-11-23__vault-deploy-step3-draft1.md: iam.aws.a's step 3 drafts (01, 02-deploy-role.md). Function URL ruling: phase 1 AuthType NONE accepted for v1 on conditions (a) to (e):
+  - (a) a token of 32 or more random bytes, compared in constant time, sent in a header only and never logged: a server condition, still open;
+  - (b) every server route gated, with /health a CloudFront Function: met;
+  - (c) reserved concurrency with a default of 10: met in vault.yaml 0.3.2;
+  - (d) Principal * only for InvokeFunctionUrl with AuthType NONE;
+  - (e) a risk row once code exists.
+  Phase 2 target: AWS_IAM plus OAC.
+- docs/security/reviews/2026-11-23__vault-stack-0.1.0.md: cloudformation.aws.a's vault.yaml. All points closed at 0.3.2 (b35a61d). No objection to the twin.
+- docs/security/reviews/2026-11-23__vault-access-0.1.0.md: iam.aws.a's vault-access.yaml. All points closed at 0.1.4 (CloudFront tag hijack fixed; Route 53 limited to the exact name and ACM's one-label token, with a Deny on deeper names). No objection to the twin.
+- Before any real customer account, both stacks still need:
+  - boto3.aws.a's checks: SourceArn set by CloudFormation; FunctionUrlAuthType on AddPermission and any InvokeFunction requirement for public URLs; RequestTag on CloudFront and ACM creates; the ACM token length; cloudformation.aws.a's handler permissions;
+  - the twin's result on CreateDistributionWithTags;
+  - O1 (whose ECR holds the image; pinned by digest);
+  - O3 (the server reads the token at start-up; in Dinis's batch).
+- Open for Dinis via pm.aws.a: bucket teardown. vaults.aws.a wants Delete; my position is Retain (customer secrets, and the deploy role denies DeleteBucket). D1: the deploy page on its own origin, so /health can be fetched without widening this site's CSP.
+- docs/security/reviews/2026-11-23__ec2-design-01.md: ec2.aws.a's EC2 design 01, sections 4, 6b and 7. All 12 points folded in at ef1df15. Lines for V5 are with conductor.aws.a:
+  - the daily move creates on a schedule;
+  - a low vCPU quota;
+  - a two-level kill switch.
+  Next: review the EC2 twin patch and, when V4 allows, the EC2 variant of the Vault stack, as code.
+
 ## Agents (account A, send_message)
 
-conductor.aws.a session_018yvwtPiszBTMHKVD4AuDwn; pm.aws.a session_018yvwtLfieUut6hSirZ6W9B; iam.aws.a session_018yvwtLi5HNUo32ot6ApGm8; architect.aws.a session_018yvwtPuQzTBRoKGD45TYFV; data.aws.a session_018yvwtNsU9Ax9WMn2h6EhHU; dev.1.aws.a session_018yvwtLV1iZjUCMEKz1PZ51; dev.2.aws.a session_018yvwtN79NSkFnwbV7UzFuc; s3.aws.a session_018yvwtQbTmpHQ839siWGBQP; lambda.aws.a session_018yvwtLeVUPVXDaPda9ugLD; cloudformation.aws.a session_018yvwtPgweggdc6AykBpQay; maestro.a session_018yvwtLiem1AqdA1YkKse4h. Titles are now a.<role>.aws.
+conductor.aws.a session_018yvwtPiszBTMHKVD4AuDwn; pm.aws.a session_018yvwtLfieUut6hSirZ6W9B; iam.aws.a session_018yvwtLi5HNUo32ot6ApGm8; architect.aws.a session_018yvwtPuQzTBRoKGD45TYFV; data.aws.a session_018yvwtNsU9Ax9WMn2h6EhHU; dev.1.aws.a session_018yvwtLV1iZjUCMEKz1PZ51; dev.2.aws.a session_018yvwtN79NSkFnwbV7UzFuc; s3.aws.a session_018yvwtQbTmpHQ839siWGBQP; lambda.aws.a session_018yvwtLeVUPVXDaPda9ugLD; cloudformation.aws.a session_018yvwtPgweggdc6AykBpQay; maestro.a session_018yvwtLiem1AqdA1YkKse4h; ec2.aws.a session_018yvwtNc3CDv5wXAXwfPgXy. (Sessions are being restarted fresh; ask maestro.a for the new ids.) Titles are now a.<role>.aws.
