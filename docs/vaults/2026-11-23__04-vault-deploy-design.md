@@ -35,7 +35,7 @@ customer's account, chosen region (stack sws-vault-<id>)            us-east-1 (s
 
 ## 2. What the customer's account holds
 
-**Names:** every resource is named `sws-vault-<id>-<part>` (for example `sws-vault-<id>-data` for the bucket, `sws-vault-<id>-api` for the function) and tagged with the Vault id, matching iam.aws.a's step 3 draft (docs/iam/vault-deploy/01-least-privilege.md, e145f1e on work/iam.aws.a): its deploy role is scoped to those names and tags. The stacks are `sws-vault-<id>` and `sws-vault-<id>-edge`. `<id>` matches `^[a-z0-9]{4,16}$` (design 05's check) and is chosen by the page, not by the customer, so two Vaults in one account never collide; the longest bucket name, `sws-vault-<id>-data`, is then 31 characters, inside S3's 3 to 63 lowercase letters, digits and hyphens.
+**Names:** every resource is named `sws-vault-<id>-<part>` (for example `sws-vault-<id>-data` for the bucket, `sws-vault-<id>-api` for the function) and tagged with the Vault id, matching iam.aws.a's step 3 draft (docs/iam/vault-deploy/01-least-privilege.md, e145f1e on work/iam.aws.a): its deploy role is scoped to those names and tags. The stacks are `sws-vault-<id>` and `sws-vault-<id>-edge`. `<id>` is 12 lowercase hex characters, `^[0-9a-f]{12}$`, as security.aws.a asked and the template's `VaultId` parameter enforces (work/cloudformation.aws.a); chosen by the page, not by the customer, so two Vaults in one account never collide. The bucket name `sws-vault-<id>-data` is then 27 characters, inside S3's naming rules.
 
 **One bucket.** Append lanes are not a separate store: sgit.ai puts them at `bare/append/{token}/` inside the vault's own `bare/` tree, outside the commit tree but in the same storage, so `SEND__S3_BUCKET` is the only bucket.
 
