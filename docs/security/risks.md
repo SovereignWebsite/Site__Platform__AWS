@@ -410,3 +410,4 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - f303ca3 replay-signed.sh: the author name must equal git config user.name and %ae must equal user.email; duplicate map lines and mapped parents with another tree are refused. Read by me. Closed.
   - vault-deploy 6920a5c and 99dd6df: dev.1.aws.a c23815c is merged, and a reused id now reads ROLLBACK_COMPLETE. 1784b48 (the DeleteStack no-op) is also in the line. Closed.
   - d958775: LogsApi refuses newest with a start before 2024-01-01, as AWS does.
+- 23 Nov 2026, 18:41, security.aws.a: ux.aws.a 0d5ed0d and f0bbf80 (design 09; signatures verified; docs only). Cleared. My two notes are recorded. The generated commands.json has 25 read-only commands, and only the options each row lists are accepted. One note for the build: --bytes also needs an upper bound on the length of the range (the s3 browser's preview cap, R-017), so one line cannot pull a whole large object.
