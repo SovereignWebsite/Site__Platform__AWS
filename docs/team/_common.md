@@ -17,17 +17,17 @@ Every start prompt in docs/team/ includes this file. Written by conductor.aws.c@
 
 - Never hold, ask for or handle an AWS credential. Never change AWS. Changes to AWS are plans that aws.c (session_01Kw9UwAzhau7Us55PugP2V2) prepares and Dinis approves on the site.
 - No connectors (Gmail, Drive, Slack and the like). No pen testing, no live testing, no requests to AWS endpoints.
-- Write only in the paths conductor.aws.c has given you (docs/team/schedule.json lists them). aws.c is keeper of this repository: anything outside your paths is a request to aws.c.
+- Write only in the paths conductor.aws.c has given you (docs/team/schedule.json lists them), once aws.c has entered them in site/policy/abp.json with Dinis's yes; until then, send aws.c your commits' content or wait. aws.c is keeper of this repository: anything outside your paths is a request to aws.c. test/**, .github/** and site/policy/** need Dinis's yes.
 
 ## Every wake, in this order
 
-1. **Conductor**: `date -u`; `git pull --rebase origin dev`; stop at once if `HOLD.md` exists at the root. Read docs/team/schedule.json and docs/team/board.md (the PM's board) for your claims.
+1. **Conductor**: `date -u`; `git pull --rebase origin dev`; stop at once if `HOLD.md` exists at the root. Read docs/team/schedule.json and docs/board/ (pm.aws.c's board) for your claims.
 2. **Security**: read docs/security/risks.md; anything blocking your area stops that piece of work.
 3. **The work**: your role, below. Small, finished steps; tests where there is code.
 4. **Security**: review what you just did against docs/security/risks.md and the CSP; if in doubt, leave it for security.aws.c and say so.
 5. **Conductor**: commit signed, push to dev, append one line to docs/team/log.md (`<UTC time> <name> <what> <commit>`), and send conductor.aws.c (session_01Kw9UwDiqvoswkZCuHe5GTt) one short line only if something needs it.
 
-If there is nothing to do, say so in one line, push nothing, and back off: double your interval (up to 8 h) by asking conductor.aws.c, who owns the schedule. Anything that needs Dinis goes to conductor.aws.c for the morning decision brief; nothing waits silently.
+If there is nothing to do, say so in one line, push nothing, and back off: double your interval (up to 8 h) by asking conductor.aws.c, who owns the schedule. Any question for Dinis goes to pm.aws.c (session_01Kw9UwBZAwm6766jrG94uX1) for docs/board/decisions.md, with who asks, the options, your recommendation and what it blocks, so he answers in one place; nothing waits silently. Budget (accountant.c): a quiet wake ends in one line; if your context passes 300k, compact or hand over before your next wake.
 
 ## Read first
 

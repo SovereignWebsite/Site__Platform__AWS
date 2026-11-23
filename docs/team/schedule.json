@@ -2,7 +2,7 @@
   "programme": "AWS Platform (aws.c), account C",
   "owner": "conductor.aws.c@SovereignWebsite.dinis",
   "authority": "Dinis Cruz, 'Lean start', maestro.c's session, 23 Nov 2026 02:39 UTC",
-  "updated": "2026-11-23T03:00Z",
+  "updated": "2026-11-23T02:50Z",
   "offsets_in_use_elsewhere_on_account_c": {
     ":03": "router.a (account A)",
     ":08": "router.c",
@@ -10,16 +10,17 @@
     ":18": "maestro",
     ":23": "maestro",
     ":33": "maestro.c",
-    ":43": "design.c",
-    ":48": "maestro"
+    ":43": "design.c hourly round",
+    ":48": "maestro",
+    "studio.c": "4-hourly update run, minute to confirm"
   },
   "stage": 1,
   "agents": [
     {
       "name": "conductor.aws.c@SovereignWebsite.dinis",
       "session": "session_01Kw9UwDiqvoswkZCuHe5GTt",
-      "cron": "58 */2 * * *",
-      "every": "2 h, even hours, :58",
+      "cron": "58 2-23/4 * * *",
+      "every": "4 h, :58 at 02,06,10,14,18,22",
       "paths": [
         "docs/team/**"
       ]
@@ -27,17 +28,17 @@
     {
       "name": "pm.aws.c@SovereignWebsite.dinis",
       "session": "session_01Kw9UwBZAwm6766jrG94uX1",
-      "cron": "proposed 58 1-23/2 * * * (pm.aws.c sets its own)",
-      "every": "2 h, odd hours, :58 (proposed)",
+      "cron": "15 0-23/6 * * *",
+      "every": "6 h, :15 (proposed; pm.aws.c proposes its own to Dinis)",
       "paths": [
-        "docs/team/board.md"
+        "docs/board/**"
       ]
     },
     {
       "name": "security.aws.c@SovereignWebsite.dinis",
       "session": null,
-      "cron": "28 * * * *",
-      "every": "1 h, :28",
+      "cron": "28 0-23/2 * * *",
+      "every": "2 h for the first 24 h (accountant.c), :28 even hours; hourly once it has findings to chase and the budget allows",
       "paths": [
         "docs/security/**"
       ],
@@ -49,8 +50,8 @@
     {
       "name": "architect.aws.c@SovereignWebsite.dinis",
       "session": null,
-      "cron": "38 0-23/2 * * *",
-      "every": "2 h, even hours, :38",
+      "cron": "38 0-23/3 * * *",
+      "every": "3 h, :38 at 00,03,06...",
       "paths": [
         "docs/architecture/**",
         "site/api/** (pending aws.c)",
@@ -63,8 +64,8 @@
     {
       "name": "s3.aws.c@SovereignWebsite.dinis",
       "session": null,
-      "cron": "53 1-23/2 * * *",
-      "every": "2 h, odd hours, :53",
+      "cron": "53 1-23/3 * * *",
+      "every": "3 h, :53 at 01,04,07...",
       "paths": [
         "docs/s3/**",
         "site/s3*.js (pending aws.c)"
@@ -83,5 +84,24 @@
     "video with the studio",
     "journalist and researcher"
   ],
-  "back_off": "an agent with nothing to do asks conductor.aws.c to double its interval, up to 8 h"
+  "back_off": "an agent with nothing to do asks conductor.aws.c to double its interval, up to 8 h",
+  "budget": {
+    "source": "accountant.c proposal, 23 Nov 02:50 UTC (material; Dinis and maestro.c set budgets)",
+    "stage_1_cap_first_24h": "40 wakes/day",
+    "planned": "38 wakes/day",
+    "per_wake_ceiling_usd_equiv": {
+      "security": 1.0,
+      "architect": 1.5,
+      "s3": 0.8,
+      "pm": 0.5,
+      "conductor": 0.8
+    },
+    "share": "programme under 35% of account C's daily spend",
+    "amber": "halve every cadence",
+    "red": "only conductor.aws.c and security.aws.c remain",
+    "rules": [
+      "over 300k context: compact or hand over before the next wake",
+      "a wake with nothing new ends in one line"
+    ]
+  }
 }

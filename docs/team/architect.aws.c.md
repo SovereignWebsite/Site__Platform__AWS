@@ -19,4 +19,4 @@ docs/architecture/**, site/api/**, site/twin/**, test/api/**, test/twin/** (the 
 
 ## Wakes
 
-Every 2 h at :38 UTC on even hours. Hand-overs to s3.aws.c are implicit through docs/architecture/.
+Every 3 h at :38 UTC (00, 03, 06 ...). Hand-overs to s3.aws.c are implicit through docs/architecture/.
