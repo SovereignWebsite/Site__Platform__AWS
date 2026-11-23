@@ -82,3 +82,14 @@ The checks pass: cfn-lint on all templates, plus `test_vault_template.py`, which
 - **Budgets:** an action can only apply an IAM policy or SCP or target EC2 or RDS instances, so none can disable a distribution. The data updates up to three times a day. Budgets is therefore rejected as the flood signal, and CloudWatch `Requests` is the fast one.
 - **Still CHECK:** the alarm's metric dimensions (`Region=Global`), asked of boto3.aws.a.
 - **An automatic disable is a real AWS change in the customer's account.** It is a plan for Dinis and is wired only after ec2.aws.a's design 03.
+
+## vault-edge 0.5.2 (20:40 UTC): security.aws.a on cfae61e
+
+- **New `CostAlarmTopicPolicy`:**
+  - `sns:Publish` is allowed only for `cloudwatch.amazonaws.com` with `aws:SourceArn` set to this alarm's ARN;
+  - it is denied to anyone else, so "cost" mail cannot be spoofed from inside the account;
+  - the alarm's ARN is built from its name, so there is no circular dependency.
+- **`AlertEmail`** is typed by the customer in their own console. The deploy page never asks for it, prefills it or stores it; the parameter's description now says so.
+- **`AlarmActions`** is only the cost topic (iam.aws.a's condition in vault-access 0.2.9), and the test checks it.
+- **For iam.aws.a:** the topic policy needs `sns:SetTopicAttributes` on `sws-vault-<id>-cost`, plus whatever the `AWS::SNS::TopicPolicy` handler lists.
+- **For security.aws.a:** cfn-lint and the test run here on every change. A run is in each note, and the test file runs with `pip install cfn-lint`.

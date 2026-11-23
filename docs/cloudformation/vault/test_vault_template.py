@@ -133,6 +133,9 @@ ER = e["Resources"]
 check(ER["CostAlarm"]["Condition"] == "CostAlarmOn" and e["Parameters"]["RequestAlarmThreshold"]["Default"] == 0, "cost alarm optional")
 check(ER["CostAlarm"]["Properties"]["AlarmName"] == {"Fn::Sub": "sws-vault-${VaultId}-requests"}, "cost alarm name (iam.aws.a scope)")
 check(ER["CostAlarmTopic"]["Properties"]["TopicName"] == {"Fn::Sub": "sws-vault-${VaultId}-cost"}, "cost topic name")
+tp = ER["CostAlarmTopicPolicy"]["Properties"]["PolicyDocument"]["Statement"]
+check({st["Sid"] for st in tp} == {"OnlyThisAlarmPublishes", "NobodyElsePublishes"}, "cost topic policy")
+check(ER["CostAlarm"]["Properties"]["AlarmActions"] == {"Fn::If": ["CostAlarmEmail", [{"Ref": "CostAlarmTopic"}], {"Ref": "AWS::NoValue"}]}, "alarm actions only the cost topic (iam.aws.a)")
 
 if fails:
     print("FAIL\n  " + "\n  ".join(fails)); sys.exit(1)

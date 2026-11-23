@@ -6,11 +6,11 @@ Description: >-
   (2) An optional cost alarm on the distribution's request count (R-026; CloudFront's metrics are in us-east-1),
   which emails the customer; the recommended guard. (3) An optional WAF web ACL with a per-address rate limit (off by
   default: billing.aws.a finds it adds cost rather than capping it). Its outputs go into the Vault stack's CertificateArn and WebAclArn.
-  DRAFT 0.5.1 by cloudformation.aws.a, 23 Nov 2026.
+  DRAFT 0.5.2 by cloudformation.aws.a, 23 Nov 2026.
 
 Metadata:
   SovereignWebsite:
-    TemplateVersion: 0.5.1-draft
+    TemplateVersion: 0.5.2-draft
 
 Parameters:
   VaultId:
@@ -66,7 +66,9 @@ Parameters:
     MaxLength: 254
     Default: ""
     AllowedPattern: "^$|^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
-    Description: Where the cost alarm emails. AWS sends a confirmation email first. Empty means the alarm only shows in the console.
+    Description: >-
+      Where the cost alarm emails. Typed by the customer in their own console: the deploy page never asks for it,
+      prefills it or stores it (security.aws.a). AWS sends a confirmation email first. Empty means console only.
 
 Conditions:
   HasDomain: !Not [!Equals [!Ref DomainName, ""]]
@@ -108,6 +110,31 @@ Resources:
         - { Protocol: email, Endpoint: !Ref AlertEmail }
       Tags:
         - { Key: sws-vault, Value: !Ref VaultId }
+
+  # Only this alarm may publish to the topic, so "cost" mail cannot be spoofed from inside the account (security.aws.a).
+  # The alarm's ARN is built from its name, not referenced, so there is no circular dependency.
+  CostAlarmTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Condition: CostAlarmEmail
+    Properties:
+      Topics: [!Ref CostAlarmTopic]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: OnlyThisAlarmPublishes
+            Effect: Allow
+            Principal: { Service: cloudwatch.amazonaws.com }
+            Action: sns:Publish
+            Resource: !Ref CostAlarmTopic
+            Condition:
+              ArnEquals: { "aws:SourceArn": !Sub "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:sws-vault-${VaultId}-requests" }
+          - Sid: NobodyElsePublishes
+            Effect: Deny
+            Principal: "*"
+            Action: sns:Publish
+            Resource: !Ref CostAlarmTopic
+            Condition:
+              ArnNotEquals: { "aws:SourceArn": !Sub "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:sws-vault-${VaultId}-requests" }
 
   CostAlarm:
     Type: AWS::CloudWatch::Alarm
