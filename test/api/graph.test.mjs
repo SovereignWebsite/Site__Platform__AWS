@@ -148,11 +148,8 @@ function slice(graph) {
   const ends = new Set(es.flatMap((e) => [e.from, e.to]));
   return { edges: new Set(es.map((e) => [e.from, e.rel, e.to, e.evidence, e.trust].join(" | "))), nodes: new Set(graph.nodes.filter((n) => ends.has(n.id)).map((n) => [n.id, n.type, n.altitude, n.trust].join(" | "))) };
 }
-// Until ontology.aws.a's builder follows design 03's Privacy rule (actor-net), its graphs still name actor-ip nodes:
-// actors are set aside on both sides and the output says so.
-const privacyPending = golden.nodes.some((n) => n.id.startsWith("urn:sws:actor-ip:"));
-const noActors = (g) => privacyPending ? { nodes: g.nodes.filter((n) => n.type !== "actor"), edges: g.edges.filter((e) => !/^urn:sws:actor-(ip|net):/.test(e.from)) } : g;
-const gs = slice(noActors(golden)), ms = slice(noActors(mine));
+ok(!golden.nodes.some((n) => n.id.startsWith("urn:sws:actor-ip:")), "the golden graph names networks, not addresses");
+const gs = slice(golden), ms = slice(mine);
 const missing = [...gs.edges].filter((x) => !ms.edges.has(x)), surplus = [...ms.edges].filter((x) => !gs.edges.has(x));
 ok(!missing.length, "edges in the golden graph the adapters should give:\n  " + missing.join("\n  "));
 ok(!surplus.length, "edges the adapters give that the golden graph lacks:\n  " + surplus.join("\n  "));
@@ -160,7 +157,7 @@ const nMissing = [...gs.nodes].filter((x) => !ms.nodes.has(x)), nSurplus = [...m
 ok(!nMissing.length && !nSurplus.length, "nodes (id, type, altitude) differ:\n  missing " + nMissing.join("\n  missing ") + "\n  surplus " + nSurplus.join("\n  surplus "));
 // Every node the adapters made outright (not a dangling end) is in the golden graph with the same type, altitude,
 // trust and backend.
-const offGolden = mine.nodes.filter((n) => !n.dangling && !(privacyPending && n.type === "actor") && !(gNode.has(n.id) && gNode.get(n.id).type === n.type && gNode.get(n.id).altitude === n.altitude && gNode.get(n.id).trust === n.trust && gNode.get(n.id).backend === n.backend));
+const offGolden = mine.nodes.filter((n) => !n.dangling && !(gNode.has(n.id) && gNode.get(n.id).type === n.type && gNode.get(n.id).altitude === n.altitude && gNode.get(n.id).trust === n.trust && gNode.get(n.id).backend === n.backend));
 ok(!offGolden.length, "every built node matches the golden graph: " + offGolden.map((n) => n.id + " " + n.type).join(", "));
 
 // ---- refinement 6: the caller's address acts on what the events touched ----
@@ -291,7 +288,7 @@ ok(!/\beval\s*\(|new Function|innerHTML|document\.|localStorage|fetch\(/.test(re
   ok(!pj.nodes.some((n) => n.trust === "curated"), "no curated nodes without curated edges");
 }
 
-const G = noActors(golden), uncovered = G.edges.length - gs.edges.size - G.edges.filter((e) => e.evidence === "curated" || e.evidence === "comment").length;
+const G = golden, uncovered = G.edges.length - gs.edges.size - G.edges.filter((e) => e.evidence === "curated" || e.evidence === "comment").length;
 if (failures) { console.error(failures + " failed, " + passed + " passed"); process.exit(1); }
 if (ctx.AwsTwin.pack() !== PACK) { console.error("FAIL the twin loaded pack " + ctx.AwsTwin.pack() + ", not " + PACK); process.exit(1); }
-console.log("OK (graph, pack " + PACK + ": " + passed + " checks; " + mine.nodes.length + " nodes, " + mine.edges.length + " edges; golden slice " + gs.nodes.size + " nodes and " + gs.edges.size + " edges equal; " + uncovered + " golden edges wait for the CloudFormation adapter and serves_from" + (privacyPending ? "; actors set aside until ontology.aws.a's builder uses networks" : "") + ")");
+console.log("OK (graph, pack " + PACK + ": " + passed + " checks; " + mine.nodes.length + " nodes, " + mine.edges.length + " edges; golden slice " + gs.nodes.size + " nodes and " + gs.edges.size + " edges equal; " + uncovered + " golden edges wait for the CloudFormation adapter and serves_from" + ")");
