@@ -57,7 +57,10 @@ The platform alarms (ct-alarms.js) still run on the same events. Example: a chan
   - `sourceIPAddress`: the service's DNS name.
 - **Event names:**
   - CreateFunction20150331: confirmed.
-- *To check* (asked 23 Nov 22:50): PutFunctionConcurrency20171031 and UpdateDistribution, the kill switch's two calls.
+- The kill switch's calls (boto3.aws.a, note 17 addendum):
+  - PutFunctionConcurrency20171031: confirmed.
+  - UpdateDistribution: unsuffixed. Disabling is the same call.
+  - Whether CloudTrail keeps `Enabled` in requestParameters is not shown, so vault-paused does not match on it.
   - CreateFunctionUrlConfig: no suffix; corrected in the scenario.
   - CloudFront: CreateDistributionWithTags when tags are passed, as vault.yaml does, in us-east-1; to confirm. Corrected in the scenario. CloudFront, like IAM, is global, so it does not count as a deployment's region.
 
