@@ -1,0 +1,126 @@
+# Ontology 01: the resource graph, first draft over the twin
+
+Written by ontology.aws.c@SovereignWebsite.dinis, 23 November 2026. Status: **draft**, for architect.aws.c and the area agents to challenge, and for the UIs to read. Pipeline P2 ("a gigantic graph that connects the whole lot"); memo sections 9 (everything hyperlinked), 21 (altitudes) and 22 (data you can follow). Built only from the twin (site/twin.js at dev 4433914) and the hub's own template (site/cloudformation/bootstrap.yaml). No AWS was called.
+
+The graph itself is in [twin-graph.json](twin-graph.json): every node and every edge of the twin's synthetic account 111122223333, each edge with the evidence it rests on.
+
+## What a user gets from this
+
+Open any asset and see everything known to connect to it, and how we know. For the twin's CloudFront-logs bucket that reads:
+
+> **111122223333--demo-cloudfront-logs--eu-west-2** (S3 bucket, eu-west-2)
+> - receives logs from **the Firehose delivery stream** for **demo-distribution-1** (inferred: object names and a code comment; the twin has no Firehose API yet)
+> - is named as the log destination in **config/site.yaml** in the demo site bucket (read from the file)
+> - holds 9 log files, 20 to 22 Nov, 09:00 to 11:00, 225 requests from 203.0.113.0/24
+> - the log lines name paths under **vault-demo-001** and **vault-demo-002** (read from the log lines)
+> - made by: unknown (no stack in the twin claims it); costs: not yet broken down
+
+That is the test for every view built on this ontology: a first-time user can see what an asset is, what it touches, and which of those links are seen, read or guessed.
+
+## 1. Public ontologies we build on
+
+We invent as little as possible; Dinis: "a lot of these ontology and taxonomies are public stuff ... We just connected the dots."
+
+| Need | Public source we reuse | How |
+|---|---|---|
+| Resource type names | AWS CloudFormation resource type identifiers (`AWS::S3::Bucket`, `AWS::IAM::Role`, `AWS::Lambda::Function` ...) and the Cloud Control resource schemas AWS publishes for them | The `type` of every node is the CloudFormation type name, so a node maps one-to-one to a template resource and to Cloud Control `GetResource`, which the twin already answers |
+| Identity of a node | Amazon Resource Names (ARNs) | The node `id` is the ARN where AWS defines one; otherwise a `twin:` URI marked as ours |
+| "Made by", "derived from", "written by" | W3C PROV-O (`prov:wasGeneratedBy`, `prov:wasDerivedFrom`, `prov:wasAttributedTo`, `prov:used`) | Relations of provenance carry the PROV-O term beside ours, so the graph exports to RDF without a mapping table |
+| Activity in the logs | OCSF (Open Cybersecurity Schema Framework), its API Activity and HTTP Activity classes | A CloudTrail record and a CloudFront log line become event nodes whose fields follow OCSF names where they exist (actor, api.operation, src_endpoint.ip, http_request.url.path) |
+| Plain metadata | Dublin Core terms (`dcterms:created`, `dcterms:modified`, `dcterms:format`) | Object dates and content types |
+
+Not yet checked line by line against each standard's current version: the terms above are named from the standards as published; boto3.aws.c is asked to check the AWS ones against AWS's documentation.
+
+## 2. Types (the taxonomy)
+
+The twelve types named for this role, plus the few the twin forces on us. Grouped by what a user would call them.
+
+| Group | Type | CloudFormation type | In the twin today |
+|---|---|---|---|
+| Where | account | (none; an AWS account) | 111122223333 |
+| Where | region | (none) | eu-west-2, eu-west-1, us-east-1 |
+| Storage | bucket | `AWS::S3::Bucket` | 4 |
+| Storage | object | (none; S3 object) | 15 |
+| Delivery | distribution | `AWS::CloudFront::Distribution` | 1, inferred |
+| Delivery | stream | `AWS::KinesisFirehose::DeliveryStream` | 1, inferred, unnamed |
+| Delivery | record | `AWS::Route53::RecordSet` | 0 |
+| Compute | function | `AWS::Lambda::Function` | 1, inferred from its dependency zip |
+| Control | stack | `AWS::CloudFormation::Stack` | 1 (sws-aws-platform) |
+| Identity | role | `AWS::IAM::Role` | 3, plus 1 referenced that does not exist |
+| Identity | policy | `AWS::IAM::ManagedPolicy` (and inline policies) | 2 AWS managed, attached to the read role |
+| Identity | identity provider | `AWS::IAM::OIDCProvider` for GitHub Actions; Google is trusted directly as a web identity provider, with no resource | 2 (Google, GitHub Actions) |
+| Watch | trail | `AWS::CloudTrail::Trail` | 1, inferred from its bucket |
+| Watch | alarm | `AWS::CloudWatch::Alarm` | 0 |
+| Activity | event | (none; a CloudTrail record or a log line) | 2 CloudTrail records, 225 log lines |
+| Business | vault | (none; ours) | 2 |
+| Business | site | (none; ours) | 1 (the demo site) |
+
+`record`, `alarm` and Route 53 zones have no twin data yet: listed so the schema is ready, not drawn.
+
+## 3. Relations
+
+Each relation has a direction, a reading in plain English both ways (so the UI can show it from either end), and a PROV-O term where one fits.
+
+| Relation | From, to | Reads forward / backward | PROV-O |
+|---|---|---|---|
+| `in` | region to account, resource to region | is in / contains | |
+| `holds` | bucket to object | holds / is held by | |
+| `made_by` | resource to stack | was made by / made | `prov:wasGeneratedBy` |
+| `writes_to` | stream to bucket | writes to / receives from | |
+| `logs_to` | distribution to stream, trail to bucket | sends its logs to / receives logs from | |
+| `serves_from` | distribution to bucket | serves from / is the origin of | `prov:used` |
+| `packages` | object (zip) to function | is the code of / runs code from | `prov:wasDerivedFrom` (backward) |
+| `trusts` | role to identity provider | trusts / is trusted by | |
+| `allows_subject` | role to external principal | may be assumed by / may assume | |
+| `has_policy` | role to policy | has / is attached to | |
+| `acted_as` | event to role | was done as / did | `prov:wasAttributedTo` |
+| `acted_on` | event to resource or object | acted on / was acted on by | `prov:used` |
+| `records` | object (log file) to event | records / is recorded in | |
+| `refers_to` | object to anything | names / is named in | |
+| `part_of` | resource to site, vault to site | is part of / is made of | |
+
+## 4. Evidence: how we know each link
+
+A user must see which links are seen and which are guessed; AWS mixes the two silently. Every edge carries one of:
+
+| Evidence | Meaning | Example in the twin |
+|---|---|---|
+| `api` | An AWS API (or the twin answering as one) returned it | `GetRole` returns the DNS role's trust to GitHub's OIDC provider |
+| `template` | A CloudFormation template declares it | bootstrap.yaml makes both platform roles |
+| `content` | Read from inside a file or record | site.yaml names the logs bucket; a CloudTrail record names the role it ran as |
+| `naming` | Inferred from a name or key pattern | `demo-distribution-1` from the log file names |
+| `comment` | Only a code comment says so | "CloudFront logs delivered by Firehose" in twin.js |
+
+`naming` and `comment` edges are drawn dashed, and every one is a question for the twin's engine (design 02 onward): give the twin the API, and the edge becomes `api`.
+
+## 5. Altitudes
+
+Memo section 21: atoms at the bottom, business functions at the top, a graph per altitude, connected. Proposed mapping, using the memo's own words:
+
+| Altitude | Memo's word | Nodes | Twin example |
+|---|---|---|---|
+| A0 | atoms | fields and values | `c_ip 203.0.113.7`, a role ARN, a key |
+| A1 | cells | events and objects | one log line, one CloudTrail record, `data/vaults.json` |
+| A2 | molecules | resources | a bucket, a role, a stack |
+| A3 | organs | systems of resources | the demo site: distribution, site bucket, stream, logs bucket |
+| A4 | people | actors | a visitor, the read role, a GitHub workflow |
+| A5 | civilisation | business functions | "a visitor reads a vault's files", "the Factory changes DNS" |
+
+Each node lives at one altitude; `part_of` and `records` are the edges that cross altitudes, so a click on a business function walks down to the log lines that prove it, and a click on an IP walks up to what it was doing (memo section 22, "link mode").
+
+## 6. Found as a by-product
+
+Mapping the twin already shows two things worth a look, the kind of finding memo section 9 asks for:
+
+1. **A dangling reference.** The twin's CloudTrail record of `UpdateAssumeRolePolicy` names role `demo-dns-role`, but the only DNS role in the twin's IAM is `sovereignwebsite-factory-dns`. In a real account this would mean the role was renamed or deleted; in the twin it is probably a seed inconsistency. For aws.c to decide which (twin.js, the CloudTrail seed).
+2. **Unowned resources.** No stack in the twin claims any of the four buckets, the stream, the distribution or the function. The graph shows them as "made by: unknown", which is the untidy-account view Dinis asked for; cloudformation.aws.c may want the twin to seed a stack for the demo site.
+
+## 7. Gaps in the twin (asks for the twin's engine)
+
+For the graph to rest on `api` evidence, the twin needs read APIs it does not have yet: CloudFront (`GetDistribution`, for the origin and logging), Firehose (`DescribeDeliveryStream`, for the destination), Lambda (`GetFunction`, for the code location), CloudTrail (`DescribeTrails`), IAM `ListAttachedRolePolicies` and `ListRoles`, Route 53 zones and records, CloudWatch alarms. Sent to architect.aws.c as input for design 02, not built here.
+
+## 8. Next
+
+- architect.aws.c: does the node and edge shape in twin-graph.json fit the API layer (site/api/)? A schema file (JSON Schema) follows once the shape is agreed.
+- The UIs: the "connected to" panel above is the first view; one per node type, five UIs as for every view.
+- Me, next wake: a generator that builds twin-graph.json from the twin itself, so the graph never drifts from the data, and the per-altitude views as a storyboard.

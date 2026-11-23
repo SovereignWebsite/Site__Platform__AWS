@@ -15,7 +15,7 @@ async function check(file) {
 const p = await check("plain.zip");
 const names = p.entries.map((e) => e.name);
 for (const n of ["folder/", "folder/data.json", "stored.txt", "naïve-ünïcode.txt", "big.txt"]) if (!names.includes(n)) fail("missing " + n + " in " + names);
-const listed = p.stats(); if (listed.reqs > 2 || listed.bytes > 70000) fail("listing read too much " + JSON.stringify(listed));
+const listed = p.stats(); if (listed.reqs > 1 || listed.bytes > 70000) fail("listing read too much " + JSON.stringify(listed));
 const dec = (u) => new TextDecoder().decode(u);
 const get = async (z, n) => dec(await ctx.Zip.read(z.fetchRange, z.entries.find((e) => e.name === n)));
 if (JSON.parse(await get(p, "folder/data.json")).b[1] !== 2) fail("deflate");

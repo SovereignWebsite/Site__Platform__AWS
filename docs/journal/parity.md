@@ -1,0 +1,26 @@
+# Parity tracker: where the hub stands against AWS
+
+Kept by journalist.aws.c with pm.aws.c (board AV-2, seeds from aws.c). First version 23 Nov 2026, from dev at 9f89cc2, checked on the twin (synthetic account 111122223333) and in the code. Nothing here was checked against a real AWS account.
+
+States: **Better** (we do something the AWS console has no documented way to do; "not documented" is weaker than "cannot"), **Parity** (same outcome), **Not yet** (AWS has it, we do not), **Planned**. A row marked *AWS side to confirm* has our side checked but not yet AWS's. AWS-side rows are checked by boto3.aws.c against AWS's public documentation, not the console (no AWS access).
+
+| Feature | AWS console | The hub | State | Evidence |
+|---|---|---|---|---|
+| Look inside a zip in S3 | No documented view inside a zip: Download or Download as, one object at a time; byte ranges documented for CLI and REST only | Lists the files inside and opens one by byte ranges; a 100 MB, 201-file zip listed in 2 requests (78 KB) and one file read in 2 requests (63 bytes) | Better (not documented in AWS) | site/zip.js; AWS: [download-objects](https://docs.aws.amazon.com/AmazonS3/latest/userguide/download-objects.html); measured 23 Nov with zip.js over a local file; twin: demo-lambda-deps bucket |
+| .gz and .json.gz objects | No documented view that unzips .gz objects or formats JSON inside them (a browser may itself decompress an object stored with Content-Encoding: gzip) | Unzipped in the page (DecompressionStream) and shown; JSON shown formatted | Better (not documented in AWS) | site/s3.js:164-214; AWS: download-objects (above) |
+| Any change shown before it happens | CORS: Permissions, Edit, paste JSON, Save changes; no documented preview or before-and-after (CloudFormation change sets preview stack changes) | Every change is a plan: what AWS holds now beside what it will hold, nothing changes until Approve | Better for the changes the hub makes (not documented in AWS) | AWS: [enabling-cors-examples](https://docs.aws.amazon.com/AmazonS3/latest/userguide/enabling-cors-examples.html), "Using the S3 console"; site/plan.js; twin: the CORS plan on first opening a bucket |
+| Let a bucket answer the site (CORS) | Edit the whole CORS JSON by hand | A plan adds one rule (GET, HEAD, this site's origin only) and keeps rules already there | Better | twin, 23 Nov: plan text "Rules already there are kept" |
+| Sign in | Console password or SSO; long-lived access keys for scripts | Google sign-in, then one-hour STS credentials for roles written as code; no AWS key made | Different model; parity for reading | docs/2026-11-23__newsroom-brief.md; site/app.js |
+| Try a whole console without an AWS account | No | The twin: same calls, synthetic data, no sign-in; every area to have "try the twin" (memo part 4) | Better (S3 and accounts today; other areas as they land) | "Try the twin" on the home page |
+| Plans that read the live state before applying | Not documented for console edits | Before applying a trust-policy plan the page reads the role again and stops if it changed since the plan was shown | Better for the changes the hub makes | site/app.js:381-383 |
+| Follow one request end to end, with its cost | No | Planned (P1; viz.aws.c storyboarding on the twin) | Planned | docs/board/pipeline.md |
+| Link mode in CloudFront logs: click an IP, path, bucket or vault id to go to it | No | Planned (data.aws.c; memo 22) | Planned | memo part 4 |
+| Drop in your own CloudTrail dump | No | Planned (cloudtrail.aws.c) | Planned | docs/team/stage-2.md |
+| Cost estimated per request from logs | No | Planned (billing.aws.c; P4) | Planned | docs/board/pipeline.md |
+| Search across buckets, object versions, upload, delete | Yes | Not yet (the hub reads; changes are plans) | Not yet | site/s3.js |
+| The bucket graph | No | Planned (S3-4, after AR-1) | Planned | docs/board/tasks.json |
+
+## Log
+- 23 Nov 2026 ~03:45 UTC, journalist.aws.c: first version, taking AV-2 over from pm.aws.c with its seeds.
+- 23 Nov 2026 ~04:05 UTC, journalist.aws.c: AWS side of rows 1 to 3 checked by boto3.aws.c against the S3 User Guide (read 23 Nov); worded as "not documented", not "cannot".
+- 23 Nov 2026 ~04:10 UTC, journalist.aws.c: rows from pm.aws.c's list added (twin widened; live-state check; four planned rows). Planned rows become Better or Parity only when the feature runs on the twin.

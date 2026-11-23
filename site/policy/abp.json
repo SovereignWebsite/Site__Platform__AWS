@@ -78,6 +78,81 @@
             "site/s3.js",
             "test/s3/**"
           ]
+        },
+        "sherpa.aws.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/sherpa/**"
+          ]
+        },
+        "journalist.aws.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/journal/**"
+          ]
+        },
+        "ontology.aws.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/ontology/**"
+          ]
+        },
+        "iam.aws.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/iam/**"
+          ]
+        },
+        "lambda.aws.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/lambda/**"
+          ]
+        },
+        "cloudformation.aws.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/cloudformation/**"
+          ]
+        },
+        "cloudtrail.aws.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/cloudtrail/**"
+          ]
+        },
+        "vaults.aws.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/vaults/**"
+          ]
+        },
+        "boto3.aws.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/boto3/**"
+          ]
+        },
+        "ux.aws.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/design/**"
+          ]
+        },
+        "data.aws.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/data/**"
+          ]
+        },
+        "billing.aws.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/billing/**"
+          ]
+        },
+        "viz.aws.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/viz/**"
+          ]
+        },
+        "video.aws.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/video/**"
+          ]
+        },
+        "swarm.aws.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/swarm/**"
+          ]
         }
       },
       "needs_owner_yes": [
@@ -102,7 +177,7 @@
         "add a server, cookies or tracking",
         "change AWS itself (only the owner does, by Approve on the site)"
       ],
-      "source": "Dinis Cruz, 23 Nov 2026 ~04:20 UTC in aws.c's session: \"Yes, to the team paths. So you can commit to their folders\". Paths as conductor.aws.c proposed; added by the keeper, aws.c."
+      "source": "Dinis Cruz, 23 Nov 2026 ~03:15 UTC in aws.c's session: \"Yes, to the team paths. So you can commit to their folders\", on the option \"docs paths only, aws.c adds each agent as it starts\". Paths as conductor.aws.c proposed (docs/team/stage-2.md); added by the keeper, aws.c. Stage 2 agents added 23 Nov 2026 03:36 UTC, docs paths only. Code paths for new agents wait for Dinis's yes in aws.c's session."
     }
   },
   "pipelines": {
