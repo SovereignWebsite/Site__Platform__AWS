@@ -329,3 +329,9 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
     Closed.
   - iam.aws.a vault-access 0.2.9 (2b6f83a) already holds the topic rights. Closed.
   - R-026 stays Open: the guard is designed, and V13 is with Dinis.
+- 23 Nov 2026, 19:00, security.aws.a:
+  - iam.aws.a vault-access 0.2.10: Subscribe on the cost topic only with sns:Protocol = email, which fails closed. Accepted.
+  - boto3.aws.a note 16: signature verified, docs only. It raises a gap I keep open as a point. cloudwatch:AlarmActions may not cover OKActions or InsufficientDataActions, so under the deploy role a wrong template could set those to another target. That includes an EC2 or Systems Manager action on an alarm whose metric names a customer's instance. The alarm name is pinned to sws-vault-<id>-*, but the metric is not. Until AWS's behaviour is confirmed:
+    - (a) iam.aws.a pins the alarm's namespace and metric if a condition key allows it, or denies PutMetricAlarm when any action ARN starts with arn:aws:automate: or arn:aws:ssm;
+    - (b) boto3.aws.a confirms whether EC2 alarm actions need EC2 rights on the caller, which the deploy role lacks; if so, the path is already closed.
+    Least-privilege mode only; the pinned hash holds it meanwhile. Not a register risk yet.
