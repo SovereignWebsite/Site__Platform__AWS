@@ -1,0 +1,737 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "IamApi (browser)",
+    "version": "0.2.0",
+    "summary": "The browser-side contract of IamApi (site/api/iam-api.js): IAM role reads.",
+    "description": "This site has no server. The paths are logical names for the methods of the browser object IamApi, not URLs anything listens on; operationId is the method name and parameters are its arguments in order. Each operation lists in x-aws-actions the IAM actions it needs on real AWS; iam.aws.a and aws.c check the list against the read role in template v3 before anything calls real AWS. Nine read actions, Resource *. Reads only: no users, groups or access keys, no policy evaluation (design 04). IAM is global: iam.amazonaws.com, signed for us-east-1, Query protocol."
+  },
+  "servers": [],
+  "x-browser-global": "IamApi",
+  "x-design": "docs/architecture/2026-11-23__04-iam-reads.md (work/architect.aws.a 77d26be)",
+  "paths": {
+    "/roles": {
+      "get": {
+        "operationId": "roles",
+        "summary": "One page of the account's roles",
+        "x-arguments": "roles({ next, max })",
+        "x-wire": "IAM ListRoles (Marker, MaxItems)",
+        "x-aws-actions": [
+          "iam:ListRoles"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "next",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of the account's roles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "next"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RoleSummary"
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Opaque cursor (IAM's Marker); null at the end"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        }
+      }
+    },
+    "/roles/{role}": {
+      "get": {
+        "operationId": "role",
+        "summary": "One role: what ListRoles lacks (last use, permissions boundary), with its trust",
+        "x-arguments": "role(name)",
+        "x-wire": "IAM GetRole",
+        "x-aws-actions": [
+          "iam:GetRole"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "role",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One role: trust policy read into statements, last use",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Role"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        }
+      }
+    },
+    "/roles/{role}/attached": {
+      "get": {
+        "operationId": "attached",
+        "summary": "One page of a role's attached managed policies",
+        "x-arguments": "attached(name, { next, max })",
+        "x-wire": "IAM ListAttachedRolePolicies",
+        "x-aws-actions": [
+          "iam:ListAttachedRolePolicies"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "role",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "next",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of a role's attached managed policies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "next"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "name",
+                          "arn"
+                        ],
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "arn": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Opaque cursor (IAM's Marker); null at the end"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        }
+      }
+    },
+    "/roles/{role}/inline": {
+      "get": {
+        "operationId": "inline",
+        "summary": "One page of a role's inline policy names",
+        "x-arguments": "inline(name, { next, max })",
+        "x-wire": "IAM ListRolePolicies",
+        "x-aws-actions": [
+          "iam:ListRolePolicies"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "role",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "next",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of a role's inline policy names",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "next"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Opaque cursor (IAM's Marker); null at the end"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        }
+      }
+    },
+    "/roles/{role}/inline/{policy}": {
+      "get": {
+        "operationId": "inlineDocument",
+        "summary": "An inline policy's document",
+        "x-arguments": "inlineDocument(name, policy)",
+        "x-wire": "IAM GetRolePolicy (PolicyDocument URL-decoded and parsed)",
+        "x-aws-actions": [
+          "iam:GetRolePolicy"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "role",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "policy",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "An inline policy's document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyDocument"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        }
+      }
+    },
+    "/policies/{arn}": {
+      "get": {
+        "operationId": "policyDocument",
+        "summary": "A managed policy's default version and its document",
+        "x-arguments": "policyDocument(arn)",
+        "x-wire": "IAM GetPolicy, then GetPolicyVersion at DefaultVersionId",
+        "x-aws-actions": [
+          "iam:GetPolicy",
+          "iam:GetPolicyVersion"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "arn",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A managed policy's default version and its document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "version",
+                    "document",
+                    "awsManaged"
+                  ],
+                  "properties": {
+                    "version": {
+                      "type": "string"
+                    },
+                    "document": {
+                      "$ref": "#/components/schemas/PolicyDocument"
+                    },
+                    "awsManaged": {
+                      "type": "boolean",
+                      "description": "An AWS managed policy (arn:aws:iam::aws:policy/...): the page points to AWS's documentation for its text"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        }
+      }
+    },
+    "/providers": {
+      "get": {
+        "operationId": "providers",
+        "summary": "The account's OpenID Connect providers",
+        "x-arguments": "providers()",
+        "x-wire": "IAM ListOpenIDConnectProviders (url read from the ARN)",
+        "x-aws-actions": [
+          "iam:ListOpenIDConnectProviders"
+        ],
+        "x-role": "read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The account's OpenID Connect providers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "arn",
+                      "url",
+                      "urlDerived"
+                    ],
+                    "properties": {
+                      "arn": {
+                        "type": "string"
+                      },
+                      "url": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "urlDerived": {
+                        "const": true,
+                        "description": "ListOpenIDConnectProviders gives ARNs only; the host is read from the ARN"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        }
+      }
+    },
+    "/providers/{arn}": {
+      "get": {
+        "operationId": "provider",
+        "summary": "One OpenID Connect provider: its URL and client ids (to tie a trust's aud condition to it)",
+        "x-arguments": "provider(arn)",
+        "x-wire": "IAM GetOpenIDConnectProvider",
+        "x-aws-actions": [
+          "iam:GetOpenIDConnectProvider"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "arn",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The provider",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "arn",
+                    "url",
+                    "clientIds"
+                  ],
+                  "properties": {
+                    "arn": {
+                      "type": "string"
+                    },
+                    "url": {
+                      "type": "string"
+                    },
+                    "clientIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "created": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RoleSummary": {
+        "type": "object",
+        "required": [
+          "name",
+          "arn",
+          "path",
+          "created",
+          "serviceLinked",
+          "trust"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "arn": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": {
+            "type": "string"
+          },
+          "maxSession": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "serviceLinked": {
+            "type": "boolean",
+            "description": "Under /aws-service-role/: AWS manages it; views group these and say so"
+          },
+          "trust": {
+            "$ref": "#/components/schemas/Trust"
+          }
+        }
+      },
+      "Role": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RoleSummary"
+          },
+          {
+            "type": "object",
+            "required": [
+              "lastUsed",
+              "boundary"
+            ],
+            "properties": {
+              "lastUsed": {
+                "description": "null: not used in the last 400 days (IAM's tracking period), never 'never used'",
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "when"
+                    ],
+                    "properties": {
+                      "when": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "region": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    }
+                  }
+                ]
+              },
+              "boundary": {
+                "description": "The permissions boundary, shown beside the role's policies in every view",
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "arn"
+                    ],
+                    "properties": {
+                      "type": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "arn": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "Trust": {
+        "type": "object",
+        "required": [
+          "statements"
+        ],
+        "description": "The trust policy read, never judged",
+        "properties": {
+          "statements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "effect",
+                "actions",
+                "principals",
+                "conditions"
+              ],
+              "properties": {
+                "effect": {
+                  "enum": [
+                    "Allow",
+                    "Deny"
+                  ]
+                },
+                "actions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "notActions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "principals": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Principal"
+                  }
+                },
+                "notPrincipals": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Principal"
+                  }
+                },
+                "conditions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "op",
+                      "key",
+                      "values"
+                    ],
+                    "properties": {
+                      "op": {
+                        "type": "string"
+                      },
+                      "key": {
+                        "type": "string"
+                      },
+                      "values": {
+                        "type": "array"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Principal": {
+        "type": "object",
+        "required": [
+          "kind",
+          "id"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "service",
+              "aws",
+              "federated",
+              "canonical"
+            ]
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "PolicyDocument": {
+        "type": "object",
+        "description": "An IAM policy document as AWS stores it (Version, Statement)"
+      },
+      "AwsError": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "status"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "examples": [
+              "NoSuchEntity",
+              "AccessDenied"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "responses": {
+      "AwsError": {
+        "description": "The promise rejects with an Error ('Code: Message', .code, .status), or the browser's TypeError for a CORS refusal",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AwsError"
+            }
+          }
+        }
+      }
+    }
+  }
+}
