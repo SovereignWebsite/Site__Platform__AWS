@@ -1,21 +1,21 @@
 {
  "format": "studio-storyboard/0",
  "slug": "aws-guard-rails-2026-11-23",
- "title": "Guard rails: nine numbers",
+ "title": "Guard rails and the kill switch",
  "audience": "Dinis",
  "requested_by": "pm.aws.a@SovereignWebsite.dinis",
- "summary": "Batch 3: nine guard rails (G1 to G9) for short-lived deployments and the daily region move, drafted by ec2.aws.a, reviewed by security.aws.a. Lower-bound list prices; approving creates nothing in AWS.",
+ "summary": "Batch 3: nine guard rails (G1 to G9) for short-lived deployments and the daily region move, and four choices (K1 to K4) for the Vault cost kill switch; drafted by ec2.aws.a, reviewed by security.aws.a. Lower-bound list prices; approving creates nothing in AWS.",
  "beats": [
   {
    "id": "b0",
-   "narration": "Nine guard rails for short-lived deployments and the daily move. Approving them creates nothing in AWS.",
+   "narration": "Nine guard rails and four kill-switch choices. Approving them creates nothing in AWS.",
    "visual": {
     "kind": "svg",
     "src": "intro",
     "caption": "Batch 3: guard rails",
     "at": 0,
-    "play": 7,
-    "end": 6.4
+    "play": 5.8,
+    "end": 5.2
    },
    "facts": [
     "s-ec2",
@@ -168,15 +168,79 @@
    ]
   },
   {
+   "id": "bk1",
+   "narration": "K1. Recommended: the automatic pause opt-in per Vault, off by default. Anyone who can flood can then switch it off.",
+   "visual": {
+    "kind": "svg",
+    "src": "k1",
+    "caption": "K1: Automatic pause",
+    "at": 0,
+    "play": 8.6,
+    "end": 8
+   },
+   "facts": [
+    "s-ec2-03",
+    "s-sec-03"
+   ]
+  },
+  {
+   "id": "bk2",
+   "narration": "K2. Recommended: throttle and disable the distribution; CloudFront is most of a flood's cost.",
+   "visual": {
+    "kind": "svg",
+    "src": "k2",
+    "caption": "K2: Levers",
+    "at": 0,
+    "play": 6.2,
+    "end": 5.6
+   },
+   "facts": [
+    "s-ec2-03",
+    "s-sec-03"
+   ]
+  },
+  {
+   "id": "bk3",
+   "narration": "K3. Recommended: suggest 45,000 requests in five minutes; the customer decides.",
+   "visual": {
+    "kind": "svg",
+    "src": "k3",
+    "caption": "K3: Threshold",
+    "at": 0,
+    "play": 5,
+    "end": 4.4
+   },
+   "facts": [
+    "s-ec2-03",
+    "s-sec-03"
+   ]
+  },
+  {
+   "id": "bk4",
+   "narration": "K4. Recommended: the same switch on for our own deployments.",
+   "visual": {
+    "kind": "svg",
+    "src": "k4",
+    "caption": "K4: Our own",
+    "at": 0,
+    "play": 4.6,
+    "end": 4
+   },
+   "facts": [
+    "s-ec2-03",
+    "s-sec-03"
+   ]
+  },
+  {
    "id": "bz",
-   "narration": "All a, except G1, a plus b, and G9, b then a. For G6, pick alert only or automatic stop. Answer in pm.aws.a's session.",
+   "narration": "All a, except G1, a plus b, G9, b then a, and K1 and K2, b. Answer in pm.aws.a's session.",
    "visual": {
     "kind": "svg",
     "src": "outro",
-    "caption": "Recommended: G1 a+b, G2 a, G3 a, G4 a, G5 a, G6 a with (i) or (ii), G7 a, G8 a, G9 b then a",
+    "caption": "Recommended: G1 a+b, G2 a, G3 a, G4 a, G5 a, G6 a with (i) or (ii), G7 a, G8 a, G9 b then a, K1 b, K2 b, K3 suggest 45,000, K4 yes",
     "at": 0,
-    "play": 10.2,
-    "end": 9.6
+    "play": 8.6,
+    "end": 8
    },
    "facts": [
     "s-ec2"
@@ -409,6 +473,101 @@
    ],
    "recommendation": "b",
    "why": "Recommended: b then a. (b) first, then (a). Order fixed: the new copy answers, DNS moves, then the old copy is deleted. The move's role holds no key."
+  },
+  {
+   "id": "K1",
+   "question": "K1. Offer the automatic pause??",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. email only",
+     "good": [],
+     "bad": [],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. opt-in, default off",
+     "good": [],
+     "bad": [],
+     "blocks": []
+    },
+    {
+     "id": "c",
+     "label": "c. on by default",
+     "good": [],
+     "bad": [],
+     "blocks": []
+    }
+   ],
+   "recommendation": "b",
+   "why": "Recommended: b. (b): a flood then costs about one evaluation period plus propagation; one pause per flood, no automatic restore. Trade-off: anyone who can send enough requests can switch a Vault off."
+  },
+  {
+   "id": "K2",
+   "question": "K2. Which levers the pause pulls?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. throttle only",
+     "good": [],
+     "bad": [],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. throttle + disable distribution",
+     "good": [],
+     "bad": [],
+     "blocks": []
+    }
+   ],
+   "recommendation": "b",
+   "why": "Recommended: b. (b): CloudFront is 43.20 of 45.89 USD an hour in a flood at 10,000 req/s."
+  },
+  {
+   "id": "K3",
+   "question": "K3. The suggested threshold?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. 45,000 per 5 min",
+     "good": [],
+     "bad": [],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. customer types one",
+     "good": [],
+     "bad": [],
+     "blocks": []
+    }
+   ],
+   "recommendation": "a",
+   "why": "Recommended: a. billing.aws.a's figure, about 1 USD an hour at the threshold; the customer can change it."
+  },
+  {
+   "id": "K4",
+   "question": "K4. The same switch on our own deployments?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. yes, on",
+     "good": [],
+     "bad": [],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. no",
+     "good": [],
+     "bad": [],
+     "blocks": []
+    }
+   ],
+   "recommendation": "a",
+   "why": "Recommended: a. Part of the guard rails; restore is a plan you approve."
   }
  ],
  "connections": {
@@ -442,6 +601,18 @@
    "id": "s-flood",
    "title": "billing.aws.a: flood.mjs, edge requests are not capped by concurrency (ddddb44)",
    "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/commit/ddddb44",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-ec2-03",
+   "title": "ec2.aws.a: design 03, the Vault cost kill switch (8fd2c77)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/8fd2c77/docs/ec2/2026-11-23__03-vault-cost-kill-switch.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-sec-03",
+   "title": "security.aws.a: review of design 03 (2632562)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/2632562/docs/security/reviews/2026-11-23__ec2-design-03-kill-switch.md",
    "read": "2026-11-23"
   }
  ],

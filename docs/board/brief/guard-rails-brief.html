@@ -100,7 +100,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
 <div class="wrap">
   <header>
     <div>
-      <h1>Guard rails: nine numbers</h1>
+      <h1>Guard rails and the kill switch</h1>
       <p class="sub">AWS Platform programme · from <span class="t-mono">docs/board/decisions.md</span>, 23 Nov 2026, 17:55 UTC (batch 3) · kept by pm.aws.a</p>
     </div>
     <div class="tabs" role="tablist" aria-label="View">
@@ -139,10 +139,10 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
 
 <script type="application/json" id="storyboard">
 {
- "title": "Guard rails: nine numbers",
+ "title": "Guard rails and the kill switch",
  "source": "docs/board/decisions.md, batch 3, on work/pm.aws.a",
  "made_by": "pm.aws.a@SovereignWebsite.dinis",
- "answer": "G1 a+b, G2 a, G3 a, G4 a, G5 a, G6 a with (i) or (ii), G7 a, G8 a, G9 b then a",
+ "answer": "G1 a+b, G2 a, G3 a, G4 a, G5 a, G6 a with (i) or (ii), G7 a, G8 a, G9 b then a, K1 b, K2 b, K3 a, K4 a",
  "scenes": [
   {
    "id": "intro",
@@ -152,7 +152,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
    "beats": [
     [
      0,
-     "Nine numbers that bound short-lived deployments and the daily region move. Approving them creates nothing in AWS.",
+     "Nine guard rails for short-lived deployments and the daily move, and four choices for the Vault cost kill switch.",
      "Nine tiles, G1 to G9."
     ],
     [
@@ -489,14 +489,154 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
    }
   },
   {
+   "id": "k1",
+   "eyebrow": "K1 · Automatic pause",
+   "title": "Offer the automatic pause?",
+   "dur": 12,
+   "beats": [
+    [
+     0,
+     "The request alarm can pause a Vault by itself. Recommended: offer it opt-in per Vault, off by default, and say the trade-off plainly.",
+     "The options as cards."
+    ],
+    [
+     7,
+     "Recommended: b.",
+     "The recommended card lights; a note below."
+    ]
+   ],
+   "panel": {
+    "asks": "ec2.aws.a (8fd2c77); reviewed by security.aws.a (2632562); boto3 and iam checks pending",
+    "what": "(b): a flood then costs about one evaluation period plus propagation; one pause per flood, no automatic restore. Trade-off: anyone who can send enough requests can switch a Vault off.",
+    "options": [
+     [
+      "a",
+      "email only"
+     ],
+     [
+      "b",
+      "opt-in, default off"
+     ],
+     [
+      "c",
+      "on by default"
+     ]
+    ],
+    "rec": "b",
+    "blocks": "Nothing outside the twin; each real change is its own plan."
+   }
+  },
+  {
+   "id": "k2",
+   "eyebrow": "K2 · Levers",
+   "title": "Which levers the pause pulls",
+   "dur": 12,
+   "beats": [
+    [
+     0,
+     "Throttling alone leaves CloudFront billing every request. Recommended: throttle and disable the distribution.",
+     "The options as cards."
+    ],
+    [
+     7,
+     "Recommended: b.",
+     "The recommended card lights; a note below."
+    ]
+   ],
+   "panel": {
+    "asks": "ec2.aws.a (8fd2c77); reviewed by security.aws.a (2632562); boto3 and iam checks pending",
+    "what": "(b): CloudFront is 43.20 of 45.89 USD an hour in a flood at 10,000 req/s.",
+    "options": [
+     [
+      "a",
+      "throttle only"
+     ],
+     [
+      "b",
+      "throttle + disable distribution"
+     ]
+    ],
+    "rec": "b",
+    "blocks": "Nothing outside the twin; each real change is its own plan."
+   }
+  },
+  {
+   "id": "k3",
+   "eyebrow": "K3 · Threshold",
+   "title": "The suggested threshold",
+   "dur": 12,
+   "beats": [
+    [
+     0,
+     "Recommended: suggest billing's 45,000 requests in five minutes, about a dollar an hour; the customer decides.",
+     "The options as cards."
+    ],
+    [
+     7,
+     "Recommended: a.",
+     "The recommended card lights; a note below."
+    ]
+   ],
+   "panel": {
+    "asks": "ec2.aws.a (8fd2c77); reviewed by security.aws.a (2632562); boto3 and iam checks pending",
+    "what": "billing.aws.a's figure, about 1 USD an hour at the threshold; the customer can change it.",
+    "options": [
+     [
+      "a",
+      "45,000 per 5 min"
+     ],
+     [
+      "b",
+      "customer types one"
+     ]
+    ],
+    "rec": "a",
+    "blocks": "Nothing outside the twin; each real change is its own plan."
+   }
+  },
+  {
+   "id": "k4",
+   "eyebrow": "K4 · Our own",
+   "title": "The same switch on our own deployments",
+   "dur": 12,
+   "beats": [
+    [
+     0,
+     "Recommended: the same switch on for our own Vaults and deployments, with restore as a plan you approve.",
+     "The options as cards."
+    ],
+    [
+     7,
+     "Recommended: a.",
+     "The recommended card lights; a note below."
+    ]
+   ],
+   "panel": {
+    "asks": "ec2.aws.a (8fd2c77); reviewed by security.aws.a (2632562); boto3 and iam checks pending",
+    "what": "Part of the guard rails; restore is a plan you approve.",
+    "options": [
+     [
+      "a",
+      "yes, on"
+     ],
+     [
+      "b",
+      "no"
+     ]
+    ],
+    "rec": "a",
+    "blocks": "Nothing outside the twin; each real change is its own plan."
+   }
+  },
+  {
    "id": "outro",
    "eyebrow": "Your answer",
-   "title": "One line answers all nine",
+   "title": "One line answers all thirteen",
    "dur": 10,
    "beats": [
     [
      0,
-     "Recommended: G1 a plus b, G2 to G8 a, G9 b then a. For G6, pick alert only or automatic stop new.",
+     "Recommended: G1 a plus b, G2 to G8 a, G9 b then a, and K1 b, K2 b, K3 suggest 45,000, K4 yes. For G6, pick alert only or automatic stop.",
      "The full answer line."
     ],
     [
@@ -548,7 +688,7 @@ function optionRow(opts, rec, tShow, tRec, notRec=[]) {
 }
 
 /* ---------- the scenes, drawn ---------- */
-const GV = {"g1": {"opts": [["a", "2 h", "0.0476"], ["b", "4 h", "0.0952"], ["c", "8 h", ""]], "rec": ["a", "b"], "note": "2 h default, 4 h hard cap"}, "g2": {"opts": [["a", "26 h", "0.6188"], ["b", "30 h", ""], ["c", "no cap", ""]], "rec": ["a"], "note": "26 h backstop"}, "g3": {"opts": [["a", "London + Ireland", ""], ["b", "more, later", ""]], "rec": ["a"], "note": "the only two priced"}, "g4": {"opts": [["a", "nano, micro, small", "0.0047 to 0.0188/h"], ["b", "+ medium", "0.0376/h"]], "rec": ["a"], "note": "medium only if the twin needs it"}, "g5": {"opts": [["a", "3 at most", ""], ["b", "you name", ""]], "rec": ["a"], "note": "one each, plus an overlap"}, "g6": {"opts": [["a", "25 USD", ""], ["b", "50 USD", ""], ["c", "100 USD", ""]], "rec": ["a"], "note": "at the cap: alert only, or also stop new? your pick"}, "g7": {"opts": [["a", "stop new: 1 click", ""], ["b", "end all: 1 click", ""]], "rec": ["a"], "note": "end all needs your approval"}, "g8": {"opts": [["a", "AWS schedule + Lambda", ""], ["b", "GitHub Actions", ""], ["c", "only in the site", ""]], "rec": ["a"], "note": "no credential outside AWS"}, "g9": {"opts": [["a", "move role now", ""], ["b", "twin week first", ""]], "rec": ["b"], "note": "a week in the twin first"}};
+const GV = {"g1": {"opts": [["a", "2 h", "0.0476"], ["b", "4 h", "0.0952"], ["c", "8 h", ""]], "rec": ["a", "b"], "note": "2 h default, 4 h hard cap"}, "g2": {"opts": [["a", "26 h", "0.6188"], ["b", "30 h", ""], ["c", "no cap", ""]], "rec": ["a"], "note": "26 h backstop"}, "g3": {"opts": [["a", "London + Ireland", ""], ["b", "more, later", ""]], "rec": ["a"], "note": "the only two priced"}, "g4": {"opts": [["a", "nano, micro, small", "0.0047 to 0.0188/h"], ["b", "+ medium", "0.0376/h"]], "rec": ["a"], "note": "medium only if the twin needs it"}, "g5": {"opts": [["a", "3 at most", ""], ["b", "you name", ""]], "rec": ["a"], "note": "one each, plus an overlap"}, "g6": {"opts": [["a", "25 USD", ""], ["b", "50 USD", ""], ["c", "100 USD", ""]], "rec": ["a"], "note": "at the cap: alert only, or also stop new? your pick"}, "g7": {"opts": [["a", "stop new: 1 click", ""], ["b", "end all: 1 click", ""]], "rec": ["a"], "note": "end all needs your approval"}, "g8": {"opts": [["a", "AWS schedule + Lambda", ""], ["b", "GitHub Actions", ""], ["c", "only in the site", ""]], "rec": ["a"], "note": "no credential outside AWS"}, "g9": {"opts": [["a", "move role now", ""], ["b", "twin week first", ""]], "rec": ["b"], "note": "a week in the twin first"}, "k1": {"opts": [["a", "email only", ""], ["b", "opt-in, default off", ""], ["c", "on by default", ""]], "rec": ["b"], "note": "anyone who can flood can switch a Vault off"}, "k2": {"opts": [["a", "throttle only", ""], ["b", "throttle + disable distribution", ""]], "rec": ["b"], "note": "CloudFront is about 94% of a flood's cost"}, "k3": {"opts": [["a", "45,000 per 5 min", "about 1/h"], ["b", "customer types one", ""]], "rec": ["a"], "note": "suggested; the customer decides"}, "k4": {"opts": [["a", "yes, on", ""], ["b", "no", ""]], "rec": ["a"], "note": "restore is a plan you approve"}};
 function gScene(id){
   const v = GV[id]; const n = v.opts.length, w = 240, gap = 30, x0 = (W-(n*w+(n-1)*gap))/2;
   let s = '';
@@ -578,11 +718,15 @@ g6(){ return gScene('g6'); },
 g7(){ return gScene('g7'); },
 g8(){ return gScene('g8'); },
 g9(){ return gScene('g9'); },
+k1(){ return gScene('k1'); },
+k2(){ return gScene('k2'); },
+k3(){ return gScene('k3'); },
+k4(){ return gScene('k4'); },
 outro(){
   let s = txt(W/2,150,'Recommended','t-m t-mute');
-  s += cue(0.3, txt(W/2,236,'G1 a+b · G2 to G8 a · G9 b then a','t-l') + txt(W/2,274,'G6 at the cap: (i) alert only or (ii) stop new automatically','t-s t-acc'), 'pop');
-  s += cue(5, txt(W/2,320,'Answer in pm.aws.a\'s session','t-m'));
-  s += cue(5.6, txt(W/2,348,'claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B','t-mono t-mute'));
+  s += cue(0.3, txt(W/2,236,'G1 a+b · G2 to G8 a · G9 b then a','t-l') + txt(W/2,274,'K1 b · K2 b · K3 45,000 per 5 min · K4 yes','t-l') + txt(W/2,300,'G6 at the cap: (i) alert only or (ii) stop new automatically','t-s t-acc'), 'pop');
+  s += cue(5, txt(W/2,340,'Answer in pm.aws.a\'s session','t-m'));
+  s += cue(5.6, txt(W/2,368,'claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B','t-mono t-mute'));
   return s;
 }};
 
