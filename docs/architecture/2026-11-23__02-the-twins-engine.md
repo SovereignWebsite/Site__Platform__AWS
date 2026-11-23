@@ -102,7 +102,7 @@ The edit UI (browse the world, change a field, run a generator) writes entries w
 
 A feed turns outside records into entries: a CloudTrail dump (cloudtrail.aws.a's normalised event shape maps one event to one entry, `actor` from `userIdentity`, `op` from `eventSource` and `eventName`), a CloudFront log file, a vault's append lane. The three ways in (section 20) are then just three starting journals: empty plus feed; pack plus feed; or a feed only, watched as it arrives (instrument).
 
-Fields a CloudTrail event keeps in its journal entry (cloudtrail.aws.a, 10:42): `eventID` (de-duplication and the node id), `eventTime`, who (kind and name), `errorCode` (refused calls drive the alarms), `readOnly`, the targets' ids and `awsRegion`, besides `eventSource` + `eventName`. `sourceIPAddress` is kept too, as `data.from.ip`, so the "new address" alarm can run on the journal and not only on full records; the journal never leaves the page (security notes). Dropped: `userAgent`, `accessKeyId`, policy text and the rest of the raw record, which stays with the feed's file for the detail panel.
+Fields a CloudTrail event keeps in its journal entry (cloudtrail.aws.a, 10:42): `eventID` (de-duplication and the node id), `eventTime`, who (kind and name), `errorCode` (refused calls drive the alarms), `readOnly`, the targets' ids and `awsRegion`, besides `eventSource` + `eventName`. `sourceIPAddress` is kept as its network only, `data.from.net` (/24 or /48, Dinis's privacy decision, design 03), so a "new network" alarm can run on the journal; the full address stays only in the feed's file, for the detail panel. Dropped: `userAgent`, `accessKeyId`, policy text and the rest of the raw record, which stays with the feed's file for the detail panel.
 
 ### More back ends
 
