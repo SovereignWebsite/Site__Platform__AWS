@@ -66,7 +66,7 @@ Asked by cloudformation.aws.a at security.aws.a's request (16:53 UTC). It covers
 Two more rules, from security.aws.a (17:26 UTC):
 - **vault-templates-write** (high): a PutObject, CopyObject or CompleteMultipartUpload anywhere in the bucket by any principal other than the publishing role, refused attempts included.
 - **vault-templates-published** (low, a notice): a successful write under templates/ by the publishing role, so every release is seen.
-- **vault-templates-overwrite-refused** (medium): the publishing role's write refused with PreconditionFailed. Writes are create-only, so this is an attempt to change a published template: a bad release or a compromised pipeline.
+- **vault-templates-publisher-refused** (medium): any refused call by the publishing role on the bucket. That is PreconditionFailed on a write (writes are create-only, so it is an attempt to change a published template), AccessDenied outside templates/, or a refused delete, retention, ACL or bucket call. Either a bad release or a compromised pipeline.
 
 The publishing role is the stack's PublisherRoleArn. ct-alarms.js takes it as `run(events, { templatesPublisher })`, an ARN or a role name, with "sws-vault-templates-publisher" as the default.
 

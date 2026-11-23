@@ -76,8 +76,10 @@ const OTHER = { type: "AssumedRole", sessionContext: { sessionIssuer: { type: "R
 const put = (who, key, o) => s3("PutObject", TB, Object.assign({ userIdentity: who, eventCategory: "Data", requestParameters: { bucketName: TB, key } }, o));
 eq(ids([...quiet, put(PUB, "templates/vault-0.4.5.yaml")]), ["vault-templates-published"], "a release by the publisher");
 eq(alarms([...quiet, put(PUB, "templates/vault-0.4.5.yaml")])[0].level, "low", "a release is a low notice");
-eq(ids([...quiet, put(PUB, "templates/vault-0.4.5.yaml", { errorCode: "PreconditionFailed" })]), ["vault-templates-overwrite-refused"], "a refused overwrite by the publisher is its own alarm, not a release");
-eq(ids([...quiet, put(PUB, "templates/vault-0.4.5.yaml", { errorCode: "AccessDenied" })]), [], "another refusal of the publisher is not an overwrite");
+eq(ids([...quiet, put(PUB, "templates/vault-0.4.5.yaml", { errorCode: "PreconditionFailed" })]), ["vault-templates-publisher-refused"], "a refused overwrite by the publisher is its own alarm, not a release");
+eq(ids([...quiet, put(PUB, "notes/x", { errorCode: "AccessDenied" })]), ["vault-templates-publisher-refused"], "publisher refused outside templates/");
+for (const a of ["DeleteObject", "PutObjectAcl", "PutBucketPolicy"]) eq(ids([...quiet, s3(a, TB, { userIdentity: PUB, errorCode: "AccessDenied", requestParameters: { bucketName: TB, key: "templates/v.yaml" } })]), ["vault-templates-publisher-refused"], "publisher refused " + a);
+eq(ids([...quiet, s3("PutObjectRetention", TB, { userIdentity: PUB, eventCategory: "Data", errorCode: "AccessDenied", requestParameters: { bucketName: TB, key: "templates/v.yaml" } })]).sort(), ["vault-templates-bucket", "vault-templates-publisher-refused"], "publisher refused retention: both rules");
 eq(ids([...quiet, put(OTHER, "templates/vault-0.4.5.yaml")]), ["vault-templates-write"], "another role writes a template");
 eq(ids([...quiet, put(OTHER, "notes/x", { errorCode: "AccessDenied" })]), ["vault-templates-write"], "a refused write elsewhere in the bucket");
 eq(ids([...quiet, put(ROOT, "templates/x.yaml")]), ["vault-templates-write"], "root writing a template");
@@ -95,4 +97,4 @@ eq(got.map((a) => a.rule), ["iam-trust-or-permissions", "hub-stack-change-applie
 if (got.some((a) => !a.words || !a.events.length || !a.level)) fail("alarm without words, events or level");
 eq(got[2].events[0].action, "CreateChangeSet", "new-network names the first call from that network");
 eq(AL.rules.length, 10, "ten rules listed");
-console.log("ok ct-alarms: 10 rules, 57 cases (21 for R-021, 19 for the templates bucket), R-008 story gives 3 alarms newest first");
+console.log("ok ct-alarms: 10 rules, 61 cases (21 for R-021, 23 for the templates bucket), R-008 story gives 3 alarms newest first");
