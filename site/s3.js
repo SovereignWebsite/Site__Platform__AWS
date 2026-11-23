@@ -362,8 +362,11 @@
         if (isGzip(u8)) {
           var inner = name.replace(/\.gz$/i, "");
           // Unzipping stops past limits.show: a small .gz can expand to gigabytes (R-016).
-          return gunzipStart(u8, LIMITS.show + 1).then(function (out) {
+          return gunzipMembers(u8, LIMITS.show + 1).then(function (g) {
             if (!current()) return;
+            var out = g.damaged ? wholeLines(g.out) : g.out;
+            if (g.members > 1) box.appendChild(P.el("p", { class: "small", text: "gzip: " + g.members + " members back to back (as appended logs are), all read." }));
+            if (g.damaged) box.appendChild(P.el("p", { class: "small", text: "gzip: the file is damaged or cut after " + human(out.length) + " unzipped; what came out before that is shown." }));
             if (out.length > LIMITS.show) {
               var part = wholeLines(out.subarray(0, LIMITS.show));
               box.appendChild(P.el("p", { class: "small preview", text: "gzip: " + human(u8.length) + " unzips to more than " + human(LIMITS.show) + "; unzipping stopped there and the first " + human(part.length) + " is shown. Download has the whole file." }));
@@ -411,6 +414,52 @@
     }
     return next().then(function () { return join(parts).subarray(0, max); });
   }
+  // Unzip one gzip member strictly: rejects on any error (cut, damaged, or data after the member's end); stops and
+  // resolves early once more than `max` bytes are out.
+  function gunzipStrict(u8, max) {
+    var reader = new Blob([u8]).stream().pipeThrough(new DecompressionStream("gzip")).getReader(), parts = [], got = 0;
+    function next() {
+      return reader.read().then(function (x) {
+        if (x.done) return { out: join(parts), capped: false };
+        parts.push(x.value); got += x.value.length;
+        if (got > max) return reader.cancel().catch(function () {}).then(function () { return { out: join(parts).subarray(0, max), capped: true }; });
+        return next();
+      });
+    }
+    return next();
+  }
+  // Unzip a gzip file of one or more members back to back. A browser's DecompressionStream stops with an error at
+  // the second member, so the members are found here: a member starts with 1f 8b 08 and ends with its length mod
+  // 2^32 (ISIZE); each candidate end is tried in order and kept only when the member unzips cleanly and its length
+  // matches. Whatever cannot be read as whole members (a cut preview, a damaged file) is unzipped leniently, keeping
+  // what comes out. Output stops at `max` bytes. Returns { out, members, capped, damaged }.
+  function gunzipMembers(u8, max) {
+    var ends = [];
+    for (var i = 1; i + 2 < u8.length; i++) if (u8[i] === 0x1f && u8[i + 1] === 0x8b && u8[i + 2] === 8) ends.push(i);
+    ends.push(u8.length);
+    var parts = [], got = 0, start = 0, members = 0, k = 0;
+    function result(capped, damaged) { return { out: join(parts).subarray(0, max), members: members, capped: capped, damaged: damaged }; }
+    function isize(seg) { var n = seg.length; return n < 8 ? -1 : (seg[n - 4] | seg[n - 3] << 8 | seg[n - 2] << 16 | seg[n - 1] << 24) >>> 0; }
+    function member() {
+      if (start >= u8.length) return Promise.resolve(result(false, false));
+      while (k < ends.length && ends[k] <= start) k++;
+      if (k >= ends.length) return rest();
+      var end = ends[k], seg = u8.subarray(start, end);
+      return gunzipStrict(seg, max - got).then(function (r) {
+        if (!r.capped && isize(seg) !== r.out.length % 4294967296) { k++; return member(); }
+        parts.push(r.out); got += r.out.length; members++; start = end; k++;
+        return r.capped ? result(true, false) : member();
+      }, function () { k++; return member(); });
+    }
+    // No whole member from here on: keep what a lenient unzip gives, and say the rest was damaged or cut.
+    function rest() {
+      return gunzipStart(u8.subarray(start), max - got).then(function (out) {
+        parts.push(out); got += out.length; if (out.length) members++;
+        return result(got >= max, true);
+      });
+    }
+    return member();
+  }
   // A preview ends at the last whole line, so JSON Lines and logs parse and no character is cut in half.
   function wholeLines(u8) {
     for (var i = u8.length - 1; i >= 0; i--) if (u8[i] === 10) return u8.subarray(0, i + 1);
@@ -442,9 +491,9 @@
       return firstBytes(r, n).then(function (u8) {
         if (!current()) return;
         if (isGzip(u8)) {
-          return gunzipStart(u8, LIMITS.show).then(function (out) {
+          return gunzipMembers(u8, LIMITS.show).then(function (g) {
             if (!current()) return;
-            var lines = wholeLines(out);
+            var lines = wholeLines(g.out);
             box.appendChild(P.el("p", { class: "small preview", text: "Preview: the first " + human(u8.length) + " of " + human(size) + " (gzip), unzipped in this browser to " + human(lines.length) + ". Download fetches the whole file." }));
             show(box, name.replace(/\.gz$/i, ""), "", lines, st);
           });
