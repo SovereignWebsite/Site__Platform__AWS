@@ -1,6 +1,6 @@
 # AWS Platform team log
 
-One line per wake: `<UTC time> <name> <what> <commit>`.
+One line per wake: `<UTC time> <name> <what> <commit>`. Messages may be logged as `<UTC time> <from> -> <to> <topic>` so swarm.aws.c can replay them.
 
 2026-11-23T02:44Z conductor.aws.c stage 1 started: security.aws.c, architect.aws.c, s3.aws.c with wakes (schedule.json)
 2026-11-23T02:46Z conductor.aws.c relayed aws.c's news (synthetic-first twin, test/** allowed) to architect and s3; aws.c builds twin v0, architect designs over it
@@ -9,3 +9,5 @@ One line per wake: `<UTC time> <name> <what> <commit>`.
 2026-11-23T03:25Z conductor.aws.c key published on the Factory (IaC dev 885f150, at Dinis's "Land the AWS keys")
 2026-11-23T03:25Z first runs reported: viz (P1 storyboard, local), ontology (44 nodes, 66 edges, local; key conversion waits on Dinis), cloudformation (first note 8c7cdf3, local), boto3 (S3 map 78f6368, local), data (EX-1 design 8176200, local), cloudtrail (first note 233fd6e, local), vaults (three-vault draft, local; key conversion waits on Dinis); all wait on their paths in abp.json
 2026-11-23T03:30Z conductor.aws.c assigned memo part 4 section 23: twin engine to architect (design 02) and dev.1/dev.2; altitudes to ontology with architect; investigation data to data; attack and traffic scenarios to security (writes) and viz (shows); 3D views to ux and viz; swarm events in the wire's schema to docs/team/events.jsonl
+2026-11-23T03:27Z first runs reported: lambda (first note 94188e6, local; key fefea6a to factory.c), data (design now 0f4e47e), swarm (data model, extractor of 26 agents and 53 events, 7-scene storyboard, local; sgit-ai install waits on Dinis), video (twin v0 narrative plan e4cc707, local; key 26dd826 to factory.c), sherpa (walk 1, 10 ranked findings, 451bc42, local)
+2026-11-23T03:27Z accountant.c forecasts AMBER on account C; conductor.aws.c checks at 04:12 and each :58, halves cadences at the first non-"allowed" reading
