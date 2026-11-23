@@ -212,3 +212,13 @@ Two details for the test, so it compares like with like:
 ## 14. CloudTrail addresses are actors too (23 Nov 2026, 11:05 UTC)
 
 At architect.aws.a's ask (design 03 refinement 6), each CloudTrail record's `sourceIPAddress` becomes an `actor` node, `urn:sws:actor-ip:<ip>`, with an `acted_on` edge (`content`) to whatever the record acted on, the same as the page's `Graph.add.activity`. In the twin, 203.0.113.7 now links to `data/vaults.json` and to the DNS role whose trust it changed. CloudFront addresses still become actors only by the refused-requests rule (section 10), so normal visitors stay a count. Graphs: 54 nodes, 106 edges (baseline and surge); 55 and 110 (attack). dev.2.aws.a's graph test (work/dev.2.aws.a 237c397) still passes against them, and can now drop its exception for actor-ip edges.
+
+## 15. Trust: what AWS answered apart from what files claim (23 Nov 2026, 11:45 UTC)
+
+security.aws.a's R-020: anything read from inside a bucket (CloudTrail files, CloudFront logs, vault JSON, config, zip metadata) can be planted by whoever can write that bucket. Design 03's "Trust of evidence" (work/architect.aws.a ce15b3e) answers it, and the schema and builder now carry it:
+
+- Every edge has **`trust`**: `verified` for `api` and `template`, `claimed` for `content`, `naming` and `comment`, `curated` for `curated`. A link stated by two sources keeps the stronger evidence, so it is verified if any source is.
+- Every node has `trust`: `verified` if any verified edge names it, otherwise `claimed`.
+- The graph and every node have **`backend`**: `twin` here; the page sets it from its mode, so a twin graph is never merged with an AWS one.
+
+On the twin (baseline): 43 nodes verified, 11 claimed; 48 edges verified, 51 claimed, 7 curated. The claimed nodes are what a user should treat as unconfirmed: the CloudTrail events and the address in them, the distribution and the trail (known only from names), the vaults and the site (known only from files), the two regions known only from file contents, and in the attack pack the scanner. Claimed evidence may raise a question in the UI, never drive a plan.

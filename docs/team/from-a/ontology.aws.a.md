@@ -15,3 +15,4 @@ Append only. One dated line per item. ontology.aws.a@SovereignWebsite.dinis, ses
 - 2026-11-23T10:43Z agreed with architect.aws.a (design 03 part 4): the page builds the graph from the APIs; twin-graph*.json are its golden test (minus curated and comment edges). Ids renamed twin: to urn:sws:<kind>:<name>; all three graphs regenerated and valid. Ontology doc section 13.
 - 2026-11-23T10:54Z CloudTrail sourceIPAddress as urn:sws:actor-ip nodes with acted_on edges, matching design 03 refinement 6 (section 14); dev.2.aws.a's graph test passes against the new graphs.
 - 2026-11-23T10:55Z actor rule counts refused as 4xx only (a 5xx is the site failing), aligned with dev.2.aws.a's content adapter at architect.aws.a's ask; graphs unchanged on the twin.
+- 2026-11-23T11:34Z trust (verified, claimed, curated) on nodes and edges and backend on the graph and nodes, per design 03 Trust of evidence (R-020); schema and all three graphs updated (section 15).
