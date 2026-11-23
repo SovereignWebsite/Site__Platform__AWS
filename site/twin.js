@@ -165,7 +165,8 @@
     },
     // One resource's (or the stack's own) step, emitted by the clock: newest first in events, as AWS lists them.
     "cloudformation.stackEvent": function (w, e) {
-      var d = e.data, st = w.accounts[d.account].stacks[d.region + "/" + d.name];
+      var d = e.data, acc = w.accounts[d.account], st = acc && acc.stacks[d.region + "/" + d.name];
+      if (!st) return; // a stack step with no stack (a journal cut before its create): nothing to apply
       st.events.unshift({ id: st.stackId.split("/").pop() + "-" + e.seq, t: e.t, logical: d.logical, physical: d.physical || "", type: d.type, status: d.status, reason: d.reason || "" });
       if (d.logical === d.name) { st.status = d.status; if (d.outputs) st.outputs = d.outputs; }
       else st.resources[d.logical] = { type: d.type, physical: d.physical || (st.resources[d.logical] || {}).physical || "", status: d.status, t: e.t, reason: d.reason || "" };
@@ -700,6 +701,7 @@
   // fails VaultFunction in wave 3, the likeliest real failure (cloudformation.aws.a, O1: a cross-account repository
   // whose policy does not list the account yet, or a digest not in the region).
   var TWIN_IMAGE = "111122223333.dkr.ecr.eu-west-2.amazonaws.com/sws-vault@sha256:" + "0123456789abcdef".repeat(4);
+  var IMAGE_PATTERN = /^[0-9]{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com\/[a-z0-9._\/-]+@sha256:[0-9a-f]{64}$/, CUSTOMER_STACKS = 8;
   function customerOf(init) { return /Credential=ASIATWINCUSTOMER\//.test(hdr(init, "authorization") || "") ? CUSTOMER : null; }
   // [logical id, type, seconds to create], wave by wave; each wave starts a second after the last one ends.
   var VAULT_WAVES = {
@@ -713,8 +715,10 @@
       [["VaultRecordA", "AWS::Route53::RecordSet", 35], ["VaultRecordAAAA", "AWS::Route53::RecordSet", 35]]
     ]
   };
-  function vaultIds(account, region, id) {
-    var r = rng("vault.ids", 20261124), pick = function (abc, n) { var o = ""; for (var i = 0; i < n; i++) o += abc[Math.floor(r() * abc.length)]; return o; };
+  function vaultIds(account, region, name) {
+    // Each stack its own stream, seeded from its name, so two stacks do not share ids (R-025 (d)).
+    var seed = 20261124; for (var c = 0; c < name.length; c++) seed = (seed * 31 + name.charCodeAt(c)) & 0x7fffffff;
+    var r = rng("vault.ids:" + account + "/" + region + "/" + name, seed), pick = function (abc, n) { var o = ""; for (var i = 0; i < n; i++) o += abc[Math.floor(r() * abc.length)]; return o; };
     var lower = "abcdefghijklmnopqrstuvwxyz0123456789", upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     return { stack: pick("0123456789abcdef", 8) + "-" + pick("0123456789abcdef", 4) + "-11ef-" + pick("0123456789abcdef", 4) + "-" + pick("0123456789abcdef", 12),
       url: pick(lower, 32), distribution: "E" + pick(upper, 13), cfDomain: "d" + pick(lower, 13) + ".cloudfront.net", secret: pick("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 6) };
@@ -805,6 +809,12 @@
       var name = form.get("StackName") || "", params = map(), m = /^sws-vault-([0-9a-f]{12})(-access)?$/.exec(name);
       formParams(form, "Parameters").forEach(function (kv) { params[kv[0]] = kv[1]; });
       if (!m) return cfnErr("ValidationError", "The twin's customer account holds Vault stacks only: sws-vault-<12 hex digits> or sws-vault-<12 hex digits>-access.");
+      // Bounds (security.aws.a, R-025 (b)): the twin's region only, and at most CUSTOMER_STACKS stacks in the account.
+      if (region !== REGION) return cfnErr("ValidationError", "The twin's customer account is in " + REGION + " only.");
+      if (Object.keys(acc.stacks).length >= CUSTOMER_STACKS && !find(name)) return cfnErr("LimitExceededException", "The twin's customer account holds at most " + CUSTOMER_STACKS + " stacks.");
+      // vault.yaml's AllowedPattern, checked before anything is made, as CloudFormation does (R-025 (c)).
+      if (params.ImageUri != null && (params.ImageUri.length > 512 || !IMAGE_PATTERN.test(params.ImageUri)))
+        return cfnErr("ValidationError", "Parameter 'ImageUri' must match pattern " + IMAGE_PATTERN.source);
       if (params.VaultId !== m[1]) return cfnErr("ValidationError", "Parameter 'VaultId' must be " + m[1] + " for stack " + name + ".");
       if (!form.get("TemplateURL") && !form.get("TemplateBody")) return cfnErr("ValidationError", "Either Template URL or Template Body must be specified.");
       var existing = find(name);
@@ -823,7 +833,7 @@
         collides = mode === "one-stack" && !!access && access.status === "CREATE_COMPLETE";
         params.DeployMode = mode;
       }
-      var ids = vaultIds(account, region, m[1]), stackId = "arn:aws:cloudformation:" + region + ":" + account + ":stack/" + name + "/" + ids.stack;
+      var ids = vaultIds(account, region, name), stackId = "arn:aws:cloudformation:" + region + ":" + account + ":stack/" + name + "/" + ids.stack;
       var plain = {}; Object.keys(params).forEach(function (k) { plain[k] = params[k]; });
       var failure = null;
       if (collides) failure = { logical: "VaultBoundary", after: 0.9,
@@ -1198,7 +1208,9 @@
     if (target !== "FilterLogEvents") return logsErr("UnknownOperationException", "Not in the twin yet: logs " + target, 404); // 404 per the Logs CommonErrors page (note 11)
     if (!q.logGroupName && !q.logGroupIdentifier) return logsErr("InvalidParameterException", "Should provide either logGroupName or logGroupIdentifier."); // message not documented
     if (q.logGroupName && q.logGroupIdentifier) return logsErr("InvalidParameterException", "LogGroup name and LogGroup ARN are mutually exclusive parameters.");
-    var g = String(q.logGroupIdentifier || q.logGroupName || "").replace(/^arn:aws:logs:[a-z0-9-]+:\d{12}:log-group:/, "").replace(/:\*$/, "");
+    var raw = String(q.logGroupIdentifier || q.logGroupName || ""), arnm = /^arn:aws:logs:([a-z0-9-]+):(\d{12}):log-group:/.exec(raw);
+    if (arnm && (arnm[1] !== REGION || arnm[2] !== ACCOUNT)) return logsErr("ResourceNotFoundException", "The specified log group does not exist.");
+    var g = raw.replace(/^arn:aws:logs:[a-z0-9-]+:\d{12}:log-group:/, "").replace(/:\*$/, "");
     if (groups.indexOf(g) < 0) return logsErr("ResourceNotFoundException", "The specified log group does not exist.");
     if (q.logStreamNames && q.logStreamNamePrefix) return logsErr("InvalidParameterException", "logStreamNames and logStreamNamePrefix are mutually exclusive parameters.");
     var limit = q.limit === undefined ? 10000 : q.limit;
@@ -1207,6 +1219,8 @@
     if (!match) return logsErr("InvalidParameterException", "Not in the twin yet: JSON, space-delimited and regex filter patterns");
     var from = 0;
     if (q.nextToken !== undefined) { var tk = /^twin-(\d+)$/.exec(String(q.nextToken)); if (!tk) return logsErr("InvalidParameterException", "The specified nextToken is invalid."); from = +tk[1]; }
+    if (Array.isArray(q.logStreamNames) && (q.logStreamNames.length < 1 || q.logStreamNames.length > 100))
+      return logsErr("InvalidParameterException", "1 validation error detected: Value at 'logStreamNames' failed to satisfy constraint: Member must have length between 1 and 100");
     var names = Array.isArray(q.logStreamNames) ? q.logStreamNames : null, prefix = typeof q.logStreamNamePrefix === "string" ? q.logStreamNamePrefix : null;
     var hit = lambdaLogEvents(g.slice(12)).filter(function (e) {
       return (q.startTime === undefined || e.timestamp >= q.startTime) && (q.endTime === undefined || e.timestamp <= q.endTime) &&
@@ -1234,6 +1248,10 @@
   }
   function answer(url, init, host) {
     var body = typeof init.body === "string" ? init.body : "";
+    // The customer's account has only its CloudFormation stacks in the twin so far: every other service refuses the
+    // customer credential rather than answer with the platform account's resources (security.aws.a, R-025 (a)).
+    if (customerOf(init) && !/^cloudformation\.[a-z0-9-]+\.amazonaws\.com$/.test(host))
+      return Promise.resolve(xmlErr("AccessDenied", "Not in the twin's customer account yet: only CloudFormation answers it. Twin mode never calls real AWS.", 403));
     var p;
     try {
       if (host === "sts.amazonaws.com" || /^sts\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = sts(new URLSearchParams(body), init);
