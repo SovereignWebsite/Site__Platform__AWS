@@ -401,8 +401,8 @@
           var v = buckets[b], sum = v.reduce(function (a, p) { return a + p[1]; }, 0);
           if (stat !== "Average") return [b, sum];
           var n = v.reduce(function (a, p) { return a + p[2]; }, 0);
-          return [b, +(v.reduce(function (a, p) { return a + p[1] * p[2]; }, 0) / n).toFixed(2)];
-        });
+          return n > 0 ? [b, +(v.reduce(function (a, p) { return a + p[1] * p[2]; }, 0) / n).toFixed(2)] : null;
+        }).filter(function (p) { return p !== null; });
       }
       if (!asc) pts.reverse();
       out.push("<member><Id>" + esc(form.get(q + "Id")) + "</Id><Label>" + esc(form.get(q + "Label") || name || "") + "</Label><Timestamps>" +
