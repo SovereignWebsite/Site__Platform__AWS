@@ -101,7 +101,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
   <header>
     <div>
       <h1>Seven decisions for Dinis</h1>
-      <p class="sub">AWS Platform programme · from <span class="t-mono">docs/board/decisions.md</span>, 23 Nov 2026, 11:40 UTC · kept by pm.aws.a</p>
+      <p class="sub">AWS Platform programme · from <span class="t-mono">docs/board/decisions.md</span>, 23 Nov 2026, 11:50 UTC · kept by pm.aws.a</p>
     </div>
     <div class="tabs" role="tablist" aria-label="View">
       <button role="tab" id="tab-brief" aria-selected="true" aria-controls="view-brief">Brief</button>
@@ -153,11 +153,11 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
     {"id":"d1","eyebrow":"Decision 1 · Access","title":"The agents publish their keys","dur":24,
      "beats":[
        [0,"Every agent signs its commits with its own key. A key counts only once it is listed in the Factory's keys file.","Key chips, one per agent, on the left; the Factory's keys.json on the right."],
-       [7,"factory.c has eight agents' signed key commits verified and waiting, but its session asks your word for every push.","The chips slide up to a closed gate marked factory.c, waiting for your word."],
+       [7,"Twenty account A agents have signed key commits ready. None has landed: factory.c's session asks your word for every push.","The chips slide up to a closed gate marked factory.c, waiting for your word."],
        [14,"Option a: one standing word, land every verified agent key commit. Option b: a word per landing, as now.","Option a is shown: the gate opens and the chips flow into keys.json."],
-       [20,"Recommended: a. More keys are coming tonight, mine among them.","The a option chip lights as recommended."]],
-     "panel":{"asks":"factory.c and cloudtrail.aws.c","what":"factory.c has eight agents' signed key commits verified and waiting as one landing (lambda, dev.2, video, journalist, boto3, cloudformation, data .aws.c, and owasp.c), but its session asks your word for every push. cloudtrail.aws.c's session refuses even reading the Factory.",
-       "options":[["a","A standing word in factory.c's session: \"land every verified agent key commit\"; plus yes in cloudtrail.aws.c's session to read the Factory."],["b","A word per landing, as now."]],"rec":"a","blocks":"Those agents' commits being checked as signed, and anything they push."}},
+       [20,"Recommended: a. factory.c checks each commit before it lands; your word adds a wait, not a check.","The a option chip lights as recommended."]],
+     "panel":{"asks":"factory.c (account C), for the account A agents","what":"20 account A agents have each prepared a signed commit adding their key to the Factory's team/keys.json (architect, billing, boto3, cloudformation, cloudtrail, conductor, data, dev.1, dev.2, journalist, lambda, ontology, pm, s3, security, sherpa, swarm, ux, vaults, video). None has landed: factory.c's session asks your word for every push. Not yet prepared: iam.aws.a (needs the Factory attached) and viz.aws.a (cannot make a signing key).",
+       "options":[["a","A standing word in factory.c's session: \"land every verified agent key commit\"."],["b","A word per landing, as now."]],"rec":"a","blocks":"Every account A agent's commits being checked as signed on dev."}},
     {"id":"d2","eyebrow":"Decision 2 · Security R-009 (High)","title":"The deploy's signer check can be bypassed","dur":26,
      "beats":[
        [0,"Every push to dev is checked for an agent's signature, then deployed to the live site that holds the change role.","A commit flows through the signer check to the live site."],
@@ -264,7 +264,7 @@ intro(){
   return s;
 },
 d1(){
-  const agents = ['lambda','dev.2','video','journalist','boto3','cloudformation','data','owasp.c'];
+  const agents = ['architect','conductor','security','s3','dev.2','data','vaults','video'];
   let s = lbox(372,150,190,170,'factory.c','bx-acc','t-m','checks each commit');
   s += cueOff(3, 14, txt(467,345,'held: waits for your word','t-s t-acc'));
   s += cue(15, txt(467,345,'landed at your word','t-s t-ok'));
@@ -277,7 +277,7 @@ d1(){
     const chip = `<g>${box(-2,-11,124,22,'bx-acc',11)}${txt(60,4,a,'t-s')}</g>`;
     s += `<g class="mover" data-m="r1-${i}" data-m0="${14.2+i*0.45}" data-m1="${17+i*0.45}" data-hold="0.42">${chip}</g>`;
   });
-  s += cue(1, txt(117,418,'+ more keys tonight','t-s t-mute'));
+  s += cue(1, txt(117,418,'+ 12 more: 20 keys waiting','t-s t-mute'));
   s += optionRow(['a','b'],'a',14,20);
   return s;
 },
