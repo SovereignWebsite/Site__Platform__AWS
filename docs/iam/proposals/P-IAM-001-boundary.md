@@ -71,3 +71,13 @@ What the draft decides, each open to change:
 - To verify before apply: whether CloudFormation calls iam:UpdateRole on every update of a role or only when MaxSessionDuration changes. If every update, the deny breaks later stack updates (and possibly their rollback), and the deny must be dropped in favour of watching MaxSessionDuration in the plan diff.
 
 Not for apply as it stands: for aws.c to plan from, security.aws.c to review, Dinis to apply by console.
+
+## Update (07:20 UTC): what Cloud Control's bucket handlers need
+
+boto3.aws.a's docs/boto3/2026-11-23__02-cloud-control-s3-handlers.md (from the `AWS::S3::Bucket` schema shipped in cfn-lint 1.61.0) settles part of the draft:
+
+- The list and read handlers need `s3:ListAllMyBuckets` and 22 bucket-level `s3:Get*`/`s3:List*` actions, and **no object read**. So the change boundary's deny on `s3:GetObject*` breaks no Cloud Control call the page makes. The read boundary (ReadOnlyAccess) is unaffected: the read role is the one that opens objects.
+- The update handler lists 48 permissions, `iam:PassRole` and every bucket Put among them; the change role holds only `s3:PutBucketCORS` of those, today and under the draft boundary. Whether a CORS-only patch calls more is unknown until a live run; if it does, the boundary must grow by console. The draft is no narrower here than v2.1, so it adds no new failure.
+- The boundary leaves out `iam:PassRole` (and denies it), which keeps R-006 bounded, as boto3.aws.a notes: no patch can make the handler pass a role.
+
+Still to verify before apply: ReadOnlyAccess coverage, and whether CloudFormation calls iam:UpdateRole on every role update.
