@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' https://accounts.google.com/gsi/ https://*.amazonaws.com; img-src 'self' data: blob:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Join the beta: AWS Platform Sovereign Website</title>
+<meta name="description" content="How to run your own AWS account from aws.platform.sovereignweb.site: what you need, the one console visit, what the site can and cannot do, and how to leave.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AWS Platform Sovereign Website">
+<meta property="og:locale" content="en_GB">
+<meta property="og:url" content="https://aws.platform.sovereignweb.site/join/">
+<meta property="og:title" content="Join the beta: AWS Platform Sovereign Website">
+<meta property="og:description" content="How to run your own AWS account from aws.platform.sovereignweb.site: what you need, the one console visit, what the site can and cannot do, and how to leave.">
+<meta property="og:image" content="https://aws.platform.sovereignweb.site/assets/share/card-1200x630.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="AWS Platform Sovereign Website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Join the beta: AWS Platform Sovereign Website">
+<meta name="twitter:description" content="How to run your own AWS account from aws.platform.sovereignweb.site: what you need, the one console visit, what the site can and cannot do, and how to leave.">
+<meta name="twitter:image" content="https://aws.platform.sovereignweb.site/assets/share/card-1200x630.jpg">
+<link rel="canonical" href="https://aws.platform.sovereignweb.site/join/">
+<link rel="stylesheet" href="../family.css">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<details class="family-credit">
+  <summary>Sovereign Website</summary>
+  <ul>
+    <li><a href="/start/">Start here</a></li>
+    <li><a href="/agents/">Use with your AI</a></li>
+    <li class="family-gap"><a href="/admin/">How this site was made</a></li>
+    <li><a href="https://sovereignwebsite.ai/">Sovereign Website</a></li>
+    <li><a href="https://sovereignwebsite.org/">Principles</a></li>
+    <li><a href="https://sovereignwebsite.site/">Hosted</a></li>
+    <li><a href="https://hub.sovereignweb.site/">Hub</a></li>
+    <li><a href="https://agents.sovereignweb.site/">Agents</a></li>
+    <li><a href="https://vault.sovereignwebsite.site/">Vault</a></li>
+    <li><a href="https://agenticcells.ai/">AgentiCCells</a></li>
+    <li><a href="https://riskmandate.ai/">RiskMandate</a></li>
+    <li><a href="https://newsroom.sgit.ai/">Newsroom</a></li>
+  </ul>
+</details>
+<header class="top">
+  <a class="name" href="/">AWS Platform Sovereign Website</a>
+  <nav class="own" aria-label="This site">
+    <a href="/start/">Start here</a>
+    <a href="/agents/">Use with your AI</a>
+  </nav>
+</header>
+<main id="main" class="app doc">
+<div class="mark">aws.platform.sovereignweb.site / join</div>
+<h1>Join the beta</h1>
+<p class="lead">Run your own AWS account from <a href="/">aws.platform.sovereignweb.site</a>: sign in with Google, get one-hour AWS credentials in your browser, and make every change as a plan you approve. This page says how to set it up, exactly what the site can do in your account, and how to leave.</p>
+
+<section class="card">
+<h2>What you need</h2>
+<ul>
+  <li><strong>An invitation.</strong> Sign-in is open to the Google accounts added to the beta (up to 100). Ask Dinis Cruz to add the Google account you will use.</li>
+  <li><strong>An AWS account</strong> where you can create IAM roles with CloudFormation, once. We suggest a sandbox or non-production account while this is a beta.</li>
+  <li><strong>A current browser</strong> (Chrome, Edge, Firefox or Safari). Nothing to install.</li>
+</ul>
+</section>
+
+<section class="card">
+<h2>Set up, in about five minutes</h2>
+<ol class="steps">
+  <li><strong>Sign in.</strong> Open <a href="/">the site</a> and press <em>Sign in with Google</em>. The page shows your Google account ID: your roles will trust only that account, through only this site.</li>
+  <li><strong>Add your AWS account.</strong> On the Accounts tab, give it a name and its 12-digit ID. It is kept in your browser only, sealed with a key the browser will not let anyone read; it is never sent to us or written anywhere.</li>
+  <li><strong>Download its template.</strong> Press <em>Download this account's template</em>: a CloudFormation file with your Google account ID and the site's sign-in client already filled in. You can read <a href="../cloudformation/bootstrap.yaml">the template</a> first.</li>
+  <li><strong>The one console visit.</strong> In the AWS console, in <strong>us-east-1</strong>: CloudFormation, Create stack, <em>Choose an existing template</em>, <em>Upload a template file</em>, pick the file, name the stack <code>sws-aws-platform</code>, check both parameters, press Next twice, tick that the stack creates IAM resources, and Submit. Wait for <code>CREATE_COMPLETE</code>.</li>
+  <li><strong>Read your account.</strong> Back on the site, press <em>Read this account</em>: it shows the role you are signed in as, until when, and your costs this month. From here on, everything happens on the site; even later versions of the template arrive as plans you approve.</li>
+  <li><strong>Browse S3.</strong> On the S3 tab, <em>List buckets</em>. The first time you open a bucket, the site shows a plan to let that bucket answer this site (below); approve it, and you can walk folders, open files, look inside zips and read <code>.json.gz</code> logs.</li>
+</ol>
+</section>
+
+<section class="card">
+<h2>What the site can do in your account</h2>
+<p>Exactly what the two roles in the template allow, and only while you are signed in, for at most an hour at a time. Each role trusts one Google account (yours) through one sign-in client (this site's).</p>
+<h3>sws-aws-platform-read</h3>
+<ul>
+  <li>View your account's configuration (AWS's <em>ViewOnlyAccess</em> and <em>SecurityAudit</em> policies), budgets and costs.</li>
+  <li><strong>Read the contents of your S3 buckets</strong> (<code>s3:Get*</code>, <code>s3:List*</code>), so the S3 browser can open files.</li>
+</ul>
+<h3>sws-aws-platform-change</h3>
+<ul>
+  <li>Add a CORS rule to a bucket you choose, so it answers this site: <code>GET</code> and <code>HEAD</code>, from <code>https://aws.platform.sovereignweb.site</code> only, keeping any rules already there. It lets this site read that bucket in your browser; it does not make the bucket public.</li>
+  <li><strong>Update its own CloudFormation stack and its own two roles</strong> (any IAM action on roles named <code>sws-aws-platform-*</code>). This is how new versions arrive without console visits, and it also means this role could widen its own permissions. Treat it as powerful: it is used only when you press Approve on a plan, signed in as you, and every plan shows AWS's own change set first.</li>
+  <li>One line is specific to the site owner's account (the trust policy of a role named <code>sovereignwebsite-factory-dns</code>); in your account that role does not exist, so it does nothing.</li>
+</ul>
+</section>
+
+<section class="card">
+<h2>What you are trusting</h2>
+<ul>
+  <li><strong>No server, no keys.</strong> The site is static files on GitHub Pages. Your Google sign-in and AWS credentials stay in your browser; calls go straight from your browser to Google and AWS, and the page's security policy allows nothing else. There is no tracking.</li>
+  <li><strong>The code your browser runs.</strong> While you are signed in, the page's code can do whatever your roles allow. That code is public, <a href="https://github.com/SovereignWebsite/Site__Platform__AWS">github.com/SovereignWebsite/Site__Platform__AWS</a>, every commit is signed by the agent that made it, and the version you are running is shown at the bottom of each page. If that is not enough for an account, use a sandbox account, or run your own copy.</li>
+  <li><strong>Not official.</strong> An unofficial site, not made or endorsed by Amazon Web Services.</li>
+</ul>
+</section>
+
+<section class="card">
+<h2>Leaving</h2>
+<ol>
+  <li>In CloudFormation, delete the stack <code>sws-aws-platform</code>: both roles go, and the site can no longer sign in to your account.</li>
+  <li>For each bucket you opened, remove the CORS rule with ID <code>sws-aws-platform</code> (S3 console, the bucket, Permissions, Cross-origin resource sharing). Without the roles, it gives no one access, but it is tidier gone.</li>
+  <li>On the site, press <em>Forget this device</em>: the key and everything sealed with it are deleted from your browser.</li>
+</ol>
+</section>
+
+<p class="small">Built by the Sovereign Website agentic team with Dinis Cruz, November 2026. Questions or problems: tell Dinis, with what the page showed.</p>
+<footer>
+<nav class="site-links" aria-label="About this site">
+  <a href="/start/">Start here</a>
+  <a href="/agents/">Use with your AI</a>
+  <a href="/admin/">How this site was made</a>
+  <a href="/policy/">How this site is governed</a>
+</nav>
+A sovereign website, made with the <a href="https://sovereignwebsite.org/">open pattern</a>. Source: <a href="https://github.com/SovereignWebsite/Site__Platform__AWS">github.com/SovereignWebsite/Site__Platform__AWS</a>.</footer>
+</main>
+</body>
+</html>

@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
   SovereignWebsite AWS platform v2, bootstrap (the last console log-in). Two roles that
-  Dinis's own Google sign-in, in his browser on aws.platform.sovereignweb.site, may
+  the account owner's own Google sign-in, in their browser on aws.platform.sovereignweb.site, may
   assume through STS AssumeRoleWithWebIdentity for at most one hour. No IAM user, no
   access key, nothing stored. Written by aws.c@SovereignWebsite.dinis, 22 Nov 2026; the site fills in both parameters.
 
@@ -20,7 +20,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       RoleName: sws-aws-platform-read
-      Description: Read-only view of this account from the AWS platform site, Dinis's Google sign-in only
+      Description: Read-only view of this account from the AWS platform site, the owner's Google sign-in only
       MaxSessionDuration: 3600
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
@@ -62,7 +62,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       RoleName: sws-aws-platform-change
-      Description: The changes Dinis approves from the AWS platform site; grows only by a reviewed change to this template
+      Description: The changes the owner approves on the AWS platform site; grows only by a reviewed change to this template
       MaxSessionDuration: 3600
       AssumeRolePolicyDocument:
         Version: "2012-10-17"

@@ -124,3 +124,7 @@ details.full { margin-top: .6rem; } details.full summary { cursor: pointer; colo
 body.screenshot-names #s3-buckets button, body.screenshot-names #s3-objects .crumbs, body.screenshot-names #s3-objects > p,
 body.screenshot-names table.s3-table td:first-child, body.screenshot-names table.s3-table th:first-child,
 body.screenshot-names #s3-file h4, body.screenshot-names #s3-status, body.screenshot-names .viewer h4 { filter: blur(6px); }
+
+/* the join page */
+main.doc section.card { margin: 1rem 0; } main.doc h2 { margin-bottom: .6rem; } main.doc h3 { margin-top: .8rem; }
+main.doc ol.steps li, main.doc ul li { margin-bottom: .45rem; }
