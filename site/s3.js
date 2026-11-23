@@ -833,7 +833,7 @@
   function view(name, type, u8) { var box = P.el("div", {}), st = P.el("p", { class: "status" }); show(box, name, type || "", u8, st); return { box: box, status: st }; }
   // limits are read as a copy and changed only through setLimits, which takes known keys with positive numbers.
   function setLimits(o) {
-    Object.keys(o || {}).forEach(function (k) { if (k in LIMITS && typeof o[k] === "number" && o[k] >= 0 && isFinite(o[k])) LIMITS[k] = o[k]; });
+    Object.keys(o || {}).forEach(function (k) { if (Object.prototype.hasOwnProperty.call(LIMITS, k) && typeof o[k] === "number" && o[k] >= 0 && isFinite(o[k])) LIMITS[k] = o[k]; });
     return Object.freeze(Object.assign({}, LIMITS));
   }
   window.S3Browser = { render: render, jsonView: jsonView, openAt: openAt, view: view, setLimits: setLimits,
