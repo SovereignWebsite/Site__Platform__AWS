@@ -34,7 +34,7 @@ The twin stores SHA-256 of each capability and compares hashes, as the server do
 | `GET /api/vault/read-base64/{vault_id}/{file_id}` | none | none | base64 in JSON, about 3.75 MB ceiling; field name *TC* | *TC* |
 | `PUT /api/vault/write/{vault_id}/{file_id}` | access token + write_key | raw ciphertext | *TC* 200 `{}` | bad key: 403 by errors.html's general rule, or 404 HTML as append-lanes.html reports for lanes (section 3a) |
 | `DELETE /api/vault/delete/{vault_id}/{file_id}` | access token + write_key | none | *TC* | *TC* |
-| `POST /api/vault/batch/{vault_id}` | per operation | mixed reads and writes, **max 100** per request; operation shape *TC* | *TC* | over 100: 400 (errors.html), body *TC* |
+| `POST /api/vault/batch/{vault_id}` | access token + write_key when any op writes | `{"operations": [{op, file_id, data, match}]}`; `op` is `read`, `write` or `write-if-match`; `data` and `match` are base64; **max 100** per request (the browser library chunks at 50) | 200; a compare-and-swap miss is `"status": "conflict"` inside the 200; rest of the per-op result *TC* | over 100: 400 (errors.html), body *TC* |
 | `POST /api/vault/list/{vault_id}` | none | *TC* | *TC* | *TC* |
 | `GET /api/vault/health/{vault_id}` | none | none | *TC* | *TC* |
 | `GET /api/vault/public-info/{vault_id}` | none | none | *TC* | *TC* |
@@ -46,7 +46,16 @@ Out of the twin for now: presigned routes (named only), `GET /api/vault/zip/{vau
 
 **Storage layout the twin keeps:** `bare/data/obj-cas-imm-{hex}` (SHA-256 over the ciphertext), `bare/keys/key-rnd-imm-{hex}`, `bare/refs/`, `bare/indexes/`, `bare/append/`.
 
-**Batch is the main gap.** The browser library sends every file write as one batch and publishes with `pushIfMatch()` (`ECAS` when someone published first, design 01 section 1), so the twin cannot be useful without the batch body. Next action: read the shape from the browser library's source at a pinned commit (it is the copy design 01 section 8.1 already asks to pin into `site/`), not from guesswork.
+**Batch, as sgit.ai states it** ([vault from JavaScript](https://sgit.ai/docs/vault/vault-from-javascript.html), checked there on 12 Oct 2026; read 23 Nov 2026 at 11:40 UTC):
+
+- Request: `{"operations": [{op, file_id, data, match}]}`, `op` one of `read`, `write`, `write-if-match`; `data` and `match` base64. `match` is the exact bytes the client last read for that file, not a hash. The browser library chunks at 50 operations.
+- A `write-if-match` whose `match` no longer holds comes back as `"status": "conflict"` **inside an HTTP 200**, not as an HTTP error. The twin must do the same: a page that only checks the HTTP status would miss a lost race.
+- `ECAS` is the **browser library's** error code, not the server's: `pushIfMatch()` throws it when the named ref moved (merge and retry). Two more library codes: `ENOMATCH` (compare-and-swap before any read: a new vault has only ever written its ref, so its first `pushIfMatch` needs a read first) and `EREADONLY` (a static host, no write API). HTTP failures throw with the status and the server's detail (for example 403 without the access token).
+- A read just before each `pushIfMatch` re-arms the comparison and turns it into a blind overwrite; the page must read once, merge, then push.
+- The named ref is `{"commit_id": "obj-cas-imm-..."}`, encrypted, at `bare/refs/<ref id>`.
+- Still *TC*: the per-operation result shape (what a read returns, what a write returns), whether one conflict rejects the whole batch (an unverified sgit.ai demo summary says so; the JavaScript page does not), and any `delete` op.
+
+The library is vault UI v0.2.3 (`sgraph_ai_app_send__ui__vault/v0/v0.2/v0.2.3/_common/js/lib/` in SGraph-AI__App__Send), twelve classic scripts in `sg-send/` and `sg-vault/`, served unversioned at `dev.vault.sgraph.ai/_common/js/lib/` (every deploy overwrites it). The remaining *TC* cells are in that source; reading it waits on access (my request to attach that repository was refused at 11:38 UTC).
 
 ## 3. Append lane routes
 
@@ -93,10 +102,10 @@ Still not stated anywhere read: missing file on read, success codes for write, d
 
 ## 5. Tests the twin ships with (for architect.aws.c and the developers)
 
-Stated behaviour, each one test: malformed `vault_id` or append `file_id` 400; 101 batch operations 400; write returns exactly `{"ok": true}`; prefixed token 400; non-hex token 400; 5 MB plus one byte 413; the 1001st pending write 507; fetch of a processed id gives nothing; mark-processed twice puts the id in `missing`; 101 ids 400; purge with `folder: "inbox"` 400; configure and purge without access token 401; bad enum key 404 with HTML; missing field 400 JSON; configure replaces anchors, so a lane left out stops accepting writes; page size 500 is clamped to 200; `-imm-` reads carry the immutable header, refs carry `no-store`, and the live-behaviour flag drops the immutable header.
+Stated behaviour, each one test: a `write-if-match` with stale `match` answers HTTP 200 with `"status": "conflict"`; 101 operations 400; malformed `vault_id` or append `file_id` 400; 101 batch operations 400; write returns exactly `{"ok": true}`; prefixed token 400; non-hex token 400; 5 MB plus one byte 413; the 1001st pending write 507; fetch of a processed id gives nothing; mark-processed twice puts the id in `missing`; 101 ids 400; purge with `folder: "inbox"` 400; configure and purge without access token 401; bad enum key 404 with HTML; missing field 400 JSON; configure replaces anchors, so a lane left out stops accepting writes; page size 500 is clamped to 200; `-imm-` reads carry the immutable header, refs carry `no-store`, and the live-behaviour flag drops the immutable header.
 
 ## 6. Next steps (vaults.aws.a)
 
 1. Done 05:40 UTC: authentication, errors and transfers read; the access token header, patterns, batch limit and the 403/404 conflict are now stated (section 3a). The rest of the *TC* cells need the SG/Send source or the browser library.
-2. The batch body and `pushIfMatch()` from the browser library at a pinned commit (section 2).
+2. Done in part 11:40 UTC: batch request, conflict-in-200 and the library's ECAS, ENOMATCH, EREADONLY (section 2). The per-op result shape needs the library source.
 3. Design 01 section 10 steps 2 and 3: lane record schemas with data.aws.c and billing.aws.c, then the worked example on the twin.

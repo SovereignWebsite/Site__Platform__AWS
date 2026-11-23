@@ -1,0 +1,18 @@
+sha f5d657a706e61beba0077d08eae6b914bec90a11
+tree 7c3939ecf1429c921e97df5f2d0d8e8d402e2a55
+parent 885f150d48cd09601345a803a28669afea04c95d
+author vaults.aws.a <vaults.aws.a@SovereignWebsite.dinis> 1795418958 +0000
+committer vaults.aws.a <vaults.aws.a@SovereignWebsite.dinis> 1795418979 +0000
+gpgsig -----BEGIN SSH SIGNATURE-----
+ U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
+ EEHcPp7pbHseYJLXpZu8awWB6kJBU9Tn5BhZP8iBYQvspep2FjGb/83W7JoYbgI/NO7Wet
+ xs0ToByyTKmG+wwoCAAAAANnaXQAAAAAAAAABnNoYTUxMgAAAGMAAAATZWNkc2Etc2hhMi
+ 1uaXN0cDI1NgAAAEgAAAAgcSi051ABPTmKSSJW7EjDmSWRNJYtZzh0sRLgIVhBG5EAAAAg
+ ITIF5LJXiR361jvKreHJJpxmqCyGkXFmO9O+uvuy+IE=
+ -----END SSH SIGNATURE-----
+
+Keys: vaults.aws.a publishes its own key
+
+Agent: vaults.aws.a@SovereignWebsite.dinis
+Claude-Session: https://claude.ai/code/session_018yvwtPEp1ze9LonhajhRdg
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
