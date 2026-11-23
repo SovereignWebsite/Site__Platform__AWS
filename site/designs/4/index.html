@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self' 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>Boarding, design 4 of Join the beta, AWS Platform</title>
+<meta name="description" content="Design 4 of aws.platform.sovereignweb.site/join/, Boarding: Boarding in five minutes: the steps as a line of stops, what you need as the ticket, leaving as the exit.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AWS Platform">
+<meta property="og:locale" content="en_GB">
+<meta property="og:url" content="https://aws.platform.sovereignweb.site/designs/4/">
+<meta property="og:title" content="Boarding, design 4 of Join the beta, AWS Platform">
+<meta property="og:description" content="Design 4 of aws.platform.sovereignweb.site/join/, Boarding: Boarding in five minutes: the steps as a line of stops, what you need as the ticket, leaving as the exit.">
+<meta property="og:image" content="https://aws.platform.sovereignweb.site/assets/share/card-1200x630.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="AWS Platform">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Boarding, design 4 of Join the beta, AWS Platform">
+<meta name="twitter:description" content="Design 4 of aws.platform.sovereignweb.site/join/, Boarding: Boarding in five minutes: the steps as a line of stops, what you need as the ticket, leaving as the exit.">
+<meta name="twitter:image" content="https://aws.platform.sovereignweb.site/assets/share/card-1200x630.jpg">
+<link rel="canonical" href="https://aws.platform.sovereignweb.site/designs/4/">
+<style>
+*{box-sizing:border-box}
+html{color-scheme:light dark;-webkit-text-size-adjust:100%}
+body{margin:0;font:1.0625rem/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--fg);overflow-wrap:break-word}
+a{color:var(--link)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.skip{position:absolute;left:-999px;top:.5rem;z-index:99;background:var(--bg);color:var(--fg);padding:.5rem .9rem;border:2px solid var(--focus)}
+.skip:focus{left:1rem}
+main *{min-width:0}
+.chrome{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;justify-content:flex-end;position:relative;z-index:5;padding-top:.5rem}
+.chrome .by{margin:0 auto 0 0;font-size:.9rem;color:var(--muted)}
+.chrome .by a{color:var(--fg)}
+.chrome details{position:relative}
+.chrome summary{cursor:pointer;list-style:none;min-height:44px;display:inline-flex;align-items:center;padding:.35rem .8rem;border:1px solid var(--ctl);border-radius:999px;font-size:.9rem;background:var(--bg);color:var(--fg)}
+.chrome summary::-webkit-details-marker{display:none}
+.chrome summary::after{content:"";width:.45rem;height:.45rem;margin-left:.5rem;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px)}
+.chrome details[open] summary::after{transform:rotate(-135deg)}
+.chrome ul{position:absolute;right:0;top:calc(100% + .35rem);margin:0;padding:.4rem;list-style:none;min-width:15rem;max-width:calc(100vw - 2rem);background:var(--bg);color:var(--fg);border:1px solid var(--ctl);border-radius:.6rem;box-shadow:0 .6rem 1.6rem rgba(0,0,0,.25)}
+.chrome li a{display:block;padding:.55rem .7rem;border-radius:.4rem;color:var(--fg);text-decoration:none;font-size:.95rem}
+.chrome li a:hover,.chrome li a:focus-visible{background:var(--hover)}
+.chrome li a[aria-current]{font-weight:700;text-decoration:underline}
+.chrome .gap{border-top:1px solid var(--ctl);margin-top:.3rem;padding-top:.3rem}
+.chrome small{display:block;font-size:.85rem;color:var(--muted);font-weight:400}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.signin{display:grid;grid-template-columns:1fr auto auto;gap:.4rem .6rem;align-items:end;margin:1.25rem 0 .5rem}
+.signin label{font-size:.9rem;color:var(--muted);grid-row:1}
+.signin label[for=__none]{grid-column:2}
+.signin input,.signin select,.signin button{font:inherit;font-size:1rem;padding:.55rem .7rem;border:1px solid var(--ctl);border-radius:6px;background:var(--field);color:var(--fg);min-height:44px}
+.signin input{grid-column:1;grid-row:2}.signin select{grid-column:2;grid-row:2}
+.signin button{grid-column:3;grid-row:2;background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-weight:700;cursor:pointer}
+@media (max-width:30rem){.signin{grid-template-columns:1fr auto}.signin button{grid-column:1/-1;grid-row:3}}
+.status{font-weight:700;min-height:1.6em}
+.note{font-size:.95rem;color:var(--muted)}
+button.small,.out select{font:inherit;font-size:1rem;padding:.4rem .7rem;border:1px solid var(--ctl);border-radius:6px;background:var(--field);color:var(--link);font-weight:700;min-height:44px;cursor:pointer}
+.out select{color:var(--fg);font-weight:400}
+.out label{color:var(--muted)}
+#forget{margin:.3rem 0}
+.out h3{font-size:1.1rem;margin:1rem 0 .3rem}
+.out table{border-collapse:collapse;width:100%;font-size:.95rem}
+.out caption{text-align:left;font-weight:700;padding:.4rem 0}
+.out th,.out td{text-align:left;vertical-align:top;padding:.45rem .6rem;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+.out thead th{color:var(--muted);font-size:.9rem}
+.scroll{overflow-x:auto;margin:1rem 0}
+.out table{border-collapse:collapse;width:100%;font-size:.95rem}
+.out caption{text-align:left;font-weight:700;padding:.4rem 0}
+.out th,.out td{text-align:left;vertical-align:top;padding:.45rem .6rem;border-bottom:1px solid var(--line)}
+.out thead th{color:var(--muted);font-size:.9rem}
+.out th .sub{display:block;font-weight:400;color:var(--muted);font-size:.875rem}
+.out tr.group th{background:var(--hover);font-size:.875rem;letter-spacing:.06em;text-transform:uppercase}
+.out td.vals{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
+.out td.ok{color:var(--ok);font-weight:700;white-space:nowrap}
+.out td.bad{color:var(--bad);font-weight:700}
+.out td.num{text-align:right;font-variant-numeric:tabular-nums}
+.sent{font-size:.9rem;color:var(--muted)}
+footer{padding:2rem 0 3rem;font-size:.95rem}
+footer nav{display:flex;flex-wrap:wrap;gap:.25rem 1.25rem}
+footer nav a{min-height:44px;display:inline-flex;align-items:center}
+@media print{.chrome,.skip,.signin,#forget{display:none}}
+
+.sec ul,.sec ol{padding-left:1.3rem}.sec li{margin:.45rem 0}
+.sec h3{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:1rem;margin:1.1rem 0 .3rem}
+.sec code{background:var(--hover);padding:.05rem .3rem;border-radius:.25rem}
+.small{color:var(--muted);font-size:.95rem}
+
+:root{--bg:#f3f6f2;--fg:#122014;--muted:#465448;--link:#14663f;--focus:#14663f;--ctl:#6f7b73;--hover:#e1e8e2;--field:#fff;--accent:#14663f;--on-accent:#fff;--line:#cfd9d1;--ok:#14663f;--bad:#a13a2a;--ticket:#ffffff}
+@media (prefers-color-scheme:dark){:root{--bg:#0d120f;--fg:#e9f0eb;--muted:#b0bdb4;--link:#86ddb3;--focus:#86ddb3;--ctl:#7b877f;--hover:#18211b;--field:#131a15;--accent:#86ddb3;--on-accent:#08140d;--line:#29342c;--ok:#86ddb3;--bad:#ff9b8a;--ticket:#131a15}}
+.wrap{max-width:72rem;margin:0 auto;padding:0 1rem}
+.mast{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:.5rem 1rem;padding:.5rem 0}
+.brand{font-weight:800;font-size:1.2rem;color:var(--fg);text-decoration:none;min-height:44px;display:inline-flex;align-items:center}
+.own{display:flex;flex-wrap:wrap;gap:.25rem 1rem;font-size:.95rem}.own a{color:var(--fg);min-height:44px;display:inline-flex;align-items:center}
+.hero{display:grid;gap:1.5rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,24rem),1fr));padding:1.5rem 0;align-items:start}
+.k{font-size:.85rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 .3rem}
+h1{font-size:clamp(2.1rem,6vw,3.6rem);line-height:1.05;margin:0 0 1rem;letter-spacing:-.02em}
+.ticket{background:var(--ticket);border:2px dashed var(--accent);border-radius:1rem;padding:1.1rem 1.3rem}
+.ticket>h2{font-size:1.3rem;margin:0 0 .4rem}
+.line .sec>h2{font-size:clamp(1.45rem,3.4vw,2rem);margin:1rem 0 .5rem}
+.line .steps{list-style:none;padding:0;counter-reset:st;position:relative}
+.line .steps>li{counter-increment:st;position:relative;padding:0 0 1.2rem 3.2rem;margin:0}
+.line .steps>li::before{content:counter(st);position:absolute;left:0;top:0;width:2.2rem;height:2.2rem;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-weight:800}
+.line .steps>li:not(:last-child)::after{content:"";position:absolute;left:1.05rem;top:2.3rem;bottom:.1rem;width:3px;background:var(--line)}
+.rest{display:grid;gap:1.25rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr));margin:1rem 0 2rem}
+.rest .sec{background:var(--ticket);border:1px solid var(--line);border-radius:.8rem;padding:1.1rem 1.3rem}
+.rest .sec>h2{font-size:1.3rem;margin:0 0 .4rem}
+.rest #leaving{border-color:var(--accent)}
+footer{border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="wrap"><nav class="chrome" aria-label="Designs and the Sovereign Website family">
+<p class="by"><a href="/">AWS Platform</a> · join page</p>
+<details><summary>Choose a design</summary><ul><li><a href="/designs/1/">1. Runbook<small>An operations runbook: a contents rail, then the procedure in numbered sections, written to be followed.</small></a></li><li><a href="/designs/2/">2. Two Keys<small>The two roles as two keys on the table: what each can open, set against what you are trusting.</small></a></li><li><a href="/designs/3/">3. Blueprint<small>A blueprint, dark first: the path from your browser to your account drawn, the steps as its annotations.</small></a></li><li><a href="/designs/4/" aria-current="page">4. Boarding<small>Boarding in five minutes: the steps as a line of stops, what you need as the ticket, leaving as the exit.</small></a></li><li><a href="/designs/5/">5. Brief<small>Everything on one plain page, for reading fast or printing.</small></a></li><li class="gap"><a href="/designs/">All five, side by side</a></li><li><a href="/">The site as it is now</a></li></ul></details>
+<details><summary>Sovereign Website</summary><ul><li><a href="/start/">Start here</a></li><li><a href="/agents/">Use with your AI</a></li><li><a href="/admin/">How this site was made</a></li><li class="gap"><a href="/policy/">How this site is governed</a></li><li><a href="https://sovereignwebsite.ai/">Sovereign Website</a></li><li><a href="https://sovereignwebsite.org/">Principles</a></li><li><a href="https://sovereignwebsite.site/">Hosted</a></li><li><a href="https://hub.sovereignweb.site/">Hub</a></li><li><a href="https://agents.sovereignweb.site/">Agents</a></li><li><a href="https://vault.sovereignwebsite.site/">Vault</a></li><li><a href="https://agenticcells.ai/">AgentiCCells</a></li><li><a href="https://riskmandate.ai/">RiskMandate</a></li><li><a href="https://newsroom.sgit.ai/">Newsroom</a></li></ul></details>
+</nav>
+<header class="mast"><a class="brand" href="/">AWS Platform</a><nav class="own" aria-label="This site"><a href="#need">What you need</a><a href="#setup">Set up</a><a href="#leaving">Leaving</a><a href="/start/">Start here</a><a href="/agents/">Use with your AI</a></nav></header>
+<main id="main"><div class="hero"><div><p class="k">aws.platform.sovereignweb.site / join</p><h1>Join the beta</h1><p>Run your own AWS account from <a href="/">aws.platform.sovereignweb.site</a>: sign in with Google, get one-hour AWS credentials in your browser, and make every change as a plan you approve. This page says how to set it up, exactly what the site can do in your account, and how to leave.</p></div><section class="sec ticket" id="need" aria-labelledby="h-need"><h2 id="h-need">What you need</h2><ul>
+  <li><strong>An invitation.</strong> Sign-in is open to the Google accounts added to the beta (up to 100). Ask Dinis Cruz to add the Google account you will use.</li>
+  <li><strong>An AWS account</strong> where you can create IAM roles with CloudFormation, once. We suggest a sandbox or non-production account while this is a beta.</li>
+  <li><strong>A current browser</strong> (Chrome, Edge, Firefox or Safari). Nothing to install.</li>
+</ul></section></div>
+<div class="line"><section class="sec" id="setup" aria-labelledby="h-setup"><h2 id="h-setup">Set up, in about five minutes</h2><ol class="steps">
+  <li><strong>Sign in.</strong> Open <a href="/">the site</a> and press <em>Sign in with Google</em>. The page shows your Google account ID: your roles will trust only that account, through only this site.</li>
+  <li><strong>Add your AWS account.</strong> On the Accounts tab, give it a name and its 12-digit ID. It is kept in your browser only, sealed with a key the browser will not let anyone read; it is never sent to us or written anywhere.</li>
+  <li><strong>Download its template.</strong> Press <em>Download this account's template</em>: a CloudFormation file with your Google account ID and the site's sign-in client already filled in. You can read <a href="/cloudformation/bootstrap.yaml">the template</a> first.</li>
+  <li><strong>The one console visit.</strong> In the AWS console, in <strong>us-east-1</strong>: CloudFormation, Create stack, <em>Choose an existing template</em>, <em>Upload a template file</em>, pick the file, name the stack <code>sws-aws-platform</code>, check both parameters, press Next twice, tick that the stack creates IAM resources, and Submit. Wait for <code>CREATE_COMPLETE</code>.</li>
+  <li><strong>Read your account.</strong> Back on the site, press <em>Read this account</em>: it shows the role you are signed in as, until when, and your costs this month. From here on, everything happens on the site; even later versions of the template arrive as plans you approve.</li>
+  <li><strong>Browse S3.</strong> On the S3 tab, <em>List buckets</em>. The first time you open a bucket, the site shows a plan to let that bucket answer this site (below); approve it, and you can walk folders, open files, look inside zips and read <code>.json.gz</code> logs.</li>
+</ol></section></div>
+<div class="rest"><section class="sec" id="can" aria-labelledby="h-can"><h2 id="h-can">What the site can do in your account</h2><p>Exactly what the two roles in the template allow, and only while you are signed in, for at most an hour at a time. Each role trusts one Google account (yours) through one sign-in client (this site's).</p>
+<h3>sws-aws-platform-read</h3>
+<ul>
+  <li>View your account's configuration (AWS's <em>ViewOnlyAccess</em> and <em>SecurityAudit</em> policies), budgets and costs.</li>
+  <li><strong>Read the contents of your S3 buckets</strong> (<code>s3:Get*</code>, <code>s3:List*</code>), so the S3 browser can open files.</li>
+</ul>
+<h3>sws-aws-platform-change</h3>
+<ul>
+  <li>Add a CORS rule to a bucket you choose, so it answers this site: <code>GET</code> and <code>HEAD</code>, from <code>https://aws.platform.sovereignweb.site</code> only, keeping any rules already there. It lets this site read that bucket in your browser; it does not make the bucket public.</li>
+  <li><strong>Update its own CloudFormation stack and its own two roles</strong> (any IAM action on roles named <code>sws-aws-platform-*</code>). This is how new versions arrive without console visits, and it also means this role could widen its own permissions. Treat it as powerful: it is used only when you press Approve on a plan, signed in as you, and every plan shows AWS's own change set first.</li>
+  <li>One line is specific to the site owner's account (the trust policy of a role named <code>sovereignwebsite-factory-dns</code>); in your account that role does not exist, so it does nothing.</li>
+</ul></section><section class="sec" id="trust" aria-labelledby="h-trust"><h2 id="h-trust">What you are trusting</h2><ul>
+  <li><strong>No server, no keys.</strong> The site is static files on GitHub Pages. Your Google sign-in and AWS credentials stay in your browser; calls go straight from your browser to Google and AWS, and the page's security policy allows nothing else. There is no tracking.</li>
+  <li><strong>The code your browser runs.</strong> While you are signed in, the page's code can do whatever your roles allow. That code is public, <a href="https://github.com/SovereignWebsite/Site__Platform__AWS">github.com/SovereignWebsite/Site__Platform__AWS</a>, every commit is signed by the agent that made it, and the version you are running is shown at the bottom of each page. If that is not enough for an account, use a sandbox account, or run your own copy.</li>
+  <li><strong>Not official.</strong> An unofficial site, not made or endorsed by Amazon Web Services.</li>
+</ul></section><section class="sec" id="leaving" aria-labelledby="h-leaving"><h2 id="h-leaving">Leaving</h2><ol>
+  <li>In CloudFormation, delete the stack <code>sws-aws-platform</code>: both roles go, and the site can no longer sign in to your account.</li>
+  <li>For each bucket you opened, remove the CORS rule with ID <code>sws-aws-platform</code> (S3 console, the bucket, Permissions, Cross-origin resource sharing). Without the roles, it gives no one access, but it is tidier gone.</li>
+  <li>On the site, press <em>Forget this device</em>: the key and everything sealed with it are deleted from your browser.</li>
+</ol></section></div>
+<p class="small">Built by the Sovereign Website agentic team with Dinis Cruz, November 2026. Questions or problems: tell Dinis, with what the page showed.</p></main>
+<footer>
+<nav aria-label="About this site"><a href="/start/">Start here</a> <a href="/agents/">Use with your AI</a> <a href="/admin/">How this site was made</a> <a href="/policy/">How this site is governed</a></nav>
+<p>A sovereign website, made with the <a href="https://sovereignwebsite.org/">open pattern</a>. Source: <a href="https://github.com/SovereignWebsite/Site__Platform__AWS">github.com/SovereignWebsite/Site__Platform__AWS</a>.</p>
+</footer>
+</div></body>
+</html>
