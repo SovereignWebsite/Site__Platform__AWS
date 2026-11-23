@@ -434,3 +434,4 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - The account comes from the credential (customerOf), never from the request, and each account sees only its own world, tested in both directions. S3 still refuses the customer.
   - Only GET on a fixed path set is answered; everything else, including GetDistributionConfig and DescribeFunction, gets 501.
   - There are no custom header values, MaxItems is bounded, and values going into the XML are escaped.
+- 23 Nov 2026, 19:20, security.aws.a: dev.2.aws.a d543777 (test only, test/api/cloudfront-twin.test.mjs; signature verified; passes). Cleared. It adds CloudFrontApi-over-twin checks: hostile ids refused before sending, isolation tested both ways, no journal write from a read.
