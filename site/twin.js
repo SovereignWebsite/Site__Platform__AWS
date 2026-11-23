@@ -129,7 +129,7 @@
   // Maps keyed by request values (bucket, key, role, change set names) have no prototype, so a name such as
   // "__proto__" or "constructor" is only ever a missing entry (security.aws.a's note on 88831eb).
   function map() { return Object.create(null); }
-  function emptyWorld() { return { objects: map(), cors: map(), roles: map(), iam: map(), template: null, stackStatus: "CREATE_COMPLETE", stackUpdated: null, stackEvents: [], changeSets: map(), requests: map() }; }
+  function emptyWorld() { return { objects: map(), cors: map(), roles: map(), iam: map(), template: null, stackStatus: "CREATE_COMPLETE", stackUpdated: null, stackEvents: [], changeSets: map(), requests: map(), pending: [], marks: [], accounts: map() }; }
   function bodyOf(spec) {
     if (spec.gzipText != null) return gzip(enc.encode(spec.gzipText));
     if (spec.zip) return makeZip(spec.zip);
@@ -142,7 +142,7 @@
   }
   // One small function per operation on the world: (world, entry) -> world changed in place.
   var OPS = {
-    "s3.putObject": function (w, e) { var d = e.data; (w.objects[d.bucket] = w.objects[d.bucket] || map())[d.key] = lazyObject(d); if (d.bucket === B.logs) delete w._hours; },
+    "s3.putObject": function (w, e) { var d = e.data; (w.objects[d.bucket] = w.objects[d.bucket] || map())[d.key] = lazyObject(d); if (d.bucket === B.logs) { delete w._hours; delete w._lambdaLogs; } },
     "s3.putBucketCors": function (w, e) { w.cors[e.data.bucket] = JSON.parse(JSON.stringify(e.data.cors)); },
     "s3.addCorsRule": function (w, e) { w.cors[e.data.bucket].CorsRules.push(JSON.parse(JSON.stringify(e.data.rule))); },
     "iam.createRole": function (w, e) { w.roles[e.data.name] = JSON.parse(JSON.stringify(e.data.trust)); if (e.data.details) w.iam[e.data.name] = JSON.parse(JSON.stringify(e.data.details)); },
@@ -155,18 +155,71 @@
       w.template = w.changeSets[e.data.name]; w.stackStatus = "UPDATE_COMPLETE"; w.stackUpdated = t;
       w.stackEvents = [[t, "sws-aws-platform", "AWS::CloudFormation::Stack", "UPDATE_COMPLETE"], [t, "sws-aws-platform", "AWS::CloudFormation::Stack", "UPDATE_IN_PROGRESS", "User Initiated"]].concat(w.stackEvents || []);
     },
-    "cloudcontrol.requestFailed": function (w, e) { w.requests[e.data.token] = e.data.message; }
+    "cloudcontrol.requestFailed": function (w, e) { w.requests[e.data.token] = e.data.message; },
+    // ---- Customer accounts (deploy plan step 4): stacks in another account, keyed account -> "region/name" ----
+    "cloudformation.createStack": function (w, e) {
+      var d = e.data, a = w.accounts[d.account] || (w.accounts[d.account] = { stacks: map() });
+      a.stacks[d.region + "/" + d.name] = { name: d.name, kind: d.kind, region: d.region, account: d.account, stackId: d.stackId, roleArn: d.roleArn || null,
+        params: d.params, created: e.t, status: "CREATE_IN_PROGRESS", resources: map(), outputs: [], ids: d.ids,
+        events: [{ id: d.stackId.split("/").pop() + "-" + e.seq, t: e.t, logical: d.name, physical: d.stackId, type: "AWS::CloudFormation::Stack", status: "CREATE_IN_PROGRESS", reason: "User Initiated" }] };
+    },
+    // One resource's (or the stack's own) step, emitted by the clock: newest first in events, as AWS lists them.
+    "cloudformation.stackEvent": function (w, e) {
+      var d = e.data, st = w.accounts[d.account].stacks[d.region + "/" + d.name];
+      st.events.unshift({ id: st.stackId.split("/").pop() + "-" + e.seq, t: e.t, logical: d.logical, physical: d.physical || "", type: d.type, status: d.status, reason: d.reason || "" });
+      if (d.logical === d.name) { st.status = d.status; if (d.outputs) st.outputs = d.outputs; }
+      else st.resources[d.logical] = { type: d.type, physical: d.physical || "", status: d.status };
+    },
+    // A marker a scenario or test can schedule (the clock's own op): the world keeps the labels in order.
+    "clock.mark": function (w, e) { w.marks.push(e.data.label); }
   };
-  function apply(w, e) { var f = OPS[e.op]; if (!f) throw new Error("twin: no operation " + e.op); f(w, e); return w; }
+  // An entry may schedule later entries (e.schedule: [{ at, op, target, data, actor, why }]); they wait in the world's
+  // pending list, so a refold rebuilds the list, and leave it when the clock emits them (e.settles: { from, i }).
+  function apply(w, e) {
+    var f = OPS[e.op]; if (!f) throw new Error("twin: no operation " + e.op); f(w, e);
+    if (e.settles) w.pending = w.pending.filter(function (p) { return !(p.from === e.settles.from && p.i === e.settles.i); });
+    if (e.schedule) e.schedule.forEach(function (x, i) { w.pending.push({ at: x.at, from: e.seq, i: i, entry: x }); });
+    return w;
+  }
   function fold(entries) { return entries.reduce(apply, emptyWorld()); }
-  // Append an entry to the journal and apply it to the live world.
-  function record(e) {
-    var full = { seq: journal.length + 1, t: e.t || new Date().toISOString(), actor: e.actor || "twin", op: e.op, target: e.target || null,
+  // ---- The twin's clock (design 02 step 5, brought forward for deploy step 4; architect.aws.a's rules, 23 Nov) ----
+  // now() is the twin's time: real time plus an offset, or frozen while paused; tick(ms) moves it on. Scheduled entries
+  // are emitted by catch-up only, each with t = its own at, in at order (ties: the scheduling entry's seq, then its
+  // place in that entry's list), so the journal depends on the clock alone, never on who read the twin or when.
+  // Catch-up runs on tick, before any new entry is recorded, and on a read while the clock runs.
+  var clock = { offset: 0, frozen: null };
+  function nowMs() { return clock.frozen != null ? clock.frozen : Date.now() + clock.offset; }
+  function nowIso() { return new Date(nowMs()).toISOString(); }
+  var settling = false;
+  function settle() {
+    if (settling || !state) return;
+    settling = true;
+    try {
+      var upTo = nowMs();
+      for (;;) {
+        var due = state.pending.filter(function (p) { return Date.parse(p.at) <= upTo; });
+        if (!due.length) break;
+        due.sort(function (a, b) { return Date.parse(a.at) - Date.parse(b.at) || a.from - b.from || a.i - b.i; });
+        var p = due[0], x = p.entry;
+        append({ t: p.at, actor: x.actor || "twin", op: x.op, target: x.target, data: x.data, why: x.why || "clock.settle", source: "clock",
+          settles: { from: p.from, i: p.i }, schedule: x.schedule });
+      }
+    } finally { settling = false; }
+  }
+  function append(e) {
+    var full = { seq: journal.length + 1, t: e.t || nowIso(), actor: e.actor || "twin", op: e.op, target: e.target || null,
       data: e.data, why: e.why || null, source: e.source || "twin" };
+    if (e.settles) full.settles = e.settles;
+    if (e.schedule) full.schedule = e.schedule.map(function (x) {
+      if (!own(OPS, x.op)) throw new Error("twin: no operation " + x.op);
+      return { at: new Date(Date.parse(x.at)).toISOString(), op: x.op, target: x.target || null, data: x.data, actor: x.actor || null, why: x.why || null, schedule: x.schedule };
+    });
     journal.push(full);
     if (state) apply(state, full);
     return full;
   }
+  // Append an entry to the journal and apply it to the live world; anything the clock owes is emitted first.
+  function record(e) { settle(); return append(e); }
   // Who made a call: the twin's credentials name the role (ASIATWINREAD, ASIATWINCHANGE).
   function actorOf(init) { var m = /Credential=ASIATWIN(\w+)/.exec(hdr(init, "authorization") || ""); return m ? "role:sws-aws-platform-" + m[1].toLowerCase() : "anonymous"; }
 
@@ -629,8 +682,134 @@
     }
     return null;
   }
+  // ---- Deploy plan step 4: a customer's account, where the Vault's stacks are created ----
+  // The customer is a second account in the same journal (AWS's documentation example id). The twin credential
+  // ASIATWINCUSTOMER calls as the customer's own administrator, as D3's recommended path has them do in their console.
+  // Stacks follow cloudformation.aws.a's Vault stack 0.3.3 and iam.aws.a's vault-access 0.1.1: the -access stack
+  // makes the deploy role and boundary; sws-vault-<id> is created with that role; resources appear wave by wave on
+  // the twin clock (the distribution takes minutes), then the stack completes with its outputs. Not yet here: the
+  // -edge stack, DNS and the health address answering, DeleteStack, and the CloudTrail records derived from these.
+  var CUSTOMER = "444455556666", VAULT_TEMPLATE = "0.3.3";
+  function customerOf(init) { return /Credential=ASIATWINCUSTOMER\//.test(hdr(init, "authorization") || "") ? CUSTOMER : null; }
+  // [logical id, type, seconds to create], wave by wave; each wave starts a second after the last one ends.
+  var VAULT_WAVES = {
+    access: [[["VaultBoundary", "AWS::IAM::ManagedPolicy", 3]], [["DeployRole", "AWS::IAM::Role", 12]]],
+    vault: [
+      [["VaultBucket", "AWS::S3::Bucket", 3], ["AccessToken", "AWS::SecretsManager::Secret", 2], ["VaultLogs", "AWS::Logs::LogGroup", 1], ["HealthFunction", "AWS::CloudFront::Function", 4]],
+      [["VaultBucketPolicy", "AWS::S3::BucketPolicy", 2], ["VaultFunctionRole", "AWS::IAM::Role", 12]],
+      [["VaultFunction", "AWS::Lambda::Function", 8]],
+      [["VaultFunctionUrl", "AWS::Lambda::Url", 2], ["VaultFunctionUrlPermission", "AWS::Lambda::Permission", 1], ["VaultFunctionInvokePermission", "AWS::Lambda::Permission", 1]],
+      [["VaultDistribution", "AWS::CloudFront::Distribution", 240]],
+      [["VaultRecordA", "AWS::Route53::RecordSet", 35], ["VaultRecordAAAA", "AWS::Route53::RecordSet", 35]]
+    ]
+  };
+  function vaultIds(account, region, id) {
+    var r = rng("vault.ids", 20261124), pick = function (abc, n) { var o = ""; for (var i = 0; i < n; i++) o += abc[Math.floor(r() * abc.length)]; return o; };
+    var lower = "abcdefghijklmnopqrstuvwxyz0123456789", upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    return { stack: pick("0123456789abcdef", 8) + "-" + pick("0123456789abcdef", 4) + "-11ef-" + pick("0123456789abcdef", 4) + "-" + pick("0123456789abcdef", 12),
+      url: pick(lower, 32), distribution: "E" + pick(upper, 13), cfDomain: "d" + pick(lower, 13) + ".cloudfront.net", secret: pick("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 6) };
+  }
+  function physicalOf(st, logical) {
+    var id = st.params.VaultId, a = st.account, rg = st.region, x = st.ids;
+    return { VaultBoundary: "arn:aws:iam::" + a + ":policy/sws-vault-" + id + "-boundary", DeployRole: "sws-vault-" + id + "-deploy",
+      VaultBucket: "sws-vault-" + id + "-data-" + a + "-" + rg, AccessToken: "arn:aws:secretsmanager:" + rg + ":" + a + ":secret:sws-vault-" + id + "-token-" + x.secret,
+      VaultLogs: "/aws/lambda/sws-vault-" + id + "-api", HealthFunction: "arn:aws:cloudfront::" + a + ":function/sws-vault-" + id + "-health",
+      VaultBucketPolicy: "sws-vault-" + id + "-data-" + a + "-" + rg, VaultFunctionRole: "sws-vault-" + id + "-api", VaultFunction: "sws-vault-" + id + "-api",
+      VaultFunctionUrl: "arn:aws:lambda:" + rg + ":" + a + ":function:sws-vault-" + id + "-api", VaultFunctionUrlPermission: "sws-vault-" + id + "-api-url",
+      VaultFunctionInvokePermission: "sws-vault-" + id + "-api-invoke", VaultDistribution: x.distribution,
+      VaultRecordA: st.params.DomainName || "", VaultRecordAAAA: st.params.DomainName || "" }[logical] || "";
+  }
+  function stackOutputs(st) {
+    var p = st.params, x = st.ids, id = p.VaultId, a = st.account, rg = st.region, kv = function (k, v) { return { OutputKey: k, OutputValue: v }; };
+    if (st.kind === "access") return [kv("DeployRoleArn", "arn:aws:iam::" + a + ":role/sws-vault-" + id + "-deploy"), kv("BoundaryArn", "arn:aws:iam::" + a + ":policy/sws-vault-" + id + "-boundary")];
+    var base = p.DomainName ? "https://" + p.DomainName : "https://" + x.cfDomain;
+    var out = [kv("Endpoint", base), kv("HealthCheck", base + "/api/info/health"), kv("DeployCheck", "https://" + x.cfDomain + "/health"),
+      kv("TokenSecretArn", physicalOf(st, "AccessToken")), kv("BucketName", physicalOf(st, "VaultBucket")), kv("DistributionId", x.distribution),
+      kv("VaultId", id), kv("AccountId", a), kv("Region", rg), kv("TemplateVersion", VAULT_TEMPLATE)];
+    if (p.DomainName && !p.HostedZoneId) out.push(kv("DnsRecords", p.DomainName + " CNAME " + x.cfDomain));
+    return out;
+  }
+  // The stack's steps on the clock, from the time it was created.
+  function stackSchedule(st, t0) {
+    var waves = VAULT_WAVES[st.kind].map(function (wv) {
+      return wv.filter(function (r) { return !/^VaultRecordA/.test(r[0]) || (st.params.DomainName && st.params.HostedZoneId); });
+    }).filter(function (wv) { return wv.length; });
+    var out = [], at = Date.parse(t0) + 1000, base = { account: st.account, region: st.region, name: st.name };
+    var ev = function (ms, logical, type, status, extra) { var d = Object.assign({ logical: logical, type: type, status: status }, base, extra || {});
+      out.push({ at: new Date(ms).toISOString(), op: "cloudformation.stackEvent", target: st.stackId, data: d, actor: "aws:cloudformation", why: "clock.settle" }); };
+    waves.forEach(function (wv) {
+      var end = at;
+      wv.forEach(function (r) {
+        ev(at, r[0], r[1], "CREATE_IN_PROGRESS");
+        ev(at + 400, r[0], r[1], "CREATE_IN_PROGRESS", { physical: physicalOf(st, r[0]), reason: "Resource creation Initiated" });
+        ev(at + r[2] * 1000, r[0], r[1], "CREATE_COMPLETE", { physical: physicalOf(st, r[0]) });
+        end = Math.max(end, at + r[2] * 1000);
+      });
+      at = end + 1000;
+    });
+    ev(at, st.name, "AWS::CloudFormation::Stack", "CREATE_COMPLETE", { physical: st.stackId, outputs: stackOutputs(st) });
+    return out;
+  }
+  function cfnErr(code, msg, status) { return xml("<ErrorResponse xmlns=\"http://cloudformation.amazonaws.com/doc/2010-05-15/\"><Error><Type>Sender</Type><Code>" + code + "</Code><Message>" + esc(msg) + "</Message></Error><RequestId>twin</RequestId></ErrorResponse>", status || 400); }
+  function formParams(form, prefix) {
+    var out = [];
+    for (var i = 1; i <= 64; i++) { var k = form.get(prefix + ".member." + i + ".ParameterKey"); if (k == null) break; out.push([k, form.get(prefix + ".member." + i + ".ParameterValue") || ""]); }
+    return out;
+  }
+  function customerCfn(form, init, region, account) {
+    var s = build(), A = form.get("Action"), acc = s.accounts[account] || { stacks: map() };
+    var find = function (n) { var st = n && acc.stacks[region + "/" + n]; if (!st && n) Object.keys(acc.stacks).forEach(function (k) { if (acc.stacks[k].stackId === n && acc.stacks[k].region === region) st = acc.stacks[k]; }); return st || null; };
+    var NS = " xmlns=\"http://cloudformation.amazonaws.com/doc/2010-05-15/\"";
+    if (A === "CreateStack") {
+      var name = form.get("StackName") || "", params = map(), m = /^sws-vault-([0-9a-f]{12})(-access)?$/.exec(name);
+      formParams(form, "Parameters").forEach(function (kv) { params[kv[0]] = kv[1]; });
+      if (!m) return cfnErr("ValidationError", "The twin's customer account holds Vault stacks only: sws-vault-<12 hex digits> or sws-vault-<12 hex digits>-access.");
+      if (params.VaultId !== m[1]) return cfnErr("ValidationError", "Parameter 'VaultId' must be " + m[1] + " for stack " + name + ".");
+      if (!form.get("TemplateURL") && !form.get("TemplateBody")) return cfnErr("ValidationError", "Either Template URL or Template Body must be specified.");
+      var existing = find(name);
+      if (existing && existing.status !== "DELETE_COMPLETE") return cfnErr("AlreadyExistsException", "Stack [" + name + "] already exists");
+      var caps = []; for (var c = 1; c <= 8; c++) { var cv = form.get("Capabilities.member." + c); if (cv) caps.push(cv); }
+      if (caps.indexOf("CAPABILITY_NAMED_IAM") < 0) return cfnErr("InsufficientCapabilitiesException", "Requires capabilities : [CAPABILITY_NAMED_IAM]");
+      var kind = m[2] ? "access" : "vault", roleArn = form.get("RoleARN") || null;
+      if (kind === "vault") {
+        var access = find(name + "-access"), want = "arn:aws:iam::" + account + ":role/" + name + "-deploy";
+        if (!access || access.status !== "CREATE_COMPLETE" || roleArn !== want)
+          return cfnErr("ValidationError", "Role " + (roleArn || "(none)") + " is invalid or cannot be assumed");
+      }
+      var ids = vaultIds(account, region, m[1]), stackId = "arn:aws:cloudformation:" + region + ":" + account + ":stack/" + name + "/" + ids.stack;
+      var plain = {}; Object.keys(params).forEach(function (k) { plain[k] = params[k]; });
+      var st = { name: name, kind: kind, region: region, account: account, stackId: stackId, params: plain, ids: ids };
+      var t = nowIso();
+      record({ t: t, actor: "user:customer-admin@" + account, op: "cloudformation.createStack", target: stackId, why: "deploy.create",
+        data: { account: account, region: region, name: name, kind: kind, params: plain, roleArn: roleArn, stackId: stackId, ids: ids }, schedule: stackSchedule(st, t) });
+      return xml("<CreateStackResponse" + NS + "><CreateStackResult><StackId>" + esc(stackId) + "</StackId></CreateStackResult></CreateStackResponse>");
+    }
+    if (A === "DescribeStacks") {
+      var one = form.get("StackName"), list = one ? [find(one)] : Object.keys(acc.stacks).map(function (k) { return acc.stacks[k]; }).filter(function (x) { return x.region === region; });
+      if (one && !list[0]) return cfnErr("ValidationError", "Stack with id " + one + " does not exist");
+      return xml("<DescribeStacksResponse" + NS + "><DescribeStacksResult><Stacks>" + list.map(function (x) {
+        return "<member><StackId>" + esc(x.stackId) + "</StackId><StackName>" + esc(x.name) + "</StackName><CreationTime>" + x.created + "</CreationTime><StackStatus>" + x.status + "</StackStatus>" +
+          (x.roleArn ? "<RoleARN>" + esc(x.roleArn) + "</RoleARN>" : "") + "<Capabilities><member>CAPABILITY_NAMED_IAM</member></Capabilities><Parameters>" +
+          Object.keys(x.params).map(function (k) { return "<member><ParameterKey>" + esc(k) + "</ParameterKey><ParameterValue>" + esc(x.params[k]) + "</ParameterValue></member>"; }).join("") +
+          "</Parameters><Outputs>" + x.outputs.map(function (o) { return "<member><OutputKey>" + esc(o.OutputKey) + "</OutputKey><OutputValue>" + esc(o.OutputValue) + "</OutputValue></member>"; }).join("") +
+          "</Outputs><Tags><member><Key>sws-vault</Key><Value>" + esc(x.params.VaultId) + "</Value></member></Tags></member>";
+      }).join("") + "</Stacks></DescribeStacksResult></DescribeStacksResponse>");
+    }
+    if (A === "DescribeStackEvents") {
+      var st2 = find(form.get("StackName"));
+      if (!st2) return cfnErr("ValidationError", "Stack [" + (form.get("StackName") || "") + "] does not exist");
+      return xml("<DescribeStackEventsResponse" + NS + "><DescribeStackEventsResult><StackEvents>" + st2.events.map(function (ev) {
+        return "<member><StackId>" + esc(st2.stackId) + "</StackId><EventId>" + esc(ev.id) + "</EventId><StackName>" + esc(st2.name) + "</StackName><LogicalResourceId>" + esc(ev.logical) +
+          "</LogicalResourceId><PhysicalResourceId>" + esc(ev.physical) + "</PhysicalResourceId><ResourceType>" + ev.type + "</ResourceType><Timestamp>" + ev.t +
+          "</Timestamp><ResourceStatus>" + ev.status + "</ResourceStatus>" + (ev.reason ? "<ResourceStatusReason>" + esc(ev.reason) + "</ResourceStatusReason>" : "") + "</member>";
+      }).join("") + "</StackEvents></DescribeStackEventsResult></DescribeStackEventsResponse>");
+    }
+    return cfnErr("InvalidAction", "Not in the twin's customer account yet: cloudformation " + A);
+  }
   function cloudformation(form, init, host) {
     if (!signed(init)) return xmlErr("MissingAuthenticationToken", "Request is missing Authentication Token", 403);
+    var cust = customerOf(init);
+    if (cust) return customerCfn(form, init, host.split(".")[1], cust);
     var s = build(), A = form.get("Action");
     var read = cfnRead(s, A, form, host.split(".")[1]);
     if (read) return read;
@@ -855,6 +1034,117 @@
       "</MetricDataResults><Messages/></GetMetricDataResult><ResponseMetadata><RequestId>twin-metrics</RequestId></ResponseMetadata></GetMetricDataResponse>");
   }
 
+  // CloudWatch Logs (JSON 1.1, target prefix Logs_20140328), read only: DescribeLogGroups and FilterLogEvents for the
+  // Lambda log groups. lambda.aws.a, 23 Nov 2026. Built from the same hourly log files as the metrics above, so a
+  // function's log lines, its GetMetricData numbers and the delivered CloudFront logs agree: one START, END and REPORT
+  // per invocation (Duration in REPORT is the request's time_taken for demo-handler, the metric's hourly mean for
+  // demo-log-enricher), an [ERROR] line for each vault request answered 4xx or 5xx (the metric's Errors), one log
+  // stream per function and hour. demo-nightly-report's group exists with no events in these hours. Synthetic.
+  var LOG_RETENTION = 30;
+  function logGroupOf(fn) { return "/aws/lambda/" + fn; }
+  function logsJson(o, status) { return new Response(JSON.stringify(o), { status: status || 200, headers: { "content-type": "application/x-amz-json-1.1" } }); }
+  function logsErr(type, msg, status) { return logsJson({ __type: type, message: msg }, status || 400); }
+  function uuidOf(s) { var h = etag(enc.encode(s)); return h.slice(0, 8) + "-" + h.slice(8, 12) + "-4" + h.slice(13, 16) + "-8" + h.slice(17, 20) + "-" + h.slice(20, 32); }
+  function lambdaLogEvents(fn) {
+    var s = build(); // the cache is kept on the world, not enumerable, as hoursOf does, so a refold makes it afresh
+    if (!s._lambdaLogs) Object.defineProperty(s, "_lambdaLogs", { value: Object.create(null), enumerable: false, configurable: true });
+    if (s._lambdaLogs[fn]) return s._lambdaLogs[fn];
+    var ev = [], mem = FN[fn].MemorySize;
+    var iso = function (t) { return new Date(t).toISOString(); };
+    hoursOf(s).forEach(function (h, hi) {
+      var stream = h.at.slice(0, 10).replace(/-/g, "/") + "/[$LATEST]" + etag(enc.encode(fn + "@" + h.at)), runs = [];
+      if (fn === "demo-handler") h.lines.forEach(function (l, li) {
+        if (!/^\/vault\/[^/]+\/files/.test(l.cs_uri_stem)) return;
+        runs.push({ t: Date.parse(l.timestamp), ms: l.time_taken * 1000, id: uuidOf(fn + h.at + li),
+          err: l.sc_status >= 400 ? "Request refused with " + l.sc_status + ": " + l.cs_method + " " + l.cs_uri_stem : "" });
+      });
+      if (fn === "demo-log-enricher") for (var q = 0; q < 4; q++) {
+        var at = Date.parse(h.at) + q * 900000 + 30000, n = h.lines.filter(function (l) { return Math.floor(+l.timestamp.slice(14, 16) / 15) === q; }).length;
+        runs.push({ t: at, ms: 40 + h.lines.length * 0.8 / 4, id: uuidOf(fn + h.at + q), info: "Enriched " + n + " records" });
+      }
+      runs.sort(function (a, b) { return a.t - b.t; }).forEach(function (r, k) {
+        var end = r.t + Math.max(1, Math.round(r.ms)), used = Math.min(mem, 48 + ((hi * 7 + k * 3) % 23));
+        var add = function (t, m) { ev.push({ logStreamName: stream, timestamp: t, message: m, ingestionTime: t + 1800 + ((k * 37) % 900) }); };
+        add(r.t, "START RequestId: " + r.id + " Version: $LATEST\n");
+        if (r.info) add(r.t + 1, "[INFO]\t" + iso(r.t + 1) + "\t" + r.id + "\t" + r.info + "\n");
+        if (r.err) add(r.t + 1, "[ERROR]\t" + iso(r.t + 1) + "\t" + r.id + "\t" + r.err + "\n");
+        add(end, "END RequestId: " + r.id + "\n");
+        add(end, "REPORT RequestId: " + r.id + "\tDuration: " + r.ms.toFixed(2) + " ms\tBilled Duration: " + Math.ceil(r.ms) + " ms\tMemory Size: " + mem + " MB\tMax Memory Used: " + used + " MB\t\n");
+      });
+    });
+    ev.sort(function (a, b) { return a.timestamp - b.timestamp; });
+    ev.forEach(function (e, i) { e.eventId = String(e.timestamp) + pad(i, 43); }); // 56 digits like AWS's sample; unique and ordered here, opaque in AWS
+    return (s._lambdaLogs[fn] = ev);
+  }
+  // A filter pattern for unstructured events, as CloudWatch Logs reads one: every plain term must appear, no -term may;
+  // ?terms alone mean at least one must, but combined with other terms they are ignored (AWS's filter pattern page, via
+  // boto3.aws.a's note 11); "quoted phrases" match whole; matching is case-sensitive. Terms match as substrings here:
+  // whether AWS matches whole words is not documented (note 11, to confirm). JSON ({...}),
+  // space-delimited ([...]) and regex (%...%) patterns are not in the twin yet.
+  function logFilter(p) {
+    p = String(p || "").trim();
+    if (!p) return function () { return true; };
+    if (/^[{[%]/.test(p)) return null;
+    var all = [], none = [], any = [];
+    (p.match(/[?-]?"[^"]*"|\S+/g) || []).forEach(function (t) {
+      var list = t[0] === "?" ? any : t[0] === "-" ? none : all, w = list === all ? t : t.slice(1);
+      list.push(w.replace(/^"([^"]*)"$/, "$1"));
+    });
+    return function (m) {
+      return all.every(function (w) { return m.indexOf(w) >= 0; }) && !none.some(function (w) { return m.indexOf(w) >= 0; }) &&
+        (!any.length || all.length || none.length || any.some(function (w) { return m.indexOf(w) >= 0; }));
+    };
+  }
+  function logs(target, body, init) {
+    if (!signed(init)) return logsErr("MissingAuthenticationTokenException", "Missing Authentication Token", 403);
+    var q; try { q = JSON.parse(body || "{}"); } catch (e) { return logsErr("SerializationException", "Body is not JSON"); }
+    if (!q || typeof q !== "object") return logsErr("SerializationException", "Body is not a JSON object");
+    var groups = Object.keys(FN).sort().map(logGroupOf), arnOf = function (g) { return "arn:aws:logs:" + REGION + ":" + ACCOUNT + ":log-group:" + g; };
+    if (target === "DescribeLogGroups") {
+      // logGroupNamePrefix (at least 1 character) or logGroupNamePattern (a case-sensitive substring), not both; with a
+      // pattern AWS returns only arn, creationTime and logGroupName (note 11). limit 1 to 50, then nextToken.
+      if (q.logGroupNamePrefix !== undefined && q.logGroupNamePattern !== undefined) return logsErr("InvalidParameterException", "LogGroup name prefix and LogGroup name pattern are mutually exclusive parameters.");
+      if (q.logGroupNamePrefix !== undefined && !(typeof q.logGroupNamePrefix === "string" && q.logGroupNamePrefix.length >= 1)) return logsErr("InvalidParameterException", "1 validation error detected: Value at 'logGroupNamePrefix' failed to satisfy constraint: Member must have length greater than or equal to 1");
+      var dl = q.limit === undefined ? 50 : q.limit;
+      if (!(dl >= 1 && dl <= 50 && dl === Math.floor(dl))) return logsErr("InvalidParameterException", "1 validation error detected: Value at 'limit' failed to satisfy constraint: Member must have value between 1 and 50");
+      var dfrom = 0;
+      if (q.nextToken !== undefined) { var dt = /^twin-(\d+)$/.exec(String(q.nextToken)); if (!dt) return logsErr("InvalidParameterException", "The specified nextToken is invalid."); dfrom = +dt[1]; }
+      var pre = typeof q.logGroupNamePrefix === "string" ? q.logGroupNamePrefix : "", pat = typeof q.logGroupNamePattern === "string" ? q.logGroupNamePattern : null;
+      var sel = groups.filter(function (g) { return pat !== null ? g.indexOf(pat) >= 0 : g.indexOf(pre) === 0; });
+      var dout = { logGroups: sel.slice(dfrom, dfrom + dl).map(function (g) {
+        var fn = g.slice(12), created = Date.parse(FN[fn].LastModified.replace("+0000", "Z"));
+        if (pat !== null) return { logGroupName: g, creationTime: created, arn: arnOf(g) + ":*" };
+        var bytes = lambdaLogEvents(fn).reduce(function (a, e) { return a + e.message.length; }, 0);
+        return { logGroupName: g, creationTime: created, retentionInDays: LOG_RETENTION, metricFilterCount: 0,
+          arn: arnOf(g) + ":*", storedBytes: bytes, logGroupClass: "STANDARD", logGroupArn: arnOf(g) };
+      }) };
+      if (dfrom + dl < sel.length) dout.nextToken = "twin-" + (dfrom + dl);
+      return logsJson(dout);
+    }
+    if (target !== "FilterLogEvents") return logsErr("UnknownOperationException", "Not in the twin yet: logs " + target, 404); // 404 per the Logs CommonErrors page (note 11)
+    if (!q.logGroupName && !q.logGroupIdentifier) return logsErr("InvalidParameterException", "Should provide either logGroupName or logGroupIdentifier."); // message not documented
+    if (q.logGroupName && q.logGroupIdentifier) return logsErr("InvalidParameterException", "LogGroup name and LogGroup ARN are mutually exclusive parameters.");
+    var g = String(q.logGroupIdentifier || q.logGroupName || "").replace(/^arn:aws:logs:[a-z0-9-]+:\d{12}:log-group:/, "").replace(/:\*$/, "");
+    if (groups.indexOf(g) < 0) return logsErr("ResourceNotFoundException", "The specified log group does not exist.");
+    if (q.logStreamNames && q.logStreamNamePrefix) return logsErr("InvalidParameterException", "logStreamNames and logStreamNamePrefix are mutually exclusive parameters.");
+    var limit = q.limit === undefined ? 10000 : q.limit;
+    if (!(limit >= 1 && limit <= 10000 && limit === Math.floor(limit))) return logsErr("InvalidParameterException", "1 validation error detected: Value at 'limit' failed to satisfy constraint: Member must have value between 1 and 10000");
+    var match = logFilter(q.filterPattern);
+    if (!match) return logsErr("InvalidParameterException", "Not in the twin yet: JSON, space-delimited and regex filter patterns");
+    var from = 0;
+    if (q.nextToken !== undefined) { var tk = /^twin-(\d+)$/.exec(String(q.nextToken)); if (!tk) return logsErr("InvalidParameterException", "The specified nextToken is invalid."); from = +tk[1]; }
+    var names = Array.isArray(q.logStreamNames) ? q.logStreamNames : null, prefix = typeof q.logStreamNamePrefix === "string" ? q.logStreamNamePrefix : null;
+    var hit = lambdaLogEvents(g.slice(12)).filter(function (e) {
+      return (q.startTime === undefined || e.timestamp >= q.startTime) && (q.endTime === undefined || e.timestamp <= q.endTime) &&
+        (!names || names.indexOf(e.logStreamName) >= 0) && (prefix === null || e.logStreamName.indexOf(prefix) === 0) && match(e.message);
+    });
+    // startFromHead false: newest first (AWS supports it for startTime on or after 1 Jan 2024, note 11); the recent invocations list uses it.
+    if (q.startFromHead === false) hit.reverse();
+    var page = hit.slice(from, from + limit), out = { events: page.map(function (e) { return Object.assign({}, e); }), searchedLogStreams: [] };
+    if (from + limit < hit.length) out.nextToken = "twin-" + (from + limit);
+    return logsJson(out);
+  }
+
   // Answer a request as AWS would. Returns a Promise of a Response, or null if the host is not AWS.
   var AWS_HOST = /(^|\.)amazonaws\.com$/;
   function handle(url, init) {
@@ -863,6 +1153,7 @@
     if (!AWS_HOST.test(host)) return null;
     // Wait for the pack; if it did not load, an AWS-shaped 503 (fail closed: nothing reaches the network).
     return ready.then(function () {
+      if (loaded && clock.frozen == null) { build(); settle(); }
       if (!loaded) return xmlErr("ServiceUnavailable", "The twin's demo pack did not load (" + ((loadError && loadError.message) || "unknown") + "). Twin mode never calls real AWS.", 503);
       return answer(url, init, host);
     });
@@ -878,6 +1169,7 @@
       else if (/^cloudcontrolapi\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudcontrol((hdr(init, "x-amz-target") || "").split(".")[1], body, init, host);
       else if (/^lambda\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = lambda(url, init);
       else if (/^monitoring\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudwatch(new URLSearchParams(body), init);
+      else if (/^logs\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = logs((hdr(init, "x-amz-target") || "").split(".")[1], body, init);
       else if (/^firehose\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = firehose((hdr(init, "x-amz-target") || "").split(".")[1], body, init);
       else if (/\.?s3\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = s3(url, init);
       else p = xmlErr("NotImplemented", "The twin does not answer " + host + " yet. Twin mode never calls real AWS.", 501);
@@ -885,9 +1177,23 @@
     return Promise.resolve(p).then(function (r) { return new Promise(function (res) { setTimeout(function () { res(r); }, 60 + lag() * 120); }); });
   }
 
-  root.AwsTwin = { handle: handle, account: ACCOUNT, buckets: B, reset: function () { state = null; journal = []; streams = {}; },
+  root.AwsTwin = { handle: handle, account: ACCOUNT, buckets: B, reset: function () { state = null; journal = []; streams = {}; clock.offset = 0; clock.frozen = null; },
     // The journal (design 02): a copy of every entry so far, and a fold of any list of entries into a world.
     journal: function () { build(); return JSON.parse(JSON.stringify(journal)); },
+    // The twin's clock: now() (ISO), tick(ms) moves it on and emits what is due, pause() freezes it, resume() runs it
+    // on from the frozen time; schedule(at, entry) records a clock.mark entry that schedules entry at that time.
+    clock: {
+      now: function () { return nowIso(); },
+      paused: function () { return clock.frozen != null; },
+      // Set the twin's time while paused (a scenario's or pack's start); time never moves back past an entry.
+      at: function (iso) { var t = Date.parse(iso); if (clock.frozen == null || !isFinite(t)) throw new Error("twin: clock.at needs a paused clock and a time");
+        if (journal.length && t < Date.parse(journal[journal.length - 1].t)) throw new Error("twin: clock.at would move time back past the journal"); clock.frozen = t; return nowIso(); },
+      pause: function () { if (clock.frozen == null) clock.frozen = Date.now() + clock.offset; },
+      resume: function () { if (clock.frozen != null) { clock.offset = clock.frozen - Date.now(); clock.frozen = null; } },
+      tick: function (ms) { if (typeof ms !== "number" || !(ms >= 0)) throw new Error("twin: tick needs a number of ms");
+        if (clock.frozen != null) clock.frozen += ms; else clock.offset += ms; build(); settle(); return nowIso(); },
+      schedule: function (label, entries) { build(); return append({ op: "clock.mark", data: { label: String(label) }, why: "clock.schedule", schedule: entries }).seq; }
+    },
     // Resolves once the pack has loaded (or failed to: then every AWS request is a 503); loadError says why.
     ready: function () { return ready; }, loadError: function () { return loadError ? loadError.message : null; },
     fold: function (entries) { return fold(entries); },
