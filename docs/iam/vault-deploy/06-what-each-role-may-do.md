@@ -14,7 +14,7 @@ AWS asks you to tick that box whenever a stack creates IAM roles or policies, be
 
 It cannot reach any other bucket, read your other secrets, create users or keys, or change any role.
 
-**A cap on that role, `sws-vault-<id>-boundary`.** A permissions boundary: the most the Vault's role can ever do, whatever a future version of the template says. It lists the same three things above.
+**A cap on that role, `sws-vault-<id>-boundary`.** A permissions boundary: the most the Vault's role can ever do, whatever a future version of the template says. It lists the same two things above.
 
 ## The cost alarm stack (`sws-vault-<id>-alarm`), only if you switch on the kill switch, creates
 
