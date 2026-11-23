@@ -1,6 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { withKillSwitch } from "./killswitch.mjs";
+import { withKillSwitch, slowAlarm } from "./killswitch.mjs";
+
+test("the slow alarm's threshold spends the monthly figure, and no more, over 30 days", () => {
+  const s = slowAlarm({ monthlyBudget: 10, periodHours: 24 });
+  assert.ok(s.worst_under_threshold_30_days <= 10 && s.worst_under_threshold_30_days > 9.99);
+  const six = slowAlarm({ monthlyBudget: 10, periodHours: 6 });
+  assert.ok(Math.abs(six.threshold - s.threshold / 4) <= 1);
+  assert.ok(six.worst_just_over_before_switch < s.worst_just_over_before_switch);
+});
 
 test("a flood under the threshold never trips and is billed by the hour", () => {
   const r = withKillSwitch({ rps: 149, propagationMinutes: 15 });
