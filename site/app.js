@@ -43,9 +43,11 @@
   // Keep the session across a refresh, sealed with this device's key (sealed-store.js). Expired parts are dropped.
   function persist() {
     if (!window.SealedStore || !SealedStore.available() || !mem.idToken) return Promise.resolve();
-    var exp = mem.claims.exp * 1000;
-    Object.keys(mem.creds).forEach(function (k) { exp = Math.max(exp, mem.creds[k].expiration); });
-    return SealedStore.seal(rec("session"), { idToken: mem.idToken, creds: mem.creds }, exp).catch(function () { /* memory only */ });
+    // Change-role credentials are never sealed (security.aws.c, R-003): after a reload, changing AWS needs a
+    // fresh assume. Only the ID token and read-role credentials are kept.
+    var keep = {}, exp = mem.claims.exp * 1000;
+    Object.keys(mem.creds).forEach(function (k) { if (!/\/sws-aws-platform-change$/.test(k)) { keep[k] = mem.creds[k]; exp = Math.max(exp, mem.creds[k].expiration); } });
+    return SealedStore.seal(rec("session"), { idToken: mem.idToken, creds: keep }, exp).catch(function () { /* memory only */ });
   }
   function restore() {
     if (!window.SealedStore || !SealedStore.available()) return Promise.resolve();

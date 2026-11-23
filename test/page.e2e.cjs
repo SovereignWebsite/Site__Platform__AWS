@@ -124,6 +124,10 @@ const flip = (p) => { const q = JSON.parse(JSON.stringify(p)); if (flips++ % 2) 
   await pg.click('li[data-plan="2026-11-23__iac-dns-trust-remove-factory"] button.approve');
   await pg.waitForSelector("text=no longer trusts");
   await pg.waitForSelector('#plans-done li[data-plan="2026-11-23__iac-dns-trust-remove-factory"]', { state: "attached" });
+  // R-003: change-role credentials are used but never sealed
+  await pg.waitForTimeout(300);
+  const sealed = await pg.evaluate(() => SealedStore.open("session").then((x) => Object.keys((x && x.creds) || {})));
+  if (sealed.some((k) => /change$/.test(k)) || !sealed.some((k) => /read$/.test(k))) throw new Error("sealed creds " + JSON.stringify(sealed));
   const left = policy.Statement[0].Condition["ForAnyValue:StringEquals"][K];
   if (typeof left !== "string" || !left.includes("SovereignWebsite__IaC")) throw new Error("after removal " + JSON.stringify(left));
   // The stack plan: diff, change set, execute.
