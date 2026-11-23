@@ -90,6 +90,50 @@ Visitor addresses from the CloudFront logs appear in lanes, alarms, lists and ex
 
 - One day at a time, swiped or stepped with `< day >`; the lanes collapse into one sparkline with change markers. No brush on the phone: the day is the range, and tapping an hour narrows to it.
 
+### 2.4 Revision 2: the three inputs, chips and Vault deployments (with cloudtrail.aws.a, 23 Nov ~20:40 UTC)
+
+cloudtrail.aws.a's data pieces (work/cloudtrail.aws.a 5cc769e) give the Timeline three inputs. One **Source** control at the top of the console picks between them:
+
+| Source | From | Bar |
+|---|---|---|
+| Twin pack | `CloudTrailScenarios.demoPack('baseline' \| 'attack' \| 'surge')` (note 04): 22 Nov 2026, 09:00 to 12:00 UTC, the hours the twin's logs cover. baseline has 23 events, surge 158 and attack 35 | the twin bar (design 02) |
+| Your file | `CloudTrailDropIn.readFiles` (note 05, section 5 below) | "Your file · read in this page only, never uploaded" |
+| Vault deployments | `group(events)` over the current source (ct-deploy.js, note 03) | none: it is a view, not a source |
+
+```
++----------------------------------------------------------------------------------+
+| Source [Twin: attack v]   Who [any v]  Service [any v]  Region [any v]  [Failed] |
++----------------------------------------------------------------------------------+
+| Worth a look (6)                                                                 |
+|  ! refused-on-protected (2)   StopLogging and a trail-bucket policy, refused     |
+|  ! iam-trust-or-permissions   the DNS role's trust policy changed                |
+|  ! hub-stack-change-applied   a change set applied to the hub's own stack        |
+|  ! new-network                an accepted sign-in from a new network             |
+|  ! refused-burst              six refused sign-ins in one burst                  |
++----------------------------------------------------------------------------------+
+| (lanes and brush as 2.1)                                                         |
++----------------------------------------------------------------------------------+
+```
+
+- **Chips** replace 2.1's three buttons. **Who** lists the principals in the data (role names, the account root, "a visitor network" for logs), **Service** the event sources, **Region** the regions with global services under "global", and **Failed** is a toggle for refused calls. Each chip shows counts, the list and lanes follow the chips, and **Clear** resets them. The chips are built from the data, never from a fixed list.
+- **Worth a look** shows ct-alarms.js's rules by their own ids with a plain line each. On the attack pack that is 6 alarms over 5 rules, refused-on-protected counting 2 (note 04). The baseline and surge packs show "Nothing worth a look in this pack." A rule opens its events, with the chips set to match.
+- **Vault deployments** (a tab beside Events in the list area): one row per Vault id, from ct-deploy.js.
+
+```
+| Vault deployments (n)                                                            |
+| 3f9a0c21b7d4  created · one-stack · by <who> · eu-west-2 · 22 Nov 10:12-10:19     |
+|               n calls · n refused · 0 out of band · alarms: none          [open] |
+| 9b1e44a0c2f7  failed  · access-stack · by <who> · eu-west-1 · ...                 |
+|               alarms: vault-deploy-refused (1)                            [open] |
+```
+
+  State is created, updated, deleted, failed or prepared, and mode is one-stack or access-stack, as the note defines them. The eight vault rules (vault-out-of-band-change, vault-change-not-approved, vault-deleted, vault-deploy-refused, vault-deploy-role-outside-cloudformation, vault-root-activity, vault-direct-change-refused, vault-token-read) show on the row that raised them. **Open** sets the chips to that Vault's events. The ids in the sketch are illustrative.
+
+  The note's own limit is said under the tab, once: "In one-stack mode, another stack's calls on this Vault look the same as the Vault's own."
+
+- **The raw record** opens from any event (2.2's [Raw JSON]) as a side panel on desktop and a pushed screen on the phone. It is text only, with no Copy button, because the record can hold a full address (the privacy rule above). It shows only for events that have a raw record: the drop-in keeps them, and the graph's copy does not.
+- **Phone**: Source and the chips go into one "Filter" sheet with a count badge. Worth a look stays first, and Vault deployments is a third button beside Events.
+
 ## 3. Moves
 
 | Move | Desktop | Phone |
@@ -103,20 +147,34 @@ Visitor addresses from the CloudFront logs appear in lanes, alarms, lists and ex
 
 ## 4. Addresses
 
-`#/timeline` (last 24 hours of the data, or the whole twin), `#/timeline/<from>/<to>` with ISO times in UTC, `#/timeline/event/<eventID>`, `#/timeline/asset/<arn or id>`. Times and ids are matched against the data before use; an unknown event id shows "Not in this trail" and the range around it.
+`#/timeline` (last 24 hours of the data, or the whole twin), `#/timeline/<from>/<to>` with ISO times in UTC, `#/timeline/event/<eventID>`, `#/timeline/asset/<arn or id>`. Revision 2 adds the chips' state after the path, so Back and a shared twin link restore it: `?who=<principal>&svc=<event source>&region=<region>&failed=1`, and `#/timeline/vault/<vault id>`. Only names from the data go in (role names, event sources, regions, Vault ids). Never a network, an address or anything from a dropped file: with Your file the address keeps the path and drops the chips, since the file is not there after a reload. Times and ids are matched against the data before use; an unknown event id shows "Not in this trail" and the range around it.
 
 ## 5. Drop in your own trail
 
 cloudtrail.aws.a's design: a file picker and drop zone that reads CloudTrail log files (`.json`, `.json.gz`, a zip of a folder) in the page. The Timeline shows it the same way as the twin, under its own bar: **"Your file · read in this page only, never uploaded"**, with a "Close the file" action. Real AWS is never called for this view. This is the strongest "try it with your own data" moment the site has: no sign-in, no account, nothing leaves the browser.
 
-**Reading the dropped file (Decode, site/api/decode.js on dev):** `.json.gz` goes through `Decode.gunzip`, and CloudTrail's `{ Records: [...] }` goes through `Decode.table`. JSON Lines exports go through `Decode.jsonLines`. The bar says what was read and where it stopped, in Decode's own terms:
+**Reading the dropped file** (revision 2, 23 Nov ~20:40 UTC): the drop-in uses cloudtrail.aws.a's own reader, `CloudTrailDropIn.readFiles(files)` (docs/cloudtrail/reader/ct-dropin.js, note 05, work/cloudtrail.aws.a 5cc769e), not Decode directly. It recognises the four shapes by content (a trail's delivery file, LookupEvents output, a bare array, one record per line), gunzips by magic bytes, merges the files newest first and drops duplicates across files.
 
-- "Read n records from trail.json.gz (n KB -> n KB)" (`rowsRead`, `packed`, `unpacked`);
-- "2 records could not be read [Show]" (`errors`);
-- at a limit: "Showing the first 50,000 records; the file has more" (`truncated.rows`) or "the first 50 MB" (`truncated.bytes`). When a lane, count or "Worth a look" rule is drawn from a truncated read, it carries "from the first 50,000 records".
-- A `.json` file over the cap cannot be read in part (`TooLarge`). The bar says "Too large to read here (over 50 MB). Split it, or drop the .json.gz", and nothing is drawn.
+```
++----------------------------------------------------------------------------------+
+| Your file · read in this page only, never uploaded            [Close the file]   |
++----------------------------------------------------------------------------------+
+| [ Choose files ]  or drop CloudTrail files here (.json, .json.gz, .jsonl)        |
+|                                                                                  |
+| Read 3 of 4 files · n events                                         [Hide]      |
+|  ✓ 111122223333_CloudTrail_eu-west-2_..._0900.json.gz   n KB -> n KB  n events   |
+|  ✓ 111122223333_CloudTrail_us-east-1_..._0900.json.gz   n KB -> n KB  n events   |
+|  ✓ lookup-events.json                                  n KB          n events    |
+|  ✗ event-history.csv     A CSV export; download the JSON instead                 |
++----------------------------------------------------------------------------------+
+```
 
-Times use the `time` hint and are shown in UTC with the zone written, like the twin's lanes.
+- **The report** is one line per file, in the reader's own words. Refusals show the reader's reason as it gives it: "a CSV export; download the JSON instead", "not a CloudTrail file", "a damaged gzip file", "larger than 50 MB; not read", "larger than 200 MB once unzipped". Past the drop limits (1 GB unzipped, 2,000,000 events, 2,000 files), "the rest is reported and not read". A refusal affects only its own file.
+- **Skipped records** within a read file show as "n records skipped [Show]", as text.
+- The report is collapsed to its first line once the timeline draws, and it stays one click away.
+- Nothing is uploaded or stored. The reader makes no network call and uses no storage (its test checks this), and closing the file drops everything.
+
+Times are shown in UTC with the zone written, like the twin's lanes.
 
 ## 6. What it needs (requests, not edits)
 
