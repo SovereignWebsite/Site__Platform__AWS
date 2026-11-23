@@ -17,6 +17,8 @@
 //                                            items) and optionally .importers: [{ export, stack }] (importers() per
 //                                            export the stack exports: the export's name and an importing stack's name);
 //                                            exports() items (optional, to check an export is the stack's own)
+//   g.add.cloudfront({ distributions, functions })  CloudFrontApi distribution() results (or distributions() items) and
+//                                            functions() items (optional): architect.aws.a design 06, section 3
 //   g.add.zips([{ bucket, key, sha256, packageName, entries }])   deployment packages; the facts come from
 //                                            Graph.zipFacts(bytes) -> Promise<{ sha256, packageName, entries }>
 //   g.toJSON()                               -> { about, evidence_levels, counts, nodes, edges } (schema shape)
@@ -343,6 +345,64 @@
       });
     }
 
+    // CloudFront (architect.aws.a design 06, section 3): a node per distribution (its ARN, type distribution, label its
+    // domain); serves_from each origin's target (api), an origin with no target making no edge (its domain stays an
+    // attribute, never a guess); invokes each associated CloudFront Function (event and path pattern in the source,
+    // until the schema gives edges attributes); logs_to the legacy logging bucket (api). CfnApi's derived ARN is the same
+    // id, so the stack's resource and this answer are one node; a naming node urn:sws:cloudfront-distribution:<id> folds
+    // into the ARN node at toJSON (distMerge) when <id> is a distribution's id.
+    function cloudfront(o) {
+      o = o || {};
+      var fnByArn = Object.create(null);
+      (Array.isArray(o.functions) ? o.functions : []).forEach(function (f) {
+        if (!f || typeof f.arn !== "string") return;
+        fnByArn[f.arn] = f;
+        vouch(node(f.arn, "function", "A2", f.name || f.arn, { cfn_type: "AWS::CloudFront::Function", runtime: f.runtime || undefined, stage: f.stage || undefined }));
+      });
+      (Array.isArray(o.distributions) ? o.distributions : []).forEach(function (d) {
+        if (!d || typeof d.arn !== "string" || !/^arn:aws[a-z-]*:cloudfront::\d{12}:distribution\/[A-Z0-9]+$/.test(d.arn)) return;
+        vouch(node(d.arn, "distribution", "A2", d.domain || d.id, { cfn_type: "AWS::CloudFront::Distribution", distribution_id: d.id || undefined,
+          aliases: Array.isArray(d.aliases) && d.aliases.length ? d.aliases.slice() : undefined, status: d.status || undefined, enabled: typeof d.enabled === "boolean" ? d.enabled : undefined,
+          origin_domains: Array.isArray(d.origins) && d.origins.length ? d.origins.map(function (x) { return x && x.domain; }).filter(Boolean) : undefined }));
+        if (d.id) distIds[d.id] = d.arn;
+        (Array.isArray(d.origins) ? d.origins : []).forEach(function (x) {
+          if (x && typeof x.target === "string" && /^arn:aws[a-z-]*:s3:::[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(x.target))
+            edge(d.arn, "serves_from", x.target, "api", "CloudFront GetDistribution (origin " + x.id + ")");
+        });
+        (Array.isArray(d.functions) ? d.functions : []).forEach(function (f) {
+          if (!f || typeof f.arn !== "string" || !/^arn:aws[a-z-]*:cloudfront::\d{12}:function\/[A-Za-z0-9_-]+$/.test(f.arn)) return;
+          if (!fnByArn[f.arn]) vouch(node(f.arn, "function", "A2", f.arn.split("/").pop(), { cfn_type: "AWS::CloudFront::Function" }));
+          edge(d.arn, "invokes", f.arn, "api", "CloudFront GetDistribution (" + f.event + " on " + f.behaviour + ")");
+        });
+        var lb = d.logging && d.logging.bucket ? root.CloudFrontApi && root.CloudFrontApi.originKind ? root.CloudFrontApi.originKind(d.logging.bucket, (/^arn:(aws[a-z-]*):/.exec(d.arn) || [])[1]) : null : null;
+        if (lb && lb.target) edge(d.arn, "logs_to", lb.target, "api", "CloudFront GetDistribution (Logging)");
+      });
+    }
+    var distIds = Object.create(null);
+    // A naming node urn:sws:cloudfront-distribution:<id> is the distribution with that id: its edges move to the ARN node
+    // with their own evidence and sources, and attributes the ARN node lacks are copied (ontology.aws.a, design 06).
+    function distMerge() {
+      // Log file names are matched in lower case (the content adapter's LOG_KEY), ids are upper case: compare both.
+      Object.keys(distIds).forEach(function (id) {
+        var arn = distIds[id], urn = "urn:sws:cloudfront-distribution:" + id;
+        if (!nodes.has(urn)) urn = "urn:sws:cloudfront-distribution:" + id.toLowerCase();
+        var u = nodes.get(urn), a = nodes.get(arn);
+        if (!u || !a) return;
+        Object.keys(u).forEach(function (k) {
+          if (["id", "type", "label", "altitude", "attribute_trust", "inferred", "note"].indexOf(k) >= 0 || a[k] !== undefined) return;
+          a[k] = u[k];
+          if (u.attribute_trust && u.attribute_trust[k]) { a.attribute_trust = a.attribute_trust || {}; a.attribute_trust[k] = u.attribute_trust[k]; }
+        });
+        var moved = [];
+        edges.forEach(function (e, k) { if (e.from === urn || e.to === urn) { moved.push(e); edges.delete(k); } });
+        moved.forEach(function (e) {
+          e.source.split("; ").forEach(function (src) { edge(e.from === urn ? arn : e.from, e.rel, e.to === urn ? arn : e.to, e.evidence, src); });
+        });
+        if (verified.has(urn)) verified.add(arn);
+        verified.delete(urn); nodes.delete(urn);
+      });
+    }
+
     function iam(o) {
       o = o || {};
       (Array.isArray(o.providers) ? o.providers : []).forEach(function (p) { if (p && typeof p.arn === "string") vouch(node(p.arn, "identity_provider", "A4", p.url || p.arn, { cfn_type: "AWS::IAM::OIDCProvider" })); });
@@ -436,6 +496,7 @@
       cfnResolve();
       logsThroughStreams();
       packagesFunctions();
+      distMerge();
       // Node trust from the edges that name it (design 03): verified wins, then claimed, curated only if nothing else.
       var named = new Map();
       edges.forEach(function (e) {
@@ -472,6 +533,7 @@
         firehose: as("verified", "Firehose DescribeDeliveryStream", firehose),
         iam: as("verified", "IAM ListRoles, GetRole and ListAttachedRolePolicies", iam),
         cfn: as("verified", "CloudFormation ListStacks, DescribeStacks and ListStackResources", cfn),
+        cloudfront: as("verified", "CloudFront ListDistributions, GetDistribution and ListFunctions", cloudfront),
         activity: as("claimed", "CloudTrail log files in a bucket", activity),
         content: as("claimed", "files in a bucket", content),
         zips: as("claimed", "zip files in a bucket", addZips)
