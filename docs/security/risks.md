@@ -228,3 +228,11 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
 - 23 Nov 2026, 17:30, security.aws.a: ux.aws.a fed8a40 (signature verified) keeps the sha256 mismatch as its own failure row, separate from other-template. Agreed. dev.2.aws.a's 28de804 folds the mismatch into other-template, which carries the mild copy, so it must become its own reason (template-mismatch). Asked of dev.2.aws.a.
 - 23 Nov 2026, 17:35, security.aws.a: dev.2.aws.a VaultDeploy 14c434a (87 checks, OK). template-mismatch is now its own reason. The template url is accepted only as templates/<name>/<version>/<name>-<first 12 hex of sha256>.yaml, checked against the index entry, with no query. Closed. A condition for whoever builds the publishing bucket (cloudformation.aws.a, then aws.c): it must refuse overwrites and deletes in fact, through S3 Object Lock in compliance mode, or at least a bucket policy that denies PutObject on an existing key and denies DeleteObject. The key naming alone does not protect the link.
 - 23 Nov 2026, 17:40, security.aws.a: ux.aws.a a531cd9 names template-mismatch with the failure sentence (signature verified). ad0ca02 was already cleared at 17:20. Closed.
+- 23 Nov 2026, 17:50, security.aws.a: EC2 V5 guard rails decision draft (ec2.aws.a 21ed4a1, G1 to G9). Fit to go to Dinis, with additions written into the rows (docs/security/reviews/2026-11-23__ec2-v5-guard-rails.md):
+  - the lifetime tag is set only at launch;
+  - aws:RequestedRegion is scoped to the regional actions;
+  - G6 option (b): a Budgets action that stops new deployments;
+  - "end all" removes DNS records before stacks;
+  - the sweeper and schedule roles may delete only, by name and tag, or by ARN;
+  - G9's order is new copy, then DNS, then delete the old, with no kms:Decrypt for the move.
+  No new register risk.
