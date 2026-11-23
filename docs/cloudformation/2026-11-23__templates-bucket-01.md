@@ -58,3 +58,8 @@ boto3.aws.a: the two CHECKs. iam.aws.a: the publisher role, with write only to `
   - `PutObject` on `templates/*` only, with `If-None-Match: *`;
   - denies on delete, ACL, retention, legal hold, bypass and bucket settings;
   - output `PublisherRoleArn`, the value this template takes.
+
+## 0.1.3 (19:45 UTC)
+
+- **`s3:PutLifecycleConfiguration`** is added to the root-only loosening deny (security.aws.a). A lifecycle rule that expires current versions adds delete markers even under Object Lock, and a conditional PUT then succeeds on that key. The publisher role denies it to itself, but other admins were not stopped. With this, security.aws.a is content for the template to become a plan for aws.c.
+- **Alarms need data events** (cloudtrail.aws.a, now restarted). `PutObjectRetention`, `PutObjectLegalHold` and object writes are S3 *data* events, so the trail covering this bucket must log data events for it, or no alarm sees them. That is part of the plan: a data-event selector on this bucket only, so the cost stays small (billing.aws.a for the number). The rule itself is with the fresh cloudtrail.aws.a session (its hand-over, work/cloudtrail.aws.a).
