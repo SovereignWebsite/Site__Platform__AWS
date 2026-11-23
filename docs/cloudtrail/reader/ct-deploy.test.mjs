@@ -91,5 +91,8 @@ const ds1 = D.group(R.read({ Records: oneStack }).events);
 check([ds1[0].mode, ds1[0].counts.outOfBand, D.alarms(ds1).length], ["one-stack", 0, 0], "one-stack mode: CloudFormation as the customer is quiet");
 // (5) root acting on a Vault resource, even a read
 check(rules(D.alarms(add({ userIdentity: { type: "Root", arn: "arn:aws:iam::" + A + ":root" }, eventSource: "s3.amazonaws.com", eventName: "GetBucketPolicy", readOnly: true, requestParameters: { bucketName: B } }))), ["vault-root-activity"], "root read");
+// vault.yaml 0.4.5: the deploy role may delete the Vault's log group on rollback; still the audit trail going away
+check(rules(D.alarms(add({ userIdentity: deployId, sourceIPAddress: "cloudformation.amazonaws.com", eventSource: "logs.amazonaws.com", eventName: "DeleteLogGroup", requestParameters: { logGroupName: "/aws/lambda/sws-vault-" + V + "-api" } }))), ["vault-deleted"], "log group deleted on rollback");
+check(rules(D.alarms(add({ userIdentity: deployId, sourceIPAddress: "cloudformation.amazonaws.com", eventSource: "logs.amazonaws.com", eventName: "DeleteLogGroup", requestParameters: { logGroupName: "/aws/lambda/sws-vault-" + V + "-api" }, errorCode: "AccessDenied" }))), ["vault-deploy-refused"], "refused log group delete");
 check(D.rules.length, 8, "eight rules");
 console.log("ok ct-deploy: 8 rules, " + cases + " cases over the vault-deploy scenario (clean, out of band, refused, teardown, approvals, two Vaults, security review)");

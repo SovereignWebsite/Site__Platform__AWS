@@ -25,7 +25,7 @@ Who deployed what, where and when, for each Vault in a customer's account, read 
 |---|---|---|
 | vault-out-of-band-change | high | A management change to a Vault's resources that CloudFormation did not make. The Vault's own API role writing data does not count. |
 | vault-change-not-approved | high | Only when approvals are given: an applied stack call with no approval whose window (and person, if set) covers it. |
-| vault-deleted | medium | DeleteStack on a Vault stack, or DeleteBucket on its data bucket. |
+| vault-deleted | medium | DeleteStack on a Vault stack, DeleteBucket on its data bucket, or DeleteLogGroup on its log group (vault.yaml 0.4.5 lets the deploy role do this on rollback; it is still the Vault's audit trail going away). |
 | vault-deploy-refused | medium | A refused stack call, or a refused CloudFormation call (e.g. stopped by the boundary). |
 | vault-deploy-role-outside-cloudformation | high | The role sws-vault-<id>-deploy acting without CloudFormation's sign. It trusts only CloudFormation, so its credentials are loose or its trust was changed. |
 | vault-root-activity | high | The account root acting on any Vault resource, reads included. |
@@ -56,6 +56,29 @@ The platform alarms (ct-alarms.js) still run on the same events. Example: a chan
   - CreateFunction20150331: confirmed.
   - CreateFunctionUrlConfig: no suffix; corrected in the scenario.
   - CloudFront: CreateDistributionWithTags when tags are passed, as vault.yaml does, in us-east-1; to confirm. Corrected in the scenario. CloudFront, like IAM, is global, so it does not count as a deployment's region.
+
+## The Vault templates bucket (ct-alarms.js rule vault-templates-bucket)
+
+Asked by cloudformation.aws.a at security.aws.a's request (16:53 UTC). It covers `sws-vault-templates-<account>-<region>`, the Object Lock bucket in templates-bucket.yaml (316ce63 on work/cloudformation.aws.a). It is high and fires on:
+- the account root as caller on any PutBucket* or DeleteBucket* call for that bucket, refused attempts included;
+- PutObjectRetention or PutObjectLegalHold by anyone. The publishing role is allowed these calls, so a planned use will fire too; that is meant, because every change to a template's lock should be seen.
+
+PutObjectRetention and PutObjectLegalHold are S3 data events, so the trail must log data events for this bucket or the rule never sees them (*to check* with boto3.aws.a: which events and selectors).
+
+Drafted as EventBridge patterns for aws.c to plan (*to check*; no AWS change without Dinis's yes):
+
+```json
+{ "source": ["aws.s3"], "detail-type": ["AWS API Call via CloudTrail"],
+  "detail": { "eventSource": ["s3.amazonaws.com"], "userIdentity": { "type": ["Root"] },
+              "eventName": [{ "prefix": "PutBucket" }, { "prefix": "DeleteBucket" }],
+              "requestParameters": { "bucketName": [{ "prefix": "sws-vault-templates-" }] } } }
+```
+
+```json
+{ "source": ["aws.s3"], "detail-type": ["AWS API Call via CloudTrail"],
+  "detail": { "eventSource": ["s3.amazonaws.com"], "eventName": ["PutObjectRetention", "PutObjectLegalHold"],
+              "requestParameters": { "bucketName": [{ "prefix": "sws-vault-templates-" }] } } }
+```
 
 ## Decision for Dinis (to pm.aws.a's batch)
 

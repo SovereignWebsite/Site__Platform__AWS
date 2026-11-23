@@ -61,6 +61,15 @@ eq(ids([...quiet, rec({ eventSource: "cloudtrail.amazonaws.com", eventName: "Sto
 eq(ids([...quiet, rec({ eventName: "UpdateAssumeRolePolicy", eventTime: "2026-11-22T11:00:00Z", sourceIPAddress: "::ffff:198.51.100.66", requestParameters: { roleName: "someone-elses-role" } })]), ["new-network"], "IPv4-mapped change from a new network");
 eq(ids([...quiet, rec({ eventName: "UpdateAssumeRolePolicy", eventTime: "2026-11-22T11:00:00Z", sourceIPAddress: "::ffff:203.0.113.99", requestParameters: { roleName: "someone-elses-role" } })]), [], "IPv4-mapped address in a known /24");
 
+// the Vault templates bucket: root on bucket settings, retention or legal hold by anyone; quiet otherwise
+const TB = "sws-vault-templates-" + A + "-eu-west-2", ROOT = { type: "Root", arn: "arn:aws:iam::" + A + ":root" };
+for (const a of ["PutBucketPolicy", "PutBucketVersioning", "DeleteBucketPolicy", "DeleteBucket"]) eq(ids([...quiet, s3(a, TB, { userIdentity: ROOT })]), ["vault-templates-bucket"], "root " + a + " on the templates bucket");
+eq(ids([...quiet, s3("PutBucketPolicy", TB, { userIdentity: ROOT, errorCode: "AccessDenied" })]), ["vault-templates-bucket"], "refused root attempt still fires");
+eq(ids([...quiet, s3("PutObjectRetention", TB, { eventCategory: "Data", requestParameters: { bucketName: TB, key: "vault/0.4.5/vault.yaml" } })]), ["vault-templates-bucket"], "retention by anyone");
+eq(ids([...quiet, s3("PutObjectLegalHold", TB, { eventCategory: "Data", requestParameters: { bucketName: TB, key: "vault/0.4.5/vault.yaml" } })]), ["vault-templates-bucket"], "legal hold by anyone");
+eq(ids([...quiet, s3("PutBucketPolicy", TB)]), [], "a role changing the policy is not this rule");
+eq(ids([...quiet, s3("PutBucketPolicy", "sws-vault-templates-x", { userIdentity: ROOT })]), [], "not the templates bucket name");
+
 // the R-008 story as the attack pack would play it: three alarms, newest first, each with its events and words
 const story = [...quiet,
   rec({ eventSource: "cloudformation.amazonaws.com", awsRegion: "eu-west-2", eventName: "CreateChangeSet", eventTime: "2026-11-22T12:00:00Z", sourceIPAddress: "198.51.100.66", requestParameters: { stackName: "sws-aws-platform", changeSetName: "x" } }),
@@ -70,5 +79,5 @@ const got = alarms(story);
 eq(got.map((a) => a.rule), ["iam-trust-or-permissions", "hub-stack-change-applied", "new-network"], "R-008 story, newest first");
 if (got.some((a) => !a.words || !a.events.length || !a.level)) fail("alarm without words, events or level");
 eq(got[2].events[0].action, "CreateChangeSet", "new-network names the first call from that network");
-eq(AL.rules.length, 6, "six rules listed");
-console.log("ok ct-alarms: 6 rules, 38 cases (21 for R-021), R-008 story gives 3 alarms newest first");
+eq(AL.rules.length, 7, "seven rules listed");
+console.log("ok ct-alarms: 7 rules, 47 cases (21 for R-021, 9 for the templates bucket), R-008 story gives 3 alarms newest first");

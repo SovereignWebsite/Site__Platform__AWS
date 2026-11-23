@@ -107,8 +107,12 @@
       words: "A Vault's stack was applied by someone, or at a time, that no approved change covers.",
       match: function (e, id, opts) { return Array.isArray(opts.approvals) && isControl(e) && APPLY[e.action] === 1 && !e.failed && !approved(e, id, opts.approvals); } },
     { id: "vault-deleted", level: "medium",
-      words: "A Vault's stack or its data bucket was deleted.",
-      match: function (e, id) { return !e.failed && ((isControl(e) && e.action === "DeleteStack") || (e.service === "s3" && e.action === "DeleteBucket")); } },
+      words: "A Vault's stack, its data bucket, or its log group (the Vault's own audit trail) was deleted.",
+      match: function (e, id) {
+        var p = (e.raw && e.raw.requestParameters) || {};
+        return !e.failed && ((isControl(e) && e.action === "DeleteStack") || (e.service === "s3" && e.action === "DeleteBucket")
+          || (e.service === "logs" && e.action === "DeleteLogGroup" && p.logGroupName === "/aws/lambda/sws-vault-" + id + "-api")); // vault.yaml 0.4.5: rollback may delete it
+      } },
     { id: "vault-deploy-refused", level: "medium",
       words: "A step of a Vault's deployment was refused, by AWS or by the deploy role's limits.",
       match: function (e, id, opts, access) { return !!e.failed && (isControl(e) || byCloudFormation(e, id, access)); } },

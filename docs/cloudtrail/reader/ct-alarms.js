@@ -4,6 +4,7 @@
 (function (root) {
   "use strict";
   var PLATFORM = /^sws-aws-platform-/, DNS_ROLE = "sovereignwebsite-factory-dns", TRAIL_BUCKET = /^aws-cloudtrail-logs-/;
+  var TEMPLATES_BUCKET = /^sws-vault-templates-\d{12}-[a-z0-9-]+$/; // cloudformation.aws.a, templates-bucket.yaml (Object Lock, COMPLIANCE)
   // Sets without a prototype, so an action named "constructor" or "__proto__" is not a member (R-021 a).
   function set(names) { var o = Object.create(null); names.forEach(function (n) { o[n] = 1; }); return o; }
   var IAM_CHANGES = set(["UpdateAssumeRolePolicy", "PutRolePolicy", "AttachRolePolicy", "DetachRolePolicy", "DeleteRolePolicy",
@@ -34,6 +35,14 @@
     { id: "trail-changed", level: "high",
       words: "CloudTrail itself, or the bucket it writes to, was stopped or changed, so later events may be missing.",
       match: function (e, ctx) { return !e.failed && trail(e, ctx); } },
+    { id: "vault-templates-bucket", level: "high",
+      words: "The Vault templates bucket: the account root changed its settings, or someone changed an object's retention or legal hold (refused attempts included).",
+      // Root on any PutBucket*/DeleteBucket*, or PutObjectRetention/PutObjectLegalHold by anyone (cloudformation.aws.a at
+      // security.aws.a's request). The object calls are S3 data events: the trail must log data events for this bucket.
+      match: function (e) {
+        if (e.service !== "s3" || !names(e, "bucket").some(function (b) { return TEMPLATES_BUCKET.test(b); })) return false;
+        return (e.who.kind === "root" && /^(PutBucket|DeleteBucket)/.test(e.action || "")) || e.action === "PutObjectRetention" || e.action === "PutObjectLegalHold";
+      } },
     { id: "refused-on-protected", level: "medium",
       words: "Someone tried, and was refused, to change the hub's roles, its stack, or CloudTrail.",
       match: function (e, ctx) { return e.failed && (hubRoles(e) || hubStack(e) || trail(e, ctx)); } },
