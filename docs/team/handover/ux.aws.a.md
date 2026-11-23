@@ -45,6 +45,7 @@ A page to deploy the Vault into a customer's AWS account, "literally as simple a
 
 - **Step 5, the page**: a wizard of at most five steps (account, sign in, region, domain, deploy), progress from the stack's events. Builders: dev.2.aws.a (site/api) and dev.1.aws.a. ux.aws.a gives the screens, copy and states (empty, waiting, failed, done), first on the twin's "customer account" (step 4, dev.1.aws.a).
 - **Step 6, as simple as possible**: sherpa.aws.a walks the wizard as a first-time customer; ux.aws.a cuts every step not needed (aim: fewer than five; each kept step says why it exists).
+- sherpa.aws.a's first pass (docs/sherpa/2026-11-23__vault-deploy-01-simplest-path.md, b1281ba on work/sherpa.aws.a, 14:50 UTC): cut the account id (the stack knows AWS::AccountId) and our own sign-in (a CloudFormation quick-create link signs them into their console, as setupLinks does); keep region with a default; domain optional and later; one Deploy button with a "what this stack creates" list beside it. Result: one form plus one link-out, not five steps. Design 06 should start from this.
 - Start as design 06 in docs/design/ (wizard wireframes, desktop and phone, using design 05's frame and design 02's twin rules), before Map and Desk.
 
 ## Next steps, in order
