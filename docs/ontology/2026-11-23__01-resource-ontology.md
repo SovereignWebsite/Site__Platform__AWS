@@ -168,3 +168,24 @@ Schema additions, each small and reversible:
 - **Facts on vaults:** `requests` and `share_of_requests`, so the surge's hot vault is visible on the vault itself.
 
 For the UIs (ux.aws.c, viz.aws.c): the attack graph is the first with a story to follow: actor, then the hours it was seen in, then the vault it went for. For security.aws.c: the actor rule is a starting point to tune, not a detector.
+
+## 11. Draft 01.3: the twin's new APIs replace guesses (ontology.aws.a, 23 Nov 2026, 08:30 UTC)
+
+The twin now answers Lambda (ListFunctions) and Firehose (ListDeliveryStreams, DescribeDeliveryStream), and IAM knows the platform's two roles (dev 88148db). The generator asks those APIs, so links that were guesses are now answers. Regenerated at dev 6985180: **53 nodes, 104 edges** (api 44, content 38, naming 11, curated 7, template 4); the attack pack adds the scanner as before.
+
+| Link | Was | Now |
+|---|---|---|
+| The stream and the logs bucket | a code comment, stream unnamed | `demo-cloudfront-logs`, from DescribeDeliveryStream (`api`), with its prefix, compression and buffer |
+| The stream's processor | not known | `transforms_with` demo-log-enricher (`api`) |
+| The zip and demo-handler | zip name (`naming`) | the function's CodeSha256 equals the zip's SHA-256 (`api`): AWS's own identity for a package |
+| Functions | one, inferred from the zip | three, from ListFunctions, with runtime, memory, timeout and code size |
+| Platform roles trust Google | template | IAM GetRole (`api`); a link stated twice keeps the stronger evidence |
+| Countries | none | requests per country on the logs bucket, from the field the enricher adds to each line |
+
+Schema additions: relations **`runs_as`** (function or stream to its IAM role) and **`transforms_with`** (stream to its processing function). The distribution's link to the stream is `naming`: its log files sit under the stream's prefix; a CloudFront API in the twin would make it `api`.
+
+Findings, replacing section 9's:
+
+1. **Fixed:** IAM GetRole now answers for both platform roles (dev 3608235).
+2. **New, for aws.c and lambda.aws.a:** the four execution roles the new APIs name (demo-handler-role, demo-log-enricher-role, demo-nightly-report-role for the functions; demo-cloudfront-logs-firehose for the stream) are not in the twin's IAM: GetRole says NoSuchEntity. In a real account a function cannot run without its role, so a user opening one from the map would see a broken link. Suggest the twin's IAM answers for them, with a trust policy for lambda.amazonaws.com and firehose.amazonaws.com.
+3. **Still open:** no stack claims the buckets, the stream, the functions or the distribution (cloudformation.aws.a has a seed for review).

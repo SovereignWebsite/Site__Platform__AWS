@@ -19,6 +19,7 @@ import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gunzipSync, inflateRawSync } from "node:zlib";
+import { createHash } from "node:crypto";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..", "..");
@@ -32,7 +33,7 @@ if (args.has("--all")) {
   const packs = Object.keys(JSON.parse(execFileSync(process.execPath, [fileURLToPath(import.meta.url), "--list-packs"]).toString()));
   let failed = false;
   for (const p of packs) {
-    try { process.stdout.write(execFileSync(process.execPath, [fileURLToPath(import.meta.url), "--pack", p, ...argv.filter((a) => a !== "--all")]).toString()); }
+    try { process.stdout.write(execFileSync(process.execPath, [fileURLToPath(import.meta.url), "--pack", p, ...argv.filter((a) => a !== "--all")], { stdio: ["ignore", "pipe", "pipe"] }).toString()); }
     catch (e) { process.stderr.write(String(e.stderr || e.message)); failed = true; }
   }
   process.exit(failed ? 1 : 0);
@@ -74,7 +75,10 @@ function node(id, type, altitude, label, extra = {}) {
 }
 function edge(from, rel, to, evidence, source) {
   const k = from + "\u0000" + rel + "\u0000" + to;
-  if (!edges.has(k)) edges.set(k, { from, rel, to, evidence, source });
+  // The same link from two sources keeps the stronger evidence (an API answer beats a template, and so on).
+  const RANK = ["api", "template", "content", "naming", "comment", "curated"];
+  const old = edges.get(k);
+  if (!old || RANK.indexOf(evidence) < RANK.indexOf(old.evidence)) edges.set(k, { from, rel, to, evidence, source });
   return k;
 }
 const ids = {
@@ -151,10 +155,10 @@ for (const v of vaults) {
 
 // CloudFront logs: the key names the distribution; the lines name the paths and visitors
 const DIST = (name) => "twin:cloudfront/distribution/" + name;
-const STREAM = "twin:firehose/deliverystream/unnamed-cloudfront-logs";
 const vaultPath = /^\/vault\/([^/]+)\/files/;
 const visitors = new Set();
 const perVault = {}; // vault -> requests for its paths
+const countries = {}; // country -> requests (a field the stream's processor adds to each line)
 const byIp = {}; // address -> { requests, refused, agents, files, vaults, first, last, paths }
 let requests = 0;
 for (const o of objectsOf[B.logs]) {
@@ -166,7 +170,10 @@ for (const o of objectsOf[B.logs]) {
     const a = (byIp[l.c_ip] = byIp[l.c_ip] || { requests: 0, refused: 0, agents: new Set(), files: new Set(), vaults: new Set(), paths: new Set(), first: l.timestamp, last: l.timestamp });
     a.requests++; if (l.sc_status >= 400) a.refused++;
     a.agents.add(l.cs_user_agent); a.files.add(o.key); a.paths.add(l.cs_uri_stem);
-    const v = /^\/vault\/([^/?]+)/.exec(l.cs_uri_stem)?.[1]; if (v) { a.vaults.add(v); perVault[v] = (perVault[v] || 0) + 1; }
+    const v = /^\/vault\/([^/?]+)/.exec(l.cs_uri_stem)?.[1]; if (v) a.vaults.add(v);
+    // Prefer the vault_id the processor wrote into the line; fall back to the path for lines without it.
+    const vid = "vault_id" in l ? l.vault_id : v; if (vid) perVault[vid] = (perVault[vid] || 0) + 1;
+    if (l.country) countries[l.country] = (countries[l.country] || 0) + 1;
     if (l.timestamp < a.first) a.first = l.timestamp; if (l.timestamp > a.last) a.last = l.timestamp;
   });
   const times = lines.map((l) => l.timestamp).sort();
@@ -178,7 +185,8 @@ for (const o of objectsOf[B.logs]) {
   const seen = new Set(lines.map((l) => vaultPath.exec(l.cs_uri_stem)?.[1]).filter((v) => v && nodes.has(ids.vault(v))));
   [...seen].sort().forEach((v) => edge(ids.object(B.logs, o.key), "refers_to", ids.vault(v), "content", "log lines (cs_uri_stem /vault/" + v + "/files)"));
 }
-Object.assign(nodes.get(ids.bucket(B.logs)), { requests, visitors: visitors.size });
+Object.assign(nodes.get(ids.bucket(B.logs)), { requests, visitors: visitors.size },
+  Object.keys(countries).length ? { countries: Object.fromEntries(Object.entries(countries).sort()) } : {});
 for (const [v, n] of Object.entries(perVault)) if (nodes.has(ids.vault(v))) Object.assign(nodes.get(ids.vault(v)), { requests: n, share_of_requests: +(n / requests).toFixed(3) });
 // An address stands out as an actor when most of what it asks for is refused (4xx): a rule on the data, no list
 // of known bad addresses. Normal visitors stay a count on the bucket, not a node each.
@@ -191,12 +199,40 @@ for (const [ip, a] of Object.entries(byIp).sort()) {
   [...a.files].sort().forEach((f) => edge(aid, "seen_in", ids.object(B.logs, f), "content", "log lines (c_ip " + ip + ")"));
   [...a.vaults].sort().filter((v) => nodes.has(ids.vault(v))).forEach((v) => edge(aid, "targeted", ids.vault(v), "content", "log lines (c_ip " + ip + ", paths under /vault/" + v + ")"));
 }
-for (const d of [...nodes.values()].filter((n) => n.type === "distribution")) {
+for (const d of [...nodes.values()].filter((n) => n.type === "distribution"))
   if (/Served from S3 through CloudFront/.test(text(await get(B.site, "index.html")))) edge(d.id, "serves_from", ids.bucket(B.site), "content", "index.html ('Served from S3 through CloudFront')");
-  if (/CloudFront logs delivered by Firehose/.test(twinSrc)) {
-    node(STREAM, "stream", "A2", "(unnamed) CloudFront logs stream", { cfn_type: "AWS::KinesisFirehose::DeliveryStream", inferred: true, note: "no Firehose API in the twin" });
-    edge(d.id, "logs_to", STREAM, "comment", "site/twin.js comment 'CloudFront logs delivered by Firehose'");
-    edge(STREAM, "writes_to", ids.bucket(B.logs), "comment", "site/twin.js comment 'CloudFront logs delivered by Firehose'");
+
+// ---- Lambda and Firehose (read APIs) ----
+const runsAs = new Map(); // role name -> what names it, for the IAM step below
+const LAMBDA = "https://lambda.eu-west-2.amazonaws.com/2015-03-31/functions/";
+const functions = JSON.parse(text((await call(LAMBDA)).bytes)).Functions || [];
+for (const f of functions) {
+  const r = /^arn:aws:lambda:([a-z0-9-]+):/.exec(f.FunctionArn)[1];
+  node(f.FunctionArn, "function", "A2", f.FunctionName, { cfn_type: "AWS::Lambda::Function", runtime: f.Runtime, handler: f.Handler, memory: f.MemorySize, timeout: f.Timeout, code_bytes: f.CodeSize, code_sha256: f.CodeSha256, modified: f.LastModified, description: f.Description });
+  edge(f.FunctionArn, "in", region(r, "api", "Lambda ListFunctions (FunctionArn)"), "api", "Lambda ListFunctions (FunctionArn)");
+  if (f.Role) { const rn = f.Role.split(":role/")[1]; node(ids.role(rn), "role", "A4", rn, { cfn_type: "AWS::IAM::Role" }); edge(f.FunctionArn, "runs_as", ids.role(rn), "api", "Lambda ListFunctions (Role)"); runsAs.set(rn, "Lambda ListFunctions (" + f.FunctionName + ")"); }
+}
+const FH = "https://firehose.eu-west-2.amazonaws.com/";
+const fh = async (target, body) => JSON.parse(text((await call(FH, { method: "POST", headers: { "x-amz-target": "Firehose_20150804." + target }, body: JSON.stringify(body) })).bytes));
+for (const name of (await fh("ListDeliveryStreams", {})).DeliveryStreamNames || []) {
+  const d = (await fh("DescribeDeliveryStream", { DeliveryStreamName: name })).DeliveryStreamDescription;
+  const r = /^arn:aws:firehose:([a-z0-9-]+):/.exec(d.DeliveryStreamARN)[1];
+  node(d.DeliveryStreamARN, "stream", "A2", name, { cfn_type: "AWS::KinesisFirehose::DeliveryStream", status: d.DeliveryStreamStatus, stream_type: d.DeliveryStreamType });
+  edge(d.DeliveryStreamARN, "in", region(r, "api", "Firehose DescribeDeliveryStream (ARN)"), "api", "Firehose DescribeDeliveryStream (ARN)");
+  for (const dest of d.Destinations || []) {
+    const s3d = dest.ExtendedS3DestinationDescription || dest.S3DestinationDescription; if (!s3d) continue;
+    const bucket = s3d.BucketARN.replace("arn:aws:s3:::", "");
+    Object.assign(nodes.get(d.DeliveryStreamARN), { s3_prefix: s3d.Prefix, compression: s3d.CompressionFormat, buffer_seconds: s3d.BufferingHints?.IntervalInSeconds });
+    edge(d.DeliveryStreamARN, "writes_to", ids.bucket(bucket), "api", "Firehose DescribeDeliveryStream (BucketARN)");
+    if (s3d.RoleARN) { const rn = s3d.RoleARN.split(":role/")[1]; node(ids.role(rn), "role", "A4", rn, { cfn_type: "AWS::IAM::Role" }); edge(d.DeliveryStreamARN, "runs_as", ids.role(rn), "api", "Firehose DescribeDeliveryStream (RoleARN)"); runsAs.set(rn, "Firehose DescribeDeliveryStream (" + name + ")"); }
+    for (const pr of s3d.ProcessingConfiguration?.Enabled ? s3d.ProcessingConfiguration.Processors || [] : []) {
+      const arn = (pr.Parameters || []).find((x) => x.ParameterName === "LambdaArn")?.ParameterValue?.replace(/:\$LATEST$/, "");
+      if (arn) edge(d.DeliveryStreamARN, "transforms_with", arn, "api", "Firehose DescribeDeliveryStream (ProcessingConfiguration)");
+    }
+    // The distribution's log files sit under this stream's prefix in this bucket: the stream carries its logs.
+    if (nodes.has(ids.bucket(bucket))) for (const dist of [...nodes.values()].filter((n) => n.type === "distribution"))
+      if ((objectsOf[bucket] || []).some((o) => o.key.startsWith(s3d.Prefix || "") && o.key.includes("/" + dist.label + "-")))
+        edge(dist.id, "logs_to", d.DeliveryStreamARN, "naming", "log files named after " + dist.label + " sit under the stream's prefix " + (s3d.Prefix || "(none)"));
   }
 }
 
@@ -215,16 +251,17 @@ function unzip(buf) {
   return out;
 }
 for (const o of objectsOf[B.deps].filter((o) => o.key.endsWith(".zip"))) {
-  const files = unzip(await get(B.deps, o.key));
+  const buf = await get(B.deps, o.key);
+  const files = unzip(buf);
+  Object.assign(nodes.get(ids.object(B.deps, o.key)), { entries: Object.keys(files).length });
+  // A function whose CodeSha256 is this zip's SHA-256 runs this code: AWS's own identity for a deployment package.
+  const sha = createHash("sha256").update(buf).digest("base64");
+  const f = functions.find((x) => x.CodeSha256 === sha);
+  if (f) { edge(ids.object(B.deps, o.key), "packages", f.FunctionArn, "api", "Lambda CodeSha256 equals the zip's SHA-256"); continue; }
   const meta = Object.entries(files).find(([n]) => n.endsWith(".dist-info/METADATA"));
   const name = meta && /^Name:\s*(.+)$/m.exec(meta[1])[1].trim();
-  if (!name) continue;
-  const cfg = files["config.json"] ? JSON.parse(files["config.json"]) : {};
-  const fid = cfg.region ? "arn:aws:lambda:" + cfg.region + ":" + ACCOUNT + ":function:" + name : "twin:lambda/function/" + name;
-  node(fid, "function", "A2", name, { cfn_type: "AWS::Lambda::Function", inferred: true, note: "no Lambda API in the twin; inferred from its dependency zip", memory: cfg.memory, timeout: cfg.timeout });
-  Object.assign(nodes.get(ids.object(B.deps, o.key)), { entries: Object.keys(files).length });
-  edge(ids.object(B.deps, o.key), "packages", fid, "naming", "zip name and dist-info METADATA (Name: " + name + ")");
-  if (cfg.region) edge(fid, "in", region(cfg.region, "content", "config.json in the zip"), "content", "config.json in the zip (region)");
+  const byName = name && functions.find((x) => x.FunctionName === name);
+  if (byName) edge(ids.object(B.deps, o.key), "packages", byName.FunctionArn, "naming", "zip name and dist-info METADATA (Name: " + name + "); CodeSha256 differs");
 }
 
 // ---- stack and its template ----
@@ -291,8 +328,8 @@ for (const rn of [...roleNames].sort()) {
   const rid = ids.role(rn);
   if (r.status === 404) {
     // Named somewhere but not in IAM: the platform roles live only in the template until the stack is applied.
-    const known = nodes.get(rid);
-    node(rid, "role", "A4", rn, known ? { iam: "not in the twin's IAM (GetRole: NoSuchEntity); declared in the template" } : { dangling: true, note: "named in the data; GetRole says NoSuchEntity" });
+    const by = runsAs.get(rn) || (nodes.get(rid)?.logical_id ? "the stack's template" : "the data");
+    node(rid, "role", "A4", rn, { dangling: true, note: "named by " + by + "; IAM GetRole says NoSuchEntity" });
     continue;
   }
   node(rid, "role", "A4", rn, { cfn_type: "AWS::IAM::Role" });
@@ -300,6 +337,10 @@ for (const rn of [...roleNames].sort()) {
   const doc = JSON.parse(decodeURIComponent(tag(text(r.bytes), "AssumeRolePolicyDocument")[0]));
   for (const st of doc.Statement) {
     const fed = st.Principal?.Federated;
+    if (fed === "accounts.google.com") {
+      node(GOOGLE, "identity_provider", "A4", "accounts.google.com", { note: "web identity federation; no IAM resource" });
+      edge(rid, "trusts", GOOGLE, "api", "IAM GetRole (trust policy Principal Federated accounts.google.com)");
+    }
     if (fed && fed.endsWith("oidc-provider/" + GH)) {
       node(fed, "identity_provider", "A4", GH, { cfn_type: "AWS::IAM::OIDCProvider" });
       edge(rid, "trusts", fed, "api", "IAM GetRole (trust policy Principal)");
@@ -321,7 +362,8 @@ const VRF = "twin:function/visitor-reads-vault-files";
 node(VRF, "business_function", "A5", "A visitor reads a vault's files");
 edge(VRF, "part_of", ids.site, "curated", "ontology rule: the demo site serves the vaults' files");
 for (const n of [...nodes.values()].filter((n) => n.type === "vault")) edge(VRF, "refers_to", n.id, "curated", "ontology rule: the function is about each vault");
-for (const id of [ids.bucket(B.site), ids.bucket(B.logs), STREAM, ...[...nodes.values()].filter((n) => n.type === "distribution").map((n) => n.id)])
+const streamsToLogs = [...edges.values()].filter((e) => e.rel === "writes_to" && e.to === ids.bucket(B.logs)).map((e) => e.from);
+for (const id of [ids.bucket(B.site), ids.bucket(B.logs), ...streamsToLogs, ...[...nodes.values()].filter((n) => n.type === "distribution").map((n) => n.id)])
   if (nodes.has(id)) edge(id, "part_of", ids.site, "curated", "ontology rule: the demo site's serving and logging path");
 
 // ---- write ----
