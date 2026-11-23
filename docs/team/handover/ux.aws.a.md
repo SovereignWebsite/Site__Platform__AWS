@@ -39,10 +39,18 @@ Branch head at hand-over: see `git log -1 origin/work/ux.aws.a`. A signers dry r
 - **R-010** (same-origin pages): before any console prototype lands under site/, aws.c and security decide; my recommendation is a view inside index.html (design 03 section 6).
 - **Privacy (Dinis, ~11:15 UTC, data.aws.a's session)**: visitor addresses are kept and shown as /24 or /48 plus country; in-page drill-down to one line may show the full address; never copied into links, Copy, exports or screenshots.
 
+## New work (Dinis, 14:55 UTC via maestro.a and conductor.aws.a)
+
+A page to deploy the Vault into a customer's AWS account, "literally as simple as possible". Plan: docs/team/plan-vault-deploy.md on work/conductor.aws.a (ea9f61d). ux.aws.a supports:
+
+- **Step 5, the page**: a wizard of at most five steps (account, sign in, region, domain, deploy), progress from the stack's events. Builders: dev.2.aws.a (site/api) and dev.1.aws.a. ux.aws.a gives the screens, copy and states (empty, waiting, failed, done), first on the twin's "customer account" (step 4, dev.1.aws.a).
+- **Step 6, as simple as possible**: sherpa.aws.a walks the wizard as a first-time customer; ux.aws.a cuts every step not needed (aim: fewer than five; each kept step says why it exists).
+- Start as design 06 in docs/design/ (wizard wireframes, desktop and phone, using design 05's frame and design 02's twin rules), before Map and Desk.
+
 ## Next steps, in order
 
 1. On key landing: merge dev, dry-run signers, push my paths to dev.
-2. Map console wireframes (design 06) once ontology.aws.a's graph is readable in the page; else Desk (plans and findings as an inbox).
+2. Design 06: the Vault deploy wizard (see above). Then Map console wireframes (design 07) once ontology.aws.a's graph is readable in the page; else Desk (plans and findings as an inbox).
 3. Re-walk design 02's acceptance with sherpa.aws.a after aws.c lands the "me" menu.
 4. Fold architect's Decode refinements into designs 03 and 04 (truncation line, gunzip sizes, column hints).
 
