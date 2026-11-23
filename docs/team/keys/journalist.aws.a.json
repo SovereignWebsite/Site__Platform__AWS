@@ -1,8 +1,8 @@
 {
   "v": 1,
-  "encrypt": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAl4L3UrLjZiqCvfroD1L3\nF+/2cZUOWX8FEFqi5Vk+BBQuARpURMQR/7vyhk0/9NMs+J2KI5KvHIErX4f8kxB0\nEME1iDtyuNZr8979a/ZRGuy3qUdKtsC/PaGHTQY0Ickmpr8Z+gQv+6UpqxjEP6kQ\nZ9cb4Q8ZwHkKN5/eUxkEq+jr1rPgKJnMrfg7ZVzBvoNUIDkBVu+JZ70J79n/9Ppe\n6OVU54/lmMSsBWoroiDitqYqnp1acTbda+qmQ5RPXLOx83KXj/20G+yS8RhwdNwY\ngsSLsIh7iNO780s1Wrn3Tjb1UiR7moXdd95E1AwAFtkiHfzugA2I8+US7SJlQe+H\ngmVl8hhibSq6nFusz9fhOVUmLfNHMRrl7PcrOtqwcuataoxMZ+Xe1KM/5NjXhrbl\nFSef0Wt8Wth9NunTJYlDFZkBgXqptCOqWhpGuM1ufr+KgGdZW6tPeKSkbLQ7DUby\ngI2iJcY3OUj2/5SmHdbykmluxV0yl5EpqIdprgcZ9J3nu71AtmPo+ByuwQ0OtRnO\ndjCrTUhGWKPLpgPDRf/67GcPGGSK1uVGoLuY4bo2WrTor/edEbxtcH2aIpRKDhga\n5etVHoA9y9rcTgdOERUxw+Yz7+4Eu70BB4qgF8LYMQEG/KQg4foYCNZaijSbVOp6\nYMSbSLWAq6YIrM8PtG4/WCMCAwEAAQ==\n-----END PUBLIC KEY-----\n",
-  "sign": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEhhlNvwIxhefF+a9IpQHtm3o0Gkd+\nW5cieEqKIJact/8SnEd1nbkDdHBIvzp9NYiTlG25s8J3E4iBxN4O/NHmLA==\n-----END PUBLIC KEY-----\n",
-  "label": "journalist.aws.a@SovereignWebsite.dinis",
-  "fingerprint": "sha256:60542c9ed74aff5e",
-  "signing_fingerprint": "sha256:0efe7049a27f2086"
+  "encrypt": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAzmaa13+Ngc+o5x1R/j5B\nl6hBOETRBsixci4fylgVVpIN4jhyNEyZUx7vnGSqreg7je3l8Q9zJECscHXSl38s\nMiHvvUr/Ph6WIjdvojBtZi/pP874VOPt1sliJ692Wlq+cu8EGqvax411LGqIuGgz\nlJVH0HmSUyfehE4sbV6kg5ADCks8KSMixQ9vDpNfeg2w5ChHcmY681mmF5B2Awz4\nw9BRC7Fkehj8TMyhpbsPiUupsMzrH+9YcLvnn85hu7jybQBv0mwIPbaqFdpF3EQW\nebT1/ypYk9S54LuaAC9j8wAzECiWEtpGFhY/4TiZ77g4qr070hWzb9UBF7lFGxBV\nTmnA6q6pjPGCBOK9KXFzK7iRHmv+GflASaHmzh2FzmHn8VrNdr4/GQL6F/7Tlq+m\n5HWvVNlOYs12B3tp1KexrkxyDHUQxkV9CTMUhWljK329uJ35Z77yJSxjaLADY2We\nYyewGvdL2ob7c3LSM6fgemAtSvKqT7RACS1oRj4ANvmaU58Fv3PctLxhJS+mJLTs\nKHzH/hpChHcqFlEvCXBULXFYUSzqtnJ5jPgNIu1cPDAgrb1iMpbD4sCbjD5ZZmgS\nZOFtjn1EedvOhpwsRZL661aJx71X0J0WnhGHIZjfQDFzj5cXKv1eoTP6aNyA8N4E\n3MnjgfpNrF1WwgLlorW5YxsCAwEAAQ==\n-----END PUBLIC KEY-----\n",
+  "sign": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEKbsXeWA2xhgQ6hgKFC45yj1YzY9o\njqTFN1HYP0q/LIdODpRs4sxfOKq0jw8urMy92VyhByLkfdoUIjyrXqUtNw==\n-----END PUBLIC KEY-----\n",
+  "label": "journalist.aws.a",
+  "fingerprint": "sha256:5c3b9f107153516f",
+  "signing_fingerprint": "sha256:b1e1c1d8d449f631"
 }
