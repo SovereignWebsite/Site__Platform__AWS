@@ -100,7 +100,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
 <div class="wrap">
   <header>
     <div>
-      <h1>Deploy a Vault: ten decisions</h1>
+      <h1>Deploy a Vault: eleven decisions</h1>
       <p class="sub">AWS Platform programme · from <span class="t-mono">docs/board/decisions.md</span>, 23 Nov 2026, 15:30 UTC (batch 2) · kept by pm.aws.a</p>
     </div>
     <div class="tabs" role="tablist" aria-label="View">
@@ -139,10 +139,10 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
 
 <script type="application/json" id="storyboard">
 {
- "title": "Deploy a Vault: ten decisions",
+ "title": "Deploy a Vault: eleven decisions",
  "source": "docs/board/decisions.md, batch 2, on work/pm.aws.a, 23 Nov 15:30 UTC",
  "made_by": "pm.aws.a@SovereignWebsite.dinis",
- "answer": "V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a",
+ "answer": "V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a, V11 a",
  "scenes": [
   {
    "id": "intro",
@@ -152,8 +152,8 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
    "beats": [
     [
      0,
-     "Ten decisions about deploying a Vault into a customer's AWS account, EC2 and short-lived deployments.",
-     "Ten tiles, V1 to V10, in two rows."
+     "Eleven decisions about deploying a Vault into a customer's AWS account, EC2 and short-lived deployments.",
+     "Eleven tiles, V1 to V11."
     ],
     [
      6,
@@ -167,7 +167,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
     ]
    ],
    "panel": {
-    "what": "Ten decisions from conductor.aws.a's plan (ea9f61d) and the first drafts of steps 1 to 3: vaults.aws.a (eec9d24), cloudformation.aws.a (42677c7), iam.aws.a (68f4b8b). Answer by number in pm.aws.a's session.",
+    "what": "Eleven decisions from conductor.aws.a's plan (ea9f61d), the first drafts of steps 1 to 3 and security's review of the page design (d38c93b): vaults.aws.a (eec9d24), cloudformation.aws.a (42677c7), iam.aws.a (68f4b8b). Answer by number in pm.aws.a's session.",
     "answer": true
    }
   },
@@ -544,14 +544,53 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
    }
   },
   {
+   "id": "v11",
+   "eyebrow": "V11 · Launches",
+   "title": "One CloudFormation launch or two",
+   "dur": 18,
+   "beats": [
+    [
+     0,
+     "Two launches: an access stack makes a deploy role with a boundary, then the Vault stack runs as that role.",
+     "Customer console, access stack, deploy role with a dashed boundary, then the Vault stack."
+    ],
+    [
+     8,
+     "One launch is a step shorter, but every later update is bounded only by the template.",
+     "A single launch path, the boundary missing; later updates marked unbounded."
+    ],
+    [
+     13,
+     "Recommended: a, two launches. We are the customer's supply chain for template and image.",
+     "The a option chip lights as recommended."
+    ]
+   ],
+   "panel": {
+    "asks": "security.aws.a (review of ux.aws.a's design 06, d38c93b)",
+    "what": "Whether the customer launches one CloudFormation stack or two.",
+    "options": [
+     [
+      "a",
+      "Two link-outs: the access stack creates the deploy role and its boundary, then the Vault stack runs as that role (one extra step, once)."
+     ],
+     [
+      "b",
+      "One stack, run as the customer's own console identity: later updates bounded only by the template."
+     ]
+    ],
+    "rec": "a",
+    "blocks": "Screen 2 of the deploy page (the real link); the twin build starts either way. Moving from b to a later means a rebuild in every customer account; if b, five conditions apply (in the review)."
+   }
+  },
+  {
    "id": "outro",
    "eyebrow": "Your answer",
-   "title": "One line answers all ten",
+   "title": "One line answers all eleven",
    "dur": 10,
    "beats": [
     [
      0,
-     "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a.",
+     "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a, V11 a.",
      "The full answer line, large."
     ],
     [
@@ -605,10 +644,10 @@ function optionRow(opts, rec, tShow, tRec, notRec=[]) {
 /* ---------- the scenes, drawn ---------- */
 const VIS = {
 intro(){
-  const n=[['V1','Where it lives','acc'],['V2','CloudFormation','acc'],['V3','Sign-in','risk'],['V4','EC2 path','acc'],['V5','Guard rails','risk'],['V6','ec2.aws.a','acc'],['V7','Audit trail','risk'],['V8','Progress','risk'],['V9','Templates','acc'],['V10','Server image','acc']];
+  const n=[['V1','Where it lives','acc'],['V2','CloudFormation','acc'],['V3','Sign-in','risk'],['V4','EC2 path','acc'],['V5','Guard rails','risk'],['V6','ec2.aws.a','acc'],['V7','Audit trail','risk'],['V8','Progress','risk'],['V9','Templates','acc'],['V10','Server image','acc'],['V11','Launches','risk']];
   let s = txt(W/2,70,'Deploy a Vault','t-xl') + cue(0.2, txt(W/2,104,'into a customer\'s AWS account · EC2 · short-lived deployments','t-m t-mute'));
-  n.forEach((d,i)=>{ const x=70+(i%5)*168, y=130+Math.floor(i/5)*118, c=d[2]==='risk'?'bx-risk':'bx-acc';
-    s += cue(0.8+i*0.3, box(x,y,150,100,c) + txt(x+75,y+50,d[0],'t-l '+(d[2]==='risk'?'t-risk':'t-acc')) + txt(x+75,y+80,d[1],'t-s'), 'pop'); });
+  n.forEach((d,i)=>{ const x=30+(i%6)*152, y=130+Math.floor(i/6)*118, c=d[2]==='risk'?'bx-risk':'bx-acc';
+    s += cue(0.8+i*0.3, box(x,y,138,100,c) + txt(x+69,y+50,d[0],'t-l '+(d[2]==='risk'?'t-risk':'t-acc')) + txt(x+69,y+80,d[1],'t-s'), 'pop'); });
   s += cue(4, txt(70,384,'red: trust or safety · amber: scope or access','t-s t-mute','start'));
   s += cue(6, box(180,398,600,40,'bx-ok',20) + txt(W/2,423,'Twin first: nothing real until you answer','t-s t-ok'));
   s += cue(11, txt(W/2,480,SB.answer,'t-m'));
@@ -722,10 +761,22 @@ v10(){
   s += optionRow(['a','b','c','d'],'a',12,13);
   return s;
 },
+v11(){
+  let s = lbox(30,120,150,64,'their console','bx','t-s');
+  s += cue(0.8, lbox(230,120,170,64,'access stack','bx-ok','t-s','launch 1, once'));
+  s += cue(1.6, `<rect x="440" y="100" width="210" height="104" rx="16" fill="none" stroke="var(--ok)" stroke-width="3" stroke-dasharray="8 5"/>` + lbox(460,120,170,64,'deploy role','bx','t-s','with a boundary'));
+  s += cue(2.4, lbox(710,120,200,64,'Vault stack','bx-ok','t-s','launch 2, runs as the role'));
+  s += path('p11a','M180 152 L228 152','ln-ok',0.8,1.4)+path('p11b','M400 152 L458 152','ln-ok',1.6,2.2)+path('p11c','M630 152 L708 152','ln-ok',2.4,3);
+  s += cue(8, lbox(230,280,170,64,'one stack','bx-hold','t-s','as their own identity'));
+  s += cue(8.6, lbox(710,280,200,64,'later updates','bx-risk','t-s','bounded only by the template'));
+  s += `<path d="M400 312 L708 312" class="ln dash"/>`;
+  s += optionRow(['a','b'],'a',12,13);
+  return s;
+},
 outro(){
   let s = txt(W/2,150,'Recommended','t-m t-mute');
   s += cue(0.3, txt(W/2,226,'V1 a · V2 a · V3 a · V4 b · V5 b','t-l'), 'pop');
-  s += cue(0.6, txt(W/2,266,'V6 a · V7 c · V8 a · V9 a · V10 a','t-l'), 'pop');
+  s += cue(0.6, txt(W/2,266,'V6 a · V7 c · V8 a · V9 a · V10 a · V11 a','t-l'), 'pop');
   s += cue(5, txt(W/2,330,'Answer in pm.aws.a\'s session','t-m'));
   s += cue(5.6, txt(W/2,358,'claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B','t-mono t-mute'));
   s += cue(6.2, txt(W/2,420,'Twin first: nothing real until you answer.','t-s t-ok'));

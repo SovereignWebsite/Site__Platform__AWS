@@ -1,21 +1,21 @@
 {
  "format": "studio-storyboard/0",
  "slug": "aws-vault-deploy-2026-11-23",
- "title": "Deploy a Vault: ten decisions",
+ "title": "Deploy a Vault: eleven decisions",
  "audience": "Dinis",
  "requested_by": "pm.aws.a@SovereignWebsite.dinis",
- "summary": "Batch 2 on the AWS Platform programme's decisions page (23 Nov 2026 15:30 UTC): ten decisions on deploying a Vault into a customer's AWS account, EC2 and short-lived deployments, from conductor.aws.a's plan and the first drafts of steps 1 to 3. Nothing runs outside the twin until Dinis answers.",
+ "summary": "Batch 2 on the AWS Platform programme's decisions page (23 Nov 2026 15:30 UTC): eleven decisions on deploying a Vault into a customer's AWS account, EC2 and short-lived deployments, from conductor.aws.a's plan and the first drafts of steps 1 to 3. Nothing runs outside the twin until Dinis answers.",
  "beats": [
   {
    "id": "b1",
-   "narration": "Ten decisions on deploying a Vault into a customer's AWS account. Nothing real runs until you answer.",
+   "narration": "Eleven decisions on deploying a Vault for a customer. Nothing real runs until you answer.",
    "visual": {
     "kind": "svg",
     "src": "intro",
     "caption": "Batch 2: deploy a Vault",
     "at": 0,
-    "play": 7.4,
-    "end": 6.8
+    "play": 6.6,
+    "end": 6
    },
    "facts": [
     "s-plan"
@@ -73,14 +73,14 @@
   },
   {
    "id": "b5",
-   "narration": "V4. Recommended: EC2 as a second path after the CloudFormation path works on the twin.",
+   "narration": "V4. Recommended: EC2 as a second path, after CloudFormation works on the twin.",
    "visual": {
     "kind": "svg",
     "src": "v4",
     "caption": "V4: EC2 as a second path",
     "at": 0,
-    "play": 6.6,
-    "end": 6
+    "play": 5.8,
+    "end": 5.2
    },
    "facts": [
     "s-plan"
@@ -88,14 +88,14 @@
   },
   {
    "id": "b6",
-   "narration": "V5. Short-lived deployments need limits. Recommended: numbers proposed from the twin, then approved by you.",
+   "narration": "V5. Recommended: limits proposed from the twin, then approved by you.",
    "visual": {
     "kind": "svg",
     "src": "v5",
     "caption": "V5: guard rails",
     "at": 0,
-    "play": 6.6,
-    "end": 6
+    "play": 5,
+    "end": 4.4
    },
    "facts": [
     "s-plan",
@@ -105,14 +105,14 @@
   },
   {
    "id": "b7",
-   "narration": "V6. Recommended: start ec2.aws.a to own EC2 and short-lived deployments, twin only.",
+   "narration": "V6. Recommended: start ec2.aws.a, twin only.",
    "visual": {
     "kind": "svg",
     "src": "v6",
     "caption": "V6: a new agent",
     "at": 0,
-    "play": 5.4,
-    "end": 4.8
+    "play": 3.1,
+    "end": 2.5
    },
    "facts": [
     "s-plan"
@@ -136,14 +136,14 @@
   },
   {
    "id": "b9",
-   "narration": "V8. Recommended: no live progress in version one. The page checks DNS and health at the end.",
+   "narration": "V8. Recommended: no live progress at first; the page checks DNS and health at the end.",
    "visual": {
     "kind": "svg",
     "src": "v8",
     "caption": "V8: live progress",
     "at": 0,
-    "play": 7.4,
-    "end": 6.8
+    "play": 7,
+    "end": 6.4
    },
    "facts": [
     "s-iam",
@@ -152,14 +152,14 @@
   },
   {
    "id": "b10",
-   "narration": "V9. Official templates sit in sgit.ai's encrypted vault. Recommended: read access, build from the Lambda one.",
+   "narration": "V9. Recommended: read access to sgit.ai's official templates; build from the Lambda one.",
    "visual": {
     "kind": "svg",
     "src": "v9",
     "caption": "V9: the official templates",
     "at": 0,
-    "play": 7,
-    "end": 6.4
+    "play": 5.8,
+    "end": 5.2
    },
    "facts": [
     "s-vaults",
@@ -182,15 +182,30 @@
    ]
   },
   {
+   "id": "b11a",
+   "narration": "V11. Recommended by security: two launches, so a deploy role with a boundary bounds every later update.",
+   "visual": {
+    "kind": "svg",
+    "src": "v11",
+    "caption": "V11: one launch or two",
+    "at": 0,
+    "play": 7.4,
+    "end": 6.8
+   },
+   "facts": [
+    "s-sec-06"
+   ]
+  },
+  {
    "id": "b12",
-   "narration": "All a, except V4 and V5, b, and V7, c. V10 depends on V9. Answer in pm.aws.a's session.",
+   "narration": "All a, except V4 and V5, b, and V7, c. Answer in pm.aws.a's session.",
    "visual": {
     "kind": "svg",
     "src": "outro",
-    "caption": "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a (if the official template settles nothing)",
+    "caption": "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a (if the official template settles nothing), V11 a",
     "at": 0,
-    "play": 7.8,
-    "end": 7.2
+    "play": 6.2,
+    "end": 5.6
    },
    "facts": [
     "s-plan"
@@ -537,6 +552,37 @@
    ],
    "recommendation": "a",
    "why": "Follow what the official Lambda template does (V9); if it settles nothing, a (pm.aws.a's view)."
+  },
+  {
+   "id": "V11",
+   "question": "V11. One CloudFormation launch or two?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. Two link-outs: access stack (deploy role and boundary), then the Vault stack as that role",
+     "good": [
+      "The deploy role bounds every future update, whatever the template says"
+     ],
+     "bad": [
+      "One extra step, once"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. One stack, run as the customer's own console identity",
+     "good": [
+      "One step"
+     ],
+     "bad": [
+      "Later updates bounded only by the template",
+      "Moving to a later means a rebuild in every customer account"
+     ],
+     "blocks": []
+    }
+   ],
+   "recommendation": "a",
+   "why": "security.aws.a (d38c93b): we are the customer's supply chain for the template and the image digest. If b, five conditions apply."
   }
  ],
  "connections": {
@@ -604,6 +650,12 @@
    "id": "s-risks",
    "title": "security: risk register (docs/security/risks.md at c87dc92)",
    "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/c87dc92/docs/security/risks.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-sec-06",
+   "title": "security.aws.a: review of ux.aws.a's design 06, the Vault deploy page (d38c93b)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/d38c93b/docs/security/reviews/2026-11-23__ux-design-06-vault-deploy-page.md",
    "read": "2026-11-23"
   }
  ],
