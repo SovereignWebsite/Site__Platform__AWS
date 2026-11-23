@@ -69,9 +69,14 @@ Two more rules, from security.aws.a (17:26 UTC):
 
 The publishing role is the stack's PublisherRoleArn. ct-alarms.js takes it as `run(events, { templatesPublisher })`, an ARN or a role name, with "sws-vault-templates-publisher" as the default.
 
-PutObject, PutObjectRetention and PutObjectLegalHold are S3 data events, so the trail must log data events for this bucket or these rules never see them (*to check* with boto3.aws.a: which events and selectors).
+PutObject, PutObjectRetention and PutObjectLegalHold are S3 data events, so the trail must log data events for this bucket or these rules never see them Checked by boto3.aws.a (docs/boto3/2026-11-23__14-templates-bucket-audit.md, AWS's pages, 23 Nov 2026):
+- The object calls are data events (AWS::S3::Object). CloudTrail does not log data events by default, Event history does not show them, and they cost extra.
+- The trail needs an advanced data event selector for AWS::S3::Object, with resources.ARN StartsWith `arn:aws:s3:::sws-vault-templates-` and readOnly false.
 
-Drafted as EventBridge patterns for aws.c to plan (*to check*; no AWS change without Dinis's yes):
+Drafted as EventBridge patterns for aws.c to plan (no AWS change without Dinis's yes). boto3.aws.a checked both:
+- The first, on bucket-level management events, needs only an active trail.
+- The second fires only once the selector above is in place.
+- Still to confirm: S3 events arrive on the default event bus of the bucket's own region, so the rules must live in that region.
 
 ```json
 { "source": ["aws.s3"], "detail-type": ["AWS API Call via CloudTrail"],
