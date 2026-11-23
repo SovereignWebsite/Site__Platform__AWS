@@ -94,6 +94,7 @@
 <ul>
 <li>Google gives this page an ID token for you. AWS STS (AssumeRoleWithWebIdentity) swaps it for credentials that end within the hour.</li>
 <li>So a refresh does not sign you out, the page seals both with this device's own key before keeping them: a key pair made by your browser for this site, whose private half cannot be read by anyone, this page included; the browser only lets this site use it. Sealed records end when the credentials do. Sign out deletes them; Forget this device also deletes the key.</li>
+<li>Once you have signed in here by hand, Google signs you in again without a click (on a refresh after the hour, or a minute before it ends), as long as this browser knows you. Sign out turns that off until you next sign in by hand.</li>
 <li>Your roles are the mandate: they are written as infrastructure as code, and a role can do only what its template lists.</li>
 <li>Calls go from your browser straight to AWS (STS, IAM, Cost Explorer), signed in the page with your one-hour credentials. No server of ours sits in between, and there is no tracking.</li>
 </ul>

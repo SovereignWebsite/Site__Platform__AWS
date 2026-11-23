@@ -44,18 +44,38 @@
     mem.idToken = token;
     mem.claims = decodeJwt(token);
     $("restored").hidden = !restored;
+    $("google-button").hidden = true;
+    scheduleRenew();
     $("who").textContent = "Signed in with Google as " + (mem.claims.email || "your account") + ".";
     $("sub").textContent = mem.claims.sub;
     $("step1-done").hidden = false;
     renderAccounts();
   }
+  // Automatic sign-in (Dinis, 23 Nov 2026: "make it so it sends these automatically when it knows me so I
+  // don't have to click"): with auto_select, Google signs the owner in without a click when this browser has
+  // signed in here before and has one such account; a minute before the ID token ends, it is asked again.
+  // Sign out turns it off (disableAutoSelect) until the next sign-in by hand.
+  var gisReady, renewTimer = null;
+  function autoSignIn() {
+    if (mem.idToken || !window.google || !google.accounts) return;
+    google.accounts.id.prompt();
+  }
+  function scheduleRenew() {
+    if (renewTimer) clearTimeout(renewTimer);
+    if (!mem.claims) return;
+    var wait = mem.claims.exp * 1000 - Date.now() - 60 * 1000;
+    renewTimer = setTimeout(function () { mem.idToken = null; $("google-button").hidden = false; autoSignIn(); }, Math.max(wait, 0));
+  }
   function initGoogle() {
-    if (!cfg.googleClientId) { $("no-client").hidden = false; return; }
+    if (!cfg.googleClientId) { $("no-client").hidden = false; gisReady = Promise.resolve(); return; }
+    var ready;
+    gisReady = new Promise(function (r) { ready = r; });
     var s = document.createElement("script");
     s.src = "https://accounts.google.com/gsi/client"; s.async = true;
     s.onload = function () {
-      google.accounts.id.initialize({ client_id: cfg.googleClientId, callback: onGoogle, auto_select: false });
+      google.accounts.id.initialize({ client_id: cfg.googleClientId, callback: onGoogle, auto_select: true, use_fedcm_for_prompt: true, cancel_on_tap_outside: false });
       google.accounts.id.renderButton($("google-button"), { theme: "outline", size: "large", text: "signin_with" });
+      ready();
     };
     document.head.appendChild(s);
   }
@@ -247,7 +267,8 @@
   $("sign-out").onclick = function () {
     mem.idToken = null; mem.claims = null; mem.creds = {};
     if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
-    $("step1-done").hidden = true; renderAccounts();
+    $("step1-done").hidden = true; $("google-button").hidden = false; renderAccounts();
+    if (renewTimer) clearTimeout(renewTimer);
     if (window.SealedStore) SealedStore.forget("session");
   };
   $("forget-device").onclick = function () {
@@ -256,5 +277,5 @@
     if (window.SealedStore) SealedStore.forgetDevice().then(function () { say($("store-status"), "This device's key and everything sealed with it are deleted.", "ok"); });
   };
   initGoogle();
-  loadAccounts().then(restore).then(renderAccounts);
+  loadAccounts().then(restore).then(renderAccounts).then(function () { return gisReady; }).then(autoSignIn);
 })();
