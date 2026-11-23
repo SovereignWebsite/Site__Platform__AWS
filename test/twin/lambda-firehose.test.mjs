@@ -19,9 +19,10 @@ if (r.status !== 200 || !/application\/json/.test(r.headers.get("content-type"))
 const list = await r.json();
 const names = list.Functions.map((f) => f.FunctionName);
 if (names.join() !== "demo-handler,demo-log-enricher,demo-nightly-report") fail("functions " + names);
-if (!("NextMarker" in list)) fail("no NextMarker");
+if ("NextMarker" in list) fail("NextMarker with no more functions (AWS includes it only when more results are available)");
 for (const f of list.Functions) {
-  for (const k of ["FunctionArn", "Runtime", "Role", "Handler", "CodeSize", "Timeout", "MemorySize", "LastModified", "CodeSha256", "Version", "State", "PackageType"]) if (f[k] === undefined) fail(f.FunctionName + " lacks " + k);
+  for (const k of ["FunctionArn", "Runtime", "Role", "Handler", "CodeSize", "Timeout", "MemorySize", "LastModified", "CodeSha256", "Version", "PackageType"]) if (f[k] === undefined) fail(f.FunctionName + " lacks " + k);
+  for (const k of ["State", "LastUpdateStatus"]) if (k in f) fail("ListFunctions returns a subset: " + k + " is GetFunctionConfiguration's");
   if (!/^arn:aws:lambda:eu-west-2:111122223333:function:/.test(f.FunctionArn)) fail("arn " + f.FunctionArn);
   if (!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}\+0000$/.test(f.LastModified)) fail("LastModified format " + f.LastModified);
   if (Buffer.from(f.CodeSha256, "base64").length !== 32) fail("CodeSha256 is not 32 bytes: " + f.FunctionName);
@@ -36,7 +37,9 @@ if (dh.Timeout !== 30 || dh.MemorySize !== 256) fail("demo-handler settings diff
 
 // GetFunctionConfiguration by name and by ARN; unknown name
 r = await get(L + "/2015-03-31/functions/demo-log-enricher/configuration");
-if ((await r.json()).Handler !== "enricher.handler") fail("GetFunctionConfiguration by name");
+const enr = await r.json();
+if (enr.Handler !== "enricher.handler") fail("GetFunctionConfiguration by name");
+if (enr.State !== "Active" || enr.LastUpdateStatus !== "Successful") fail("GetFunctionConfiguration carries State and LastUpdateStatus");
 r = await get(L + "/2015-03-31/functions/" + encodeURIComponent("arn:aws:lambda:eu-west-2:111122223333:function:demo-handler") + "/configuration");
 if ((await r.json()).FunctionName !== "demo-handler") fail("GetFunctionConfiguration by ARN");
 r = await get(L + "/2015-03-31/functions/nope/configuration");
@@ -57,6 +60,16 @@ const lam = s3d.ProcessingConfiguration.Processors[0].Parameters[0].ParameterVal
 if (!names.some((n) => lam.indexOf(":function:" + n + ":") > 0)) fail("processor is not a twin function: " + lam);
 r = await fh("DescribeDeliveryStream", { DeliveryStreamName: "nope" });
 if (r.status !== 400 || (await r.json()).__type !== "ResourceNotFoundException") fail("unknown stream");
+
+// names that are Object.prototype properties are not functions or streams (security.aws.a, 23 Nov)
+for (const n of ["constructor", "__proto__", "toString", "hasOwnProperty"]) {
+  r = await get(L + "/2015-03-31/functions/" + n + "/configuration");
+  if (r.status !== 404) fail("function " + n + " answered " + r.status);
+  r = await fh("DescribeDeliveryStream", { DeliveryStreamName: n });
+  if (r.status !== 400 || (await r.json()).__type !== "ResourceNotFoundException") fail("stream " + n + " answered");
+}
+r = await fh("DescribeDeliveryStream", {});
+if (r.status !== 400) fail("missing stream name answered");
 
 // unsigned calls are refused; writes are not in the twin
 if ((await get(L + "/2015-03-31/functions/", {})).status !== 403) fail("unsigned Lambda call answered");
