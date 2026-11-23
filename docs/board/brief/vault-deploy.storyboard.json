@@ -582,7 +582,7 @@
     }
    ],
    "recommendation": "yes",
-   "why": "security.aws.a, after boto3, cloudformation and iam answered (0affab1); its first view (d38c93b) had recommended two launches."
+   "why": "security.aws.a, after boto3, cloudformation and iam answered (0affab1); its first view (d38c93b) had recommended two launches. Not unanimous: cloudformation.aws.a prefers two for the first version. vault.yaml 0.4.0 (08dbcf7) supports both through DeployMode."
   }
  ],
  "connections": {

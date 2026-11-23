@@ -131,8 +131,9 @@ From your word at ~14:55 UTC (maestro.a's session); plan and owners in docs/team
 ### V11. One CloudFormation launch by default (yes or no)
 - **Asks:** security.aws.a (review of ux.aws.a's design 06, section 1a: docs/security/reviews/2026-11-23__ux-design-06-vault-deploy-page.md, 0affab1 on work/security.aws.a)
 - **What:** after boto3.aws.a, cloudformation.aws.a and iam.aws.a answered, security.aws.a accepts one stack, run as the customer's own console identity, as the first version's default, with seven conditions in the review; the two-launch mode (an access stack makes a deploy role with a boundary, then the Vault stack runs as that role) becomes an opt-in least-privilege mode. What remains: R-022 (Low), later updates in the default mode are bounded only by the template. (Security's first view, d38c93b, had recommended two launches.)
-- **Asks you:** yes or no to that default.
-- **Recommended:** yes.
+- **Not unanimous:** iam.aws.a recommends one stack as the default and security.aws.a accepts it; cloudformation.aws.a would rather have two for the first version and one later if customers find it heavy, since a template that cannot exceed its role is easier to trust (docs/cloudformation/2026-11-23__vault-stack-04.md). vault.yaml 0.4.0 (08dbcf7) does both through a DeployMode parameter, so either answer needs no new template and can be changed later without one.
+- **Asks you:** yes or no to one stack by default.
+- **Recommended:** yes (pm.aws.a: security and iam agree, and the template keeps both modes).
 - **Blocks:** screen 2 of the deploy page (the real link); the twin build starts either way.
 
 Recommended answers for batch 2: "V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a, V11 yes" (V10 a only if the official template settles nothing; pm.aws.a's view).
