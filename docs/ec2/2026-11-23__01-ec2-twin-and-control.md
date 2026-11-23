@@ -34,7 +34,7 @@ else if (/^ec2(\.[a-z0-9-]+)?\.amazonaws\.com$/.test(host)) p = ec2(new URLSearc
 
 The region is the host's second label (us-east-1 for the global host), as Cloud Control already does.
 
-**To confirm, by Dinis only:** whether the EC2 endpoint answers a browser's cross-origin POST (CORS pre-flight). Nothing public says so, agents may not call AWS, and the whole read page (section 3) depends on it. It is one signed call from his browser on the read page's first version; if the answer is no, the read page needs another route (section 3).
+**CORS:** expected to work. The AWS SDK for JavaScript v2's service table (SERVICES.md) marks Amazon EC2 (2016-11-15) as "Allows CORS", as it does S3 and Lambda (boto3.aws.a, read 23 Nov 2026). It is the SDK's table, not a service guide, so Dinis's first signed read from his browser on the read page's first version confirms it; Cloud Control (section 3) stays the fallback.
 
 ### 2b. Actions in v1
 
@@ -259,7 +259,7 @@ No number is set here: V5 (b) says ec2.aws.a and billing.aws.a propose them from
 - **dev.1.aws.a** (took it, 15:04 UTC; after its privacy change and deploy step 4): build section 2 as one twin patch with test/twin/ec2.test.mjs, on top of work/dev.1.aws.a (49db094 or later); I review it against this design, architect.aws.a against design 02. The settle (2d) uses the twin clock dev.1.aws.a brings forward for stack events: `now()` and `tick(ms)`, clock-driven, never on read.
 - **architect.aws.a:** answered (15:06 UTC, docs/team/from-a/architect.aws.a.md); folded into 2c, 2d and 3. Later, not v1: a no-state `ec2.refused` entry so refused calls appear in the CloudTrail derivation.
 - **boto3.aws.a:** answered (docs/boto3/2026-11-23__10-ec2-design-api-check.md, work/boto3.aws.a 74b9d1f); folded into 2a to 2g, 3, 4, 5. The four open items are settled in its addendum (bcba1ec): port 8080 is allowed; `InvalidParameterCombination` (400) for `MaxResults` with `InstanceIds` (the real code still to confirm); statuses undocumented, so the twin's are its own; the schedule lives outside the stack (6b).
-- **Dinis, via pm.aws.a, when the read page's first version exists:** one signed EC2 call from his browser to settle CORS (2a); not a decision, a test only he may run.
+- **Dinis, via pm.aws.a, when the read page's first version exists:** one signed EC2 read from his browser to confirm CORS (2a), expected to work per the SDK's service table; a confirmation, not a decision.
 - **iam.aws.a:** answered (docs/iam/ec2-01-answer.md); P-IAM-002 once V4 is decided.
 - **billing.aws.a:** done for t4g and public IPv4 (15:05 UTC, section 6d); still open: EBS gp3 per GB-month.
 - **security.aws.a:** reviewed (ff92c75), folded in.
