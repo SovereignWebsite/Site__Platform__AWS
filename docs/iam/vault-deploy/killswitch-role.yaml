@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  DRAFT 0.1.1 (iam.aws.a), the role of the Vault cost kill switch, for ec2.aws.a's design 03 (a8696af section 3) and
+  DRAFT 0.1.2 (iam.aws.a), the role of the Vault cost kill switch, for ec2.aws.a's design 03 (a8696af section 3) and
   for cloudformation.aws.a to fold into the alarm stack sws-vault-<id>-alarm (us-east-1). Shown here as its own
   template only so it can be linted. Created by the customer's own identity, like the alarm (R-027), never by the
   deploy role. Pauses one Vault; never deletes, never restores, nothing else.
@@ -44,12 +44,12 @@ Resources:
               # Enabled. Recorded as the residual.
               - Sid: DisableTheOneDistribution
                 Effect: Allow
-                Action: [cloudfront:GetDistribution, cloudfront:GetDistributionConfig, cloudfront:UpdateDistribution]
+                Action: [cloudfront:GetDistribution, cloudfront:GetDistributionConfig, cloudfront:UpdateDistribution, cloudfront:ListTagsForResource]
                 Resource: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${DistributionId}"
               # Lever 2: throttle the one function to zero. PutFunctionConcurrency takes any value; the code sets 0.
               - Sid: ThrottleTheOneFunction
                 Effect: Allow
-                Action: [lambda:PutFunctionConcurrency, lambda:GetFunctionConcurrency]
+                Action: [lambda:PutFunctionConcurrency, lambda:GetFunctionConcurrency, lambda:ListTags]
                 Resource: !Sub "arn:aws:lambda:${VaultRegion}:${AWS::AccountId}:function:sws-vault-${VaultId}-api"
               # design 03 (8fd2c77): mark both as paused (sws-vault-paused=<time>), so a Vault stack update cannot
               # silently undo the pause. That one tag key only (aws:TagKeys), on these two resources only.
