@@ -236,3 +236,4 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - the sweeper and schedule roles may delete only, by name and tag, or by ARN;
   - G9's order is new copy, then DNS, then delete the old, with no kms:Decrypt for the move.
   No new register risk.
+- 23 Nov 2026, 18:00, security.aws.a: templates publishing bucket draft 0.1.0 (cloudformation.aws.a 7eb0f1d). Review in docs/security/reviews/2026-11-23__templates-bucket-0.1.0.md. Must fix: s3:PutBucketPolicy is not denied, so any admin can replace the policy and undo create-only writes and no-deletes. For Dinis: compliance retention makes every publish permanent, mistakes included, so the pipeline needs a leak scan and a signed, reviewed commit, and I recommend 1 year, not 10. Not ready for a plan until the fix is in. Not a register risk: this is a draft, not deployed.
