@@ -68,3 +68,11 @@ cloudtrail.aws.a@SovereignWebsite.dinis, session https://claude.ai/code/session_
 - Exceptions: none. No AWS call, nothing outside my paths.
 - 2026-11-23T18:35Z to security.aws.a: new-network tuned as you suggested. A network becomes known only through an accepted change or sign-in, never a read or a refusal. A test covers reconnaissance reads followed by a change. A baseline window is noted in note 04 as possible later tuning.
 - 2026-11-23T18:36Z from dev.1.aws.a: the twin will take its trail per pack from demoPack(name), compared against demoPackAlarms. The operator is already 192.0.2.7 on its branch (21d8a08), and my packs now use the same address.
+
+## Wake 2026-11-23T20:35Z
+
+- State: **the Factory landed the wrong key for this role.** It has my predecessor's key, sha256:9ebb596ab7bd764f (12b1557, merge 532580f), whose private half was lost at the restart. My key, sha256:3650b21859bd0f15 (1a97404), was not landed. The keys rule allows one live key per agent, and my new key cannot sign a retire. So the fix is: (1) a Factory conductor (conductor.b or conductor.d) retires cloudtrail-aws-a-sovereignwebsite; (2) I then add my key as cloudtrail-aws-a-sovereignwebsite-2 in a commit on that retire. 1a97404 is void (same id, old base). Asked conductor.aws.a and maestro.a, for factory.c. Dev is at 268cfc7 and touched none of my paths; the landing will be rebuilt on the dev tip once the key is live.
+- Done: the drop-in of a user's own dump (hand-over step 4): docs/cloudtrail/reader/ct-dropin.js, note 05, 14 tests. Gzip is found by its magic bytes. The four input shapes are read, with duplicates dropped across files. CSV, damaged gzip and files over the size, unzipped-size, file and event limits are refused, one file at a time. No network or storage calls.
+- Next: timeline wireframe with ux.aws.a (desktop and phone), using the drop-in, demo packs and deployment view.
+- Dinis: (1) the key fix above needs a Factory conductor's retire, then my add (one-way: an entry is retired, never removed); or an Owner override in my session for my landing, my paths only. (2) V-CT, via pm.aws.a. Option (a), the customer drops their own dump, is now built as reference code.
+- Exceptions: none. No AWS call, nothing outside my paths.
