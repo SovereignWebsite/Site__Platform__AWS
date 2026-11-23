@@ -118,6 +118,8 @@ def summary(agents, events):
         "agents": len(agents), "agents_by_account": dict(sorted(accounts.items())),
         "commits": len(commits), "signed": sum(1 for c in commits if c["signed"]),
         "commits_on_dev": sum(1 for c in commits if c.get("branch", "dev") == "dev"),
+        "signatures_checked": {v: sum(1 for c in commits if c.get("signature") == v)
+                               for v in sorted({c["signature"] for c in commits if c.get("signature")})},
         "landed_through_keeper": sum(1 for e in events if e["type"] == "handoff"),
         "top_committers": sorted(by_agent.items(), key=lambda kv: (-kv[1], kv[0]))[:5],
         "spawn_burst": {"agents": burst[0], "from": burst[1], "to": burst[2],
@@ -181,6 +183,12 @@ def main():
                            "source": f"docs/team/handover/{a['id'][:-2]}.md"})
         if c["on_behalf_of"]:
             events.append({"t": c["at"], "type": "handoff", "from": c["on_behalf_of"], "to": c["agent"], "sha": c["sha"]})
+    sigs_file = ROOT / "docs/swarm/data/signatures.json"           # from verify_signatures.py, when it has run
+    sigs = json.loads(sigs_file.read_text()) if sigs_file.exists() else {}
+    for e in events:
+        if e["type"] == "commit" and e["sha"] in sigs:
+            e["signature"] = sigs[e["sha"]]["verdict"]
+            e["key_of"] = sigs[e["sha"]]["key_of"]
     events += log_events((ROOT / "docs/team/log.md").read_text())
     events.sort(key=lambda e: e["t"])
     out = {"schema": "swarm-replay/0.1", "since": since, "agents": sorted(agents.values(), key=lambda a: a.get("born") or "9"),
