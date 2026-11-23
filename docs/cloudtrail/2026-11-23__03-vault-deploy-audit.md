@@ -43,7 +43,7 @@ The platform alarms (ct-alarms.js) still run on the same events. Example: a chan
 ## Files
 
 - `docs/cloudtrail/reader/ct-deploy.js`: `group(events)` and `alarms(deployments, { approvals })` over the reader's events.
-- `docs/cloudtrail/scenarios/vault-deploy.js`: the twin-first scenario. It gives the records one access-stack deployment leaves, with options for out of band, refused and teardown. It is for dev.1.aws.a to replay into the twin's customer account (step 4).
+- `docs/cloudtrail/scenarios/vault-deploy.js`: the twin-first scenario. It gives the records one access-stack deployment leaves, with options for out of band, refused and teardown. dev.1.aws.a uses it as the expected output: the twin derives its customer account's trail from its journal, and a test compares the two (step 4).
 - `docs/cloudtrail/reader/ct-deploy.test.mjs`: 37 cases (run: `node docs/cloudtrail/reader/ct-deploy.test.mjs`).
 
 ## To check (boto3.aws.a)
@@ -52,7 +52,7 @@ The platform alarms (ct-alarms.js) still run on the same events. Example: a chan
   - access-stack mode: AssumedRole `sws-vault-<id>-deploy` with `invokedBy` cloudformation.amazonaws.com;
   - one-stack mode: the caller's identity with `invokedBy`;
   - in both, `sourceIPAddress` cloudformation.amazonaws.com.
-  The reader accepts any one of these signs.
+  ct-deploy.js takes `invokedBy` or `sourceIPAddress` as CloudFormation's sign; the role's name alone is not one.
 - The event names with version suffixes: CreateFunction20150331, CreateFunctionUrlConfig20211031, CreateDistribution2020_05_31.
 
 ## Decision for Dinis (to pm.aws.a's batch)
