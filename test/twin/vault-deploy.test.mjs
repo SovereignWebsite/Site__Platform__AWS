@@ -76,7 +76,7 @@ assert.equal(v.status, "CREATE_COMPLETE");
 assert.deepEqual(Object.keys(v.out).sort(), ["AccountId", "BucketName", "DeployCheck", "DeployMode", "DistributionId", "Endpoint", "HealthCheck", "Region", "TemplateVersion", "TokenSecretArn", "VaultId"], "the eleven outputs (no DnsRecords: the zone is in this account)");
 assert.equal(v.out.DeployMode, "access-stack"); assert.ok(!ev.some((e) => e.logical === "VaultBoundary"), "access-stack mode: the boundary is the -access stack's");
 assert.equal(v.out.Endpoint, "https://vault.example.com"); assert.match(v.out.DeployCheck, /^https:\/\/d[a-z0-9]{13}\.cloudfront\.net\/health$/);
-assert.equal(v.out.BucketName, "sws-vault-0a1b2c3d4e5f-data-444455556666-eu-west-2"); assert.equal(v.out.TemplateVersion, "0.4.6-draft");
+assert.equal(v.out.BucketName, "sws-vault-0a1b2c3d4e5f-data-444455556666-eu-west-2"); assert.equal(v.out.TemplateVersion, "0.4.7-draft");
 assert.match(v.out.DistributionId, /^E[A-Z0-9]{13}$/); assert.match(v.out.TokenSecretArn, /:secret:sws-vault-0a1b2c3d4e5f-token-[A-Za-z]{6}$/);
 checks += 24;
 
@@ -138,6 +138,34 @@ checks += 24;
   const all = tag((await cfn(twin, { Action: "DescribeStacks" })).text, "StackName");
   assert.deepEqual(all.sort(), ["sws-vault-" + ID, "sws-vault-" + ID + "-access"], "DescribeStacks with no name lists the region's stacks");
   checks += 8;
+}
+
+// 3e. The function cannot pull its image (cloudformation.aws.a's chosen failure): VaultFunction fails in wave 3, the
+// rollback undoes everything made in reverse creation order, all three RetainExceptOnCreate resources included.
+{
+  const t5 = fresh();
+  assert.equal((await create(t5, "sws-vault-" + ID, { VaultId: ID, ImageUri: "999999999999.dkr.ecr.eu-west-2.amazonaws.com/sws-vault@sha256:" + "f".repeat(64) })).status, 200);
+  t5.clock.tick(10 * 60 * 1000);
+  const e5 = await events(t5, "sws-vault-" + ID), o5 = await outputs(t5, "sws-vault-" + ID);
+  assert.ok(e5.some((e) => e.logical === "VaultFunction" && e.status === "CREATE_FAILED"), "the function fails");
+  assert.match((await cfn(t5, { Action: "DescribeStackEvents", StackName: "sws-vault-" + ID })).text, /can't access the image 999999999999/, "with the image in the reason");
+  assert.ok(!e5.some((e) => /^VaultFunctionUrl|VaultDistribution/.test(e.logical)), "nothing after wave 3 starts");
+  const del = e5.filter((e) => e.status === "DELETE_COMPLETE").map((e) => e.logical);
+  assert.deepEqual(del, ["VaultFunction", "VaultFunctionRole", "VaultBucketPolicy", "VaultBoundary", "HealthFunction", "VaultLogs", "AccessToken", "VaultBucket"], "everything undone, in reverse creation order");
+  assert.equal(e5.filter((e) => e.status === "DELETE_IN_PROGRESS").length, 7, "each made resource goes DELETE_IN_PROGRESS first (all but the failed function)");
+  assert.ok(!e5.some((e) => e.status === "DELETE_SKIPPED"), "RetainExceptOnCreate: nothing kept on a first create's rollback");
+  assert.equal(o5.status, "ROLLBACK_COMPLETE"); assert.deepEqual(o5.out, {});
+  const known = await create(fresh(), "sws-vault-" + ID, { VaultId: ID, ImageUri: "111122223333.dkr.ecr.eu-west-2.amazonaws.com/sws-vault@sha256:" + "0123456789abcdef".repeat(4) });
+  assert.equal(known.status, 200, "the twin's published image is accepted");
+  checks += 9;
+}
+// 3f. ListStacks: the region's stacks, newest first, filtered by status.
+{
+  const t = (await cfn(twin, { Action: "ListStacks" })).text;
+  assert.deepEqual(tag(t, "StackName"), ["sws-vault-" + ID, "sws-vault-" + ID + "-access"], "newest first");
+  const f = (await cfn(twin, { Action: "ListStacks", "StackStatusFilter.member.1": "ROLLBACK_COMPLETE" })).text;
+  assert.deepEqual(tag(f, "StackName"), [], "a filter keeps only those statuses");
+  checks += 2;
 }
 
 // 4. The platform's credentials see the platform's stack, not the customer's.

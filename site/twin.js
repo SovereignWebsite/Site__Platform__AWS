@@ -691,10 +691,15 @@
   // Resources appear wave by wave on
   // the twin clock (the distribution takes minutes), then the stack completes with its outputs. Not yet here: the
   // -edge stack, DNS and the health address answering, DeleteStack, and the CloudTrail records derived from these.
-  var CUSTOMER = "444455556666", VAULT_TEMPLATE = "0.4.6-draft";
-  // DeletionPolicy per vault.yaml 0.4.6: Retain is kept on any delete (DELETE_SKIPPED); RetainExceptOnCreate is kept
-  // on a later DeleteStack but deleted when the first create rolls back (AWS's DeletionPolicy page).
-  var DELETION = { VaultBucket: "RetainExceptOnCreate", VaultLogs: "RetainExceptOnCreate", VaultBucketPolicy: "Retain" };
+  var CUSTOMER = "444455556666", VAULT_TEMPLATE = "0.4.7-draft";
+  // DeletionPolicy per vault.yaml 0.4.7: all three RetainExceptOnCreate, so kept on a later DeleteStack
+  // (DELETE_SKIPPED) and deleted when the first create rolls back (AWS's DeletionPolicy page). Retain, kept on any
+  // delete, is handled too, for templates that use it.
+  var DELETION = { VaultBucket: "RetainExceptOnCreate", VaultLogs: "RetainExceptOnCreate", VaultBucketPolicy: "RetainExceptOnCreate" };
+  // The function's image the twin treats as published and reachable from the customer's account. Any other ImageUri
+  // fails VaultFunction in wave 3, the likeliest real failure (cloudformation.aws.a, O1: a cross-account repository
+  // whose policy does not list the account yet, or a digest not in the region).
+  var TWIN_IMAGE = "111122223333.dkr.ecr.eu-west-2.amazonaws.com/sws-vault@sha256:" + "0123456789abcdef".repeat(4);
   function customerOf(init) { return /Credential=ASIATWINCUSTOMER\//.test(hdr(init, "authorization") || "") ? CUSTOMER : null; }
   // [logical id, type, seconds to create], wave by wave; each wave starts a second after the last one ends.
   var VAULT_WAVES = {
@@ -745,32 +750,44 @@
     var out = [], at = Date.parse(t0) + 1000, base = { account: st.account, region: st.region, name: st.name };
     var ev = function (ms, logical, type, status, extra) { var d = Object.assign({ logical: logical, type: type, status: status }, base, extra || {});
       out.push({ at: new Date(ms).toISOString(), op: "cloudformation.stackEvent", target: st.stackId, data: d, actor: "aws:cloudformation", why: "clock.settle" }); };
-    if (st.collides) {
-      // One-stack mode with an -access stack's boundary already there: the name collides, wave 1 is cancelled, rollback.
-      // After boto3.aws.a's note 13 (work/boto3.aws.a 6b96561): in-progress siblings are CREATE_FAILED; the rollback runs
-      // in reverse creation order, Retain resources DELETE_SKIPPED (AWS's stack-events guide), the rest, and
-      // RetainExceptOnCreate on a first create, DELETE_COMPLETE (cloudformation.aws.a, vault.yaml 0.4.6).
-      // The twin's own choices, where AWS does not document it: the wording "Resource creation cancelled", and what a
-      // resource that never finished shows in the rollback (by its deletion policy, as if it had been made).
-      var w1 = waves[0], bad = "sws-vault-" + st.params.VaultId + "-boundary";
-      w1.forEach(function (r) { ev(at, r[0], r[1], "CREATE_IN_PROGRESS"); });
-      ev(at + 900, "VaultBoundary", "AWS::IAM::ManagedPolicy", "CREATE_FAILED", { reason: "Resource handler returned message: \"A policy called " + bad + " already exists. Duplicate names are not allowed.\" (HandlerErrorCode: AlreadyExists)" });
-      w1.forEach(function (r) { if (r[0] !== "VaultBoundary") ev(at + 1000, r[0], r[1], "CREATE_FAILED", { reason: "Resource creation cancelled" }); });
-      ev(at + 1100, st.name, "AWS::CloudFormation::Stack", "ROLLBACK_IN_PROGRESS", { physical: st.stackId, reason: "The following resource(s) failed to create: [" + w1.map(function (r) { return r[0]; }).sort().join(", ") + "]. Rollback requested by user." });
-      w1.slice().reverse().forEach(function (r, i) { ev(at + 2000 + i * 300, r[0], r[1], DELETION[r[0]] === "Retain" ? "DELETE_SKIPPED" : "DELETE_COMPLETE"); });
-      ev(at + 2000 + w1.length * 300 + 500, st.name, "AWS::CloudFormation::Stack", "ROLLBACK_COMPLETE", { physical: st.stackId });
-      return out;
-    }
-    waves.forEach(function (wv) {
-      var end = at;
+    // A failure, if there is one: { logical, after (seconds into its wave), reason }. On it: what finished in that wave
+    // stays CREATE_COMPLETE, the failing resource is CREATE_FAILED, the rest of the wave is cancelled (CREATE_FAILED),
+    // ROLLBACK_IN_PROGRESS, everything touched is undone in reverse creation order (a made resource DELETE_IN_PROGRESS
+    // then DELETE_COMPLETE; Retain DELETE_SKIPPED; RetainExceptOnCreate deleted, this being the first create), then
+    // ROLLBACK_COMPLETE with no outputs. After boto3.aws.a's note 13 (work/boto3.aws.a 6b96561). The twin's own
+    // choices, where AWS does not document them: the wording "Resource creation cancelled", the failure reasons, and
+    // what a failed or cancelled resource shows in the rollback (DELETE_COMPLETE, or DELETE_SKIPPED if Retain).
+    var fail = st.failure, touched = [];
+    for (var wi = 0; wi < waves.length; wi++) {
+      var wv = waves[wi], end = at, failing = fail && wv.some(function (r) { return r[0] === fail.logical; });
+      var fAt = failing ? at + fail.after * 1000 : Infinity;
       wv.forEach(function (r) {
         ev(at, r[0], r[1], "CREATE_IN_PROGRESS");
-        ev(at + 400, r[0], r[1], "CREATE_IN_PROGRESS", { physical: physicalOf(st, r[0]), reason: "Resource creation Initiated" });
-        ev(at + r[2] * 1000, r[0], r[1], "CREATE_COMPLETE", { physical: physicalOf(st, r[0]) });
-        end = Math.max(end, at + r[2] * 1000);
+        if (at + 400 < fAt) ev(at + 400, r[0], r[1], "CREATE_IN_PROGRESS", { physical: physicalOf(st, r[0]), reason: "Resource creation Initiated" });
+        var doneAt = at + r[2] * 1000;
+        if (r[0] === (fail || {}).logical && failing) touched.push([r, "failed"]);
+        else if (doneAt <= fAt) { ev(doneAt, r[0], r[1], "CREATE_COMPLETE", { physical: physicalOf(st, r[0]) }); touched.push([r, "made"]); }
+        else touched.push([r, "cancelled"]);
+        end = Math.max(end, doneAt);
       });
+      if (failing) {
+        var stopped = touched.filter(function (x) { return x[1] !== "made"; });
+        ev(fAt, fail.logical, wv.filter(function (r) { return r[0] === fail.logical; })[0][1], "CREATE_FAILED", { reason: fail.reason });
+        stopped.forEach(function (x) { if (x[1] === "cancelled") ev(fAt + 100, x[0][0], x[0][1], "CREATE_FAILED", { reason: "Resource creation cancelled" }); });
+        ev(fAt + 200, st.name, "AWS::CloudFormation::Stack", "ROLLBACK_IN_PROGRESS", { physical: st.stackId,
+          reason: "The following resource(s) failed to create: [" + stopped.map(function (x) { return x[0][0]; }).sort().join(", ") + "]. Rollback requested by user." });
+        var t = fAt + 1000;
+        touched.slice().reverse().forEach(function (x) {
+          var r = x[0], keep = DELETION[r[0]] === "Retain";
+          if (keep) { ev(t, r[0], r[1], "DELETE_SKIPPED"); t += 300; return; }
+          if (x[1] === "made") { ev(t, r[0], r[1], "DELETE_IN_PROGRESS"); t += 300; }
+          ev(t, r[0], r[1], "DELETE_COMPLETE"); t += 300;
+        });
+        ev(t + 500, st.name, "AWS::CloudFormation::Stack", "ROLLBACK_COMPLETE", { physical: st.stackId });
+        return out;
+      }
       at = end + 1000;
-    });
+    }
     ev(at, st.name, "AWS::CloudFormation::Stack", "CREATE_COMPLETE", { physical: st.stackId, outputs: stackOutputs(st) });
     return out;
   }
@@ -808,7 +825,12 @@
       }
       var ids = vaultIds(account, region, m[1]), stackId = "arn:aws:cloudformation:" + region + ":" + account + ":stack/" + name + "/" + ids.stack;
       var plain = {}; Object.keys(params).forEach(function (k) { plain[k] = params[k]; });
-      var st = { name: name, kind: kind, region: region, account: account, stackId: stackId, params: plain, ids: ids, mode: mode, collides: collides };
+      var failure = null;
+      if (collides) failure = { logical: "VaultBoundary", after: 0.9,
+        reason: "Resource handler returned message: \"A policy called sws-vault-" + m[1] + "-boundary already exists. Duplicate names are not allowed.\" (HandlerErrorCode: AlreadyExists)" };
+      else if (kind === "vault" && plain.ImageUri && plain.ImageUri !== TWIN_IMAGE) failure = { logical: "VaultFunction", after: 3,
+        reason: "Resource handler returned message: \"Lambda can't access the image " + plain.ImageUri + ". Check the repository's policy lists this account and the digest is in " + region + ".\" (twin's wording)" };
+      var st = { name: name, kind: kind, region: region, account: account, stackId: stackId, params: plain, ids: ids, mode: mode, failure: failure };
       var t = nowIso();
       record({ t: t, actor: "user:customer-admin@" + account, op: "cloudformation.createStack", target: stackId, why: "deploy.create",
         data: { account: account, region: region, name: name, kind: kind, mode: mode, params: plain, roleArn: roleArn, stackId: stackId, ids: ids }, schedule: stackSchedule(st, t) });
@@ -833,6 +855,16 @@
           "</LogicalResourceId><PhysicalResourceId>" + esc(ev.physical) + "</PhysicalResourceId><ResourceType>" + ev.type + "</ResourceType><Timestamp>" + ev.t +
           "</Timestamp><ResourceStatus>" + ev.status + "</ResourceStatus>" + (ev.reason ? "<ResourceStatusReason>" + esc(ev.reason) + "</ResourceStatusReason>" : "") + "</member>";
       }).join("") + "</StackEvents></DescribeStackEventsResult></DescribeStackEventsResponse>");
+    }
+    if (A === "ListStacks") {
+      // Every stack in the region, newest first, filtered by StackStatusFilter.member.N if given (as AWS does).
+      var want = []; for (var f = 1; f <= 32; f++) { var fv = form.get("StackStatusFilter.member." + f); if (fv) want.push(fv); }
+      var rows = Object.keys(acc.stacks).map(function (k) { return acc.stacks[k]; }).filter(function (x) { return x.region === region && (!want.length || want.indexOf(x.status) >= 0); })
+        .sort(function (a, b) { return a.created < b.created ? 1 : a.created > b.created ? -1 : 0; });
+      return xml("<ListStacksResponse" + NS + "><ListStacksResult><StackSummaries>" + rows.map(function (x) {
+        return "<member><StackId>" + esc(x.stackId) + "</StackId><StackName>" + esc(x.name) + "</StackName><CreationTime>" + x.created + "</CreationTime><StackStatus>" + x.status +
+          "</StackStatus><DriftInformation><StackDriftStatus>NOT_CHECKED</StackDriftStatus></DriftInformation></member>";
+      }).join("") + "</StackSummaries></ListStacksResult></ListStacksResponse>");
     }
     if (A === "ListStackResources") {
       var st3 = find(form.get("StackName"));
