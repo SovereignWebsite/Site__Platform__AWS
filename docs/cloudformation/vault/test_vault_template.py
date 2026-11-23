@@ -82,6 +82,10 @@ code = code["Fn::Sub"] if isinstance(code, dict) else code
 check('"access-control-allow-origin": { value: "${DeployPageOrigin}" }' in code, "health CORS origin")
 check('value: "*"' not in code, "health CORS *")
 
+# The token secret is always this stack's own (no bring-your-own ARN in v1, security.aws.a).
+check("AccessTokenSecretArn" not in v["Parameters"], "bring-your-own token secret present")
+check("Condition" not in R["AccessToken"], "AccessToken is conditional")
+
 # The token is never an output.
 check(all("SecretString" not in str(o) for o in v["Outputs"].values()), "token in outputs")
 
@@ -91,4 +95,4 @@ check("OnlyInUsEast1" in e["Rules"], "edge us-east-1 rule")
 
 if fails:
     print("FAIL\n  " + "\n  ".join(fails)); sys.exit(1)
-print("OK (vault templates: caching off, Retain, names, boundary, no wildcards, trust, bucket policy, DNS order, CORS, outputs)")
+print("OK (vault templates: caching off, Retain, names, boundary, no wildcards, trust, bucket policy, DNS order, CORS, own token secret, outputs)")

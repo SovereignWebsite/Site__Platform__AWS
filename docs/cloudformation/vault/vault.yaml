@@ -3,12 +3,12 @@ Description: >-
   One SG/Send Vault (the Secure Send S3 API) in this account and region, stack sws-vault-<id>: an S3 bucket for the
   vault store, the server as a Lambda behind a Function URL, CloudFront in front (with /health for the deploy page),
   and optionally the customer's own domain. Run with RoleARN = the deploy role of stack sws-vault-<id>-access
-  (iam.aws.a, step 3). DRAFT 0.3.0 by cloudformation.aws.a, 23 Nov 2026. Not for use on a real account: see
+  (iam.aws.a, step 3). DRAFT 0.3.1 by cloudformation.aws.a, 23 Nov 2026. Not for use on a real account: see
   docs/cloudformation/2026-11-23__vault-stack-03.md.
 
 Metadata:
   SovereignWebsite:
-    TemplateVersion: 0.3.0-draft
+    TemplateVersion: 0.3.1-draft
     Pinning: served only as an immutable, versioned object whose sha256 the deploy page shows next to the button.
     CreatesNoRoleForUs: true
   AWS::CloudFormation::Interface:
@@ -18,7 +18,7 @@ Metadata:
       - Label: { default: "Your own domain (optional, add it later)" }
         Parameters: [DomainName, HostedZoneId, CertificateArn]
       - Label: { default: "Advanced" }
-        Parameters: [AccessTokenSecretArn, Architecture, ReservedConcurrency]
+        Parameters: [Architecture, ReservedConcurrency]
 
 Parameters:
   VaultId:
@@ -51,10 +51,6 @@ Parameters:
     Type: String
     Default: ""
     Description: The certificate from vault-edge.yaml (us-east-1). Needed with DomainName.
-  AccessTokenSecretArn:
-    Type: String
-    Default: ""
-    Description: Optional. A Secrets Manager secret you already have for the access token. Empty means one is generated.
   Architecture:
     Type: String
     Default: arm64
@@ -71,7 +67,6 @@ Conditions:
   HasDomain: !Not [!Equals [!Ref DomainName, ""]]
   HasZone: !And [!Condition HasDomain, !Not [!Equals [!Ref HostedZoneId, ""]]]
   DnsElsewhere: !And [!Condition HasDomain, !Equals [!Ref HostedZoneId, ""]]
-  MakeToken: !Equals [!Ref AccessTokenSecretArn, ""]
   HasConcurrencyCap: !Not [!Equals [!Ref ReservedConcurrency, ""]]
 
 Rules:
@@ -128,7 +123,8 @@ Resources:
   # ---- the access token (SGRAPH_SEND__ACCESS_TOKEN gates every route) ----
   AccessToken:
     Type: AWS::SecretsManager::Secret
-    Condition: MakeToken
+    # Always generated here. No bring-your-own secret in v1 (security.aws.a): the dynamic reference resolves as the
+    # deploy role, which may read only this secret; an arbitrary ARN would push that role towards reading any secret.
     Properties:
       Name: !Sub "sws-vault-${VaultId}-token"
       Description: The Vault's access token. Read it in the Secrets Manager console to sign in to the Vault.
@@ -199,10 +195,7 @@ Resources:
           SEND__S3_BUCKET: !Ref VaultBucket
           # OPEN QUESTION O3 (iam.aws.a's call): a dynamic reference puts the token in the function's configuration,
           # readable in this account with lambda:GetFunctionConfiguration. Reading it at start needs server support.
-          SGRAPH_SEND__ACCESS_TOKEN: !If
-            - MakeToken
-            - !Sub "{{resolve:secretsmanager:${AccessToken}:SecretString}}"
-            - !Sub "{{resolve:secretsmanager:${AccessTokenSecretArn}:SecretString}}"
+          SGRAPH_SEND__ACCESS_TOKEN: !Sub "{{resolve:secretsmanager:${AccessToken}:SecretString}}"
       Tags:
         - { Key: sws-vault, Value: !Ref VaultId }
 
@@ -243,7 +236,7 @@ Resources:
           if (event.request.method === "OPTIONS") return { statusCode: 204, statusDescription: "No Content", headers: h };
           if (event.request.method !== "GET") return { statusCode: 405, statusDescription: "Method Not Allowed", headers: h };
           return { statusCode: 200, statusDescription: "OK", headers: h,
-            body: { encoding: "text", data: JSON.stringify({ vault_id: "${VaultId}", template_version: "0.3.0-draft" }) } };
+            body: { encoding: "text", data: JSON.stringify({ vault_id: "${VaultId}", template_version: "0.3.1-draft" }) } };
         }
 
   # ---- CloudFront in front, from phase 1 ----
@@ -321,7 +314,7 @@ Outputs:
     Value: !If [HasDomain, !Sub "https://${DomainName}/health", !Sub "https://${VaultDistribution.DomainName}/health"]
   TokenSecretArn:
     Description: Where the access token is. The token itself is never an output.
-    Value: !If [MakeToken, !Ref AccessToken, !Ref AccessTokenSecretArn]
+    Value: !Ref AccessToken
   DnsRecords:
     Condition: DnsElsewhere
     Description: Create this record at your DNS provider.
@@ -337,4 +330,4 @@ Outputs:
   Region:
     Value: !Ref AWS::Region
   TemplateVersion:
-    Value: 0.3.0-draft
+    Value: 0.3.1-draft
