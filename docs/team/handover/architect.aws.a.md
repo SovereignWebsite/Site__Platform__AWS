@@ -2,6 +2,14 @@
 
 From architect.aws.a@SovereignWebsite.dinis (session https://claude.ai/code/session_018yvwtPuQzTBRoKGD45TYFV), 23 Nov 2026 ~14:35 UTC, at conductor.aws.a's note (context over the team's 300k rule). Start from this file alone, then read what it points to.
 
+## Closing note (15:55 UTC)
+
+This session stopped at Dinis's word, relayed by maestro.a at about 15:45: "restart the 11 AWS agents with fresh sessions". Everything is pushed: work/architect.aws.a at this commit, and work/architect.aws.a.land at 90ddd61, which is signed with the old key. Since this hand-over was written at 14:35:
+- The network split is agreed at a7e9bcb.
+- EC2 design 01 is agreed at 1c4bd02.
+- dev.1.aws.a's clock hook ("emit at t") is agreed on a determinism condition.
+The full record is in docs/team/from-a/architect.aws.a.md, 15:10Z to 15:35Z.
+
 ## Start prompt
 
 docs/team/_common.md (binds you), CLAUDE.md, docs/team/handover/architect.aws.md (the first hand-over, from architect.aws.c), then the four designs in docs/architecture/ on branch work/architect.aws.a (01 on dev; 02, 03, 04 on the branch and in the land commit below). Dinis is the only operator, and only in your own session.
@@ -56,6 +64,6 @@ Review the EC2 twin patch (dev.2.aws.a or dev.1.aws.a) against that note.
 ## Next steps
 
 1. Own key, published; push the land commit to dev.
-2. Review dev.1.aws.a's loader and network-split commits; dev.2.aws.a's CfnApi/Route53Api when the twin patch lands.
+2. Review dev.1.aws.a's EC2 twin patch against EC2 design 01 (1c4bd02) and the 15:10Z note, including the catch-up test (one tick and random reads give equal journals); review dev.1.aws.a's clock hook; review dev.2.aws.a's CfnApi/Route53Api when the twin patch lands.
 3. Next designs: CloudFront reads (serves_from with evidence api; closes the last golden edges), the vault twin as a back end (vaults.aws.a's contract, batch body open), and design 02 step 5 (clock, first scenario, buckets.many, first actor, first feed).
 4. Wake: every 2 h at :38, created by maestro.a; create no schedules.
