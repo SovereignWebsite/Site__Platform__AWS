@@ -1,0 +1,69 @@
+// Tests for docs/cloudtrail/reader/ct-deploy.js over the twin-first scenario docs/cloudtrail/scenarios/vault-deploy.js.
+// Run from the repository root: node docs/cloudtrail/reader/ct-deploy.test.mjs
+import { readFileSync } from "node:fs";
+const fail = (m) => { console.error("FAIL", m); process.exit(1); };
+const eq = (a, b, m) => { if (JSON.stringify(a) !== JSON.stringify(b)) fail(m + ": " + JSON.stringify(a) + " !== " + JSON.stringify(b)); };
+globalThis.window = globalThis;
+for (const f of ["./ct-reader.js", "./ct-alarms.js", "./ct-deploy.js", "../scenarios/vault-deploy.js"]) new Function(readFileSync(new URL(f, import.meta.url), "utf8"))();
+const R = globalThis.CloudTrailReader, D = globalThis.CloudTrailDeployments, S = globalThis.CloudTrailScenarios, AL = globalThis.CloudTrailAlarms;
+const V = "0a1b2c3d4e5f", W = "ffeeddccbbaa";
+const events = (o) => R.read(S.vaultDeploy(o)).events;
+const rules = (list) => list.map((a) => a.rule);
+let cases = 0; const check = (a, b, m) => { cases++; eq(a, b, m); };
+
+// a clean deployment: one Vault, both stacks, created by the customer's SSO role, every resource call by CloudFormation
+let ds = D.group(events());
+check(ds.length, 1, "one deployment");
+let d = ds[0];
+check([d.id, d.account, d.regions, d.state], [V, "111122223333", ["eu-west-2"], "created"], "id, account, regions, state");
+check(Object.keys(d.stacks).sort(), ["sws-vault-" + V, "sws-vault-" + V + "-access"], "both stacks");
+check(d.by.name, "AWSReservedSSO_AdministratorAccess_0123456789abcdef", "deployed by the customer's role");
+check(d.counts, { calls: 12, failed: 0, byCloudFormation: 10, outOfBand: 0 }, "counts");
+check(d.events[0].time >= d.events[d.events.length - 1].time, true, "events newest first");
+check(D.alarms(ds), [], "a clean deployment raises nothing");
+check(AL.run(events()).length, 0, "and no platform alarm either");
+
+// out of band: the customer edits the bucket policy by hand an hour later
+ds = D.group(events({ outOfBand: true }));
+check(ds[0].counts.outOfBand, 1, "one out-of-band change");
+check(rules(D.alarms(ds)), ["vault-out-of-band-change"], "out-of-band alarm");
+check(D.alarms(ds)[0].events[0].action, "PutBucketPolicy", "names the call");
+
+// a step refused by the deploy role's boundary: the deployment shows failed
+ds = D.group(events({ refused: true }));
+check(ds[0].state, "failed", "refused step fails the deployment");
+check(rules(D.alarms(ds)), ["vault-deploy-refused"], "refused alarm");
+
+// teardown: both stacks deleted, two deleted alarms (one per stack)
+ds = D.group(events({ teardown: true }));
+check(ds[0].state, "deleted", "teardown");
+check(rules(D.alarms(ds)), ["vault-deleted", "vault-deleted"], "deleted alarms");
+
+// approvals: with a window covering the deploy, quiet; a window that ends too early, or the wrong person, fires
+const t = Date.parse("2026-11-24T09:00:00Z");
+const role = "AWSReservedSSO_AdministratorAccess_0123456789abcdef";
+check(D.alarms(D.group(events()), { approvals: [{ vault: V, from: t, to: t + 3600e3, by: role }] }), [], "approved deploy");
+check(rules(D.alarms(D.group(events()), { approvals: [{ vault: V, from: t, to: t + 60e3 }] })), ["vault-change-not-approved"], "second stack outside the window");
+check(rules(D.alarms(D.group(events()), { approvals: [{ vault: V, from: t, to: t + 3600e3, by: "someone-else" }] })), ["vault-change-not-approved", "vault-change-not-approved"], "wrong person");
+check(rules(D.alarms(D.group(events()), { approvals: [{ vault: W, from: t, to: t + 3600e3 }] })), ["vault-change-not-approved", "vault-change-not-approved"], "approval for another Vault");
+
+// two Vaults in one dump are two deployments, latest activity first; unrelated events are ignored
+const both = R.merge([R.read(S.vaultDeploy()), R.read(S.vaultDeploy({ vaultId: W, start: "2026-11-24T12:00:00Z", region: "us-east-1" })),
+  R.read({ Records: [{ eventID: "other", eventName: "GetObject", eventSource: "s3.amazonaws.com", eventTime: "2026-11-24T13:00:00Z", requestParameters: { bucketName: "someone-elses" }, userIdentity: { type: "Root" } }] })]).events;
+ds = D.group(both);
+check(ds.map((x) => [x.id, x.regions]), [[W, ["us-east-1"]], [V, ["eu-west-2"]]], "two Vaults, latest first");
+
+// vaultOf: from a stack, a role, a bucket, a request parameter, or the deploy role's identity; not from 11 or 13 hex digits
+const one = (r) => R.normalise(Object.assign({ eventID: "x", eventTime: "2026-11-24T09:00:00Z", eventSource: "s3.amazonaws.com", userIdentity: { type: "Root" } }, r));
+check(D.vaultOf(one({ eventName: "PutBucketPolicy", requestParameters: { bucketName: "sws-vault-" + V + "-data-111122223333-eu-west-2" } })), V, "bucket");
+check(D.vaultOf(one({ eventName: "CreateLogGroup", eventSource: "logs.amazonaws.com", requestParameters: { logGroupName: "/aws/lambda/sws-vault-" + V + "-api" } })), V, "log group in parameters");
+check(D.vaultOf(one({ eventName: "PutBucketPolicy", requestParameters: { bucketName: "sws-vault-0a1b2c3d4e5-data" } })), null, "11 hex digits");
+check(D.vaultOf(one({ eventName: "PutBucketPolicy", requestParameters: { bucketName: "sws-vault-0a1b2c3d4e5f0-data" } })), null, "13 hex digits");
+check(D.vaultOf(one({ eventName: "GetObject", requestParameters: { bucketName: "b" } })), null, "not a Vault");
+
+// the Vault working (its API role writing data) is not a change to the Vault
+const apiPut = one({ eventName: "PutObject", eventCategory: "Management", requestParameters: { bucketName: "sws-vault-" + V + "-data-111122223333-eu-west-2", key: "k" },
+  userIdentity: { type: "AssumedRole", sessionContext: { sessionIssuer: { userName: "sws-vault-" + V + "-api", arn: "arn:aws:iam::111122223333:role/sws-vault-" + V + "-api" } } } });
+check(rules(D.alarms(D.group([apiPut]))), [], "API role writing data is quiet");
+check(D.rules.length, 4, "four rules");
+console.log("ok ct-deploy: 4 rules, " + cases + " cases over the vault-deploy scenario (clean, out of band, refused, teardown, approvals, two Vaults)");
