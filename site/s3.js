@@ -397,7 +397,43 @@
     if (pending && P.signedIn() && accts.length) { var r = pending; pending = null; return apply(r); }
     if (window.AwsTransport && AwsTransport.isTwin() && P.signedIn() && accts.length && !state.acct && lb && lb.onclick) lb.onclick();
   }
+  // ---- keyboard (first note, item 13) ----
+  // In a listing: Up and Down (Home, End) move between rows; Enter opens (the rows are buttons). Backspace or
+  // Alt+Up goes up a level: from a file to its folder, from a folder to its parent. "/" moves to the filter;
+  // Escape in a filter clears it. Typing in a field is never taken over.
+  function typing(t) { return /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName) || t.isContentEditable; }
+  function onKey(ev) {
+    if (ev.ctrlKey || ev.metaKey) return;
+    var t = ev.target, k = ev.key;
+    if (k === "Escape" && t.classList && t.classList.contains("filter") && t.value) {
+      t.value = ""; t.dispatchEvent(new Event("input")); ev.preventDefault(); return;
+    }
+    if (typing(t)) return;
+    var table = t.closest && t.closest(".s3-table");
+    if (table && !ev.altKey && /^(ArrowDown|ArrowUp|Home|End)$/.test(k)) {
+      var rows = Array.prototype.filter.call(table.querySelectorAll("tbody tr"), function (tr) { return !tr.hidden; })
+        .map(function (tr) { return tr.querySelector("button"); }).filter(Boolean);
+      var i = rows.indexOf(t), n = k === "Home" ? 0 : k === "End" ? rows.length - 1 : i + (k === "ArrowDown" ? 1 : -1);
+      if (rows[n]) { rows[n].focus(); rows[n].scrollIntoView({ block: "nearest" }); }
+      ev.preventDefault(); return;
+    }
+    if (k === "/" && !ev.altKey) {
+      var f = (t.closest && t.closest(".viewer, #s3-objects") || $("s3-objects")).querySelector(".filter") || $("s3-objects").querySelector(".filter");
+      if (f) { f.focus(); ev.preventDefault(); }
+      return;
+    }
+    if ((k === "Backspace" && !ev.altKey) || (k === "ArrowUp" && ev.altKey)) {
+      if (!state.bucket || !$("s3-list")) return;
+      ev.preventDefault();
+      // The address moves, and apply() lands the focus on the crumbs of the folder shown.
+      if (state.key) return go(state.bucket, state.prefix);
+      if (!state.prefix) return;
+      var up = state.prefix.replace(/[^/]*\/$/, "");
+      arrive = true; state.prefix = up; listObjects();
+    }
+  }
   function init() {
+    $("step4").addEventListener("keydown", onKey);
     $("s3-list-buckets").onclick = function () {
       state.acct = P.accounts().filter(function (a) { return a.id === $("s3-account").value; })[0];
       state.region = "us-east-1";
