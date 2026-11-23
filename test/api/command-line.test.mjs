@@ -145,6 +145,8 @@ for (const row of table.commands) {
   ok(E("plan cors b").kind === "plan" && /No plan for that yet/.test(E("plan cors b").message), "plan never runs: Desk holds plans");
   for (const l of ["ls a b", "cat bkt", "cat bkt/", "cat /k", "who", "who a b", "roles x", "cdn x", "stacks x", "stack", "logs", "logs --newest", "map x", "open", "open /x"]) ok(E(l, ctx1).code === "arity", l + ": usage");
   for (const l of ["rm bkt/k", "ls *", "s3 deleteBucket bkt", ""]) ok(!E(l, ctx1).ok, JSON.stringify(l) + " refused");
+  for (const l of ["ls a..b", "ls a.-b", "ls a-.b", "ls 192.168.1.10", "cat 10.0.0.1/k"]) ok(E(l, ctx1).code === "arity", l + ": not an S3 bucket name (two dots, dot by a dash, IP-shaped)");
+  ok(E("ls my.bucket", ctx1).ok && E("ls a-b.c-d", { bucketRegions: {} }).code === "needs-bucket-region", "dotted and dashed names that S3 allows still pass");
   for (const l of ["ls *", "ls b*", "cat */k", "open ../x", "ls __proto__", "ls B", "ls a"]) ok(E(l, ctx1).code === "arity", l + ": not a bucket name, so no lookup is built");
   // security.aws.a's rules (design 09): no alias shadows a row; an alias takes only its row's declared options.
   const sample = { region: "eu-west-2", bucket: "bkt", key: "k", name: "n", role: "r", policy: "p", arn: "arn:aws:iam::" + A + ":role/r", stack: "s", exportName: "e", group: "/g", id: "EDEMOTWIN00001" };

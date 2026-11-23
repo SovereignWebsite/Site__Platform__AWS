@@ -140,6 +140,10 @@
     { alias: "files", usage: "files", expands: [], summary: "Switch to Files" }, { alias: "map", usage: "map", expands: [], summary: "Switch to Map" },
     { alias: "timeline", usage: "timeline", expands: [], summary: "Switch to Timeline" }, { alias: "desk", usage: "desk", expands: [], summary: "Switch to Desk" }
   ];
+  // S3's general purpose bucket naming rules, as far as a name alone can show: 3 to 63 of a-z 0-9 . -, starting and
+  // ending with a letter or digit, no two dots in a row, no dot next to a dash, not shaped like an IP address
+  // (security.aws.a's nit on 3bf0c3a).
+  function isBucket(b) { return BUCKET.test(b) && !/\.\.|\.-|-\./.test(b) && !/^\d{1,3}(\.\d{1,3}){3}$/.test(b); }
   function own(map, k) { return map && Object.prototype.hasOwnProperty.call(map, k) ? map[k] : undefined; }
   // Every step is checked by the row's own grammar before it is handed back, so an alias accepts only the target
   // row's declared options and can never yield a call parse would refuse (security.aws.a, design 09).
@@ -165,7 +169,7 @@
     // <bucket>[/<rest>]: the bucket is everything before the first "/"; its region only from s3 getBucket.
     var place = function (word) {
       var i = word.indexOf("/"), b = i < 0 ? word : word.slice(0, i);
-      return BUCKET.test(b) ? { bucket: b, path: i < 0 ? "" : word.slice(i + 1) } : null;
+      return isBucket(b) ? { bucket: b, path: i < 0 ? "" : word.slice(i + 1) } : null;
     };
     var bucketRegion = function (b) {
       var r = own(ctx.bucketRegions, b);
