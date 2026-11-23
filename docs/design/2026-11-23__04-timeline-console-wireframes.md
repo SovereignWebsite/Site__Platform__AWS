@@ -115,8 +115,8 @@ cloudtrail.aws.a's data pieces (work/cloudtrail.aws.a 5cc769e) give the Timeline
 +----------------------------------------------------------------------------------+
 ```
 
-- **Chips** replace 2.1's three buttons. **Who** lists the principals in the data (role names, the account root, "a visitor network" for logs), **Service** the event sources, **Region** the regions with global services under "global", and **Failed** is a toggle for refused calls. Each chip shows counts, the list and lanes follow the chips, and **Clear** resets them. The chips are built from the data, never from a fixed list.
-- **Worth a look** shows ct-alarms.js's rules by their own ids with a plain line each. On the attack pack that is 6 alarms over 5 rules, refused-on-protected counting 2 (note 04). The baseline and surge packs show "Nothing worth a look in this pack." A rule opens its events, with the chips set to match.
+- **Chips** replace 2.1's three buttons. **Who** lists the principals in the data (role names, the account root, "a visitor network" for logs), **Service** the event sources, **Region** the regions, with IAM, STS (which record us-east-1) and CloudFront grouped under "global", and **Failed** is a toggle for refused calls. Each chip shows counts, the list and lanes follow the chips, and **Clear** resets them. The chips are built from the data, never from a fixed list.
+- **Worth a look** shows each alarm's level (high, medium, low, as a word and a mark, not colour alone), its rule id as the label and the alarm's own words (`a.words`), so the lines stay true when the rules change. The words in the sketch are placeholders for those. On the attack pack that is 6 alarms over 5 rules, refused-on-protected counting 2 (note 04). The baseline and surge packs show "Nothing worth a look in this pack." A rule opens its events, with the chips set to match.
 - **Vault deployments** (a tab beside Events in the list area): one row per Vault id, from ct-deploy.js.
 
 ```
@@ -131,7 +131,7 @@ cloudtrail.aws.a's data pieces (work/cloudtrail.aws.a 5cc769e) give the Timeline
 
   The note's own limit is said under the tab, once: "In one-stack mode, another stack's calls on this Vault look the same as the Vault's own."
 
-- **The raw record** opens from any event (2.2's [Raw JSON]) as a side panel on desktop and a pushed screen on the phone. It is text only, with no Copy button, because the record can hold a full address (the privacy rule above). It shows only for events that have a raw record: the drop-in keeps them, and the graph's copy does not.
+- **The raw record** opens from any event (2.2's [Raw JSON]) as a side panel on desktop and a pushed screen on the phone. It is text only, with no Copy button, because the record can hold a full address (the privacy rule above). Every event from the reader carries its raw record, the twin packs' included (only the graph's copy drops it), so the panel is there for every event.
 - **Phone**: Source and the chips go into one "Filter" sheet with a count badge. Worth a look stays first, and Vault deployments is a third button beside Events.
 
 ## 3. Moves
@@ -151,7 +151,7 @@ cloudtrail.aws.a's data pieces (work/cloudtrail.aws.a 5cc769e) give the Timeline
 
 ## 5. Drop in your own trail
 
-cloudtrail.aws.a's design: a file picker and drop zone that reads CloudTrail log files (`.json`, `.json.gz`, a zip of a folder) in the page. The Timeline shows it the same way as the twin, under its own bar: **"Your file · read in this page only, never uploaded"**, with a "Close the file" action. Real AWS is never called for this view. This is the strongest "try it with your own data" moment the site has: no sign-in, no account, nothing leaves the browser.
+cloudtrail.aws.a's design: a file picker and drop zone that reads CloudTrail log files (`.json`, `.json.gz`, `.jsonl`, plain or gzip, recognised by content; a zip is not read) in the page. The Timeline shows it the same way as the twin, under its own bar: **"Your file · read in this page only, never uploaded"**, with a "Close the file" action. Real AWS is never called for this view. This is the strongest "try it with your own data" moment the site has: no sign-in, no account, nothing leaves the browser.
 
 **Reading the dropped file** (revision 2, 23 Nov ~20:40 UTC): the drop-in uses cloudtrail.aws.a's own reader, `CloudTrailDropIn.readFiles(files)` (docs/cloudtrail/reader/ct-dropin.js, note 05, work/cloudtrail.aws.a 5cc769e), not Decode directly. It recognises the four shapes by content (a trail's delivery file, LookupEvents output, a bare array, one record per line), gunzips by magic bytes, merges the files newest first and drops duplicates across files.
 
@@ -169,7 +169,8 @@ cloudtrail.aws.a's design: a file picker and drop zone that reads CloudTrail log
 +----------------------------------------------------------------------------------+
 ```
 
-- **The report** is one line per file, in the reader's own words. Refusals show the reader's reason as it gives it: "a CSV export; download the JSON instead", "not a CloudTrail file", "a damaged gzip file", "larger than 50 MB; not read", "larger than 200 MB once unzipped". Past the drop limits (1 GB unzipped, 2,000,000 events, 2,000 files), "the rest is reported and not read". A refusal affects only its own file.
+- **The report** is one line per file, in the reader's own words (after security.aws.a's memory review, e714b43): "larger than 50 MB; not read", "larger than 64 MB once unzipped; not read", "a damaged gzip file; not read", "a CSV export; download the JSON instead", "not a CloudTrail file (no Records, Events or records)". Past a drop limit (256 MB unzipped, 500,000 events or 2,000 files per drop): "the drop's limit is reached; not read". A refusal affects only its own file. A zip, including a zipped folder, is refused as not a CloudTrail file.
+- **Under the drop zone**, the reader's own line: "Files are read in this tab and never uploaded. Up to 64 MB per file once unzipped and 256 MB per drop; for more, drop fewer days at a time."
 - **Skipped records** within a read file show as "n records skipped [Show]", as text.
 - The report is collapsed to its first line once the timeline draws, and it stays one click away.
 - Nothing is uploaded or stored. The reader makes no network call and uses no storage (its test checks this), and closing the file drops everything.
