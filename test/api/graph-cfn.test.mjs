@@ -81,6 +81,7 @@ ok(node("arn:aws:s3:::" + AwsTwin.buckets.site).type === "bucket" && node("arn:a
   && node("arn:aws:lambda:eu-west-2:" + A + ":function:demo-handler").type === "function" && node("urn:sws:cfn-resource:" + arnOf("demo-dns") + "/WwwAlias").type === "record"
   && node("arn:aws:route53:::hostedzone/Z0DEMOTWIN0001").type === "unknown", "resources typed from their CloudFormation type where the schema has one");
 ok(node("arn:aws:s3:::" + AwsTwin.buckets.site).arn_derived === true && node("arn:aws:s3:::" + AwsTwin.buckets.site).logical_id === "SiteBucket", "a derived ARN says so");
+ok(node("arn:aws:s3:::" + AwsTwin.buckets.site).attribute_trust.id.trust === "claimed" && node(arnOf("demo-site")).attribute_trust.id === undefined && node("urn:sws:cfn-resource:" + arnOf("demo-dns") + "/WwwAlias").attribute_trust.id === undefined, "a node made only from a derived ARN: its id is claimed");
 
 // ---- refers_to (imports) ----
 ok(has(arnOf("demo-dns"), "refers_to", arnOf("demo-site")) && has(arnOf("demo-dns"), "refers_to", arnOf("demo-site")).evidence === "api" && /demo-site-distribution-domain/.test(has(arnOf("demo-dns"), "refers_to", arnOf("demo-site")).source), "demo-dns imports from demo-site");

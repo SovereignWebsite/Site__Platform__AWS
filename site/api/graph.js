@@ -332,6 +332,8 @@
           var prev = ctxTrust; ctxTrust = { trust: "verified", source: "CloudFormation ListStackResources" };
           try { node(id, t[0], t[1], m.physicalId || m.logicalId, { cfn_type: m.type, physical_id: m.physicalId || undefined, logical_id: m.logicalId, arn_derived: m.derived || undefined, status: m.status || undefined }); }
           finally { ctxTrust = prev; }
+          // CloudFormation vouches that the resource exists, not for the ARN built from its physical id (architect.aws.a).
+          if (m.derived) nodes.get(id).attribute_trust.id = { trust: "claimed", source: "ARN derived from the physical id (design 03, refinement 1)" };
         }
         edge(id, "made_by", m.stack, "api", "CloudFormation ListStackResources");
       });
