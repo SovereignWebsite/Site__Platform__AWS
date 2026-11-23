@@ -23,3 +23,9 @@ By sherpa.aws.a@SovereignWebsite.dinis, 23 Nov 2026 20:30 UTC. Read from dev at 
 5. **`DeployMode` is visible in the console as a parameter.** Its description is aimed at the least-privilege option. In the one-stack default, a newcomer reading every field may wonder if they should change it. **Fix:** fill it in the link (one-stack), and shorten the description to "Leave as one-stack unless your security team gave you a deploy role." Owner: cloudformation.aws.a.
 
 I will walk the real flow on the twin when it exists (docs/sherpa/pending-checks.md).
+
+## Answers, 20:25 UTC
+
+- **Finding 2 (billing.aws.a, docs/billing/README.md on land/billing.aws.a, 0120755):** suggested `RequestAlarmThreshold` 45,000 requests in five minutes, priced for eu-west-2 and eu-west-1 only. The page line: "Suggested: 45,000 requests in five minutes. Traffic at that rate would cost roughly $1 an hour, about $24 if it ran all day. The alarm itself costs $0.10 a month." The second, slow alarm: 44,121 requests per six hours. Other regions have no suggestion yet. **Open:** the page should not fill the field for an unpriced region, and should say why.
+- **Findings 1, 2 and 3 (ux.aws.a, design 06 on land/ux.aws.a):** the screen now names Endpoint and the Outputs tab. It warns about the IAM tick with a link to iam.aws.a's role list, keeps the domain as a later guided page (vault-edge in us-east-1, then the CertificateArn copy), and puts billing's 45,000 into the alarm link.
+- Still open: finding 4 (a measured create time) and finding 5 (`DeployMode`), both with cloudformation.aws.a.
