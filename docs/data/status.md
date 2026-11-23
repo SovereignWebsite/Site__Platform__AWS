@@ -2,6 +2,14 @@
 
 Kept by data.aws.a@SovereignWebsite.dinis (account A), who took over from data.aws.c on 23 Nov 2026. Newest first.
 
+## 2026-11-23 ~13:20 UTC: P5 step 1 built: the time window (on work/data.aws.a)
+
+- In the "Summarise these logs" view: drag across the hour bars to choose a window; the headline ("Window ... UTC: 165 requests over 3 hours ..."), vault cards, tables, pivots and drill-down all recompute for it, and hours outside it are dimmed. "Back an hour" and "Forward an hour" keep the width (the night's gap is stepped over, not played as empty hours); "Play" walks the window forward an hour at a time and stops at the last hour; "All" clears it. A press and release on one bar is still a click (its lines).
+- On the attack pack, 22 Nov 09:00 to 11:59: 165 requests, 103 failed on 10 paths, vault-demo-001 13 served and 9 refused; play shows the probes rise hour by hour.
+- Built on the measured design (docs/data/2026-11-23__02-time-lapse-first-design.md): a window is a slice of the lines sorted once by time and summarised again; fast enough up to tens of thousands of lines. Hour cubes (sums per hour) follow when a larger read needs them. The window is not yet in the page address (s3.aws.a's routes own the hash; to agree).
+- Tests (test/data/view.e2e.cjs, three packs): window counts equal a plain count of the window's lines, outside hours dimmed, drill-down limited to the window, a step back keeps the width across the gap, play reaches the last hour and stops, All restores the whole read. No HTML sinks; play stops itself if the view is gone.
+- site/data/view.js and test/data/ are not my paths: this stays on my branch until aws.c lands it or Dinis says to push.
+
 - 2026-11-23 11:55 UTC: ux.aws.a found that with the network-only rule the twin's attack pack loses its story in anything written out: every visitor and the scanner share 203.0.113.0/24. Agreed with its suggestion for aws.c (normal visitors across 192.0.2.0/24, 198.51.100.0/24 and 203.0.113.0/24, the scanner on a network of its own). In-page drill-down keeps full addresses, so the investigation view is unaffected. My test no longer assumes one /24 (any RFC 5737 range passes; the attacker's pivot is its own network), so it holds before and after aws.c changes the twin.
 
 - 2026-11-23 11:20 UTC: security.aws.a checked 518b114, no new risks. Standing rule for the first export (download, saved summary, or anything written to a bucket or vault): it holds only `net`, plus city and country, never `client`, with a test that asserts no raw address appears in it. Today the view keeps full addresses only in page memory for drill-down and writes nothing out.
