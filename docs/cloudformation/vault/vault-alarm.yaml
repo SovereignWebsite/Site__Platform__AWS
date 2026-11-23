@@ -6,11 +6,11 @@ Description: >-
   metric, so the deploy role is never allowed to create alarms (security.aws.a, R-027). Run it after the Vault stack
   exists, with its DistributionId output. Optional kill switch (KillSwitch, default off; ec2.aws.a's design 03): the
   alarm invokes a small inline function that throttles the Vault's function to 0 and disables its distribution, marks
-  both sws-vault-paused, and never deletes or restores. Twin only until Dinis decides (K1 to K4). DRAFT 0.2.0 by cloudformation.aws.a, 23 Nov 2026.
+  both sws-vault-paused, and never deletes or restores. Twin only until Dinis decides (K1 to K4). DRAFT 0.3.0 by cloudformation.aws.a, 23 Nov 2026.
 
 Metadata:
   SovereignWebsite:
-    TemplateVersion: 0.2.0-draft
+    TemplateVersion: 0.3.0-draft
 
 Parameters:
   VaultId:
@@ -28,6 +28,13 @@ Parameters:
     Description: >-
       Requests in 5 minutes above which the cost alarm fires. The customer chooses it; the page can suggest one from
       billing.aws.a's model.
+  SlowRequestThreshold:
+    Type: Number
+    Default: 0
+    MinValue: 0
+    Description: >-
+      Requests in 6 hours above which the slow cost alarm fires: it catches a flood held just under the 5-minute
+      threshold (security.aws.a, R-026; billing.aws.a suggests 44,121 for a 10 USD a month budget). 0 means no slow alarm.
   AlertEmail:
     Type: String
     MaxLength: 254
@@ -54,6 +61,8 @@ Parameters:
 Conditions:
   CostAlarmEmail: !Not [!Equals [!Ref AlertEmail, ""]]
   KillSwitchOn: !Equals [!Ref KillSwitch, throttle-and-disable]
+  SlowAlarmOn: !Not [!Equals [!Ref SlowRequestThreshold, 0]]
+  SlowKillSwitch: !And [!Condition SlowAlarmOn, !Condition KillSwitchOn]
 
 Rules:
   KillSwitchNeedsRegion:
@@ -97,14 +106,20 @@ Resources:
             Action: sns:Publish
             Resource: !Ref CostAlarmTopic
             Condition:
-              ArnEquals: { "aws:SourceArn": !Sub "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:sws-vault-${VaultId}-requests" }
+              ArnEquals:
+                "aws:SourceArn":
+                  - !Sub "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:sws-vault-${VaultId}-requests"
+                  - !Sub "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:sws-vault-${VaultId}-requests-slow"
           - Sid: NobodyElsePublishes
             Effect: Deny
             Principal: "*"
             Action: sns:Publish
             Resource: !Ref CostAlarmTopic
             Condition:
-              ArnNotEquals: { "aws:SourceArn": !Sub "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:sws-vault-${VaultId}-requests" }
+              ArnNotEquals:
+                "aws:SourceArn":
+                  - !Sub "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:sws-vault-${VaultId}-requests"
+                  - !Sub "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:sws-vault-${VaultId}-requests-slow"
 
   CostAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -120,6 +135,29 @@ Resources:
       Period: 300
       EvaluationPeriods: 1
       Threshold: !Ref RequestAlarmThreshold
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If
+        - CostAlarmEmail
+        - !If [KillSwitchOn, [!Ref CostAlarmTopic, !GetAtt KillSwitchFunction.Arn], [!Ref CostAlarmTopic]]
+        - !If [KillSwitchOn, [!GetAtt KillSwitchFunction.Arn], !Ref AWS::NoValue]
+
+  # The slow alarm: the same metric over 6 hours, so a flood held under the 5-minute threshold is still caught.
+  CostAlarmSlow:
+    Type: AWS::CloudWatch::Alarm
+    Condition: SlowAlarmOn
+    Properties:
+      AlarmName: !Sub "sws-vault-${VaultId}-requests-slow"
+      AlarmDescription: Over 6 hours, the Vault's CloudFront distribution has served more requests than expected; CloudFront bills every request.
+      Namespace: AWS/CloudFront
+      MetricName: Requests
+      Dimensions:
+        - { Name: DistributionId, Value: !Ref DistributionId }
+        - { Name: Region, Value: Global }
+      Statistic: Sum
+      Period: 21600
+      EvaluationPeriods: 1
+      Threshold: !Ref SlowRequestThreshold
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
       AlarmActions: !If
@@ -206,13 +244,13 @@ Resources:
         Variables:
           DISTRIBUTION_ID: !Ref DistributionId
           FUNCTION_ARN: !Sub "arn:${AWS::Partition}:lambda:${VaultRegion}:${AWS::AccountId}:function:sws-vault-${VaultId}-api"
-          ALARM_NAME: !Sub "sws-vault-${VaultId}-requests"
+          ALARM_NAMES: !Sub "sws-vault-${VaultId}-requests,sws-vault-${VaultId}-requests-slow"
       Code:
         ZipFile: |
           import json, os, datetime, boto3
           DIST = os.environ["DISTRIBUTION_ID"]
           FN = os.environ["FUNCTION_ARN"]
-          ALARM = os.environ["ALARM_NAME"]
+          ALARMS = os.environ["ALARM_NAMES"].split(",")
           def log(**k):
               print(json.dumps(k, default=str))
           def handler(event, context):
@@ -220,7 +258,7 @@ Resources:
               d = (event or {}).get("alarmData") or {}
               name = d.get("alarmName")
               state = (d.get("state") or {}).get("value")
-              if name != ALARM or state != "ALARM":
+              if name not in ALARMS or state != "ALARM":
                   log(action="ignored", alarm=name, state=state)
                   return
               t = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -254,6 +292,19 @@ Resources:
       SourceAccount: !Ref AWS::AccountId
       SourceArn: !Sub "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:sws-vault-${VaultId}-requests"
 
+  KillSwitchPermissionSlow:
+    Type: AWS::Lambda::Permission
+    Condition: SlowKillSwitch
+    Properties:
+      FunctionName: !Ref KillSwitchFunction
+      Action: lambda:InvokeFunction
+      Principal: lambda.alarms.cloudwatch.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:sws-vault-${VaultId}-requests-slow"
+
 Outputs:
   CostAlarmName:
     Value: !Ref CostAlarm
+  SlowAlarmName:
+    Condition: SlowAlarmOn
+    Value: !Ref CostAlarmSlow

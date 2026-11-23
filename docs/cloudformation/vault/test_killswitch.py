@@ -22,7 +22,7 @@ class Fake:
         return f
 sys.modules["boto3"] = types.SimpleNamespace(client=lambda svc, region_name=None: Fake(svc, region_name))
 os.environ.update(DISTRIBUTION_ID="EDEMOTWIN00001", FUNCTION_ARN="arn:aws:lambda:eu-west-2:111122223333:function:sws-vault-0123456789ab-api",
-                  ALARM_NAME="sws-vault-0123456789ab-requests")
+                  ALARM_NAMES="sws-vault-0123456789ab-requests,sws-vault-0123456789ab-requests-slow")
 ns = {}; exec(compile(code, "index.py", "exec"), ns)
 fails = []
 def check(ok, m):
@@ -30,7 +30,7 @@ def check(ok, m):
 ev = lambda name, st: {"time": "2026-11-23T20:00:00Z", "alarmData": {"alarmName": name, "state": {"value": st}}}
 
 state = {"conc": 10, "enabled": True}
-for e in [ev("other-alarm", "ALARM"), ev("sws-vault-0123456789ab-requests", "OK"), {}, None]:
+for e in [ev("other-alarm", "ALARM"), ev("sws-vault-0123456789ab-requests", "OK"), ev("sws-vault-0123456789ab-requests-slower", "ALARM"), ev("sws-vault-0123456789ab", "ALARM"), {}, None]:
     ns["handler"](e, None)
 check(not calls, f"acted on a foreign or non-ALARM event: {calls}")
 
@@ -49,6 +49,11 @@ check(n2 == n_writes, "second trigger wrote again")
 check(not any("delete" in o.lower() for _, o, _ in calls), "deleted something")
 check(state["enabled"] is False and state["conc"] == 0, "restored")
 
+# The slow alarm pauses too, on a fresh Vault.
+state.update(conc=10, enabled=True); calls.clear()
+ns["handler"](ev("sws-vault-0123456789ab-requests-slow", "ALARM"), None)
+check(state == {"conc": 0, "enabled": False}, f"slow alarm did not pause: {state}")
+
 if fails:
     print("FAIL\n  " + "\n  ".join(fails)); sys.exit(1)
-print("OK (kill switch: ignores others, pauses once with IfMatch and tags, no second write, never deletes or restores)")
+print("OK (kill switch: both alarms pause, ignores others, pauses once with IfMatch and tags, no second write, never deletes or restores)")

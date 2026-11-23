@@ -53,3 +53,13 @@ By hand, never automatic: delete the function's concurrency override or set it b
 - **Not confirmed (boto3.aws.a note 17):** whether throttled invocations are unbilled, and how quickly a disabled distribution stops billing ("a few minutes" to propagate).
 - **CHECK:** the alarm-action event's field names.
 - **Reviews:** security.aws.a reviews the code; dev.1.aws.a builds the twin from design 03 section 6.
+
+## 0.3.0 (21:25 UTC): the slow alarm (security.aws.a, R-026; billing.aws.a 27911d0 and 7621a65)
+
+**Why:** a flood held just under the 5-minute threshold never trips the fast alarm. At 149 req/s that is about $24 a day.
+
+**What 0.3.0 adds:**
+- **`CostAlarmSlow`, `sws-vault-<id>-requests-slow`:** the same metric, Sum over 21600 s (6 hours), with its own `SlowRequestThreshold`. 0 means no slow alarm. billing.aws.a suggests 44,121 for a $10 a month budget, with a worst case of $12.41 before the switch acts, against $48.88 at 24 hours.
+- **Same actions as the fast alarm:** the same topic and the same kill switch. The test checks they are identical, and that neither alarm has OK or insufficient-data actions.
+- **The kill switch accepts exactly these two alarm names.** A second invoke permission, `KillSwitchPermissionSlow`, has the slow alarm's `SourceArn`. The topic policy now allows exactly the two alarms' ARNs, and denies everything else.
+- **`test_killswitch.py`** checks that the slow alarm pauses too, and that look-alike names (`...-requests-slower`, `sws-vault-<id>`) are ignored. The code is 1.6 KB.
