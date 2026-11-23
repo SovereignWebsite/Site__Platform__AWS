@@ -69,7 +69,24 @@ const fail = (m) => { throw new Error(m); };
   await pg.waitForSelector("#s3-status >> text=did not answer the browser");
   if (!/CORS rule/.test(await st())) fail("CORS hint: " + await st());
 
+  // 5. A Retry kept from one bucket and clicked after moving to another asks the new bucket nothing.
+  await pg.evaluate(() => { window.__err = { match: "\\.zip", status: 404, code: "NoSuchKey", times: 1 }; });
+  // (case 4 left its Retry: it lists the folder again)
+  await pg.click("#s3-status button.s3-retry");
+  await pg.waitForSelector("#s3-list button:has-text('" + zip + "')");
+  await pg.click("#s3-list button:has-text('" + zip + "')");
+  await pg.waitForSelector("#s3-status button.s3-retry");
+  await pg.evaluate(() => { window.__keptRetry = document.querySelector("#s3-status button.s3-retry"); });
+  const { logs } = await pg.evaluate(() => window.AwsTwin.buckets);
+  await pg.evaluate((b) => { location.hash = "#/s3/" + b + "/"; }, logs);
+  await pg.waitForSelector("#s3-list >> text=cloudfront/");
+  const asked = []; await pg.exposeFunction("__asked", (u) => asked.push(u));
+  await pg.evaluate(() => { const h = window.AwsTwin.handle; window.AwsTwin.handle = (u, i) => { window.__asked(u); return h(u, i); }; });
+  await pg.evaluate(() => window.__keptRetry.click());
+  await pg.waitForSelector("#s3-status >> text=That Retry was for");
+  if (asked.length) fail("a stale Retry asked S3: " + asked.join(" "));
+
   if (errors.length) fail("page errors: " + errors.join(" | "));
-  console.log("OK (s3 errors: NoSuchKey, AccessDenied, SlowDown and Failed to fetch told apart with AWS's code kept; Retry repeats the step)");
+  console.log("OK (s3 errors: NoSuchKey, AccessDenied, SlowDown and Failed to fetch told apart with AWS's code kept; Retry repeats the step, only in the bucket it failed in)");
   await br.close(); srv.close();
 })().catch((e) => { console.error("FAIL", e.message); process.exit(1); });

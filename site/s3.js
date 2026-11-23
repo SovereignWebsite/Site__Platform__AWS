@@ -421,8 +421,14 @@
   function fail(st, e, retry, region) {
     P.say(st, explain(e && e.message, region), "bad");
     if (!retry) return;
-    var b = P.el("button", { type: "button", class: "quiet s3-retry", text: "Retry" });
-    b.onclick = function () { b.disabled = true; retry(); };
+    // The step is retried only in the bucket it failed in, at the folder it failed at (security.aws.a: a Retry
+    // clicked after moving to another bucket must not ask that bucket for the old key).
+    var at = { bucket: state.bucket, prefix: state.prefix }, b = P.el("button", { type: "button", class: "quiet s3-retry", text: "Retry" });
+    b.onclick = function () {
+      b.disabled = true;
+      if (state.bucket !== at.bucket) return P.say(st, "That Retry was for " + (at.bucket || "the list of buckets") + "; open it again to retry there.", "ok");
+      state.prefix = at.prefix; retry();
+    };
     st.appendChild(document.createTextNode(" ")); st.appendChild(b);
   }
   function human(n) { return n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(1) + " MB"; }
