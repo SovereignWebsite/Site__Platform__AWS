@@ -40,17 +40,21 @@ lane file (.enc)         sgit's encrypted envelope, base64 text; sent base64 aga
 
 Every record has `id` (sha256 hex over source, object key and line or event id), `t` (UTC, ISO 8601, the time of the fact, not of capture) and `src` (key and line, so link mode reaches the exact line).
 
-### 3.1 `cloudfront-extract/1` (owner: data.aws.a)
+### 3.1 `cloudfront-extract/1` (owner: data.aws.a; agreed 07:40 UTC, its module at f28ef80 on work/data.aws.a)
 
-data.aws.a's schema v0, unchanged, with two fields the enricher now adds:
+data.aws.a's schema v0, with these fields:
 
 | Field | From (twin field) | Note |
 |---|---|---|
 | `t`, `method`, `path`, `status`, `bytes`, `ms` | timestamp, cs_method, cs_uri_stem, sc_status, sc_bytes, time_taken x 1000 | as schema v0 |
 | `edge`, `edge_city`, `country` | x_edge_location, country | `country` is the enricher's |
+| `request_id`, `result`, `host`, `hour` | x-edge-request-id, x-edge-result-type, host | when present; P1 joins on `request_id`, P4 needs `result` (hit or miss) per edge |
 | `agent_kind`, `kind` | cs_user_agent, path | as schema v0 |
-| `vault` | vault_id | the enricher's field; empty when the path names none |
-| `client` | c_ip | **never the raw address** in a lane: see section 4 |
+| `vault` | path, by the extract | set only when the decoded path names a vault id with no `.`, `..` or slash; never taken from the enricher |
+| `vault_claim` | vault_id | the enricher's value when it differs from `vault` (the twin's enricher gives `..` for `/vault/../../etc/passwd`) |
+| `net` | c_ip | the truncated network only (section 4); named `net`, never `client`, so no one reads a lane as holding addresses |
+
+Left out on purpose: the query string (probe strings, possibly tokens) and the raw user agent (`agent_kind` is enough).
 
 ### 3.2 `vault-usage/1` (owner: vaults.aws.a, derived)
 
@@ -58,10 +62,10 @@ Not read from AWS: written by the drain from 3.1 records whose `vault` is set, o
 
 ```json
 { "id": "...", "t": "2026-11-22T11:00:00Z", "vault": "vault-demo-001",
-  "requests": 4, "errors": 0, "bytes": 21034, "clients": 3, "edges": ["LHR", "DUB"], "countries": ["GB", "IE"] }
+  "ok": 4, "refused": 0, "bytes": 21034, "clients": 3, "edges": ["LHR", "DUB"], "countries": ["GB", "IE"] }
 ```
 
-Counts only: no client, no path beyond the vault id, no user agent. This is the "what vaults are being accessed" view of memo section 6 without saying who.
+`ok` counts 2xx and 3xx, `refused` 4xx and 5xx; "accessed" means `ok` only (in the twin's attack pack, nine probes on vault-demo-001 are all refused and must not count as use). Built only from records whose `vault` is set, never from `vault_claim`. `clients` is counted in the page before truncation. Counts only: no client, no path beyond the vault id, no user agent. This is the "what vaults are being accessed" view of memo section 6 without saying who.
 
 ### 3.3 `cloudtrail-event/1` (agreed with cloudtrail.aws.a, 07:39 UTC; its reference: docs/cloudtrail/2026-11-23__02-event-shape.md, 3a039f0)
 
@@ -116,7 +120,7 @@ An hour's file is rewritten while the hour is open and immutable once it closes 
 
 ## 6. Questions for the owners (not Dinis)
 
-1. data.aws.a: is 3.1 your schema v0 as you want it in a lane, and are `country` and `vault` the names you want?
+1. data.aws.a: answered 07:40 UTC, folded into 3.1 and 3.2.
 2. billing.aws.a: answered 07:39 UTC, folded into 3.5.
 3. cloudtrail.aws.a: answered 07:39 UTC, folded into 3.3.
 4. boto3.aws.a: check 3.4 against GetMetricData's documentation (it notes `Messages` is also returned; to add when it answers in docs/boto3/).
