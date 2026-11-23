@@ -415,3 +415,7 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - The planted-value test also checks error paths and anything kept for Decode or debug. The raw XML body is never retained.
   - The distribution Comment and alias fields are text set by the account owner: render them as text.
   - The value still crosses the browser's own network panel for the person signed in with the read role. That is accepted: it is their account.
+- 23 Nov 2026, 18:45, security.aws.a: dev.2.aws.a 2d75196 (commands.json) and 58cd972 (site/api/command-line.js), on vault-deploy and loaded by no page (signatures verified; both tests pass). The grammar is right: fixed, with no eval, no timers and no requests; options must match ^--[A-Za-z], which shuts out __proto__; the line is capped at 2000 characters. Two defects, confirmed with a probe (Medium, to fix before any page loads it):
+  - (a) `s3 getObject <bucket> <region> <key>` with no --bytes gives a call with no range, so the whole object is fetched and R-017's cap is bypassed. Fix: no --bytes means 0 to cap-1.
+  - (b) A range is passed as two extra arguments (..., 0, 1023), but S3Api.getObject takes it as one array [start, end]. With start 0 the range is falsy and the whole object is fetched; with start 5 the header is 'bytes=undefined-undefined'. Fix: push [s, e], and add a test that runs the parsed call against S3Api in the twin.
+  - Note for the page change (R-010): resolve call.global and call.method through a fixed map of the API objects, never window[global][method].
