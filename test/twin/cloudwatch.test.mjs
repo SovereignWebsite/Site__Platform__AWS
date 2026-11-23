@@ -56,6 +56,12 @@ const dx = await day.text(), dt = members(dx, "Timestamps"), dv = members(dx, "V
 if (dt.join() !== "2026-11-22T00:00:00Z,2026-11-21T00:00:00Z,2026-11-20T00:00:00Z") fail("daily buckets: " + dt);
 const want22 = fr.v.slice(0, 3).reduce((a, b) => a + b, 0);
 if (dv[0] !== want22) fail("daily sum 22 Nov: " + dv[0] + " vs " + want22);
+// a daily Average is over all the day's samples: each hour weighted by its invocations (boto3.aws.a)
+const dd = await call(T, query("AWS/Lambda", "Duration", "FunctionName", "demo-handler", "Average", { "MetricDataQueries.member.1.MetricStat.Period": "86400" }));
+const ddv = members(await dd.text(), "Values").map(Number);
+const w = inv.v.slice(0, 3), a = dur.v.slice(0, 3);
+const want = +(a.reduce((s, x, i) => s + x * w[i], 0) / w.reduce((s, x) => s + x, 0)).toFixed(2);
+if (Math.abs(ddv[0] - want) > 0.02) fail("daily Duration average not weighted: " + ddv[0] + " vs " + want);
 if ((await call(T, query("AWS/Lambda", "Invocations", "FunctionName", "demo-handler", "Sum", { "MetricDataQueries.member.1.MetricStat.Period": "90" }))).status !== 400) fail("Period 90 accepted");
 // a metric is matched on its exact dimensions: an extra dimension finds nothing
 const extra = await call(T, query("AWS/Lambda", "Invocations", "FunctionName", "demo-handler", "Sum", { "MetricDataQueries.member.1.MetricStat.Metric.Dimensions.member.2.Name": "Resource", "MetricDataQueries.member.1.MetricStat.Metric.Dimensions.member.2.Value": "demo-handler" }));

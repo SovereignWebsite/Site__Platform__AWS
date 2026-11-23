@@ -378,21 +378,31 @@
       for (var j = 1; form.get(m + "Dimensions.member." + j + ".Name"); j++) dims.push([form.get(m + "Dimensions.member." + j + ".Name"), form.get(m + "Dimensions.member." + j + ".Value")]);
       var period = +form.get(q + "MetricStat.Period"), stat = form.get(q + "MetricStat.Stat"), ns = form.get(m + "Namespace"), name = form.get(m + "MetricName");
       // Period: AWS takes 1, 5, 10, 30 or any multiple of 60 seconds (boto3.aws.a, against AWS's reference). The twin
-      // keeps hourly datapoints: multiples of 3600 are aggregated from them (Sum adds; Average is the mean of the
-      // hourly averages, a synthetic simplification); shorter periods answer Complete with no datapoints and a note (TwinHourlyOnly is the twin's own code, not an AWS one).
+      // keeps hourly datapoints: multiples of 3600 are aggregated from them (Sum adds; Average is over all the samples,
+      // each hour weighted by its sample count); shorter periods answer Complete with no datapoints and a note (TwinHourlyOnly is the twin's own code, not an AWS one).
       if (!(period > 0 && (period % 60 === 0 || [1, 5, 10, 30].indexOf(period) >= 0))) return xmlErr("InvalidParameterValue", "The parameter Period must be 1, 5, 10, 30 or a multiple of 60.");
       var note = "";
+      var samples = function (h) { // samples behind an hour's Average: demo-handler's vault API requests, else the enricher's 4 runs
+        if (ns === "AWS/Lambda" && dims.length === 1 && dims[0][1] === "demo-handler") return h.lines.filter(function (l) { return /^\/vault\/[^/]+\/files/.test(l.cs_uri_stem); }).length;
+        return 4;
+      };
       var hourly = s.hours.filter(function (h) { var t = Date.parse(h.at); return t >= t0 && t < t1; })
-        .map(function (h) { return [h.at, metricSeries(ns, name, dims, stat, h)]; }).filter(function (p) { return p[1] !== null; });
+        .map(function (h) { return [h.at, metricSeries(ns, name, dims, stat, h), samples(h)]; }).filter(function (p) { return p[1] !== null; });
       var pts = [];
       if (period % 3600 !== 0) { if (hourly.length) note = "<Messages><member><Code>TwinHourlyOnly</Code><Value>The twin keeps hourly datapoints; ask with a Period that is a multiple of 3600.</Value></member></Messages>"; }
       else {
         var buckets = {}, order = [];
         hourly.forEach(function (p) {
           var b = new Date(Math.floor(Date.parse(p[0]) / (period * 1000)) * period * 1000).toISOString().replace(".000Z", "Z");
-          if (!buckets[b]) { buckets[b] = []; order.push(b); } buckets[b].push(p[1]);
+          if (!buckets[b]) { buckets[b] = []; order.push(b); } buckets[b].push(p);
         });
-        pts = order.map(function (b) { var v = buckets[b], sum = v.reduce(function (a, x) { return a + x; }, 0); return [b, stat === "Average" ? +(sum / v.length).toFixed(2) : sum]; });
+        // Average over all the samples in the period (boto3.aws.a): each hour weighted by its sample count.
+        pts = order.map(function (b) {
+          var v = buckets[b], sum = v.reduce(function (a, p) { return a + p[1]; }, 0);
+          if (stat !== "Average") return [b, sum];
+          var n = v.reduce(function (a, p) { return a + p[2]; }, 0);
+          return [b, +(v.reduce(function (a, p) { return a + p[1] * p[2]; }, 0) / n).toFixed(2)];
+        });
       }
       if (!asc) pts.reverse();
       out.push("<member><Id>" + esc(form.get(q + "Id")) + "</Id><Label>" + esc(form.get(q + "Label") || name || "") + "</Label><Timestamps>" +
