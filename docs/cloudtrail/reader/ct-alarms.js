@@ -56,6 +56,10 @@
     { id: "vault-templates-published", level: "low",
       words: "The publishing role published a template, so a new release is live.",
       match: function (e, ctx) { return templatesObject(e) && WRITES[e.action] === 1 && !e.failed && isPublisher(e, ctx) && /^templates\//.test(objectKey(e)); } },
+    { id: "vault-templates-overwrite-refused", level: "medium",
+      words: "The publishing role tried to overwrite a published template and was refused: a bad release, or a compromised pipeline.",
+      // Writes are create-only (If-None-Match: *), so a write to an existing key fails with PreconditionFailed (security.aws.a).
+      match: function (e, ctx) { return templatesObject(e) && WRITES[e.action] === 1 && !!e.failed && e.failed.code === "PreconditionFailed" && isPublisher(e, ctx); } },
     { id: "refused-on-protected", level: "medium",
       words: "Someone tried, and was refused, to change the hub's roles, its stack, or CloudTrail.",
       match: function (e, ctx) { return e.failed && (hubRoles(e) || hubStack(e) || trail(e, ctx)); } },
