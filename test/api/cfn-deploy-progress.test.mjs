@@ -105,6 +105,27 @@ ok(JSON.stringify(listed.map((x) => x.name).sort()) === JSON.stringify(["sws-vau
 ok(listed.every((x) => x.arn.startsWith("arn:aws:cloudformation:" + R + ":" + ACCT + ":stack/" + x.name + "/") && x.created && x.status), "stacks(): each with its ARN, created and status");
 ok(listed.find((x) => x.name === "sws-vault-1a2b3c4d5e6f").status === "ROLLBACK_COMPLETE", "stacks(): the failed one shows ROLLBACK_COMPLETE");
 
+// Teardown (the page's "Remove this Vault" points the customer to DeleteStack in their console; dev.1.aws.a c5357c2).
+// CfnApi follows it: events newest first until DELETE_COMPLETE, the retained data kept (DELETE_SKIPPED), and the
+// stack then gone from stacks() unless deleted is asked for, while stack(arn) still answers DELETE_COMPLETE.
+{
+  const name = "sws-vault-0f1e2d3c4b5a", arn = (await api.stack(R, name)).arn;
+  const del = await twin.handle("https://cloudformation." + R + ".amazonaws.com/", { method: "POST", headers: { authorization: CUST }, body: new URLSearchParams({ Action: "DeleteStack", Version: "2010-05-15", StackName: name }).toString() });
+  ok(del.status === 200, "teardown: DeleteStack in the console");
+  let status = "", i = 0;
+  for (; i < 40 && status !== "DELETE_COMPLETE"; i++) { status = (await api.stack(R, arn)).status; twin.clock.tick(30 * 1000); }
+  ok(status === "DELETE_COMPLETE", "teardown: stack(arn) follows it to DELETE_COMPLETE after " + i + " polls");
+  const ev = (await ctx.CfnApi.all((next) => api.events(R, arn, { next }))).items;
+  ok(ev[0].logicalId === name && ev[0].status === "DELETE_COMPLETE", "teardown: newest event is the stack's DELETE_COMPLETE");
+  const skipped = ev.filter((e) => e.status === "DELETE_SKIPPED").map((e) => e.logicalId).sort();
+  ok(JSON.stringify(skipped) === JSON.stringify(["VaultBucket", "VaultBucketPolicy", "VaultLogs"]), "teardown: the data, its policy and the logs stay with the customer (DELETE_SKIPPED): " + skipped);
+  let gone = null; try { await api.stack(R, name); } catch (e) { gone = e; }
+  ok(gone && gone.code === "ValidationError" && /does not exist/.test(gone.message), "teardown: by name the stack no longer exists");
+  const live = (await ctx.CfnApi.all((next) => api.stacks(R, { next }))).items.map((x) => x.name);
+  const all = (await ctx.CfnApi.all((next) => api.stacks(R, { next, deleted: true }))).items;
+  ok(!live.includes(name) && all.some((x) => x.name === name && x.status === "DELETE_COMPLETE"), "teardown: stacks() leaves it out; stacks({ deleted: true }) shows it DELETE_COMPLETE");
+}
+
 // CfnApi only read.
 ok(sent.every((a) => /^(List|Describe)/.test(a)), "CfnApi sent only reads: " + [...new Set(sent)].join(", "));
 
