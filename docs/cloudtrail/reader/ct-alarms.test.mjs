@@ -42,6 +42,8 @@ eq(ids([...quiet, ...["10:00", "10:15", "10:30", "10:45", "11:00"].map((m) => de
 
 // new address: a change from an address never seen before; a read from one is quiet; a service is not an address
 eq(ids([...quiet, rec({ eventName: "UpdateAssumeRolePolicy", eventTime: "2026-11-22T11:00:00Z", sourceIPAddress: "198.51.100.66", requestParameters: { roleName: "someone-elses-role" } })]), ["new-network"], "change from a new network");
+eq(ids([...quiet, rec({ eventName: "GetRole", readOnly: true, eventTime: "2026-11-22T10:58:00Z", sourceIPAddress: "198.51.100.66", requestParameters: { roleName: "x" } }),
+  rec({ eventName: "UpdateAssumeRolePolicy", eventTime: "2026-11-22T11:00:00Z", sourceIPAddress: "198.51.100.66", requestParameters: { roleName: "someone-elses-role" } })]), ["new-network"], "reconnaissance reads do not make a network known");
 eq(ids([...quiet, rec({ eventName: "GetRole", readOnly: true, eventTime: "2026-11-22T10:59:00Z", sourceIPAddress: "198.51.100.66", errorCode: "AccessDenied", requestParameters: { roleName: "x" } }),
   rec({ eventName: "UpdateAssumeRolePolicy", eventTime: "2026-11-22T11:00:00Z", sourceIPAddress: "198.51.100.66", requestParameters: { roleName: "someone-elses-role" } })]), ["new-network"], "a refusal does not make a network known");
 eq(ids([...quiet, rec({ eventName: "GetRole", readOnly: true, eventTime: "2026-11-22T11:00:00Z", sourceIPAddress: "198.51.100.66", requestParameters: { roleName: "x" } })]), [], "read from a new network");
@@ -100,4 +102,4 @@ eq(got.map((a) => a.rule), ["iam-trust-or-permissions", "hub-stack-change-applie
 if (got.some((a) => !a.words || !a.events.length || !a.level)) fail("alarm without words, events or level");
 eq(got[2].events[0].action, "CreateChangeSet", "new-network names the first call from that network");
 eq(AL.rules.length, 10, "ten rules listed");
-console.log("ok ct-alarms: 10 rules, 63 cases (21 for R-021, 23 for the templates bucket), R-008 story gives 3 alarms newest first");
+console.log("ok ct-alarms: 10 rules, 64 cases (21 for R-021, 23 for the templates bucket), R-008 story gives 3 alarms newest first");

@@ -34,7 +34,8 @@ The alarms it raises, newest first:
 
 ## Two alarm fixes this found (ct-alarms.js)
 
-- **new-network:** a refused call no longer makes a network "known". Before, the attacker's six refusals marked 203.0.113.0/24 as seen, so the accepted sign-in raised nothing.
+- **new-network:** a network becomes "known" only through an accepted change or sign-in. Refusals and reads no longer count (the reads part is from security.aws.a's review of ed227b6). Before, the attacker's six refusals marked 203.0.113.0/24 as seen, so the accepted sign-in raised nothing. Reconnaissance reads would have hidden a later change the same way.
+  - Possible later tuning: a baseline window, so networks seen only in events older than it also count as known.
 - **refused-burst:** a burst now holds every refusal in its ten minutes, not just the first five.
 
 ## For the twin owner (dev.1.aws.a; aws.c keeps site/twin.js)

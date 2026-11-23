@@ -90,7 +90,7 @@
           var ip = e.from.net;
           if (!ip) return; // a service acting, or no address
           if (!first && !seen[ip] && e.change && !e.failed) out.push([e]);
-          if (!e.failed) { seen[ip] = 1; first = false; } // a network becomes known by what it did, not by what it was refused
+          if (!e.failed && e.change) { seen[ip] = 1; first = false; } // known only through an accepted change or sign-in, never a refusal or a read (security.aws.a)
         });
         return out;
       } }
