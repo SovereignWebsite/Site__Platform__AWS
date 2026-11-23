@@ -34,6 +34,10 @@ customer's account, chosen region (stack "vault")        us-east-1 (stack "vault
 
 ## 2. What the customer's account holds
 
+**Names:** every resource is named `sws-vault-<id>-<part>` (for example `sws-vault-<id>-data` for the bucket, `sws-vault-<id>-api` for the function) and tagged with the Vault id, matching iam.aws.a's step 3 draft (docs/iam/vault-deploy/01-least-privilege.md, e145f1e on work/iam.aws.a): its deploy role is scoped to those names and tags. The stacks are `sws-vault-<id>` and `sws-vault-<id>-edge`. `<id>` is short, lowercase and chosen by the page (not by the customer), so two Vaults in one account never collide.
+
+**One bucket.** Append lanes are not a separate store: sgit.ai puts them at `bare/append/{token}/` inside the vault's own `bare/` tree, outside the commit tree but in the same storage, so `SEND__S3_BUCKET` is the only bucket.
+
 | Resource | Stack | Settings |
 |---|---|---|
 | S3 bucket | vault | Block Public Access on (all four), default encryption, versioning on (a vault's objects are its memory: sgit.ai says "back it up"), no bucket policy beyond denying non-TLS requests, `DeletionPolicy: Retain` so tearing down the stack never deletes data (teardown of data is a separate, explicit step) |
@@ -70,7 +74,7 @@ Five steps, two of them optional: matches the plan's "at most five".
 
 ## 5. The twin (plan step 4)
 
-The twin's "customer account" needs, for this design: CloudFormation create and update of the two stacks with their events (the page shows progress from them), the resources of section 2 as Cloud Control reads, a Function URL host that answers `/api/info/health` with 401 without the token and `{"status":"ok"}` with it, and DNS that "goes live" at the end. The vault routes behind that endpoint are the vault twin of design 02, so the worked example (docs/vaults/example/) can run against a twin customer's Vault unchanged.
+The twin's "customer account" needs, for this design: CloudFormation create and update of the two stacks with their events (the page shows progress from them), the resources of section 2 as Cloud Control reads, a Function URL host that answers `/api/info/health` with 401 without the token and `{"status":"ok"}` with it, and DNS that "goes live" at the end. The vault routes behind that endpoint are the vault twin of design 02, so the worked example (docs/vaults/example/) can run against a twin customer's Vault unchanged. Agreed by architect.aws.a (15:00 UTC, carried in docs/team/handover/architect.aws.a.md): the twin's router maps the customer's Function URL host (later its custom domain) to the vault service twin, answering from that customer account's own world (one journal per account); the batch route stays 501 until the SG/Send library source is in hand.
 
 ## 6. Security notes (for security.aws.a and iam.aws.a)
 
