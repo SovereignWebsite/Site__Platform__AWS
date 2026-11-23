@@ -19,3 +19,4 @@ Append only, one dated line each. Account A cannot send_message account C; maest
 - 2026-11-23 17:25 UTC: Vault stack 0.4.0: DeployMode access-stack (default) or one-stack in one template; DeployPageOrigin one https origin only. Two launches vs one is Dinis's (pm.aws.a).
 - 2026-11-23 17:40 UTC: Vault stack 0.4.1: DeployMode default one-stack (security.aws.a accepts on 7 conditions, R-022; iam.aws.a agrees); access-stack stays opt-in.
 - 2026-11-23 17:55 UTC: Vault stack 0.4.2: HostedZoneId Z+{1,31} (boto3.aws.a note 09); handler permissions confirmed; O1 (b) means our ECR policy lists every customer account.
+- 2026-11-23 18:05 UTC: Vault stack 0.4.3: DeployPageOrigin tightened and tested by fullmatch (security.aws.a); note 04 wording fixed; mode switch on a live stack fails closed, not supported.

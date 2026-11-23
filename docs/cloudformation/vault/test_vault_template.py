@@ -67,7 +67,15 @@ pb = role["PermissionsBoundary"]["Fn::If"]
 check(pb[0] == "OneStack" and pb[1] == {"Ref": "VaultBoundary"} and "sws-vault-${VaultId}-boundary" in str(pb[2]), "role boundary in both modes")
 check(R["VaultBoundary"].get("Condition") == "OneStack", "in-stack boundary only in one-stack mode")
 check(R["VaultBoundary"]["Properties"]["ManagedPolicyName"] == {"Fn::Sub": "sws-vault-${VaultId}-boundary"}, "boundary name")
-check(v["Parameters"]["DeployPageOrigin"]["AllowedPattern"].startswith("^https://") and "*" not in v["Parameters"]["DeployPageOrigin"]["AllowedPattern"].replace("[a-z0-9-]*", ""), "DeployPageOrigin pattern")
+# DeployPageOrigin: run the pattern itself. fullmatch, as a whole-value match: Python's re.match with "$" would accept
+# a trailing newline. (Which regex engine CloudFormation uses for AllowedPattern is not stated here; see note 04.)
+origin = re.compile(v["Parameters"]["DeployPageOrigin"]["AllowedPattern"])
+for o in ["https://deploy.example.com", "https://deploy.example.com:8443", "https://a.b.example.co.uk", "https://xn--bcher-kva.example"]:
+    check(origin.fullmatch(o) is not None, f"DeployPageOrigin refuses good origin {o!r}")
+for o in ["https://*.example.com", "https://example.com/x", "http://example.com", "https://example.com.", "https://localhost",
+          "https://example.com:0", "https://example.com:099", "https://192.168.0.1", "https://10.0.0.1:443", "https://example.com\n",
+          "https://Example.com", "https://example.com?x", "https://user@example.com", "", "https://"]:
+    check(origin.fullmatch(o) is None, f"DeployPageOrigin accepts bad origin {o!r}")
 for st in walk(role["Policies"]):
     if isinstance(st, dict) and "Effect" in st:
         acts = st["Action"] if isinstance(st["Action"], list) else [st["Action"]]
