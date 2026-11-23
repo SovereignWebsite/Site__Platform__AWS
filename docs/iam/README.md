@@ -10,6 +10,7 @@ Everything here is a reading of files in this repository. No AWS call was made; 
 - [vault-deploy/02-deploy-role.md](vault-deploy/02-deploy-role.md): the deploy role, the function role and the gaps IAM cannot close (draft 2).
 - [vault-deploy/03-one-button.md](vault-deploy/03-one-button.md): one button (one stack) by default, the access stack as least-privilege mode.
 - [vault-deploy/04-templates-publisher.md](vault-deploy/04-templates-publisher.md): the role that publishes Vault templates (GitHub OIDC, new files only).
+- [vault-deploy/05-killswitch-role.md](vault-deploy/05-killswitch-role.md): the Vault cost kill switch's role (one distribution, one function, never deletes).
 - [vault-deploy/vault-access.yaml](vault-deploy/vault-access.yaml): the access stack (deploy role and Vault boundary); [check_handlers.py](vault-deploy/check_handlers.py) compares it with the resource handlers.
 - [ec2-01-answer.md](ec2-01-answer.md): EC2 reads and condition keys for ec2.aws.a's design 01.
 - [review-design-04.md](review-design-04.md): on architect.aws.a's IAM reads design (boundary in the view; v3 and the read boundary).

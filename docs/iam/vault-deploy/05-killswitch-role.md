@@ -1,0 +1,24 @@
+# Vault deploy: the kill switch's role
+
+iam.aws.a, 23 Nov 2026 ~20:10 UTC, for ec2.aws.a's design 03 (docs/ec2/2026-11-23__03-vault-cost-kill-switch.md, a8696af, section 3). Draft: [killswitch-role.yaml](killswitch-role.yaml), cfn-lint 1.61.0 clean; for cloudformation.aws.a to fold into the alarm stack, and for security.aws.a to review.
+
+**ec2.aws.a's question: can the customer's own identity, running the alarm stack, create this role in both modes without widening the deploy role?** Yes. The alarm stack always runs with the customer's own identity (R-027), in one-stack and in least-privilege mode, and the deploy role's NeverAnotherStack denies it any CloudFormation action on `sws-vault-<id>-alarm`. Nothing is added to the deploy role. The one cost: in least-privilege mode, whoever adds the alarm stack needs rights to create an IAM role, so the kill switch is an administrator's opt-in there.
+
+## The role, `sws-vault-<id>-killswitch`
+
+- **Trust:** `lambda.amazonaws.com`, `aws:SourceAccount` = the account.
+- **Lever 1:** cloudfront Get, GetDistributionConfig and UpdateDistribution on exactly the Vault's distribution (parameter DistributionId).
+- **Lever 2:** lambda PutFunctionConcurrency and GetFunctionConcurrency on exactly `function:sws-vault-<id>-api` in the Vault's region (a cross-region call from us-east-1; parameter VaultRegion).
+- **Its own logs.**
+- **Denied:** DeleteFunctionConcurrency (that is restore, a person's act, section 4), every delete, function code or configuration changes, AddPermission, and every IAM, S3, Secrets Manager, EC2 and SSM action.
+
+## What IAM cannot narrow (residuals, recorded)
+
+1. **UpdateDistribution takes the whole configuration.** IAM cannot limit it to `Enabled: false`, so the role could change anything on that one distribution, its origin included. Held by the function's code: inline in the pinned template, it only flips Enabled, after checking the event (design 03 section 3). A change to the code is a template change, hashed and reviewed.
+2. **PutFunctionConcurrency takes any value.** The code sets 0; a wrong value would raise or lower the cap on that one function only.
+
+Both are bounded to one distribution and one function of one Vault, and the code is reviewable in the template. Neither reaches anything else in the account.
+
+## For boto3.aws.a (ec2.aws.a's trigger question)
+
+Whether a CloudWatch alarm can invoke a Lambda function directly as an alarm action, and which principal then appears in the function's resource policy (so the Permission can pin `aws:SourceArn` to the one alarm), decides whether the topic must exist whenever the kill switch is on.
