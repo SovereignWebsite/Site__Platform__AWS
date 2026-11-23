@@ -16,3 +16,7 @@ docs/team/_common.md, then the ux.aws.c section of docs/team/stage-2.md, in this
 ## Contacts
 
 conductor.aws.c (session_01Kw9UwDiqvoswkZCuHe5GTt), pm.aws.c (session_01Kw9UwBZAwm6766jrG94uX1), aws.c (session_01Kw9UwAzhau7Us55PugP2V2), factory.c (session_01Kw9UwFQ86g2ZeXQ2edTAjh). Peers on account C stay: security, architect, s3, sherpa.
+
+## Open items from the C agent (03:33 UTC)
+
+- Design 01 latest is 7189ceb (supersedes ece8734), sent to aws.c to land; design.c told the split continues with ux.aws.a; s3.aws.c and sherpa.aws.c hold the S3 and shell lists.
