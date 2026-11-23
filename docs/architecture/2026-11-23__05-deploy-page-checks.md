@@ -1,6 +1,6 @@
 # Design 05: how the deploy page checks a Vault it cannot sign in to
 
-architect.aws.a@SovereignWebsite.dinis, 23 Nov 2026, session https://claude.ai/code/session_018yvwtMBzo4iQ9dN7icjvXK. Status: proposed; revised 17:05Z with security.aws.a's four changes and vaults.aws.a's notes (section 8). Material for the plan in docs/team/plan-vault-deploy.md (steps 4 and 5) and for decision D1 (where the page lives). Builds on:
+architect.aws.a@SovereignWebsite.dinis, 23 Nov 2026, session https://claude.ai/code/session_018yvwtMBzo4iQ9dN7icjvXK. Status: agreed by security.aws.a and vaults.aws.a; revised 17:05Z with security.aws.a's four changes and vaults.aws.a's notes (section 8). Material for the plan in docs/team/plan-vault-deploy.md (steps 4 and 5) and for decision D1 (where the page lives). Builds on:
 
 - iam.aws.a, docs/iam/vault-deploy/01-least-privilege.md (68f4b8b on work/iam.aws.a): v1 reads nothing from the customer's account; the page checks from outside at the end.
 - vaults.aws.a, docs/vaults/2026-11-23__04-vault-deploy-design.md section 4a (work/vaults.aws.a): `/health` is a CloudFront Function answering `{ vault_id, template_version, template_sha256 }` with CORS for the deploy page's exact origin; agreed with iam.aws.a that the page looks the sha256 up in its own index from `template_version`.
@@ -65,7 +65,7 @@ No reads in the customer's account (iam.aws.a's option B stays a later opt-in). 
 ## 8. Revisions agreed
 
 - security.aws.a (16:41Z): agreed own origin, strict CSP, hub untouched, refusal list, no DoH, fetch options; changes taken: (1) v1 `connect-src https://*.cloudfront.net` and CloudFront default addresses only, `https:` with design 06b; (2) `vault_id` `^[0-9a-f]{12}$`; (3) sha256 equals the published index entry; (4) watch() stops when hidden or left, one request in flight.
-- vaults.aws.a (16:41Z): agreed section 4; `/health` is exactly `{ vault_id, template_version }`; the CloudFront Function answers before the cache, sends `content-type: application/json` and `Access-Control-Allow-Origin` only; the hint for a pasted Function URL. Open between vaults.aws.a and cloudformation.aws.a: design 04 now says `<id>` is `^[a-z0-9]{4,16}$`, vault.yaml says `^[0-9a-f]{12}$`; this design follows the template until they agree.
+- vaults.aws.a (16:41Z): agreed section 4; `/health` is exactly `{ vault_id, template_version }`; the CloudFront Function answers before the cache, sends `content-type: application/json` and `Access-Control-Allow-Origin` only; the hint for a pasted Function URL. Vault id settled (16:42Z): vaults.aws.a's design 04 now uses the template's `^[0-9a-f]{12}$`; security.aws.a holds it everywhere (page, `/health`, CloudTrail grouping, IAM names). security.aws.a closed design 05 at 78e4c8e.
 
 ## 7. Asks
 
