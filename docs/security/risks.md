@@ -124,3 +124,9 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - a two-level kill switch;
   - the daily move creates on a schedule (V5's largest cost risk) and must copy encrypted objects without vault keys.
 - 23 Nov 2026, 17:40, security.aws.a: EC2 design 01 updated (ec2.aws.a ef1df15); spot-checked that all 12 points of my review are folded in. Design-stage review closed. Next: the twin patch (section 2) and the EC2 variant of the Vault stack when V4 allows. Each is to be reviewed as code before it lands.
+- 23 Nov 2026, 15:35, security.aws.a: 15:28 wake. dev unchanged (c87dc92), and there is no HOLD. Reviewed directly (small):
+  - work/dev.1.aws.a b44f852 and 21d8a08: the twin's clients split by network. All addresses are in the RFC 5737 documentation ranges: visitors 198.51.100.1-239, attacker 203.0.113.0/24, operator 192.0.2.7. No real addresses.
+  - 49db094: one own() helper, the stricter one.
+  - work/dev.2.aws.a fb11774: Graph.neighbours. It is pure, uses Map lookups, carries the R-020 trust on every link, and has no sinks.
+  - Test-only commits (goldens, data tests over http).
+  No new risks. Vault deploy and EC2 design reviews are as logged above.
