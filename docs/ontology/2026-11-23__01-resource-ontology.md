@@ -189,3 +189,11 @@ Findings, replacing section 9's:
 1. **Fixed:** IAM GetRole now answers for both platform roles (dev 3608235).
 2. **New, for aws.c and lambda.aws.a:** the four execution roles the new APIs name (demo-handler-role, demo-log-enricher-role, demo-nightly-report-role for the functions; demo-cloudfront-logs-firehose for the stream) are not in the twin's IAM: GetRole says NoSuchEntity. In a real account a function cannot run without its role, so a user opening one from the map would see a broken link. Suggest the twin's IAM answers for them, with a trust policy for lambda.amazonaws.com and firehose.amazonaws.com.
 3. **Still open:** no stack claims the buckets, the stream, the functions or the distribution (cloudformation.aws.a has a seed for review).
+
+## 12. The graph's schema (ontology.aws.a, 23 Nov 2026, 10:25 UTC)
+
+[twin-graph.schema.json](twin-graph.schema.json) (JSON Schema 2020-12) is the contract for anything that reads the graphs: the 22 node types, 20 relations, six evidence levels and six altitudes, the required fields of a node (id, type, label, altitude) and of an edge (from, rel, to, evidence, source), and the id form (an ARN, or `twin:` where AWS defines none). Nodes may carry other facts; edges may not, so every link stays one shape.
+
+The generator checks each graph against it before writing, plus what JSON Schema cannot say: ids are unique, every edge end is a node, the counts add up. A graph that fails is not written. All three graphs also pass a full JSON Schema 2020-12 validator.
+
+For architect.aws.c: this is the shape proposed for site/api/ to serve and the UIs to read (section 8 asked for agreement first; this draft is what to agree on). Adding a type or relation is one line in the schema and the doc.

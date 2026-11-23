@@ -380,6 +380,30 @@ const graph = {
   evidence_levels: ["api", "template", "content", "naming", "comment", "curated"],
   counts, nodes: nodeList, edges: edgeList,
 };
+// Check the graph against twin-graph.schema.json (its enums, required fields and id form) and the rules a
+// schema cannot state: unique ids, every edge end a node, counts that add up. A failure stops the write.
+function validate(g) {
+  const S = JSON.parse(readFileSync(join(HERE, "twin-graph.schema.json"), "utf8")).$defs, errs = [];
+  const idRe = new RegExp(S.node.properties.id.pattern), seen = new Set();
+  for (const n of g.nodes) {
+    for (const k of S.node.required) if (!(k in n)) errs.push("node " + n.id + ": missing " + k);
+    if (!idRe.test(n.id)) errs.push("node " + n.id + ": id is neither an ARN nor twin:");
+    if (seen.has(n.id)) errs.push("node " + n.id + ": duplicate id"); seen.add(n.id);
+    if (!S.node_type.enum.includes(n.type)) errs.push("node " + n.id + ": unknown type " + n.type);
+    if (!S.altitude.enum.includes(n.altitude)) errs.push("node " + n.id + ": unknown altitude " + n.altitude);
+  }
+  for (const e of g.edges) {
+    for (const k of S.edge.required) if (!(k in e)) errs.push("edge " + e.from + " " + e.rel + ": missing " + k);
+    for (const k of Object.keys(e)) if (!(k in S.edge.properties)) errs.push("edge " + e.from + " " + e.rel + ": unexpected field " + k);
+    if (!S.relation.enum.includes(e.rel)) errs.push("edge " + e.from + ": unknown relation " + e.rel);
+    if (!S.evidence.enum.includes(e.evidence)) errs.push("edge " + e.from + " " + e.rel + ": unknown evidence " + e.evidence);
+    for (const end of [e.from, e.to]) if (!seen.has(end)) errs.push("edge " + e.from + " " + e.rel + " " + e.to + ": no node " + end);
+  }
+  if (g.counts.nodes !== g.nodes.length || g.counts.edges !== g.edges.length) errs.push("counts do not match");
+  return errs;
+}
+const problems = validate(graph);
+if (problems.length) { console.error(OUT.slice(HERE.length + 1) + " fails twin-graph.schema.json:\n  " + problems.join("\n  ")); process.exit(1); }
 const out = JSON.stringify(graph, null, 1) + "\n";
 if (args.has("--stdout")) process.stdout.write(out);
 else if (args.has("--check")) {
