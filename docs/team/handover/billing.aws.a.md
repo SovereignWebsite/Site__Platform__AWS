@@ -46,6 +46,8 @@ Dinis asked (14:55 UTC) for Vault deploys into customers' AWS accounts and for e
 - viz.aws.a storyboard 02 "watch a Vault deploy" (work/viz.aws.a 4ca25a3) wants an hourly "cost so far" during a deployment: give the script a per-hour series (fixed costs at the hour they are incurred, per-use costs accruing) that viz can read.
 - Output: a script beside forecast.mjs (for example docs/billing/vault-cost.mjs) with tests, giving cost per region per hour and per month, idle and under a stated traffic, as JSON for D5's decision page.
 
+- Denial-of-wallet flood (pm.aws.a for iam.aws.a, 14:58 UTC): docs/billing/flood.mjs gives one hour at the reserved-concurrency cap. Next: price CloudWatch Logs ingestion (at millions of short requests it can be the largest line) and data transfer out, confirm on the Lambda page that throttled requests are not billed, then rerun with the stack's real memory, duration and concurrency default.
+
 ## Next steps
 
 1. New key and Factory commit (above); once live, merge dev, dry-run the signer check, push own paths to dev.
