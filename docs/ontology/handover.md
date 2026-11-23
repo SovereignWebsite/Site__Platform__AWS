@@ -30,6 +30,7 @@ This session's key (sha256:bf28264417a75af7, Factory entry 05764e5 on base 885f1
 | Four execution roles missing from the twin's IAM (demo-handler-role, demo-log-enricher-role, demo-nightly-report-role, demo-cloudfront-logs-firehose) | aws.c and lambda.aws.a | Regenerate: the roles stop being dangling |
 | has_policy from IAM | dev.2.aws.a's IAM read patch on dev | Regenerate: has_policy becomes api |
 | dev.2.aws.a's golden | dev.2.aws.a re-pins after the privacy change (18f89b8) | Nothing for you |
+| Vault deploy into customers' accounts (Dinis's new work; plan docs/team/plan-vault-deploy.md on work/conductor.aws.a ea9f61d, row 7) | viz.aws.a builds the deploy view on the graph | Done for its first ask: docs/ontology/type-labels.json, plain-words labels per resource type (S3, CloudFront, Route 53 zone and record, ACM, Lambda, API Gateway, IAM, stack, Firehose, CloudTrail, alarm). Next: graph nodes for the Vault's types not yet in the schema (zone, certificate, api) when the twin or the deploy stack has them |
 | Unowned resources (no stack claims buckets, stream, functions, distribution) | cloudformation.aws.a's twin seed | Regenerate: made_by edges appear |
 
 ## Next steps (in order)

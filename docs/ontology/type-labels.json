@@ -1,0 +1,19 @@
+{
+ "about": "Plain-words labels for AWS resource types, for UIs that show a resource to someone who does not know AWS (viz.aws.a's storyboard 02, the Vault deploy). Keyed by CloudFormation type; graph node types map through cfn_type. label: what it is for a person; short: two or three words for a small box; aws: the AWS name, shown second. By ontology.aws.a@SovereignWebsite.dinis, 23 Nov 2026. Plain British English; to change a label, change it here so every view agrees.",
+ "types": {
+  "AWS::S3::Bucket": { "label": "Store for the site's files", "short": "File store", "aws": "S3 bucket", "node_type": "bucket" },
+  "AWS::CloudFront::Distribution": { "label": "Front door that serves the site to visitors, fast, from near them", "short": "Front door", "aws": "CloudFront distribution", "node_type": "distribution" },
+  "AWS::Route53::HostedZone": { "label": "Address book for a domain", "short": "Address book", "aws": "Route 53 hosted zone", "node_type": "zone" },
+  "AWS::Route53::RecordSet": { "label": "One entry in the address book: sends a web address to the front door", "short": "Web address", "aws": "Route 53 record", "node_type": "record" },
+  "AWS::CertificateManager::Certificate": { "label": "Padlock certificate, so the address opens over HTTPS", "short": "Padlock", "aws": "ACM certificate", "node_type": "certificate" },
+  "AWS::Lambda::Function": { "label": "Small program that runs only when asked", "short": "Program", "aws": "Lambda function", "node_type": "function" },
+  "AWS::ApiGateway::RestApi": { "label": "Entrance for the vault's requests, passed on to its programs", "short": "API entrance", "aws": "API Gateway REST API", "node_type": "api" },
+  "AWS::ApiGatewayV2::Api": { "label": "Entrance for the vault's requests, passed on to its programs", "short": "API entrance", "aws": "API Gateway HTTP API", "node_type": "api" },
+  "AWS::IAM::Role": { "label": "Permission badge a service wears to do its job", "short": "Permission badge", "aws": "IAM role", "node_type": "role" },
+  "AWS::IAM::ManagedPolicy": { "label": "List of what a badge allows", "short": "Permission list", "aws": "IAM policy", "node_type": "policy" },
+  "AWS::CloudFormation::Stack": { "label": "Recipe that built these resources, and can change or remove them together", "short": "Recipe", "aws": "CloudFormation stack", "node_type": "stack" },
+  "AWS::KinesisFirehose::DeliveryStream": { "label": "Conveyor that carries visit logs into the log store", "short": "Log conveyor", "aws": "Firehose delivery stream", "node_type": "stream" },
+  "AWS::CloudTrail::Trail": { "label": "Diary of every change made in the account", "short": "Change diary", "aws": "CloudTrail trail", "node_type": "trail" },
+  "AWS::CloudWatch::Alarm": { "label": "Alarm that rings when something crosses a line", "short": "Alarm", "aws": "CloudWatch alarm", "node_type": "alarm" }
+ }
+}
