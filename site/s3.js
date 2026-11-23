@@ -469,10 +469,10 @@
       /^AccessDenied|not authorized/i.test(m) ? "S3 refused the read role here: it may not read this bucket, folder or file. Nothing was changed." :
       /^NoSuchKey/.test(m) ? "This file is no longer in the bucket (moved or deleted since the folder was listed). Refresh the folder." :
       /^NoSuchBucket/.test(m) ? "This bucket no longer exists." :
-      /ExpiredToken|InvalidToken|TokenRefreshRequired|RequestExpired|Sign in with Google/.test(m) ? "The session ran out. Sign in again, then Retry." :
+      /ExpiredToken|InvalidToken|TokenRefreshRequired|RequestExpired|Sign in with Google/.test(m) ? (window.AwsTransport && AwsTransport.isTwin() ? "The session ran out." : "The session ran out. Sign in again at the top of the page, then Retry.") :
       /PermanentRedirect|AuthorizationHeaderMalformed|^HTTP 301/.test(m) ? "The bucket answers in another region than the one asked" + (region ? " (" + region + ")" : "") + "." :
       /Failed to fetch|NetworkError|Load failed/.test(m) ? "S3 did not answer the browser: this device is offline, or the bucket's CORS rule does not allow this site" + (region ? " (region " + region + ")" : "") + "." :
-      /SlowDown|ServiceUnavailable|InternalError|^HTTP 5\d\d/.test(m) ? "S3 is busy or failed for a moment. Retry." : "";
+      /SlowDown|ServiceUnavailable|InternalError|^HTTP 5\d\d/.test(m) ? "S3 is busy or failed for a moment. Try again in a moment." : "";
     return why ? why + " (" + m + ")" : m;
   }
   // Say what went wrong in the status line; with a retry, a button that tries the same step again.
