@@ -85,6 +85,14 @@ code = code["Fn::Sub"] if isinstance(code, dict) else code
 check('"access-control-allow-origin": { value: "${DeployPageOrigin}" }' in code, "health CORS origin")
 check('value: "*"' not in code, "health CORS *")
 
+# Public invoke only through the URL: InvokeFunctionUrl with auth NONE, InvokeFunction only via the URL.
+for n, r in R.items():
+    if r["Type"] == "AWS::Lambda::Permission" and r["Properties"].get("Principal") == "*":
+        pr = r["Properties"]
+        ok = (pr["Action"] == "lambda:InvokeFunctionUrl" and pr.get("FunctionUrlAuthType") == "NONE") or \
+             (pr["Action"] == "lambda:InvokeFunction" and pr.get("InvokedViaFunctionUrl") is True)
+        check(ok, f"{n}: public {pr['Action']} not limited to the Function URL")
+
 # The token secret is always this stack's own (no bring-your-own ARN in v1, security.aws.a).
 check("AccessTokenSecretArn" not in v["Parameters"], "bring-your-own token secret present")
 check("Condition" not in R["AccessToken"], "AccessToken is conditional")
@@ -98,4 +106,4 @@ check("OnlyInUsEast1" in e["Rules"], "edge us-east-1 rule")
 
 if fails:
     print("FAIL\n  " + "\n  ".join(fails)); sys.exit(1)
-print("OK (vault templates: caching off, Retain, names, boundary, no wildcards, trust, bucket policy, DNS order, CORS, own token secret, outputs)")
+print("OK (vault templates: caching off, Retain, names, boundary, no wildcards, trust, bucket policy, DNS order, CORS, own token secret, public invoke via URL only, outputs)")

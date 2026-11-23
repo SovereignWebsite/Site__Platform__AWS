@@ -3,12 +3,12 @@ Description: >-
   One SG/Send Vault (the Secure Send S3 API) in this account and region, stack sws-vault-<id>: an S3 bucket for the
   vault store, the server as a Lambda behind a Function URL, CloudFront in front (with /health for the deploy page),
   and optionally the customer's own domain. Run with RoleARN = the deploy role of stack sws-vault-<id>-access
-  (iam.aws.a, step 3). DRAFT 0.3.2 by cloudformation.aws.a, 23 Nov 2026. Not for use on a real account: see
+  (iam.aws.a, step 3). DRAFT 0.3.3 by cloudformation.aws.a, 23 Nov 2026. Not for use on a real account: see
   docs/cloudformation/2026-11-23__vault-stack-03.md.
 
 Metadata:
   SovereignWebsite:
-    TemplateVersion: 0.3.2-draft
+    TemplateVersion: 0.3.3-draft
     Pinning: served only as an immutable, versioned object whose sha256 the deploy page shows next to the button.
     CreatesNoRoleForUs: true
   AWS::CloudFormation::Interface:
@@ -219,6 +219,16 @@ Resources:
       Principal: "*"
       FunctionUrlAuthType: NONE
 
+  # Function URLs created from October 2025 also need lambda:InvokeFunction (AWS Lambda guide, urls-auth, read by
+  # boto3.aws.a). InvokedViaFunctionUrl limits it to calls through the URL, so it never opens the Invoke API to "*".
+  VaultFunctionInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref VaultFunction
+      Action: lambda:InvokeFunction
+      Principal: "*"
+      InvokedViaFunctionUrl: true
+
   # ---- /health for the deploy page (vaults.aws.a design 04, 4a): fixed JSON, CORS for the deploy page only ----
   HealthFunction:
     Type: AWS::CloudFront::Function
@@ -241,7 +251,7 @@ Resources:
           if (event.request.method === "OPTIONS") return { statusCode: 204, statusDescription: "No Content", headers: h };
           if (event.request.method !== "GET") return { statusCode: 405, statusDescription: "Method Not Allowed", headers: h };
           return { statusCode: 200, statusDescription: "OK", headers: h,
-            body: { encoding: "text", data: JSON.stringify({ vault_id: "${VaultId}", template_version: "0.3.2-draft" }) } };
+            body: { encoding: "text", data: JSON.stringify({ vault_id: "${VaultId}", template_version: "0.3.3-draft" }) } };
         }
 
   # ---- CloudFront in front, from phase 1 ----
@@ -335,4 +345,4 @@ Outputs:
   Region:
     Value: !Ref AWS::Region
   TemplateVersion:
-    Value: 0.3.2-draft
+    Value: 0.3.3-draft
