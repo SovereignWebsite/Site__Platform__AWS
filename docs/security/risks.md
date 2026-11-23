@@ -140,3 +140,8 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
 - 23 Nov 2026, 16:45, security.aws.a: two more re-signed landings, both on dev c87dc92. Signatures verify against the bundle in each commit, the iac files rebuild to their stated sha, and only the agent's own paths are touched.
   - work/architect.aws.a.s2 5f464a8 + d1c1a42 (key sha256:de99a9493fff045a, Factory cf41638): designs 02, 03 and 04. docs/architecture is byte-identical to 90ddd61, and design 03 already answers R-020 (11:50 entry above). The only other change is the from-a note. Agree; no new risks.
   - land/lambda.aws.a.2 e8b9004 (key sha256:d61b0521abb04503, Factory 360fc72): the same tree as land/lambda.aws.a 1ba8d23 outside the key files and from-a note. The twin patch inside it was reviewed with lambda.aws.a's twin fixes (14:45 entry above). No new risks.
+- 23 Nov 2026, 16:50, security.aws.a: land/boto3.aws.a e3afc21 (six commits on dev c87dc92, key sha256:e92a055e826dad40, Factory b0c5231). All six signatures verify against the bundle, the iac file rebuilds, only the agent's own paths are touched, and the content matches work/boto3.aws.a. Notes 03 to 07 are docs only.
+  - The twin max-keys patch is a proposal and not applied. It echoes the refused value through esc() and caps the page at 1000. A very long digit string becomes Infinity, which the cap still holds.
+  - The ListFunctions subset patch only removes fields. Fine as twin code.
+  - Both patches also touch test/**, which needs Dinis's yes when aws.c applies them.
+  - No new risks.
