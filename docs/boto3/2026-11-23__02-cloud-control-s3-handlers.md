@@ -65,3 +65,15 @@ It is a snapshot: AWS adds actions to these lists as S3 grows (this one already 
 - Which buckets the hub may see (map section 4 item 2): unchanged, for Dinis through pm.aws.c once iam.aws.a has looked.
 - Twin fixes Q1 to Q4 (map section 3): patches to site/twin.js for aws.c and architect.aws.c, next wake.
 - The action-name check in point 1, against the Service Authorization Reference for S3.
+
+## Addendum, 23 Nov 2026 16:50 UTC: the three recent action names, checked
+
+The caveat above asked for the recent names in the narrowed read policy to be checked against the Service Authorization Reference (SAR) for S3 before it becomes a plan. All 30 action names in this note were compared with the SAR's actions table (https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazons3.html) and botocore's S3 model (s3 2006-03-01), both read 23 Nov 2026:
+
+| Action | SAR | botocore operation | Verdict |
+|---|---|---|---|
+| `s3:GetBucketAbac` | listed ("retrieve ABAC configuration for a general purpose bucket") | `GetBucketAbac` | Confirmed |
+| `s3:GetBucketMetadataTableConfiguration` | listed ("return the S3 Metadata configuration for a specified general purpose bucket") | `GetBucketMetadataTableConfiguration` | Confirmed |
+| `s3:GetBucketDefaultStorageClass` | **not listed** | **no such operation** | To confirm |
+
+The other 27 names are in the SAR (`s3:Get*` and `s3:List*` in section 2 are wildcards, not names). `s3:GetBucketDefaultStorageClass` is in the AWS::S3::Bucket read handler of the cfn-lint 1.61.0 schema, but neither the SAR nor botocore knows it, and its API reference page has no content. It may be an action AWS has not yet published, or a schema slip. Keep it in the narrowed policy (a name that is not an action matches no call, so it cannot widen anything), and treat a Cloud Control read that fails with AccessDenied on it as the sign to look again. Not a blocker for the read plan.
