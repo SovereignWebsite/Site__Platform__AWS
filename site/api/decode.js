@@ -6,8 +6,8 @@
 //   Decode.gunzip(bytes, { maxBytes })          -> Promise<{ bytes, packed, unpacked, truncated: { bytes } }>
 //   Decode.text(bytes)                          -> string (UTF-8, a leading BOM dropped)
 //   Decode.json(text)                           -> value; throws an Error with .line and .column
-//   Decode.jsonLines(text, { max, maxBytes })   -> table
-//   Decode.csv(text, { max, maxBytes, delimiter }) -> table   (RFC 4180)
+//   Decode.jsonLines(text, { max, maxBytes, partial }) -> table
+//   Decode.csv(text, { max, maxBytes, partial, delimiter }) -> table   (RFC 4180)
 //   Decode.table(value, { max })                -> table   (an array of objects, or CloudTrail's { Records })
 //
 //   table = { columns: [{ name, hint: "number" | "time" | "text" }], rows: [[...]], errors: [{ line, message }],
@@ -18,8 +18,8 @@
 // max rows (default 50 000) and a byte cap (default 50 MB, unpacked). At either, gunzip, jsonLines and csv stop
 // and return what they have, with truncated saying which, so a page can say "showing the first 50 MB";
 // rowsRead counts the input rows looked at (good and bad). json() cannot be partial: over the cap it throws an
-// Error with .code "TooLarge". gunzip cut at the cap may end mid-line; a table read from it reports that last
-// line as an error. Values are returned as they are: never evaluated, never turned into HTML.
+// Error with .code "TooLarge". gunzip cut at the cap may end mid-line: pass { partial: gunzip's truncated.bytes }
+// and the last line is dropped as cut (truncated.bytes set), not reported as an error. Values are returned as they are: never evaluated, never turned into HTML.
 (function (root) {
   "use strict";
   var MAX_ROWS = 50000, MAX_BYTES = 50 * 1024 * 1024, SAMPLE = 65536;
@@ -35,11 +35,13 @@
   }
   function capText(s, max) { capBytes(s.length, max); } // UTF-16 units: a lower bound on the UTF-8 size, close enough for a cap
   // Text over the cap: keep what fits, up to its last whole line.
-  function cut(s, max) {
+  // With partial (the text was already cut, for example by gunzip's cap), the last line is cut too, whatever its
+  // length: dropped, not reported as bad data.
+  function cut(s, max, partial) {
     max = max || MAX_BYTES;
-    if (s.length <= max) return { text: s, cut: false };
-    var part = s.slice(0, max), nl = part.lastIndexOf("\n");
-    return { text: nl >= 0 ? part.slice(0, nl + 1) : part, cut: true };
+    if (s.length <= max && !partial) return { text: s, cut: false };
+    var part = s.length > max ? s.slice(0, max) : s, nl = part.lastIndexOf("\n");
+    return { text: nl >= 0 ? part.slice(0, nl + 1) : "", cut: true };
   }
 
   function text(bytes) {
@@ -171,7 +173,7 @@
 
   function jsonLines(s, opts) {
     opts = opts || {};
-    var c = cut(s, opts.maxBytes), max = opts.max || MAX_ROWS, values = [], errors = [], read = 0, truncRows = false, lines = c.text.split("\n");
+    var c = cut(s, opts.maxBytes, opts.partial), max = opts.max || MAX_ROWS, values = [], errors = [], read = 0, truncRows = false, lines = c.text.split("\n");
     for (var i = 0; i < lines.length; i++) {
       var l = lines[i].replace(/\r$/, "");
       if (!l.trim()) continue;
@@ -187,7 +189,7 @@
   function csv(s, opts) {
     opts = opts || {};
     if (s.charCodeAt(0) === 0xfeff) s = s.slice(1);
-    var c = cut(s, opts.maxBytes); s = c.text;
+    var c = cut(s, opts.maxBytes, opts.partial); s = c.text;
     var d = opts.delimiter || ",", max = opts.max || MAX_ROWS;
     var records = [], errors = [], field = "", rec = [], quoted = false, line = 1, start = 1, i = 0, n = s.length, truncRows = false;
     function endField() { rec.push(field); field = ""; }

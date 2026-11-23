@@ -122,6 +122,18 @@ await test("limits: json() over the cap throws TooLarge; jsonLines and csv stop 
   assert.equal(D.limits.rows, 50000); assert.equal(D.limits.bytes, 50 * 1024 * 1024);
 });
 
+await test("partial: gunzip cut mid-line, the last line is dropped as cut, not reported as bad data", async () => {
+  const body = '{"n":1}\n'.repeat(200), g = await D.gunzip(new Uint8Array(gzipSync(body)), { maxBytes: 1003 });
+  assert.equal(g.truncated.bytes, true);
+  const noisy = D.jsonLines(D.text(g.bytes));
+  assert.equal(noisy.errors.length, 1, "without partial the cut line reads as an error");
+  const t = D.jsonLines(D.text(g.bytes), { partial: g.truncated.bytes });
+  assert.equal(t.rows.length, 125); assert.deepEqual(plain(t.errors), []); assert.equal(t.truncated.bytes, true);
+  const c = D.csv("a,b\n1,2\n3,", { partial: true });
+  assert.deepEqual(plain(c.rows), [["1", "2"]]); assert.deepEqual(plain(c.errors), []); assert.equal(c.truncated.bytes, true);
+  assert.equal(D.jsonLines('{"n":1}\n', { partial: true }).rows.length, 1, "a whole last line is kept");
+});
+
 await test("column hints from the first 200 rows: number, time, text", () => {
   const t = D.csv("n,t,s,mixed,empty\n1,2026-11-22T10:01:02Z,a,1,\n2.5,2026-11-22,b,x,\n-3e2,2026-11-22 10:01:02.123+01:00,c,2,\n");
   assert.deepEqual(plain(t.columns.map((c) => c.hint)), ["number", "time", "text", "text", "text"]);
