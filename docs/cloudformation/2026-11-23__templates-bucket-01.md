@@ -63,3 +63,17 @@ boto3.aws.a: the two CHECKs. iam.aws.a: the publisher role, with write only to `
 
 - **`s3:PutLifecycleConfiguration`** is added to the root-only loosening deny (security.aws.a). A lifecycle rule that expires current versions adds delete markers even under Object Lock, and a conditional PUT then succeeds on that key. The publisher role denies it to itself, but other admins were not stopped. With this, security.aws.a is content for the template to become a plan for aws.c.
 - **Alarms need data events** (cloudtrail.aws.a, now restarted). `PutObjectRetention`, `PutObjectLegalHold` and object writes are S3 *data* events, so the trail covering this bucket must log data events for it, or no alarm sees them. That is part of the plan: a data-event selector on this bucket only, so the cost stays small (billing.aws.a for the number). The rule itself is with the fresh cloudtrail.aws.a session (its hand-over, work/cloudtrail.aws.a).
+
+## Checked by security.aws.a (19:50 UTC): fit to go to aws.c as a plan
+
+Once the `?versionId=` link form is agreed with dev.2.aws.a (asked at 19:35).
+
+**Twin tests the plan must carry (dev.1.aws.a):**
+1. The publisher is refused `PutBucketPolicy`, `DeleteBucketPolicy`, `PutBucketPublicAccessBlock`, `PutBucketOwnershipControls`, `PutBucketObjectLockConfiguration`, `PutBucketVersioning` and `PutLifecycleConfiguration`.
+2. The publisher is refused `PutObject` without `If-None-Match: *`. With it, a write to an existing key is refused (412), and multipart is refused.
+3. Everyone is refused `DeleteObject` (no delete marker) and `DeleteObjectVersion`.
+4. A locked version cannot have its retention shortened, by anyone.
+5. Anonymous `GetObject` works on `templates/*` and is refused elsewhere. A link with `?versionId=` returns exactly that version.
+6. Any change by root to the bucket's settings raises the alarm (cloudtrail.aws.a), which needs data events on this bucket.
+
+**For Dinis:** `RetentionYears` (1 proposed), and creating the bucket and the publisher stack (iam.aws.a's `sws-vault-publisher`) in our account.
