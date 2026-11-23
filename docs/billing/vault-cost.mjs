@@ -79,8 +79,16 @@ export function vaultCost({ region = "eu-west-2", hours = 720, monthHours = 720,
     totals: { fixed: sum("fixed"), per_use: sum("per_use"), total: sum("fixed") + sum("per_use") },
     lines: Object.values(lines), series,
     prices_version: book.retrieved, basis: "list prices before free tiers, credits and tax",
+    not_priced: NOT_PRICED, total_is_lower_bound: true,
   };
 }
+
+// Lines this Vault may incur that prices.json cannot price yet: unknown, never $0. The total is a lower bound until each is priced.
+export const NOT_PRICED = [
+  { id: "ecr.image", cost: null, why: "Amazon ECR storage and transfer for the Lambda image: not read yet; depends on which account holds the image." },
+  { id: "cloudwatch.logs.lambda_vended_tiers", cost: null, why: "Whether Lambda's own logs use the vended-log tiers instead of Standard ingestion: still to read. Standard is used, as the higher rate." },
+  { id: "cloudfront.transfer_out.past_free_tb", cost: null, why: "The first 1 TB a month is $0 per account; an account already past it pays the next tier on this Vault's bytes. Not modelled." },
+];
 
 export const assumptions = [
   "Before free tiers: a cost cap should not count on them, and the customer's account may already use them.",
@@ -108,7 +116,7 @@ export function report() {
       ephemeral_2h_stated_traffic: vaultCost({ region, hours: 2, traffic: STATED }).totals,
     };
   }
-  return { stated_traffic: STATED, assumptions, by_region: out };
+  return { stated_traffic: STATED, assumptions, not_priced: NOT_PRICED, totals_are_lower_bounds: true, by_region: out };
 }
 
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
@@ -122,5 +130,6 @@ if (isMain) {
     console.log("\n" + region + " (" + book.regions[region] + ")");
     for (const [k, v] of Object.entries(x)) console.log("  " + k.padEnd(28) + " fixed " + $(v.fixed).padStart(9) + "  per use " + $(v.per_use).padStart(9) + "  total " + $(v.total));
   }
+  console.log("\nNot priced (unknown, not $0; totals are lower bounds):\n- " + NOT_PRICED.map((n) => n.why).join("\n- "));
   console.log("\nAssumptions:\n- " + assumptions.join("\n- "));
 }
