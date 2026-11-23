@@ -967,6 +967,110 @@
       return xmlErr("InvalidAction", "Not in the twin yet: cloudformation " + A);
     });
   }
+  // ---- CloudFront reads (architect.aws.a's design 06, section 4; boto3.aws.a's note 18 for the API's shape) ----
+  // One global endpoint, REST with XML answers: ListDistributions (GET /2020-05-31/distribution), GetDistribution
+  // (GET /2020-05-31/distribution/<id>) and ListFunctions (GET /2020-05-31/function), each from the caller's account's
+  // world. The platform account has the demo site's distribution; a customer account has each Vault stack's, from
+  // when its create settles until its delete settles, with the Function URL origin and the -health function on
+  // viewer-request for /health (as vault.yaml's VaultDistribution and HealthFunction). Members given are the ones a
+  // reader needs, not every required member of AWS's shapes. The twin's own choices, where AWS's documentation does
+  // not say: MaxItems from 1 to 1000 (default 100), the next item's key as NextMarker, the error wording, and
+  // ListFunctions without Stage listing both stages of a published function.
+  var CF_NS = " xmlns=\"http://cloudfront.amazonaws.com/doc/2020-05-31/\"";
+  function cfErr(code, msg, status) { return xml("<?xml version=\"1.0\"?><ErrorResponse" + CF_NS + "><Error><Type>Sender</Type><Code>" + code + "</Code><Message>" + esc(msg) + "</Message></Error><RequestId>twin</RequestId></ErrorResponse>", status || 400); }
+  function cfDistributions(s, account) {
+    if (account === ACCOUNT) return [{ id: "EDEMOTWIN00001", domain: "d111111abcdef8.cloudfront.net", aliases: ["www.example.com"], status: "Deployed", enabled: true,
+      modified: "2026-11-18T14:20:30.000Z", comment: "demo-site", priceClass: "PriceClass_100", httpVersion: "http2", defaultRoot: "index.html",
+      origins: [{ id: "demo-site", domain: B.site + ".s3." + REGION + ".amazonaws.com", s3: true }], behaviours: [] }];
+    var acc = s.accounts[account], out = [];
+    if (!acc) return out;
+    Object.keys(acc.stacks).forEach(function (k) {
+      var st = acc.stacks[k], r = st.kind === "vault" && st.resources.VaultDistribution;
+      if (!r || !(r.status === "CREATE_COMPLETE" || r.status === "DELETE_IN_PROGRESS" || r.status === "DELETE_FAILED")) return;
+      var done = r.status === "CREATE_COMPLETE", p = st.params;
+      out.push({ id: st.ids.distribution, domain: st.ids.cfDomain, aliases: p.DomainName ? [p.DomainName] : [], status: done ? "Deployed" : "InProgress", enabled: done,
+        modified: r.t, comment: "sws-vault-" + p.VaultId, priceClass: "PriceClass_100", httpVersion: "http2and3", defaultRoot: "", webAcl: p.WebAclArn || "",
+        origins: [{ id: "vault-api", domain: st.ids.url + ".lambda-url." + st.region + ".on.aws", s3: false }],
+        behaviours: [{ path: "/health", fn: physicalOf(st, "HealthFunction"), event: "viewer-request" }] });
+    });
+    return out;
+  }
+  function cfFunctions(s, account) {
+    var acc = account !== ACCOUNT && s.accounts[account], out = [];
+    if (!acc) return out;
+    Object.keys(acc.stacks).forEach(function (k) {
+      var st = acc.stacks[k], r = st.kind === "vault" && st.resources.HealthFunction;
+      if (!r || !(r.status === "CREATE_COMPLETE" || r.status === "DELETE_IN_PROGRESS" || r.status === "DELETE_FAILED")) return;
+      var d = st.resources.VaultDistribution, live = d && (d.status === "CREATE_COMPLETE" || d.status === "DELETE_IN_PROGRESS");
+      ["DEVELOPMENT", "LIVE"].forEach(function (stage) {
+        out.push({ name: "sws-vault-" + st.params.VaultId + "-health", arn: physicalOf(st, "HealthFunction"), stage: stage, runtime: "cloudfront-js-2.0",
+          comment: "Answers /health with the Vault id and template version; never reaches the server.",
+          status: stage === "LIVE" && live ? "DEPLOYED" : "UNASSOCIATED", created: r.t, modified: r.t });
+      });
+    });
+    return out;
+  }
+  function cfPage(items, key, q) {
+    var max = q.has("MaxItems") ? q.get("MaxItems") : "100";
+    if (!/^[0-9]{1,4}$/.test(max) || +max < 1 || +max > 1000) return { err: cfErr("InvalidArgument", "MaxItems must be a whole number from 1 to 1000 (the twin's bound).") };
+    var start = 0, marker = q.get("Marker");
+    if (marker) { start = items.map(key).indexOf(marker); if (start < 0) return { err: cfErr("InvalidArgument", "The marker is not valid.") }; }
+    var page = items.slice(start, start + +max);
+    return { page: page, max: +max, marker: marker || "", next: start + +max < items.length ? key(items[start + +max]) : null };
+  }
+  function cfQty(name, inner, items) { return "<" + name + "><Quantity>" + items.length + "</Quantity>" + (items.length ? "<Items>" + items.map(inner).join("") + "</Items>" : "") + "</" + name + ">"; }
+  function cfOrigins(d) {
+    return cfQty("Origins", function (o) {
+      return "<Origin><Id>" + esc(o.id) + "</Id><DomainName>" + esc(o.domain) + "</DomainName><OriginPath></OriginPath><CustomHeaders><Quantity>0</Quantity></CustomHeaders>" +
+        (o.s3 ? "<S3OriginConfig><OriginAccessIdentity></OriginAccessIdentity></S3OriginConfig>"
+              : "<CustomOriginConfig><HTTPPort>80</HTTPPort><HTTPSPort>443</HTTPSPort><OriginProtocolPolicy>https-only</OriginProtocolPolicy><OriginSslProtocols><Quantity>1</Quantity><Items><SslProtocol>TLSv1.2</SslProtocol></Items></OriginSslProtocols></CustomOriginConfig>") + "</Origin>";
+    }, d.origins);
+  }
+  function cfFns(b) { return cfQty("FunctionAssociations", function (f) { return "<FunctionAssociation><FunctionARN>" + esc(f.fn) + "</FunctionARN><EventType>" + f.event + "</EventType></FunctionAssociation>"; }, b ? [b] : []); }
+  function cfBehaviours(d) {
+    var target = esc(d.origins[0].id);
+    return "<DefaultCacheBehavior><TargetOriginId>" + target + "</TargetOriginId><ViewerProtocolPolicy>redirect-to-https</ViewerProtocolPolicy>" + cfFns(null) + "</DefaultCacheBehavior>" +
+      cfQty("CacheBehaviors", function (b) { return "<CacheBehavior><PathPattern>" + esc(b.path) + "</PathPattern><TargetOriginId>" + target + "</TargetOriginId><ViewerProtocolPolicy>redirect-to-https</ViewerProtocolPolicy>" + cfFns(b) + "</CacheBehavior>"; }, d.behaviours);
+  }
+  function cfAliases(d) { return cfQty("Aliases", function (a) { return "<CNAME>" + esc(a) + "</CNAME>"; }, d.aliases); }
+  function cfArn(account, id) { return "arn:aws:cloudfront::" + account + ":distribution/" + id; }
+  function cloudfront(url, init, account) {
+    var s = build(), u = new URL(url), m = /^\/2020-05-31\/(distribution|function)(?:\/([^\/]+))?$/.exec(u.pathname), q = u.searchParams;
+    if (!m || (init.method || "GET").toUpperCase() !== "GET" || (m[1] === "function" && m[2] !== undefined))
+      return cfErr("NotImplemented", "The twin answers three CloudFront reads only: ListDistributions, GetDistribution and ListFunctions. Twin mode never calls real AWS.", 501);
+    if (m[1] === "function") {
+      var stage = q.get("Stage");
+      if (stage !== null && stage !== "DEVELOPMENT" && stage !== "LIVE") return cfErr("InvalidArgument", "Stage must be DEVELOPMENT or LIVE.");
+      var fns = cfFunctions(s, account).filter(function (f) { return stage === null || f.stage === stage; });
+      var fp = cfPage(fns, function (f) { return f.name + ":" + f.stage; }, q);
+      if (fp.err) return fp.err;
+      return xml("<?xml version=\"1.0\"?><FunctionList" + CF_NS + ">" + (fp.next ? "<NextMarker>" + esc(fp.next) + "</NextMarker>" : "") + "<MaxItems>" + fp.max + "</MaxItems>" +
+        "<Quantity>" + fp.page.length + "</Quantity>" + (fp.page.length ? "<Items>" + fp.page.map(function (f) {
+          return "<FunctionSummary><Name>" + esc(f.name) + "</Name><Status>" + f.status + "</Status><FunctionConfig><Comment>" + esc(f.comment) + "</Comment><Runtime>" + f.runtime + "</Runtime></FunctionConfig>" +
+            "<FunctionMetadata><FunctionARN>" + esc(f.arn) + "</FunctionARN><Stage>" + f.stage + "</Stage><CreatedTime>" + f.created + "</CreatedTime><LastModifiedTime>" + f.modified + "</LastModifiedTime></FunctionMetadata></FunctionSummary>";
+        }).join("") + "</Items>" : "") + "</FunctionList>");
+    }
+    var ds = cfDistributions(s, account);
+    if (m[2] !== undefined) {
+      var d = ds.filter(function (x) { return x.id === m[2]; })[0];
+      if (!d) return cfErr("NoSuchDistribution", "The specified distribution does not exist.", 404);
+      var r = xml("<?xml version=\"1.0\"?><Distribution" + CF_NS + "><Id>" + d.id + "</Id><ARN>" + cfArn(account, d.id) + "</ARN><Status>" + d.status + "</Status><LastModifiedTime>" + d.modified + "</LastModifiedTime>" +
+        "<InProgressInvalidationBatches>0</InProgressInvalidationBatches><DomainName>" + d.domain + "</DomainName><DistributionConfig><CallerReference>twin-" + d.id + "</CallerReference>" + cfAliases(d) +
+        "<DefaultRootObject>" + esc(d.defaultRoot) + "</DefaultRootObject>" + cfOrigins(d) + cfBehaviours(d) + "<Comment>" + esc(d.comment) + "</Comment>" +
+        "<Logging><Enabled>false</Enabled><IncludeCookies>false</IncludeCookies><Bucket></Bucket><Prefix></Prefix></Logging><PriceClass>" + d.priceClass + "</PriceClass><Enabled>" + d.enabled + "</Enabled>" +
+        "<WebACLId>" + esc(d.webAcl || "") + "</WebACLId><HttpVersion>" + d.httpVersion + "</HttpVersion></DistributionConfig></Distribution>");
+      r.headers.set("etag", "E" + d.id.slice(1, 8) + d.modified.replace(/[^0-9]/g, "").slice(0, 6));
+      return r;
+    }
+    var dp = cfPage(ds, function (x) { return x.id; }, q);
+    if (dp.err) return dp.err;
+    return xml("<?xml version=\"1.0\"?><DistributionList" + CF_NS + "><Marker>" + esc(dp.marker) + "</Marker>" + (dp.next ? "<NextMarker>" + dp.next + "</NextMarker>" : "") +
+      "<MaxItems>" + dp.max + "</MaxItems><IsTruncated>" + (dp.next ? "true" : "false") + "</IsTruncated><Quantity>" + dp.page.length + "</Quantity>" + (dp.page.length ? "<Items>" + dp.page.map(function (d) {
+        return "<DistributionSummary><Id>" + d.id + "</Id><ARN>" + cfArn(account, d.id) + "</ARN><Status>" + d.status + "</Status><LastModifiedTime>" + d.modified + "</LastModifiedTime><DomainName>" + d.domain + "</DomainName>" +
+          cfAliases(d) + cfOrigins(d) + cfBehaviours(d) + "<Comment>" + esc(d.comment) + "</Comment><PriceClass>" + d.priceClass + "</PriceClass><Enabled>" + d.enabled + "</Enabled>" +
+          "<WebACLId>" + esc(d.webAcl || "") + "</WebACLId><HttpVersion>" + d.httpVersion + "</HttpVersion><Staging>false</Staging></DistributionSummary>";
+      }).join("") + "</Items>" : "") + "</DistributionList>");
+  }
   function ce() { return json({ ResultsByTime: [{ Total: { UnblendedCost: { Amount: "42.17", Unit: "USD" } } }] }); }
   function cloudcontrol(target, body, init, host) {
     if (!signed(init)) return json({ __type: "AccessDeniedException", message: "Missing signature" }, 403);
@@ -1277,8 +1381,11 @@
     if (!(limit >= 1 && limit <= 10000 && limit === Math.floor(limit))) return logsErr("InvalidParameterException", "1 validation error detected: Value at 'limit' failed to satisfy constraint: Member must have value between 1 and 10000");
     var match = logFilter(q.filterPattern);
     if (!match) return logsErr("InvalidParameterException", "Not in the twin yet: JSON, space-delimited and regex filter patterns");
-    var from = 0;
-    if (q.nextToken !== undefined) { var tk = /^twin-(\d+)$/.exec(String(q.nextToken)); if (!tk) return logsErr("InvalidParameterException", "The specified nextToken is invalid."); from = +tk[1]; }
+    // startFromHead (botocore logs 2014-03-28, FilterLogEventsRequest): default true; false gives the latest events first
+    // and is refused when startTime is before 1 Jan 2024; on later pages the direction in nextToken wins over it.
+    var from = 0, head = q.startFromHead !== false;
+    if (q.nextToken !== undefined) { var tk = /^twin-(head|tail)-(\d+)$/.exec(String(q.nextToken)); if (!tk) return logsErr("InvalidParameterException", "The specified nextToken is invalid."); head = tk[1] === "head"; from = +tk[2]; }
+    else if (!head && !(q.startTime >= Date.UTC(2024, 0, 1))) return logsErr("InvalidParameterException", "startFromHead false is supported only when startTime is on or after Jan 1, 2024 00:00:00 UTC."); // message not documented
     if (Array.isArray(q.logStreamNames) && (q.logStreamNames.length < 1 || q.logStreamNames.length > 100))
       return logsErr("InvalidParameterException", "1 validation error detected: Value at 'logStreamNames' failed to satisfy constraint: Member must have length between 1 and 100");
     var names = Array.isArray(q.logStreamNames) ? q.logStreamNames : null, prefix = typeof q.logStreamNamePrefix === "string" ? q.logStreamNamePrefix : null;
@@ -1286,10 +1393,9 @@
       return (q.startTime === undefined || e.timestamp >= q.startTime) && (q.endTime === undefined || e.timestamp <= q.endTime) &&
         (!names || names.indexOf(e.logStreamName) >= 0) && (prefix === null || e.logStreamName.indexOf(prefix) === 0) && match(e.message);
     });
-    // startFromHead false: newest first (AWS supports it for startTime on or after 1 Jan 2024, note 11); the recent invocations list uses it.
-    if (q.startFromHead === false) hit.reverse();
+    if (!head) hit.reverse();
     var page = hit.slice(from, from + limit), out = { events: page.map(function (e) { return Object.assign({}, e); }), searchedLogStreams: [] };
-    if (from + limit < hit.length) out.nextToken = "twin-" + (from + limit);
+    if (from + limit < hit.length) out.nextToken = "twin-" + (head ? "head" : "tail") + "-" + (from + limit);
     return logsJson(out);
   }
 
@@ -1308,10 +1414,11 @@
   }
   function answer(url, init, host) {
     var body = typeof init.body === "string" ? init.body : "";
-    // The customer's account has only its CloudFormation stacks in the twin so far: every other service refuses the
-    // customer credential rather than answer with the platform account's resources (security.aws.a, R-025 (a)).
-    if (customerOf(init) && !/^cloudformation\.[a-z0-9-]+\.amazonaws\.com$/.test(host))
-      return Promise.resolve(xmlErr("AccessDenied", "Not in the twin's customer account yet: only CloudFormation answers it. Twin mode never calls real AWS.", 403));
+    // The customer's account has only its CloudFormation stacks and, from them, its CloudFront distributions and functions
+    // (design 06) in the twin so far: every other service refuses the customer credential rather than answer with the
+    // platform account's resources (security.aws.a, R-025 (a)).
+    if (customerOf(init) && !/^cloudformation\.[a-z0-9-]+\.amazonaws\.com$/.test(host) && host !== "cloudfront.amazonaws.com")
+      return Promise.resolve(xmlErr("AccessDenied", "Not in the twin's customer account yet: only CloudFormation and CloudFront answer it. Twin mode never calls real AWS.", 403));
     var p;
     try {
       if (host === "sts.amazonaws.com" || /^sts\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = sts(new URLSearchParams(body), init);
@@ -1324,6 +1431,7 @@
       else if (/^logs\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = logs((hdr(init, "x-amz-target") || "").split(".")[1], body, init);
       else if (/^firehose\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = firehose((hdr(init, "x-amz-target") || "").split(".")[1], body, init);
       else if (/\.?s3\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = s3(url, init);
+      else if (host === "cloudfront.amazonaws.com") p = cloudfront(url, init, customerOf(init) || ACCOUNT);
       else p = xmlErr("NotImplemented", "The twin does not answer " + host + " yet. Twin mode never calls real AWS.", 501);
     } catch (e) { p = xmlErr("InternalFailure", e.message, 500); }
     return Promise.resolve(p).then(function (r) { return new Promise(function (res) { setTimeout(function () { res(r); }, 60 + lag() * 120); }); });
