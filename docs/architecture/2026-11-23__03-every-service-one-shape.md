@@ -128,13 +128,13 @@ test/api/<svc>-api.test.mjs  decode.test.mjs  activity.test.mjs  graph.test.mjs 
 Anything read from inside a bucket (CloudTrail files, CloudFront logs, vault JSON, config files, zip metadata) can be written by whoever can write that bucket: a dormant role made to look used, a fake hostile sign-in, a planted zip tied to a real function by name. So the graph keeps what AWS answered apart from what files claim:
 
 - Every node and edge carries **`trust`**, derived from its evidence: `verified` for `api` and `template` (AWS's own answer, or the stack AWS deployed); `claimed` for `content`, `naming` and `comment`; `curated` stays `curated` (a person said so). A node is `verified` if any verified edge or API answer names it, otherwise `claimed`.
-- An edge with two sources (design 04's one-edge rule) is `verified` if any source is.
+- An edge with two sources (design 04's one-edge rule) is `verified` if any source is. **Attributes keep their own trust** (security.aws.a): a verified edge or node does not lend its trust to facts read from files; request counts, last-seen times and addresses from logs stay `claimed`, each attribute stored with its own `source` and `trust`.
 - **Claimed evidence never drives a suggestion to remove, replace or narrow anything.** "Unused" comes only from verified signals: IAM's `RoleLastUsed` (design 04), later service last-accessed, never from the absence of CloudTrail lines in a bucket. A claimed signal may raise a question ("this file says role X signed in from 203.0.113.66; AWS has not confirmed it"), never answer one.
 - The UIs show the two apart (claimed edges drawn differently, with the source file one click away), and the plan generator (`plan.js`) refuses input marked `claimed`.
 - The graph and each node carry **`backend: "twin" | "aws"`**, set by the page from the mode it is in (the banner's mode), not by the APIs, which stay blind to the back end (design 01). A graph exported from the twin can never be mistaken for, or merged with, one from AWS.
 - Later, CloudTrail log file integrity validation (the digest files AWS signs) or `LookupEvents` can upgrade CloudTrail-derived edges to `verified`; until then they are `claimed`.
 
-ontology.aws.a's schema gains `trust` on nodes and edges and `backend` on the graph and nodes; the golden test compares `trust` too.
+security.aws.a accepted this design for R-020 (13d2bdf); it closes when built and tested. ontology.aws.a's schema gains `trust` on nodes and edges and `backend` on the graph and nodes; the golden test compares `trust` too.
 
 ## Open questions
 
