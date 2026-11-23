@@ -73,3 +73,56 @@ Schedules: aggressive at first ("for now I would like you to be quite aggressive
 4. The five consoles: any starting ideas for each, or should the designer propose five?
 5. The coding and NFR principles: the exact sites to follow.
 6. Confirm the first schedule above, and that the conductor starts the agents.
+
+---
+
+# Part 2 (Dinis, ~02:45 UTC)
+
+## 9. Principles added
+
+- **Business context, not the whole of AWS.** Once a service's primitives are in place, build visualisations around *how we use it*. Add only the features we use: "100% coverage of the piece of AWS that I use", and nothing else. The point is also to clean AWS up.
+- **Everything hyperlinked, as a semantic graph.** On any asset you see everything known to connect to it. Example: open a bucket and see everywhere it is used, that it receives logs from a Firehose stream (shown too), which Lambda functions touch it, which CloudFormation stack made it, which Route 53 records point at it. AWS does not do this well. Assets are few (a couple of roles, buckets, functions), so a mapping per asset is practical; use common sense for things that come in thousands.
+- **Find mistakes as a by-product:** over-privileged roles, unused resources, untidy accounts. IAM above all: get to "absolutely all the right accounts and all the right privileges", deleting what is not needed.
+- **Agent behaviour policies in the browser.** Policies are connected to everything, including the page itself: the code contains its own behaviour policy and the browser blocks activities outside it, to contain injections and the like. Newsroom articles (newsroom.sgit.ai) already discuss this level of protection. Code defensively; the security agents help.
+- **Vaults for data, for now.** Most of this could be public, as little is confidential (to be double-checked), but vaults are the practical default for most users. Several vaults: live AWS reads, snapshots of temporal data, and the cross-mapping folders of the graph. Vault APIs and append lanes are documented on sgit.ai, with many examples there scaling up to full databases and transformations.
+- **Workflows run from the web first**, then programmatically. **GitHub Actions** can also run them, since we already give workflows scoped AWS access (OIDC): a pipeline transforms data, and the browser consumes the results.
+- **Region and account agnostic.** Most of Dinis's work today is in London and Ireland. The goal is to move resources between regions and accounts easily: today that is painful, and it is also what is sold to clients (their own accounts). Sites should deploy to AWS as well as GitHub Pages, then later to other clouds (Azure, GCP and others); AWS first.
+
+## 10. A site per area, mirroring AWS
+
+Each major area is its own centre of gravity, with its own site, API, explanations and UIs, under the platform:
+
+| Site | Area |
+|---|---|
+| s3.aws.platform.sovereignweb.site | S3: browser, bucket graph, CORS, lifecycle |
+| lambda.aws.platform.sovereignweb.site | Lambda: what each function does, traffic, monitoring, connections |
+| iam.aws.platform.sovereignweb.site | IAM: roles, policies, accounts, the trust graph, clean-up. "one of the most complex ... gives us a lot of value for money" |
+| cloudformation.aws.platform.sovereignweb.site | Every stack, mapped to what it made |
+| route53.aws.platform.sovereignweb.site | Zones and records, mapped to what they serve |
+| cloudfront.aws.platform.sovereignweb.site | Distributions and their logs |
+| firehose.aws.platform.sovereignweb.site | Delivery streams and where they write |
+| cloudtrail.aws.platform.sovereignweb.site and cloudwatch.aws.platform.sovereignweb.site | "finally understand what ... is happening"; open source, so anyone can drop in their own CloudTrail dump |
+
+aws.platform.sovereignweb.site stays the hub (sign-in, accounts, plans) and links to each. The order follows Dinis: S3, then Lambda (with Firehose), then CloudFormation, Route 53, IAM, CloudTrail and CloudWatch. Each site is a Factory request (factory.c) at Dinis's word.
+
+## 11. The team, revised
+
+- **A conductor for this project: conductor.aws.** It starts and coordinates the area agents (aws.*). **A PM** alongside, who keeps track of everything.
+- Area agents: S3, Lambda (and Firehose), IAM (its own agent: "a world of its own"), CloudFormation and Route 53, CloudTrail and CloudWatch.
+- **A vaults agent** that studies vaults on sgit.ai: creating and using vaults and append lanes, in the browser, up to databases and transformations.
+- As in part 1: designer, UX, data scientist, architect, developer, AWS / Boto3 expert, security, AppSec, adversarial, video and narrative with the studio.
+- **Maestro creates them all** (relayed by aws.c). Dinis: one place to make decisions ("maybe at the maestro, maybe at the decision level"), not approvals spread across twenty agents. Most of this is work already done before.
+- Every agent installs sgit, makes its own key and publishes it itself.
+
+## 12. Schedule, revised
+
+Not every agent every hour. Agents start at **different minutes of the hour**, so they do not collide. Most hand-overs are implicit: each agent wakes at its time, picks up the state and carries on. Explicit hand-overs only when needed. The loop on every wake stays: conductor, security, the work, security, conductor. Agents with nothing to do back off.
+
+## 13. Answers to part 1's questions
+
+1. Stack: S3 first, then Lambda, Firehose, CloudFormation, Route 53, CloudFront, IAM, CloudTrail, CloudWatch. Regions: agnostic; today mostly London (eu-west-2) and Ireland (eu-west-1).
+2. Secure Send S3 API, clients and regions: ask maestro.c and the conductor.
+3. Vault APIs and append lanes: documented on sgit.ai.
+4. Five consoles: the designer designs and proposes them.
+5. Coding and NFR principles: Dinis will give the links.
+6. Schedule: as section 12; conductor.aws and the PM run it; maestro.c creates the team.
