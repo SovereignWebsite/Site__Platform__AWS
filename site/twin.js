@@ -378,8 +378,11 @@
     put(B.site, "data/vaults.json", "application/json", JSON.stringify({ vaults: [{ id: "vault-demo-001", files: 42, region: REGION }, { id: "vault-demo-002", files: 7, region: "eu-west-1" }] }));
     put(B.site, "config/site.yaml", "application/x-yaml", "site: demo\nregion: eu-west-2\ncache:\n  ttl: 3600   # seconds\n  enabled: true\nlogs: s3://" + B.logs + "/\n");
     };
-    // CloudFront logs delivered by Firehose: one gzip of JSON lines per hour, each line naming the distribution (design 06).
+    // CloudFront logs delivered by Firehose: one gzip of JSON lines per hour. AWS's v2 records carry no distribution id
+    // (one delivery source is one distribution; boto3.aws.a via architect.aws.a, design 06 section 4), so each line has
+    // the host the visitor asked for: the www alias, or for a small seeded share the distribution's own domain (direct hits).
     G["cloudfront.traffic"] = function (P) {
+    var hosts = rng("cloudfront.hosts", thePack().seed), withHost = function (l) { l["x-host-header"] = hosts() < 0.05 ? "d111111abcdef8.cloudfront.net" : "www.example.com"; return l; };
     var names = rng("cloudfront.names", thePack().seed), hex = function (n) { var o = ""; for (var i = 0; i < n; i++) o += "0123456789abcdef"[Math.floor(names() * 16)]; return o; };
     var logUuid = function () { return hex(8) + "-" + hex(4) + "-" + hex(4) + "-" + hex(4) + "-" + hex(12); };
     var paths = ["/", "/index.html", "/assets/site.css", "/data/vaults.json", "/vault/vault-demo-001/files", "/vault/vault-demo-002/files", "/favicon.ico"];
@@ -387,18 +390,18 @@
       var lines = [];
       for (var i = 0; i < P.perHour; i++) {
         var p = P.hot && rnd() < P.hotShare ? P.hot : pick(paths);
-        lines.push(JSON.stringify(enrich({ distribution_id: "EDEMOTWIN00001", timestamp: "2026-11-" + day + "T" + pad(hour) + ":" + pad(Math.floor(rnd() * 60)) + ":" + pad(Math.floor(rnd() * 60)) + "Z",
+        lines.push(JSON.stringify(withHost(enrich({ timestamp: "2026-11-" + day + "T" + pad(hour) + ":" + pad(Math.floor(rnd() * 60)) + ":" + pad(Math.floor(rnd() * 60)) + "Z",
           c_ip: VISITOR_IPS[Math.floor(rnd() * VISITOR_IPS.length)], cs_method: "GET", cs_uri_stem: p, sc_status: p === "/favicon.ico" ? 404 : 200,
-          sc_bytes: Math.floor(rnd() * 9000 + 300), time_taken: +(rnd() * 0.2).toFixed(3), x_edge_location: pick(["LHR50-C1", "DUB2-C1", "AMS1-C1"]), cs_user_agent: pick(["Mozilla/5.0", "curl/8.5", "python-requests/2.32"]) })));
+          sc_bytes: Math.floor(rnd() * 9000 + 300), time_taken: +(rnd() * 0.2).toFixed(3), x_edge_location: pick(["LHR50-C1", "DUB2-C1", "AMS1-C1"]), cs_user_agent: pick(["Mozilla/5.0", "curl/8.5", "python-requests/2.32"]) }))));
       }
       if (P.probe && day === P.probe.day) {
         // One address (TEST-NET-3, documentation range) probing, getting louder each hour.
         var probes = ["/.env", "/.git/config", "/wp-admin/", "/admin", "/config.json", "/backup.zip", "/vault/../../etc/passwd", "/vault/vault-demo-001/files?key=../../secrets", "/api/vaults?id=1%27%20OR%20%271%27=%271"];
         for (var a = 0; a < (hour - 8) * P.probe.perHourStep; a++) {
           var pr = pick(probes);
-          lines.push(JSON.stringify(enrich({ distribution_id: "EDEMOTWIN00001", timestamp: "2026-11-22T" + pad(hour) + ":" + pad(Math.floor(rnd() * 60)) + ":" + pad(Math.floor(rnd() * 60)) + "Z",
+          lines.push(JSON.stringify(withHost(enrich({ timestamp: "2026-11-22T" + pad(hour) + ":" + pad(Math.floor(rnd() * 60)) + ":" + pad(Math.floor(rnd() * 60)) + "Z",
             c_ip: P.probe.ip, cs_method: pick(["GET", "GET", "POST"]), cs_uri_stem: pr, sc_status: pick([403, 404, 404, 400]), sc_bytes: Math.floor(rnd() * 400 + 100),
-            time_taken: +(rnd() * 0.05).toFixed(3), x_edge_location: "AMS1-C1", cs_user_agent: pick(["sqlmap/1.8", "Nuclei - Open-source project", "curl/8.5"]) })));
+            time_taken: +(rnd() * 0.05).toFixed(3), x_edge_location: "AMS1-C1", cs_user_agent: pick(["sqlmap/1.8", "Nuclei - Open-source project", "curl/8.5"]) }))));
         }
         lines.sort();
       }
