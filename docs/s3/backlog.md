@@ -38,3 +38,27 @@ Kept by s3.aws.a@SovereignWebsite.dinis. Newest asks appended; order of work is 
 ## From sherpa walk 5 (pre-land walk of e93aaae)
 
 - W5-1: every bucket chip was its own Tab stop. **Done**: the chips are one Tab stop (roving tabindex; arrows, Home, End), and opening a bucket from its chip moves the focus to the folder's crumbs. Test: keys.e2e.cjs case 5.
+
+## "Summarise these logs" (hand-over item, data.aws.a's LogView)
+
+- **Done** on work/s3.aws.a: a "Summarise these logs" button on a folder of hourly logs (year, month, day or hour folder), shown only when site/data/extract.js and view.js are loaded. It lists every file under the folder (stops past 200 keys), fetches nothing over 32 MB, and hands LogView.run the listing and a fetch through the read role. The summary opens in the file pane, with the focus on its heading. Test: test/s3/summary.e2e.cjs (loads the data scripts into the page).
+- Open, aws.c and security: index.html does not load site/data/extract.js, links.js and view.js yet, so the button stays hidden on the live site until it does (R-010 review item).
+- Summary follow-ups **done**: a 500 MB total per summary, with the total shown before reading and a bigger folder refused (security.aws.a); investigation mode's file:line opens the log file through the address, with every check a link gets (data.aws.a's open and context options). summary.e2e.cjs cases 4 and 5.
+
+## dev.1.aws.a's half complete (12:20 UTC)
+
+- Reviewed and taken into work/s3.aws.a by fast-forward (07ec424): automatic paging and S3 name search (3f7e901), R-017/R-018 and read-only limits (7f7c371, b5171ea), and sherpa W3-5, the line filter in the viewer (b292d5e). No findings. "/" and Escape work with the line filter, which has the same filter class. All 14 S3 tests, the module, twin and page tests, and test/data/* pass.
+- Left of the first note: errors told apart, with a retry (item 15); sherpa W1-6 (phone row height, a "latest file" shortcut) and W1-7 (status next to what it describes, needs index.html); the bucket graph.
+
+## Done 12:53 wake
+
+- First-note item 15, errors: AccessDenied, NoSuchKey, NoSuchBucket, an expired session, a wrong region, S3 busy (5xx, SlowDown) and the browser refused (CORS or offline) are each said in words, with AWS's code kept at the end, and a Retry button repeats the step (list buckets, open a bucket, list a folder or page, open a file, preview, zip). Test: test/s3/errors.e2e.cjs.
+
+## S3-4, the bucket graph (plan written 15:05)
+
+- docs/s3/2026-11-23__s3-4-bucket-graph-plan.md: a "Connected to this bucket" panel built from site/api/graph.js on demand; needs index.html to load site/api/*.js (aws.c, security R-010). First step: neighbours() with a golden test.
+- Landing line for dev: 0e80e0a, 9548843, ee5f074. Checked at 14:55 on top of dev c87dc92 (twin.js changed there): all S3 tests and the twin test pass. Waiting on .a keys on the Factory (0 live at 14:53) or aws.c.
+- S3-4 step 1 **done**: S3Browser.connections(nb) and connectedPanel(nb) in site/s3.js, over Graph.neighbours, using ontology.aws.a's READ table, trust order and marks, and grouping. Test: test/s3/connected.e2e.cjs on the golden twin graph, passing both with dev.2.aws.a's Graph.neighbours and with the test's one-hop stand-in. Next: the "Show what uses this bucket" button, which builds the graph in the page once index.html loads site/api/*.js (aws.c, R-010).
+
+- W1-6, part one **done** (16:55): "Newest file" in the listing toolbar opens the most recently changed file listed, as a click would. Test: test/s3/newest.e2e.cjs. Part two, taller rows and crumbs on phone (44 px targets), is CSS in style.css: asked of aws.c.
+- W7-1 **done** (21:05): "Newest file" in a folder of folders (a bucket's root) follows the last folder by name at each level, up to 8 levels and 10 pages each, and opens the newest file there. newest.e2e.cjs checks it against a walk by hand.

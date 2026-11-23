@@ -2,6 +2,26 @@
 
 Kept by data.aws.a@SovereignWebsite.dinis (account A), who took over from data.aws.c on 23 Nov 2026. Newest first.
 
+- 2026-11-23 20:55 UTC: security.aws.a verified c73ea8d (key, paths, tests, no sinks) with two Lows and a nit, all fixed: the test server listens on 127.0.0.1 only, tests its allow-list on the normalised path (so /site/../CLAUDE.md and .git are refused) and answers 400 to a bad escape, with checks for each; a drill-down now stops Play, so the next tick does not wipe it (tested); a drag ends on pointercancel or a release or exit off the bars.
+
+- 2026-11-23 20:30 UTC: checked my branch on dev.1.aws.a's renamed logs (99c442f): 9 hours found, none outside the layout, both tests pass. boto3.aws.a then found AWS's v2 CloudFront records carry no distribution id, so the twin drops it (1096ed4) and adds `x-host-header` (www.example.com, about 5% the raw d111111abcdef8.cloudfront.net name). The extract already maps it to `host`; host is now a pivot ("host asked for"), so requests that bypass the site's own name stand out. The distribution mapping stays, harmless, for sources that carry one.
+
+- 2026-11-23 19:30 UTC: ready for dev.1.aws.a's Firehose object names (design 06, at its 20:09 wake): the extract groups by the hourly folders, not by file name, and takes several files per hour; the view test accepts both the old and the new names; the extract maps a distribution id (`distribution_id`, `distribution-id`, `DistributionId`) to `distribution`.
+
+- 2026-11-23 15:05 UTC: ready for the twin's packs as files (design 02 step 2, dev.1.aws.a): view.e2e.cjs now serves the repository over http (only /site/ and /test/data/ served or allowed as requests), and extract.test.mjs hands twin.js its packs from test/twin/packs.mjs when that loader exists (skipped before it lands). Both pass on dev and on work/dev.1.aws.a (49db094).
+
+## 2026-11-23 ~13:20 UTC: P5 step 1 built: the time window (on work/data.aws.a)
+
+- In the "Summarise these logs" view: drag across the hour bars to choose a window; the headline ("Window ... UTC: 165 requests over 3 hours ..."), vault cards, tables, pivots and drill-down all recompute for it, and hours outside it are dimmed. "Back an hour" and "Forward an hour" keep the width (the night's gap is stepped over, not played as empty hours); "Play" walks the window forward an hour at a time and stops at the last hour; "All" clears it. A press and release on one bar is still a click (its lines).
+- On the attack pack, 22 Nov 09:00 to 11:59: 165 requests, 103 failed on 10 paths, vault-demo-001 13 served and 9 refused; play shows the probes rise hour by hour.
+- Built on the measured design (docs/data/2026-11-23__02-time-lapse-first-design.md): a window is a slice of the lines sorted once by time and summarised again; fast enough up to tens of thousands of lines. Hour cubes (sums per hour) follow when a larger read needs them. The window is not yet in the page address (s3.aws.a's routes own the hash; to agree).
+- Tests (test/data/view.e2e.cjs, three packs): window counts equal a plain count of the window's lines, outside hours dimmed, drill-down limited to the window, a step back keeps the width across the gap, play reaches the last hour and stops, All restores the whole read. No HTML sinks; play stops itself if the view is gone.
+- site/data/view.js and test/data/ are not my paths: this stays on my branch until aws.c lands it or Dinis says to push.
+
+- 2026-11-23 11:55 UTC: ux.aws.a found that with the network-only rule the twin's attack pack loses its story in anything written out: every visitor and the scanner share 203.0.113.0/24. Agreed with its suggestion for aws.c (normal visitors across 192.0.2.0/24, 198.51.100.0/24 and 203.0.113.0/24, the scanner on a network of its own). In-page drill-down keeps full addresses, so the investigation view is unaffected. My test no longer assumes one /24 (any RFC 5737 range passes; the attacker's pivot is its own network), so it holds before and after aws.c changes the twin.
+
+- 2026-11-23 11:20 UTC: security.aws.a checked 518b114, no new risks. Standing rule for the first export (download, saved summary, or anything written to a bucket or vault): it holds only `net`, plus city and country, never `client`, with a test that asserts no raw address appears in it. Today the view keeps full addresses only in page memory for drill-down and writes nothing out.
+
 ## 2026-11-23 ~11:20 UTC: landed on dev at Dinis's word; privacy decided
 
 - Dinis Cruz, 23 Nov 2026 ~11:15 UTC in data.aws.a's session: "Yes push it, ok to trust your key and test keep only the network (and if available the city and country)".
