@@ -30,6 +30,11 @@ R = v["Resources"]
 # A cap on concurrency by default (security.aws.a condition c).
 check(v["Parameters"]["ReservedConcurrency"].get("Default") not in (None, ""), "no default concurrency cap")
 
+# security.aws.a's one-stack condition 2: no Transform, macro or custom resource.
+check("Transform" not in v, "Transform present")
+check(not any(r["Type"].startswith(("Custom::", "AWS::CloudFormation::CustomResource", "AWS::CloudFormation::Macro")) for r in R.values()), "custom resource or macro present")
+check(v["Parameters"]["DeployMode"]["Default"] == "one-stack", "DeployMode default")
+
 # Ids: fixed length, hex, no dash, so names never overlap between Vaults.
 check(v["Parameters"]["VaultId"]["AllowedPattern"] == "^[0-9a-f]{12}$", "VaultId pattern")
 # The image is pinned by digest.
