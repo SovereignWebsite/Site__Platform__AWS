@@ -60,6 +60,9 @@ Nothing here stops the team: the agents are building on the twin. Decision 3 hol
 - **Recommended:** (a). Read only, and a pinned commit is what design 01 already proposes copying into site/ for the CSP.
 - **Blocks:** the per-operation result shape and the batch-wide conflict rule in the vault twin (design 02 section 2); nothing else.
 
+## Next batch, in preparation (Vault deploy page, EC2, ephemeral deployments)
+From your word at ~14:55 UTC (maestro.a's session); plan and owners in docs/team/plan-vault-deploy.md on work/conductor.aws.a (ea9f61d). Comes to you as one batch, with a presentation and a decision video, once steps 1 to 3 (vault deployment design, the stack, least privilege in the customer's account) have a first draft: D1 where the deploy page lives; D2 CloudFormation first or Terraform too; D3 how the customer signs in (their own console with a one-click stack link, or a role the page assumes); D4 EC2 as a second deploy path now or later; D5 guard rails for ephemeral deployments and daily region moves; D6 start a new agent, ec2.aws.a. Nothing runs outside the twin before then.
+
 ## Not needed yet
 - **Which vault endpoint first** (vaults.aws.a): recommended, the twin now, then your own SG/Send in eu-west-2 (append routes exist only on dev.send.sgraph.ai today). Asked before any live vault write.
 - **Who drains the snapshot lanes** (vaults.aws.a): recommended, the browser while you are signed in (no new credential anywhere), a GitHub Actions job later. Asked when the drain cadence is set (vaults design 01 section 4).

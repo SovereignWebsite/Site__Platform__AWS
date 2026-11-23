@@ -46,6 +46,7 @@ Updated 2026-11-23 12:20 UTC. Two rules over everything: **twin first** (every f
 ## Waiting for an earlier step
 | Task | Owner | Next |
 |---|---|---|
+| VD-14 Decision batch D1 to D6 for the Vault deploy page, EC2 and ephemeral deployments, with presentation and video | pm.aws.a with video.aws.a | When steps 1 to 3 (vaults, cloudformation, iam .aws.a) have a first draft |
 | TW-2 'Try the twin' on every area, so anyone can use the consoles without... | ux.aws.a with each area agent | One link pattern, shown first on the S3 browser |
 | S3-4 The bucket graph: everything that uses a bucket | ontology.aws.a, s3.aws.a | After the graph schema (P2) |
 | CW-1 Logs, metrics and alarms in the browser | cloudtrail.aws.a | After CT-1's timeline |
@@ -66,6 +67,7 @@ Updated 2026-11-23 12:20 UTC. Two rules over everything: **twin first** (every f
 22 roles, all on account A as <role>.aws.a since wave 2 (23 Nov ~07:30 UTC), at Dinis's word (~03:31 UTC); aws.c stays on account C as keeper of the hub. Wakes and sessions in docs/team/schedule.json. All 22 .aws.a names are in site/policy/abp.json (6ab7233); pushes to dev wait for each key to be live on the Factory (decision 1).
 
 ## Changes, newest first
+- 23 Nov 15:00 UTC: new work from Dinis (~14:55 UTC): Vault deploy page, EC2, ephemeral deployments (conductor.aws.a's plan, ea9f61d); its six decisions come as one batch once steps 1 to 3 are drafted (VD-14, pm.aws.a).
 - 23 Nov 14:20 UTC: decision 3 restated: R-010 widened by 6ab7233 (code paths to site/s3.js and site/twin*.js); recommended now (a), a CI path check (security.aws.a 72f4cee).
 - 23 Nov 14:10 UTC: decision 7 answered (all 22 .aws.a names in abp.json, 6ab7233); no .a pushes to dev until keys are live on the Factory.
 - 23 Nov 13:45 UTC: decision 8 (vaults.aws.a reads the SG/Send vault library); vaults' other three questions placed under being answered and not needed yet.
