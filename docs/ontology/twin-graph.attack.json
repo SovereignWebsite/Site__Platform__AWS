@@ -9,14 +9,14 @@
   "curated"
  ],
  "counts": {
-  "nodes": 54,
-  "edges": 108,
+  "nodes": 55,
+  "edges": 110,
   "by_evidence": {
    "api": 44,
    "curated": 7,
    "template": 4,
    "naming": 11,
-   "content": 42
+   "content": 44
   }
  },
  "nodes": [
@@ -45,6 +45,13 @@
    ],
    "distinct_paths": 9,
    "rule": "at least 10 requests, at least 80% refused (4xx)"
+  },
+  {
+   "id": "urn:sws:actor-ip:203.0.113.7",
+   "type": "actor",
+   "label": "203.0.113.7",
+   "altitude": "A4",
+   "src_ip": "203.0.113.7"
   },
   {
    "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
@@ -1147,6 +1154,20 @@
    "to": "urn:sws:vault:vault-demo-001",
    "evidence": "content",
    "source": "log lines (c_ip 203.0.113.66, paths under /vault/vault-demo-001)"
+  },
+  {
+   "from": "urn:sws:actor-ip:203.0.113.7",
+   "rel": "acted_on",
+   "to": "arn:aws:iam::111122223333:role/sovereignwebsite-factory-dns",
+   "evidence": "content",
+   "source": "CloudTrail sourceIPAddress 203.0.113.7"
+  },
+  {
+   "from": "urn:sws:actor-ip:203.0.113.7",
+   "rel": "acted_on",
+   "to": "arn:aws:s3:::111122223333--demo-site--eu-west-2/data/vaults.json",
+   "evidence": "content",
+   "source": "CloudTrail sourceIPAddress 203.0.113.7"
   },
   {
    "from": "urn:sws:business-function:visitor-reads-vault-files",

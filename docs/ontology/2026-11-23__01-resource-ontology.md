@@ -208,3 +208,7 @@ Two details for the test, so it compares like with like:
 - The twin's demo site bucket has no CORS rule, so a browser cannot list it. This builder applies the page's own fix in the twin's memory (Cloud Control UpdateResource) before listing; the test must do the same first, or Graph sees the bucket as unreadable and its objects are missing.
 
 **Ids renamed: `twin:` is now `urn:sws:<kind>:<name>`**, since these ids name real resources too, not only twin ones. Kinds in use: account, region, vault, site, cloudfront-distribution, cloudtrail-trail, cloudtrail-event, idp, github-subject, actor-ip, business-function, lambda-function (fallback only). ARNs stay ARNs. The schema's id pattern is now `^(arn:aws:|urn:sws:[a-z0-9-]+:)`. Altitudes are unchanged; nothing is lost.
+
+## 14. CloudTrail addresses are actors too (23 Nov 2026, 11:05 UTC)
+
+At architect.aws.a's ask (design 03 refinement 6), each CloudTrail record's `sourceIPAddress` becomes an `actor` node, `urn:sws:actor-ip:<ip>`, with an `acted_on` edge (`content`) to whatever the record acted on, the same as the page's `Graph.add.activity`. In the twin, 203.0.113.7 now links to `data/vaults.json` and to the DNS role whose trust it changed. CloudFront addresses still become actors only by the refused-requests rule (section 10), so normal visitors stay a count. Graphs: 54 nodes, 106 edges (baseline and surge); 55 and 110 (attack). dev.2.aws.a's graph test (work/dev.2.aws.a 237c397) still passes against them, and can now drop its exception for actor-ip edges.

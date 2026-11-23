@@ -9,14 +9,14 @@
   "curated"
  ],
  "counts": {
-  "nodes": 53,
-  "edges": 104,
+  "nodes": 54,
+  "edges": 106,
   "by_evidence": {
    "api": 44,
    "curated": 7,
    "template": 4,
    "naming": 11,
-   "content": 38
+   "content": 40
   }
  },
  "nodes": [
@@ -26,6 +26,13 @@
    "label": "111122223333",
    "altitude": "A2",
    "note": "the example account AWS uses in its own documentation; synthetic"
+  },
+  {
+   "id": "urn:sws:actor-ip:203.0.113.7",
+   "type": "actor",
+   "label": "203.0.113.7",
+   "altitude": "A4",
+   "src_ip": "203.0.113.7"
   },
   {
    "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
@@ -1100,6 +1107,20 @@
    "to": "urn:sws:region:eu-west-2",
    "evidence": "api",
    "source": "Cloud Control GetResource (RegionalDomainName)"
+  },
+  {
+   "from": "urn:sws:actor-ip:203.0.113.7",
+   "rel": "acted_on",
+   "to": "arn:aws:iam::111122223333:role/sovereignwebsite-factory-dns",
+   "evidence": "content",
+   "source": "CloudTrail sourceIPAddress 203.0.113.7"
+  },
+  {
+   "from": "urn:sws:actor-ip:203.0.113.7",
+   "rel": "acted_on",
+   "to": "arn:aws:s3:::111122223333--demo-site--eu-west-2/data/vaults.json",
+   "evidence": "content",
+   "source": "CloudTrail sourceIPAddress 203.0.113.7"
   },
   {
    "from": "urn:sws:business-function:visitor-reads-vault-files",

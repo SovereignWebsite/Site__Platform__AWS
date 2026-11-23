@@ -316,6 +316,14 @@ for (const o of objectsOf[B.trail]) {
     const p = r.requestParameters || {};
     if (p.bucketName && p.key) edge(eid, "acted_on", ids.object(p.bucketName, p.key), "content", "CloudTrail requestParameters (bucketName, key)");
     if (p.roleName) { roleNames.add(p.roleName); edge(eid, "acted_on", ids.role(p.roleName), "content", "CloudTrail requestParameters.roleName"); }
+    // The caller's address is an actor too (design 03 refinement 6): it acted on what the event acted on, so an
+    // address links to everything it touched, in CloudTrail as in the CloudFront logs.
+    const ip = r.sourceIPAddress;
+    if (ip && /^[0-9a-fA-F:.]+$/.test(ip)) {
+      const aid = node("urn:sws:actor-ip:" + ip, "actor", "A4", ip, { src_ip: ip });
+      if (p.bucketName && p.key) edge(aid, "acted_on", ids.object(p.bucketName, p.key), "content", "CloudTrail sourceIPAddress " + ip);
+      if (p.roleName) edge(aid, "acted_on", ids.role(p.roleName), "content", "CloudTrail sourceIPAddress " + ip);
+    }
     events.push(eid);
   }
 }
