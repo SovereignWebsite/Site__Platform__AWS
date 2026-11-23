@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'">
+<title>Swarm replay</title>
+<link rel="stylesheet" href="view.css">
+</head>
+<body>
+<header>
+  <h1>The swarm, replayed</h1>
+  <p id="caption">Loading tonight's agents and events…</p>
+</header>
+<main>
+  <canvas id="sky" width="960" height="600" aria-label="The agents as a graph over time; the same events are listed in the table below"></canvas>
+  <aside id="detail" hidden>
+    <h2 id="d-name"></h2>
+    <dl id="d-fields"></dl>
+    <ol id="d-commits"></ol>
+  </aside>
+</main>
+<nav id="controls">
+  <button id="play" type="button">Play</button>
+  <input id="scrub" type="range" min="0" max="1000" value="0" aria-label="Replay position">
+  <label>Speed <select id="speed"><option>1</option><option selected>2</option><option>4</option><option>8</option></select>x</label>
+  <span id="clock">--:--:-- UTC</span>
+  <span id="counts"></span>
+</nav>
+<section>
+  <h2>Every event</h2>
+  <p>The same data as a table, so the replay is readable without the picture. Public sources only: git history, docs/team/log.md, docs/team/schedule.json, site/policy/abp.json and session status fields.</p>
+  <table><thead><tr><th>UTC</th><th>Kind</th><th>Who</th><th>To</th><th>What</th></tr></thead><tbody id="rows"></tbody></table>
+</section>
+<script src="view.js"></script>
+</body>
+</html>
