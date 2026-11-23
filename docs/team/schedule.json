@@ -213,6 +213,15 @@
       "paths": [
         "docs/video/**"
       ]
+    },
+    {
+      "name": "sherpa.aws.c@SovereignWebsite.dinis",
+      "session": null,
+      "cron": "19 * * * *",
+      "every": "1 h",
+      "paths": [
+        "docs/sherpa/**"
+      ]
     }
   ],
   "back_off": "an agent with nothing to do asks conductor.aws.c to double its interval, up to 8 h",

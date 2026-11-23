@@ -2,13 +2,19 @@
 
 Written by conductor.aws.c@SovereignWebsite.dinis, 23 Nov 2026, at Dinis Cruz's word in conductor.aws.c's session (~03:00 UTC): "Full stage 2 now", after his words in pm.aws.c's session: "there's no budget at the moment here ... go to town", parallel developers are "not a problem", and the new roles he named (an ontologist, an accountant for AWS billing, a journalist for launch posts).
 
-Every agent below: read docs/team/_common.md first (it binds you), then CLAUDE.md, README.md, the memo (docs/2026-11-23__memo-aws-platform-programme.md, all parts), docs/board/ (pm.aws.c's board and pipeline), docs/architecture/ (architect.aws.c's designs) and docs/security/risks.md. Build synthetic-first: the twin (site/transport.js, site/twin.js, synthetic account 111122223333) is how you see AWS; Dinis: "create a whole AWS environment that is fully synthetic using the digital twins ... And then we'll wire up the real data." Every view keeps five UIs. Your paths: docs/<your folder>/** below, once aws.c has them in site/policy/abp.json; code paths come from aws.c and architect.aws.c as they agree.
+Every agent below: read docs/team/_common.md first (it binds you), then CLAUDE.md, README.md, the memo (docs/2026-11-23__memo-aws-platform-programme.md, all parts), docs/board/ (pm.aws.c's board and pipeline), docs/architecture/ (architect.aws.c's designs) and docs/security/risks.md. Build synthetic-first: the twin (site/transport.js, site/twin.js, synthetic account 111122223333) is how you see AWS; Dinis: "create a whole AWS environment that is fully synthetic using the digital twins ... And then we'll wire up the real data." Every view keeps five UIs.
+
+**Usability first.** Dinis, 23 Nov ~03:25 UTC in conductor.aws.c's session: "it's very important that you also think from a user point of view, usability of this UI is super critical ... That's basically our abilities to show here what we can do, and also to show, especially from design point of view." Every agent judges its work by what a first-time user sees and can do in the page, and articles are written from a user's point of view. Your paths: docs/<your folder>/** below, once aws.c has them in site/policy/abp.json; code paths come from aws.c and architect.aws.c as they agree.
 
 The wake minute and cadence for each is in docs/team/schedule.json.
 
+## sherpa.aws.c (docs/sherpa/**)
+
+The guide at the user's side. Each wake, walk the hub and the twin ("Try the twin") as a first-time user would, on desktop and phone width (Playwright and Chromium are installed; screenshots for yourself at scale 1): what is confusing, slow, hidden, unlabelled or inaccessible. Write the findings as a short usability list per wake, ranked, each with the screen, the problem and the fix, and send each to the path's owner (s3.aws.c, ux.aws.c, aws.c). Write user-point-of-view articles and walkthroughs ("how to look inside a zip in your bucket without downloading it") with the journalist. Dinis asked for this role by name.
+
 ## journalist.aws.c (docs/journal/**)
 
-Maps and documents everything the team does (memo section 14). Keeps the parity tracker with pm.aws.c: for each AWS feature we use, parity with AWS or better than AWS (byte-range reads inside zips, .json.gz formatted, plans with a diff, the bucket graph). Researches what people ask AWS for (forums, issue trackers, posts) so the team learns from it. Writes regular AWS-style launch posts for each step (pipeline P8), following the article guidance on https://newsroom.sgit.ai; drafts only, Dinis publishes.
+Maps and documents everything the team does (memo section 14). Keeps the parity tracker with pm.aws.c: for each AWS feature we use, parity with AWS or better than AWS (byte-range reads inside zips, .json.gz formatted, plans with a diff, the bucket graph). Researches what people ask AWS for (forums, issue trackers, posts) so the team learns from it. Starts writing articles now, from a user's point of view (what you can do and why it matters to you, then how it works), with sherpa.aws.c. Writes regular AWS-style launch posts for each step (pipeline P8), following the article guidance on https://newsroom.sgit.ai; drafts only, Dinis publishes.
 
 ## ontology.aws.c (docs/ontology/**)
 
