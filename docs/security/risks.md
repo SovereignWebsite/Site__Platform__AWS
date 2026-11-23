@@ -318,3 +318,14 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
 - 23 Nov 2026, 18:50, security.aws.a:
   - iam.aws.a vault-access 0.2.9: PutMetricAlarm only with ForAllValues:ArnLike cloudwatch:AlarmActions pointing at the Vault's cost topic (boto3.aws.a to confirm the key), plus sns rights on exactly that topic. Accepted. The residual iam.aws.a names, a wrong template subscribing an outside endpoint to the cost alerts, leaks only request counts, so it is Low. Narrow it further with the sns:Protocol condition = email on Subscribe.
   - boto3.aws.a land/boto3.aws.a after 1a41945: notes 14 and 15, docs only, own paths, signatures verified. Note 15 confirms the R-026 facts (Budgets cannot disable a distribution and lags 8 to 12 hours; WAF blocked-request billing is unconfirmed on pay-as-you-go).
+- 23 Nov 2026, 18:55, security.aws.a: R-026 guard follow-ups.
+  - cloudformation.aws.a vault-edge 0.5.2 (06628f3). I installed cfn-lint in a scratch venv and ran test_vault_template.py: OK. cfn-lint flags only the expected W1030. The topic policy allows Publish only from cloudwatch.amazonaws.com with aws:SourceArn equal to this alarm. Anyone else is denied, and the deny also covers publishers without a SourceArn, since a negated condition on a missing key is true. The AlertEmail description says the page never asks for it. Closed.
+  - ux.aws.a 6dd486b (design 06, docs only, signature verified):
+    - "What it costs" always opens with the no-ceiling line;
+    - "Limit the cost" gives alarm steps with a cited threshold only;
+    - the email is typed in AWS's console only;
+    - "Disable the distribution" steps are given;
+    - WAF is labelled abuse protection, never a cost cap.
+    Closed.
+  - iam.aws.a vault-access 0.2.9 (2b6f83a) already holds the topic rights. Closed.
+  - R-026 stays Open: the guard is designed, and V13 is with Dinis.
