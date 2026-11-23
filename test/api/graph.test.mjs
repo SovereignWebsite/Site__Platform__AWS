@@ -1,8 +1,8 @@
 // Graph (site/api/graph.js) over the twin, built as a page would: S3Api for buckets and objects (after the CORS fix
 // a user's Approve would make), Activity.fromBytes for the trail files, then the golden test of design 03,
 // refinement 7: against ontology.aws.a's twin-graph.json, compare node id, type, altitude and edge from, rel, to,
-// evidence, on the part of the graph the adapters built so far cover (S3, CloudTrail files). The rest of the golden
-// graph (IAM, CloudFormation, Lambda, Firehose, file contents, curated) waits for its adapters and is counted.
+// evidence, on the part of the graph the adapters built so far cover (S3, CloudTrail files, what files say). The rest of the golden
+// graph (IAM, CloudFormation, Lambda, Firehose, zip contents, serves_from, curated) waits for its adapters and is counted.
 // Node 22, no network. Run: node test/api/graph.test.mjs
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
@@ -60,6 +60,17 @@ g.add.s3(buckets);
 const trail = buckets.find((b) => b.name === ctx.AwsTwin.buckets.trail);
 for (const o of trail.objects.filter((o) => o.key.endsWith(".json.gz")))
   g.add.activity(await ctx.Activity.fromBytes((await api.getObject(trail.name, trail.region, o.key)).bytes, { name: o.key }), { bucket: trail.name, key: o.key });
+// Content: every object the graph shows on its own (not inside a grouped prefix), read and decoded as a page would.
+const D = ctx.Decode, files = [];
+const grouped = (b, key) => b.objects.filter((o) => o.key.slice(0, o.key.lastIndexOf("/") + 1) === key.slice(0, key.lastIndexOf("/") + 1)).length > 50;
+for (const b of buckets) for (const o of b.objects) {
+  if (o.key.includes("/") && grouped(b, o.key)) continue;
+  let bytes = (await api.getObject(b.name, b.region, o.key)).bytes, kind = D.sniff(bytes, { name: o.key });
+  if (kind === "gzip") { bytes = (await D.gunzip(bytes)).bytes; kind = D.sniff(bytes, { name: o.key.replace(/\.gz$/, "") }); }
+  if (kind === "zip" || kind === "binary") continue;
+  files.push({ bucket: b.name, key: o.key, text: D.text(bytes) });
+}
+g.add.content(files, { site: { name: "demo", label: "Demo site", bucket: ctx.AwsTwin.buckets.site } });
 const mine = JSON.parse(JSON.stringify(g.toJSON()));
 
 // ---- schema: enums, required fields, id form, every edge end a node, counts ----
@@ -81,9 +92,15 @@ const covered = (e, typeOf) => {
   if (e.rel === "logs_to" && e.evidence === "naming" && ft === "trail") return true;
   if ((e.rel === "in" || e.rel === "records") && e.evidence === "content" && e.from.startsWith(trailBucket)) return true;
   if (["acted_as", "signed_in_via", "acted_on"].includes(e.rel) && ft === "event") return true;
+  // content adapter
+  if (e.rel === "refers_to" && e.evidence === "content") return true;
+  if ((e.rel === "in" || e.rel === "part_of") && e.evidence === "content" && ft === "vault") return true;
+  if (e.rel === "records" && e.evidence === "naming" && typeOf(e.to) === "distribution") return true;
+  if ((e.rel === "seen_in" || e.rel === "targeted") && e.evidence === "content" && ft === "actor") return true;
   return false;
 };
-const extra = (e) => e.from.startsWith("urn:sws:actor-ip:"); // refinement 6: actor-ip from activity, not in the builder
+// refinement 6: actor-ip acted_on edges come from activity and are not in the builder's graph yet
+const extra = (e) => e.from.startsWith("urn:sws:actor-ip:") && e.rel === "acted_on";
 function slice(graph) {
   const typeOf = (id) => (graph.nodes.find((n) => n.id === id) || {}).type;
   const es = graph.edges.filter((e) => covered(e, typeOf));
@@ -100,7 +117,9 @@ const nMissing = [...gs.nodes].filter((x) => !ms.nodes.has(x)), nSurplus = [...m
 ok(!nMissing.length && !nSurplus.length, "nodes (id, type, altitude) differ:\n  missing " + nMissing.join("\n  missing ") + "\n  surplus " + nSurplus.join("\n  surplus "));
 // Every node the adapters made outright (not a dangling end) is in the golden graph with the same type and altitude,
 // apart from actor-ip nodes.
-ok(mine.nodes.filter((n) => !n.dangling && !n.id.startsWith("urn:sws:actor-ip:")).every((n) => gNode.has(n.id) && gNode.get(n.id).type === n.type && gNode.get(n.id).altitude === n.altitude), "every built node matches the golden graph");
+const actorOnlyFromActivity = (n) => n.id.startsWith("urn:sws:actor-ip:") && !gNode.has(n.id);
+const offGolden = mine.nodes.filter((n) => !n.dangling && !actorOnlyFromActivity(n) && !(gNode.has(n.id) && gNode.get(n.id).type === n.type && gNode.get(n.id).altitude === n.altitude));
+ok(!offGolden.length, "every built node matches the golden graph: " + offGolden.map((n) => n.id + " " + n.type).join(", "));
 
 // ---- refinement 6: the caller's address acts on what the events touched ----
 const actorEdges = mine.edges.filter(extra);
@@ -112,6 +131,32 @@ h.add.s3([{ name: "b", region: "eu-west-2", cors: null, objects: [{ key: "<img s
 ok(h.toJSON().nodes.some((n) => n.label === "<img src=x onerror=alert(1)>.txt"), "a hostile key is a label as it is");
 ok(!/\beval\s*\(|new Function|innerHTML|document\.|localStorage|fetch\(/.test(readFileSync(here("../../site/api/graph.js"), "utf8")), "graph.js: no eval, HTML, storage or network");
 
+// ---- content rules at their edges ----
+{
+  const c = ctx.Graph({ account: A });
+  const line = (ip, st, path = "/x") => JSON.stringify({ c_ip: ip, cs_uri_stem: path, sc_status: st });
+  const log = (k, ls) => ({ bucket: "logs", key: "cf/" + k + "-2026-11-22-10-00-00.gz", text: ls.join("\n") + "\n" });
+  c.add.content([
+    { bucket: "site", key: "data/v.json", text: JSON.stringify({ vaults: [{ id: "v1", region: "eu-west-1" }, { id: "" }, { region: "x" }, "junk", { id: "v2", region: "not a region" }] }) },
+    { bucket: "site", key: "data/other.json", text: JSON.stringify({ items: [{ id: "nope" }] }) },
+    { bucket: "site", key: "notes.txt", text: "see s3://not-config-file/" },
+    { bucket: "site", key: "app.env", text: "A=s3://bucket-one/x\nB=s3://bucket-one/y\n" },
+    log("d1", [...Array(9)].map(() => line("198.51.100.1", 403))),                                    // 9 refused: under 10
+    log("d2", [...Array(10)].map((_, i) => line("198.51.100.2", i < 8 ? 404 : 200, "/vault/v1/files"))), // 8 of 10: exactly 80%
+    log("d3", [...Array(10)].map(() => line("198.51.100.3", 503))),                                    // 5xx is not refused
+    log("d4", ["not json", JSON.stringify({ hello: 1 })])                                              // no log lines: no distribution
+  ], { site: { name: "s", bucket: "site" } });
+  const j = JSON.parse(JSON.stringify(c.toJSON())), has = (id) => j.nodes.some((n) => n.id === id && !n.dangling);
+  const e = (f, r, t) => j.edges.some((x) => x.from === f && x.rel === r && x.to === t);
+  ok(has("urn:sws:vault:v1") && has("urn:sws:vault:v2") && !has("urn:sws:vault:") && !has("urn:sws:vault:nope"), "only well-formed vault entries in a vaults list");
+  ok(e("urn:sws:vault:v1", "in", "urn:sws:region:eu-west-1") && !j.edges.some((x) => x.from === "urn:sws:vault:v2" && x.rel === "in"), "a vault's region only when it is a region");
+  ok(e("urn:sws:vault:v1", "part_of", "urn:sws:site:s"), "a vault listed in the site's bucket is part of the site");
+  ok(!j.edges.some((x) => x.to === "arn:aws:s3:::not-config-file") && j.edges.filter((x) => x.to === "arn:aws:s3:::bucket-one").length === 1, "s3:// only from config files, once per file");
+  ok(!has("urn:sws:actor-ip:198.51.100.1") && has("urn:sws:actor-ip:198.51.100.2") && !has("urn:sws:actor-ip:198.51.100.3"), "actor rule: at least 10 requests, at least 80% 4xx");
+  ok(e("urn:sws:actor-ip:198.51.100.2", "targeted", "urn:sws:vault:v1") && e("logs/cf/d2-2026-11-22-10-00-00.gz".replace(/^/, "arn:aws:s3:::"), "refers_to", "urn:sws:vault:v1"), "actor targets the vault; the log file refers to it");
+  ok(has("urn:sws:cloudfront-distribution:d1") && !has("urn:sws:cloudfront-distribution:d4"), "a distribution only from files with log lines");
+}
+
 const uncovered = golden.edges.length - gs.edges.size - golden.edges.filter((e) => e.evidence === "curated" || e.evidence === "comment").length;
 if (failures) { console.error(failures + " failed, " + passed + " passed"); process.exit(1); }
-console.log("OK (graph: " + passed + " checks; " + mine.nodes.length + " nodes, " + mine.edges.length + " edges; golden slice " + gs.nodes.size + " nodes and " + gs.edges.size + " edges equal; " + uncovered + " golden edges wait for the IAM, CloudFormation, Lambda, Firehose and content adapters)");
+console.log("OK (graph: " + passed + " checks; " + mine.nodes.length + " nodes, " + mine.edges.length + " edges; golden slice " + gs.nodes.size + " nodes and " + gs.edges.size + " edges equal; " + uncovered + " golden edges wait for the IAM, CloudFormation, Lambda and Firehose adapters, zip contents and serves_from)");

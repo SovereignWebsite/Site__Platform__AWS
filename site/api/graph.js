@@ -7,6 +7,8 @@
 //   var g = Graph({ account: "111122223333" });
 //   g.add.s3([{ name, region, cors, objects: [{ key, size, modified }] }])   buckets from S3Api, objects listed flat
 //   g.add.activity(read, { bucket, key })    one trail file: Activity.read / fromBytes result, and where it came from
+//   g.add.content(files, { site })           what files say: [{ bucket, key, text }] already decoded (Decode), and
+//                                            optionally which bucket serves a site: { name, bucket }
 //   g.toJSON()                               -> { about, evidence_levels, counts, nodes, edges } (schema shape)
 //
 // Ids: the ARN where AWS defines one, otherwise urn:sws:<kind>:<name>. An edge seen twice keeps the stronger
@@ -117,6 +119,78 @@
         }
       });
     }
+    // Content: what the files say, by what they hold rather than by their names (the builder's rules made general):
+    //   - an s3://<bucket> reference in a config file (YAML, JSON, TOML, INI, .conf, .env) refers_to that bucket;
+    //   - a JSON document with a "vaults" list names vaults (in a region, part of the site if it sits in the site's bucket);
+    //   - a CloudFront log file (key <distribution>-YYYY-MM-DD-HH-MM-SS.gz, lines with c_ip, cs_uri_stem, sc_status)
+    //     records its distribution (naming), refers_to the vaults its paths name, and an address with at least 10
+    //     requests, at least 80% of them refused (4xx), becomes an actor seen_in those files and targeting those vaults.
+    // Vault lists are read before logs, so log lines can name known vaults. Files nothing recognises are left alone.
+    var LOG_KEY = /\/([a-z0-9-]+)-\d{4}-\d\d-\d\d-\d\d-\d\d-\d\d\.gz$/, CONFIG = /\.(ya?ml|json|toml|ini|conf|cfg|env)$/i;
+    function content(files, o) {
+      o = o || {};
+      var siteId = null;
+      if (o.site && o.site.name) {
+        siteId = "urn:sws:site:" + o.site.name;
+        var index = files.filter(function (f) { return f.bucket === o.site.bucket && f.key === "index.html"; })[0];
+        var title = index && /<title>([^<]*)<\/title>/.exec(index.text);
+        node(siteId, "site", "A3", o.site.label || o.site.name, title ? { title: title[1] } : {});
+      }
+      files.forEach(function (f) {
+        if (!CONFIG.test(f.key)) return;
+        var fid = ids.object(f.bucket, f.key), re = /\bs3:\/\/([a-z0-9][a-z0-9.-]{1,61}[a-z0-9])/g, m, seen = {};
+        while ((m = re.exec(f.text))) if (!seen[m[1]]) {
+          seen[m[1]] = 1;
+          edge(fid, "refers_to", ids.bucket(m[1]), "content", f.key + " (s3://" + m[1] + "/...)");
+        }
+      });
+      files.forEach(function (f) {
+        if (!/\.json$/i.test(f.key)) return;
+        var doc; try { doc = JSON.parse(f.text); } catch (e) { return; }
+        if (!doc || !Array.isArray(doc.vaults)) return;
+        var fid = ids.object(f.bucket, f.key);
+        doc.vaults.forEach(function (v) {
+          if (!v || typeof v.id !== "string" || !v.id) return;
+          var vid = node("urn:sws:vault:" + v.id, "vault", "A5", v.id, typeof v.files === "number" ? { files: v.files } : {});
+          edge(fid, "refers_to", vid, "content", f.key);
+          if (typeof v.region === "string" && /^[a-z]{2}(-[a-z]+)+-\d$/.test(v.region)) edge(vid, "in", region(v.region, "content", f.key + " (region)"), "content", f.key + " (region)");
+          if (siteId && f.bucket === o.site.bucket) edge(vid, "part_of", siteId, "content", f.key + " in the site's bucket");
+        });
+      });
+      var byIp = {};
+      files.forEach(function (f) {
+        var m = LOG_KEY.exec(f.key);
+        if (!m) return;
+        var lines = f.text.split("\n").map(function (l) { try { return JSON.parse(l); } catch (e) { return null; } })
+          .filter(function (l) { return l && typeof l === "object" && "c_ip" in l && "cs_uri_stem" in l && "sc_status" in l; });
+        if (!lines.length) return;
+        var fid = ids.object(f.bucket, f.key), did = "urn:sws:cloudfront-distribution:" + m[1];
+        node(did, "distribution", "A2", m[1], { cfn_type: "AWS::CloudFront::Distribution", inferred: true, note: "named by its log files" });
+        edge(fid, "records", did, "naming", "log object key names " + m[1]);
+        var vaults = {};
+        lines.forEach(function (l) {
+          var v = /^\/vault\/([^/?]+)/.exec(String(l.cs_uri_stem));
+          if (v && /^\/vault\/[^/]+\/files/.test(l.cs_uri_stem)) vaults[v[1]] = 1;
+          var a = byIp[l.c_ip] = byIp[l.c_ip] || { requests: 0, refused: 0, files: {}, vaults: {} };
+          a.requests++; if (+l.sc_status >= 400 && +l.sc_status < 500) a.refused++;
+          a.files[f.key] = f.bucket; if (v) a.vaults[v[1]] = 1;
+        });
+        Object.keys(vaults).sort().forEach(function (v) {
+          if (nodes.has("urn:sws:vault:" + v)) edge(fid, "refers_to", "urn:sws:vault:" + v, "content", "log lines (cs_uri_stem /vault/" + v + "/files)");
+        });
+      });
+      Object.keys(byIp).sort().forEach(function (ip) {
+        var a = byIp[ip];
+        if (a.requests < 10 || a.refused / a.requests < 0.8 || !/^[0-9a-fA-F:.]+$/.test(ip)) return;
+        var aid = node(ids.actor(ip), "actor", "A4", ip + " (refused " + a.refused + " of " + a.requests + ")",
+          { ocsf_class: "HTTP Activity", src_ip: ip, requests: a.requests, refused: a.refused, rule: "at least 10 requests, at least 80% refused (4xx)" });
+        Object.keys(a.files).sort().forEach(function (k) { edge(aid, "seen_in", ids.object(a.files[k], k), "content", "log lines (c_ip " + ip + ")"); });
+        Object.keys(a.vaults).sort().forEach(function (v) {
+          if (nodes.has("urn:sws:vault:" + v)) edge(aid, "targeted", "urn:sws:vault:" + v, "content", "log lines (c_ip " + ip + ", paths under /vault/" + v + ")");
+        });
+      });
+    }
+
     // An object names its bucket already: a bucket target with an object target in it is not a second edge.
     function actedOn(targets) {
       return targets.filter(function (t) {
@@ -141,7 +215,7 @@
         evidence_levels: EVIDENCE.slice(), counts: { nodes: nodeList.length, edges: edgeList.length, by_evidence: by }, nodes: nodeList, edges: edgeList };
     }
 
-    return { add: { s3: s3, activity: activity }, toJSON: toJSON, ids: ids };
+    return { add: { s3: s3, activity: activity, content: content }, toJSON: toJSON, ids: ids };
   }
 
   root.Graph = Graph;
