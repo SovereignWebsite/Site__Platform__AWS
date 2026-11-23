@@ -195,7 +195,8 @@ Screen 3's sentences, keyed by the reasons `checkHealth` and `cleanEndpoint` ret
 | `not-a-vault` | "That address answered, but it is not a Vault made by this page." |
 | `other-vault` | "That is Vault <id>; this page made <id>. Did you copy the address of another stack?" |
 | `old-template` | "That Vault reports template <version>, which this page does not offer, so it cannot vouch for it. Consider updating it." |
-| sha256 differs from the index (reason name from dev.2.aws.a) | "That Vault's template does not match the published one. Do not use it: delete the stack and deploy again from this page." |
+| `other-template` (a published version, but not the one this page linked) | "This Vault was made from template <version>, not the one this page offered. Did you paste the address of an older deployment?" |
+| sha256 differs from the index (asked of dev.2.aws.a as its own reason, not folded into `other-template`) | "That Vault's template does not match the published one. Do not use it: delete the stack and deploy again from this page." |
 | `too-large` | "That address sent back far more than a Vault's check does, so the page stopped reading. Check you copied Endpoint." |
 
 <id> and <version> are filled with `textContent`. The ids are 12 hex characters, already checked against `^[0-9a-f]{12}$`.
