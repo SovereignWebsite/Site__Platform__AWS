@@ -58,6 +58,16 @@ if (!names.some((n) => lam.indexOf(":function:" + n + ":") > 0)) fail("processor
 r = await fh("DescribeDeliveryStream", { DeliveryStreamName: "nope" });
 if (r.status !== 400 || (await r.json()).__type !== "ResourceNotFoundException") fail("unknown stream");
 
+// names that are Object.prototype properties are not functions or streams (security.aws.a, 23 Nov)
+for (const n of ["constructor", "__proto__", "toString", "hasOwnProperty"]) {
+  r = await get(L + "/2015-03-31/functions/" + n + "/configuration");
+  if (r.status !== 404) fail("function " + n + " answered " + r.status);
+  r = await fh("DescribeDeliveryStream", { DeliveryStreamName: n });
+  if (r.status !== 400 || (await r.json()).__type !== "ResourceNotFoundException") fail("stream " + n + " answered");
+}
+r = await fh("DescribeDeliveryStream", {});
+if (r.status !== 400) fail("missing stream name answered");
+
 // unsigned calls are refused; writes are not in the twin
 if ((await get(L + "/2015-03-31/functions/", {})).status !== 403) fail("unsigned Lambda call answered");
 if ((await fh("ListDeliveryStreams", {}, {})).status !== 403) fail("unsigned Firehose call answered");
