@@ -115,7 +115,8 @@
     query: ["cs_uri_query", "cs-uri-query"], status: ["sc_status", "sc-status"], bytes: ["sc_bytes", "sc-bytes"],
     seconds: ["time_taken", "time-taken"], edge: ["x_edge_location", "x-edge-location"],
     agent: ["cs_user_agent", "cs(User-Agent)", "cs-user-agent"], request_id: ["x_edge_request_id", "x-edge-request-id"],
-    result: ["x_edge_result_type", "x-edge-result-type"], host: ["cs_host", "cs(Host)", "x-host-header"]
+    result: ["x_edge_result_type", "x-edge-result-type"], host: ["cs_host", "cs(Host)", "x-host-header"],
+    country: ["country", "c_country", "c-country"], vault_id: ["vault_id", "vault-id"]
   };
   function pick(raw, names) { for (var i = 0; i < names.length; i++) if (raw[names[i]] !== undefined && raw[names[i]] !== "") return raw[names[i]]; return ""; }
   // Kinds of path, in order; easy to change in one place.
@@ -169,10 +170,18 @@
       ms: isNaN(sec) ? null : Math.round(sec * 1000),
       edge: edge, edge_city: (/^[A-Z]{3}/.exec(edge) || [""])[0],
       agent: String(pick(raw, MAP.agent)), agent_kind: agentKind(pick(raw, MAP.agent)),
-      kind: kind, vault: vm && vm[1] !== ".." && vm[1] !== "." ? decodeSafe(vm[1]) : "",
+      // vault: from the path, by the same rule as the vault cards; an upstream vault_id (the enricher's) is a
+      // claim, kept as vault_claim only when it differs (it may count a traversal such as /vault/../ as a vault)
+      kind: kind, vault: vaultOf(vm), vault_claim: (function (c) { return c && c !== vaultOf(vm) ? c : ""; })(String(pick(raw, MAP.vault_id))),
+      country: String(pick(raw, MAP.country)).toUpperCase(),
       request_id: String(pick(raw, MAP.request_id)), result: String(pick(raw, MAP.result)), host: String(pick(raw, MAP.host)),
       src: src
     };
+  }
+  function vaultOf(m) {
+    if (!m) return "";
+    var id = decodeSafe(m[1]);
+    return id === "." || id === ".." || /[\/\\]/.test(id) ? "" : id;
   }
   function decodeSafe(s) { try { return decodeURIComponent(s); } catch (e) { return s; } }
 

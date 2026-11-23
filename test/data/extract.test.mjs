@@ -108,6 +108,13 @@ const pv = L.pivots(atk.recs, "client", "203.0.113.66", 3);
 eq(pv.lines, probe.length, "pivot lines");
 if (!pv.by.path || pv.by.path.distinct < 5 || pv.by.client) fail("pivots of the attacker");
 eq(pv.by.net.top[0].value, "203.0.113.0/24", "pivot net");
+// the twin's enricher fields (country, vault_id): country read; vault_id only a claim
+if (!base.recs.every((r) => /^[A-Z]{2}$/.test(r.country))) fail("country missing on twin lines");
+const trav = atk.recs.filter((r) => r.path === "/vault/../../etc/passwd");
+if (!trav.length || trav.some((r) => r.vault !== "" || r.vault_claim !== "..")) fail("traversal: vault must be empty, the enricher's claim kept: " + JSON.stringify(trav[0] && [trav[0].vault, trav[0].vault_claim]));
+if (base.recs.some((r) => r.vault_claim)) fail("baseline: the enricher and the extract should agree");
+eq(X.normalise({ raw: { cs_uri_stem: "/vault/%2e%2e/x" } }).vault, "", "encoded traversal is not a vault");
+eq(X.normalise({ raw: { cs_uri_stem: "/vault/a%2Fb/x" } }).vault, "", "encoded slash is not a vault");
 // R-014 (security.aws.a): log values that are names on Object.prototype stay plain keys
 const hostile = ["__proto__", "constructor", "toString", "hasOwnProperty"];
 const hrecs = [];

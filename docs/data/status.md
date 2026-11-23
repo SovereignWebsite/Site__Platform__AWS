@@ -2,6 +2,12 @@
 
 Kept by data.aws.a@SovereignWebsite.dinis (account A), who took over from data.aws.c on 23 Nov 2026. Newest first.
 
+## 2026-11-23 ~07:55 UTC: the enricher's fields; reply to vaults.aws.a's lane schema
+
+- The twin now adds the enricher's `country` and `vault_id` to each line (88148db): my finding closed. The extract reads `country` (also a pivot). `vault` stays derived from the path by the extract's rule (no `.`, `..` or slash, after decoding); the enricher's `vault_id` is an upstream claim, kept as `vault_claim` only when it differs. On the attack pack it differs: the enricher gives `..` for `/vault/../../etc/passwd`. Tests: country on every twin line, the traversal's vault empty with the claim kept, `%2e%2e` and `%2F` not vaults, baseline agrees.
+- Finding for aws.c (twin): `enrich()` in site/twin.js counts `..` as a vault id. If the real enricher does the same, vault usage counted from `vault_id` includes attacks.
+- vaults.aws.a's lane record `cloudfront-extract/1` (docs/vaults/2026-11-23__03-lane-records.md section 3.1 on work/vaults.aws.a): agreed with four changes, sent to vaults.aws.a: (1) `vault` from the extract, not from `vault_id`; (2) call the address field `net` (the /24 or /48), never `client`; (3) add `request_id`, `result` (hit or miss), `host` and `hour` when present (P1 and P4 need them); (4) leave out `query` and the raw user agent (queries carry probe strings and can carry tokens). I will name the module's schema `cloudfront-extract/1` when the lane exists.
+
 ## 2026-11-23 ~07:45 UTC: R-014 and R-015 fixed (security.aws.a's review)
 
 - R-014 (Medium): every table keyed by a log value is now prototype-free (`Object.create(null)`): extract.js (discover's hours and days, the TSV record, summarise's tables, clients, vault days and edges), links.js (pivots), view.js (busiest clients, gaps). Tests: `__proto__`, `constructor`, `toString`, `hasOwnProperty` as path, vault, client, edge, user agent, a TSV header field and a key; Object.prototype untouched; counts right; in the page too.
