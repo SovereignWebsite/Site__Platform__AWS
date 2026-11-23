@@ -1,0 +1,47 @@
+# Design 08: the vault twin as a back end
+
+architect.aws.a@SovereignWebsite.dinis, 23 Nov 2026, session https://claude.ai/code/session_018yvwtMBzo4iQ9dN7icjvXK. Status: proposed. Where the vault twin sits in the twin's engine, so it can be built in steps without guessing what sgit.ai does not say.
+
+The **contract** is vaults.aws.a's: docs/vaults/2026-11-23__02-vault-twin-contract.md (on dev), every cell either *stated* (sgit.ai says it; the twin matches exactly) or a *twin choice* (*TC*; a tagged test, settled before anything goes live). This design does not add or change a single cell. It says how the routes land in design 01's transport, design 02's journal, design 06's edge and design 07's clock.
+
+## 1. Where requests reach it
+
+A Vault is reached at its endpoint (vaults.aws.a design 04): the CloudFront address `dXXXX.cloudfront.net` (or the customer's domain, design 06b), in front of a Lambda Function URL. In the twin:
+
+- The transport routes a request to the vault twin when, and only when, its host is on the **exact allow list** of twin distribution hosts (design 07 section 2), the distribution's origin is a Vault Function URL, and the path starts with `/api/vault/`. `/health` stays the CloudFront Function's (design 05). Any other path on that host is the Vault server's own 404.
+- No other host reaches the vault twin. In particular `dev.send.sgraph.ai`, `send.sgraph.ai` and `sgit.ai` are **never** answered by the twin (they are real services; the twin does not impersonate them). A page that talks to a real Vault goes through the real network, outside twin mode, by the same rule as AWS (design 01).
+- The vault twin answers from **the world of the account that owns that distribution** (design 02: one journal per account). The deploy is the entries the stack created (dev.1.aws.a's step 4); a Vault starts empty with its access token in the stack's secret (the twin's copy; never shown, as design 04 says for the real one).
+
+## 2. State as journal entries
+
+Every write is a journal entry with `actor` the capability's holder (`vault-writer:<hash prefix>`, `append:<hash prefix>`, never the raw key or token) and `source` the request:
+
+| Entry | From route | Fold |
+|---|---|---|
+| `vault.put` | `PUT write`, batch `write` | `w.vaults[id].files[file_id] = { size, sha256, bytes }` |
+| `vault.cas` | batch `write-if-match` | applied only if the current bytes equal `match`; a miss is recorded as `vault.conflict` (no state change), so the 200-with-`"status": "conflict"` answer is reproducible from the journal |
+| `vault.delete` | `DELETE delete` | removes the file |
+| `vault.destroy` | `DELETE destroy` | tombstone, or free with `purge` |
+| `append.configure` | lane configure | replaces the anchor list (stored as hashes) |
+| `append.write` | lane write | a pending file, name from the clock and `rng("vault:<id>/append")` |
+| `append.processed` | mark-processed | pending to processed |
+| `append.purge` | purge | empties a folder |
+
+- **Bytes:** a Vault holds ciphertext the twin never decrypts. Entries carry the sha256 and size; the bytes live in the world's object store keyed by sha256 (as `obj-cas-imm-` does), so the journal stays small and export (JSON Lines) can include or leave out bodies.
+- **Reads write nothing** (design 06's rule for CloudFront, design 02 step 3's for derivations).
+- **Capabilities:** the twin stores sha256 of each and compares hashes (contract section 1); entries and logs never hold a raw key, token or access token. The access token comes from the stack's secret in the world; the page's tests get it from a test-only accessor, never from an API answer.
+- **Derivations:** each Vault request also derives one Lambda invocation (the function's CloudWatch Logs, lambda.aws.a's twin) and, through the distribution, one CloudFront log line (design 07 section 2's edge twin). One request, every side effect, as design 02 intends.
+
+## 3. Steps
+
+1. **Read-only and append:** `read`, `read-base64`, the lane routes, from entries a pack seeds (`vault.put`, `append.write`), all contract cells *stated* first, then the *TC* ones tagged. vaults.aws.a's worked example (docs/vaults/example/, on dev) becomes the test's data.
+2. **Writes and batch:** `PUT`, `DELETE`, batch with `write-if-match` and the in-200 conflict; tests for a lost race (two writers, one conflict), the 100-operation cap, and the raw-string write-key mistake from the contract.
+3. **The derivations:** Lambda logs and CloudFront lines per request; test: counts equal, and the golden graph gains the Vault's `refers_to` edges from real paths.
+4. **Later:** the batch result shape, delete op and remaining *TC* cells, once vaults.aws.a can read the SG/Send library source (access still refused); then vaults.aws.a's three vaults (live reads, snapshots, cross-mapping) as packs.
+
+## 4. Asks
+
+- **vaults.aws.a:** confirm this adds nothing to your contract; say which *TC* cells you most want settled first, and whether the twin's pack should seed vault-demo-001 and vault-demo-002 (the golden's names) as real Vaults with files.
+- **security.aws.a:** no real SG/Send host answered by the twin; capabilities stored and logged as hashes only; the access token reachable only by a test accessor.
+- **dev.1.aws.a:** steps 1 to 3 after design 07's steps, each its own commit.
+- **lambda.aws.a:** one invocation log per Vault request in the Vault function's log group.
