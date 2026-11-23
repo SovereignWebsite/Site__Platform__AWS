@@ -24,6 +24,7 @@
 (function (root) {
   "use strict";
   var EVIDENCE = ["api", "template", "content", "naming", "comment", "curated"];
+  var TRUST = { api: "verified", template: "verified", content: "claimed", naming: "claimed", comment: "claimed", curated: "curated" };
   var GROUP = 50; // a folder with more objects than this is one prefix node, as the builder does
   var GOOGLE = "urn:sws:idp:accounts.google.com";
   var TARGET_ALTITUDE = { object: "A1", bucket: "A2", stack: "A2", function: "A2", policy: "A2", trail: "A2", role: "A4" };
@@ -31,13 +32,27 @@
   function Graph(opts) {
     opts = opts || {};
     var nodes = new Map(), edges = new Map(), account = opts.account || null;
-    // Where the graph's facts come from (security R-020): "twin" or "aws", stamped on every node; and which nodes an
-    // AWS API answered for. A node only files or names speak for (an actor, a vault, an event, an inferred
-    // distribution or trail) is marked unverified: bucket contents can be planted, so such nodes and their content
-    // and naming edges must never feed an "unused", "safe to remove" or "replace" signal, and views show IAM and
-    // other API facts apart from file claims. Graph.verified(edge) says the same for an edge.
-    var source = opts.source === "aws" ? "aws" : opts.source === "twin" ? "twin" : "unknown", verified = new Set();
+    // Trust of evidence (design 03, security R-020). backend is the page's mode ("twin" or "aws"), passed in by the
+    // caller and never inferred. Every edge's trust follows its evidence: verified for api and template, claimed
+    // for content, naming and comment, curated as is; a merged edge is verified if any source is. A node is
+    // verified if an API answer or a verified edge names it; else curated only if every edge naming it is curated;
+    // else claimed. Attributes keep their own trust: each node's attribute_trust maps an attribute to { trust,
+    // source }, set by the adapter that wrote it, and a claimed fact never overwrites a verified one. Claimed
+    // evidence may raise a question, never drive a suggestion to remove, replace or narrow anything.
+    if (opts.backend !== "twin" && opts.backend !== "aws") throw new TypeError("Graph needs backend: \"twin\" or \"aws\", from the page's mode");
+    var backend = opts.backend, verified = new Set(), ctxTrust = { trust: "claimed", source: "unknown" };
     function vouch(id) { verified.add(id); return id; }
+    function setAttr(n, k, v) {
+      if (v === undefined) return;
+      n.attribute_trust = n.attribute_trust || {};
+      var old = n.attribute_trust[k];
+      if (old && old.trust === "verified" && ctxTrust.trust !== "verified") return;
+      n[k] = v; n.attribute_trust[k] = { trust: ctxTrust.trust, source: ctxTrust.source };
+    }
+    // Run an adapter with the trust its own facts carry.
+    function as(trust, src, fn) {
+      return function () { var prev = ctxTrust; ctxTrust = { trust: trust, source: src }; try { return fn.apply(null, arguments); } finally { ctxTrust = prev; } };
+    }
     var ids = {
       account: function () { return "urn:sws:account:" + account; },
       region: function (r) { return "urn:sws:region:" + r; },
@@ -50,7 +65,7 @@
 
     function node(id, type, altitude, label, extra) {
       var n = nodes.get(id) || { id: id, type: type, label: label, altitude: altitude };
-      for (var k in extra || {}) n[k] = extra[k];
+      Object.keys(extra || {}).forEach(function (k) { setAttr(n, k, extra[k]); });
       nodes.set(id, n);
       return id;
     }
@@ -81,10 +96,10 @@
         if (b.region) edge(bid, "in", vouch(region(b.region, "api", "Cloud Control GetResource")), "api", "Cloud Control GetResource (RegionalDomainName)");
         // A CloudTrail bucket made by the console is named aws-cloudtrail-logs-<account>-<trail>: a naming inference.
         var tm = /^aws-cloudtrail-logs-\d{12}-(.+)$/.exec(b.name);
-        if (tm) {
+        if (tm) as("claimed", "a bucket's name", function () {
           node(ids.trail(tm[1]), "trail", "A2", tm[1], { cfn_type: "AWS::CloudTrail::Trail", inferred: true, note: "named by its bucket" });
           edge(ids.trail(tm[1]), "logs_to", bid, "naming", "bucket name aws-cloudtrail-logs-<account>-" + tm[1]);
-        }
+        })();
         var byFolder = Object.create(null);
         (b.objects || []).forEach(function (o) {
           var f = o.key.indexOf("/") >= 0 ? o.key.slice(0, o.key.lastIndexOf("/") + 1) : "";
@@ -119,6 +134,8 @@
         if (e.who && e.who.kind === "role" && e.who.arn) {
           node(e.who.arn, "role", "A4", e.who.name || e.who.arn.split("/").pop(), { cfn_type: "AWS::IAM::Role" });
           edge(e.node, "acted_as", e.who.arn, "content", "CloudTrail userIdentity.sessionContext.sessionIssuer");
+          var rn = nodes.get(e.who.arn);
+          if (e.iso && (!rn.last_seen || e.iso > rn.last_seen)) setAttr(rn, "last_seen", e.iso); // claimed: a file says so
           if (e.who.via === "accounts.google.com") {
             node(GOOGLE, "identity_provider", "A4", "accounts.google.com", { note: "web identity federation; no IAM resource" });
             edge(e.node, "signed_in_via", GOOGLE, "content", "CloudTrail webIdFederationData.federatedProvider");
@@ -235,7 +252,7 @@
         if (st.region) edge(st.arn, "in", vouch(region(st.region, "api", "Firehose DescribeDeliveryStream (ARN)")), "api", "Firehose DescribeDeliveryStream (ARN)");
         (st.destinations || []).forEach(function (d) {
           if (d.kind !== "s3" || !d.bucket) return;
-          var n = nodes.get(st.arn); n.s3_prefix = d.prefix; n.compression = d.compression; n.buffer_seconds = d.bufferSeconds;
+          var n = nodes.get(st.arn); setAttr(n, "s3_prefix", d.prefix); setAttr(n, "compression", d.compression); setAttr(n, "buffer_seconds", d.bufferSeconds);
           edge(st.arn, "writes_to", ids.bucket(d.bucket), "api", "Firehose DescribeDeliveryStream (BucketARN)");
           role(d.roleArn, "Firehose DescribeDeliveryStream (RoleARN)", st.arn);
           (d.processors || []).forEach(function (p) {
@@ -298,7 +315,7 @@
       list.forEach(function (z) {
         if (!z || !z.bucket || !z.key) return;
         var oid = ids.object(z.bucket, z.key);
-        if (nodes.has(oid) && typeof z.entries === "number") nodes.get(oid).entries = z.entries;
+        if (nodes.has(oid) && typeof z.entries === "number") setAttr(nodes.get(oid), "entries", z.entries);
         zips.push(z);
       });
     }
@@ -337,30 +354,50 @@
       return targets.filter(function (t) { return t && typeof t.id === "string" && !(t.type === "bucket" && withObjects.has(t.id)); });
     }
 
+    function nodeTrust(id) { return nodeTrustMap ? nodeTrustMap.get(id) || "claimed" : "claimed"; }
+    var nodeTrustMap = null;
     function toJSON() {
       logsThroughStreams();
       packagesFunctions();
+      // Node trust from the edges that name it (design 03): verified wins, then claimed, curated only if nothing else.
+      var named = new Map();
+      edges.forEach(function (e) {
+        var t = TRUST[e.evidence];
+        [e.from, e.to].forEach(function (id) { var m = named.get(id) || {}; m[t] = true; named.set(id, m); });
+      });
+      nodeTrustMap = new Map();
+      named.forEach(function (m, id) { nodeTrustMap.set(id, m.verified ? "verified" : m.claimed ? "claimed" : "curated"); });
+      verified.forEach(function (id) { nodeTrustMap.set(id, "verified"); });
       var nodeList = Array.from(nodes.values()).map(function (n) {
-        var o = Object.assign({}, n); o.source = source;
-        if (!verified.has(n.id)) o.unverified = true;
+        var o = Object.assign({}, n);
+        if (n.attribute_trust) o.attribute_trust = JSON.parse(JSON.stringify(n.attribute_trust));
+        o.trust = nodeTrust(n.id); o.backend = backend;
         return o;
       });
-      var edgeList = Array.from(edges.values()).map(function (e) { return Object.assign({}, e); });
+      var edgeList = Array.from(edges.values()).map(function (e) { return { from: e.from, rel: e.rel, to: e.to, evidence: e.evidence, trust: TRUST[e.evidence], source: e.source }; });
       var have = new Set(nodeList.map(function (n) { return n.id; }));
       edgeList.forEach(function (e) {
         [e.from, e.to].forEach(function (end) {
-          if (!have.has(end)) { have.add(end); nodeList.push({ id: end, type: "unknown", label: end, altitude: "A2", dangling: true, unverified: true, source: source, note: "named by an edge; no adapter has described it yet" }); }
+          if (!have.has(end)) { have.add(end); nodeList.push({ id: end, type: "unknown", label: end, altitude: "A2", dangling: true, note: "named by an edge; no adapter has described it yet", trust: nodeTrust(end), backend: backend }); }
         });
       });
       nodeList.sort(function (a, b) { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; });
       edgeList.sort(function (a, b) { var x = a.from + a.rel + a.to, y = b.from + b.rel + b.to; return x < y ? -1 : x > y ? 1 : 0; });
       var by = {};
       edgeList.forEach(function (e) { by[e.evidence] = (by[e.evidence] || 0) + 1; });
-      return { about: "Resource graph built in the page from the service APIs and the activity reader (site/api/graph.js); source: " + source + ".",
+      return { about: "Resource graph built in the page from the service APIs and the activity reader (site/api/graph.js).", backend: backend,
         evidence_levels: EVIDENCE.slice(), counts: { nodes: nodeList.length, edges: edgeList.length, by_evidence: by }, nodes: nodeList, edges: edgeList };
     }
 
-    return { add: { s3: s3, activity: activity, content: content, lambda: lambda, firehose: firehose, zips: addZips, iam: iam }, toJSON: toJSON, ids: ids };
+    return { add: {
+        s3: as("verified", "S3 ListObjectsV2 and Cloud Control GetResource", s3),
+        lambda: as("verified", "Lambda ListFunctions", lambda),
+        firehose: as("verified", "Firehose DescribeDeliveryStream", firehose),
+        iam: as("verified", "IAM ListRoles, GetRole and ListAttachedRolePolicies", iam),
+        activity: as("claimed", "CloudTrail log files in a bucket", activity),
+        content: as("claimed", "files in a bucket", content),
+        zips: as("claimed", "zip files in a bucket", addZips)
+      }, toJSON: toJSON, ids: ids };
   }
 
   // A zip's facts for add.zips: its SHA-256 (base64, as Lambda's CodeSha256), the package name its
@@ -385,6 +422,6 @@
 
   // An edge an AWS API answered for (evidence api or template). content and naming edges come from what files say or
   // from names, which bucket contents can plant (security R-020): show them as claims, never as proof.
-  Graph.verified = function (e) { return !!e && (e.evidence === "api" || e.evidence === "template"); };
+  Graph.verified = function (e) { return !!e && (e.trust ? e.trust === "verified" : TRUST[e.evidence] === "verified"); };
   root.Graph = Graph;
 })(typeof window !== "undefined" ? window : globalThis);
