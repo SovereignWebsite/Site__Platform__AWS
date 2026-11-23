@@ -22,7 +22,7 @@ Command is a line you type into, with results as cards. Design 01 asked that "co
 
 How the extra parts are typed:
 - **Query options** are `--name value` after the path parameters (for example `s3 listObjects <bucket> <region> --prefix cloudfront/`). Only the options the row lists are accepted.
-- **A byte range** on `s3 getObject` is `--bytes <start>-<end>` (for example `--bytes 0-1023`). The API takes it as two arguments rather than an option, so the parser handles this one case itself, and both numbers are checked as whole numbers with start not after end.
+- **A byte range** on `s3 getObject` is `--bytes <start>-<end>` (for example `--bytes 0-1023`). The API takes it as two arguments rather than an option, so the parser handles this one case itself, and both numbers are checked as whole numbers with start not after end. The range length is capped at the S3 browser's preview cap (R-017), so one line cannot pull a whole large object. Over the cap: "That range is over the preview limit. Use Files to read it in parts."
 
 Short forms come on top, as a small, hand-kept alias table that only ever maps to a generated command: `ls` is `s3 listBuckets`, `ls <bucket>` is `s3 listObjects` with the bucket's region looked up, `open <bucket>/<key>` opens Files there, `who <role>` is `iam role` plus `iam attached`. An alias can never reach an operation the documents do not define.
 
