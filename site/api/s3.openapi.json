@@ -2,9 +2,9 @@
   "openapi": "3.1.0",
   "info": {
     "title": "S3Api (browser)",
-    "version": "0.1.0",
-    "summary": "The browser-side contract of S3Api (site/api/s3-api.js), as architect.aws.c's design 01 asks.",
-    "description": "This site has no server. The paths below are logical names for the methods of the browser object S3Api, not URLs anything listens on; operationId is the method name. Each operation lists in x-aws-actions the IAM actions it needs on real AWS; the union over the operations a UI uses is the least-privilege list aws.c turns into the template's next plan. Cloud Control handler permissions for AWS::S3::Bucket are not listed yet: aws.c confirms them against AWS's published resource schema first (x-aws-actions-pending says so where it applies). On the twin (synthetic account 111122223333) no credentials are used."
+    "version": "0.2.0",
+    "summary": "The browser-side contract of S3Api (site/api/s3-api.js, 774fc03): its four read methods.",
+    "description": "This site has no server. The paths below are logical names for the methods of the browser object S3Api, not URLs anything listens on; operationId is the method name and parameters are its arguments in order. Each operation lists in x-aws-actions the IAM actions it needs on real AWS; the union over the operations a UI uses is the least-privilege list aws.c turns into the template's next plan. S3Api only reads: design 01's planCors and applyPlan are not in it (changes stay with plans and Approve, site/plan.js), so they are listed under x-not-in-s3api, not as operations. Cloud Control handler permissions for AWS::S3::Bucket are not listed yet: aws.c confirms them against AWS's published resource schema first (x-aws-actions-pending). On the twin (synthetic account 111122223333) no credentials are used."
   },
   "servers": [],
   "x-browser-global": "S3Api",
@@ -14,13 +14,29 @@
       "get": {
         "operationId": "listBuckets",
         "summary": "List the account's buckets",
-        "x-wire": "Cloud Control ListResources, TypeName AWS::S3::Bucket, paged by NextToken (S3Api follows every page)",
-        "x-aws-actions": ["cloudformation:ListResources"],
+        "x-wire": "Cloud Control ListResources in us-east-1, TypeName AWS::S3::Bucket, MaxResults 100, paged by NextToken (S3Api follows every page)",
+        "x-aws-actions": [
+          "cloudformation:ListResources"
+        ],
         "x-aws-actions-pending": "handler permissions of AWS::S3::Bucket for list, to be confirmed by aws.c",
         "x-role": "read",
         "responses": {
-          "200": { "description": "Every bucket", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/BucketSummary" } } } } },
-          "default": { "$ref": "#/components/responses/AwsError" }
+          "200": {
+            "description": "Every bucket name, sorted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
         }
       }
     },
@@ -28,146 +44,377 @@
       "get": {
         "operationId": "getBucket",
         "summary": "Read one bucket's properties, including its region",
-        "x-wire": "Cloud Control GetResource, TypeName AWS::S3::Bucket; region from RegionalDomainName",
-        "x-aws-actions": ["cloudformation:GetResource"],
+        "x-wire": "Cloud Control GetResource in us-east-1, TypeName AWS::S3::Bucket; region from RegionalDomainName, us-east-1 when there is none",
+        "x-aws-actions": [
+          "cloudformation:GetResource"
+        ],
         "x-aws-actions-pending": "handler permissions of AWS::S3::Bucket for read, to be confirmed by aws.c",
         "x-role": "read",
-        "parameters": [ { "$ref": "#/components/parameters/bucket" } ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/bucket"
+          }
+        ],
         "responses": {
-          "200": { "description": "The bucket", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Bucket" } } } },
-          "default": { "$ref": "#/components/responses/AwsError" }
+          "200": {
+            "description": "The bucket",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bucket"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
         }
       }
     },
-    "/buckets/{bucket}/objects": {
+    "/buckets/{bucket}/{region}/objects": {
       "get": {
         "operationId": "listObjects",
         "summary": "One page of folders and files under a prefix",
-        "x-wire": "S3 ListObjectsV2: GET ?list-type=2&prefix=&delimiter=/&continuation-token=",
-        "x-aws-actions": ["s3:ListBucket"],
+        "x-wire": "S3 ListObjectsV2: GET ?list-type=2&delimiter=&max-keys=&prefix=&continuation-token=; path-style URL for a bucket name with a dot",
+        "x-aws-actions": [
+          "s3:ListBucket"
+        ],
         "x-role": "read",
         "parameters": [
-          { "$ref": "#/components/parameters/bucket" },
-          { "name": "prefix", "in": "query", "required": false, "schema": { "type": "string", "default": "" } },
-          { "name": "token", "in": "query", "required": false, "description": "The nextToken of the previous page", "schema": { "type": "string" } }
+          {
+            "$ref": "#/components/parameters/bucket"
+          },
+          {
+            "name": "region",
+            "in": "path",
+            "required": true,
+            "description": "The bucket's region, from getBucket",
+            "schema": {
+              "type": "string",
+              "examples": [
+                "eu-west-1"
+              ]
+            }
+          },
+          {
+            "name": "prefix",
+            "in": "query",
+            "required": false,
+            "description": "opts.prefix",
+            "schema": {
+              "type": "string",
+              "default": ""
+            }
+          },
+          {
+            "name": "delimiter",
+            "in": "query",
+            "required": false,
+            "description": "opts.delimiter; empty string lists flat",
+            "schema": {
+              "type": "string",
+              "default": "/"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "description": "opts.token: the next of the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "maxKeys",
+            "in": "query",
+            "required": false,
+            "description": "opts.maxKeys",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 1000
+            }
+          }
         ],
         "responses": {
-          "200": { "description": "One page", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ObjectPage" } } } },
-          "default": { "$ref": "#/components/responses/AwsError" }
-        }
+          "200": {
+            "description": "One page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectPage"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        },
+        "x-arguments": "listObjects(bucket, region, { prefix, delimiter, token, maxKeys })"
       }
     },
-    "/buckets/{bucket}/objects/{key}": {
+    "/buckets/{bucket}/{region}/objects/{key}": {
       "get": {
         "operationId": "getObject",
         "summary": "Read an object, whole or a byte range (the zip reader reads by ranges)",
         "x-wire": "S3 GetObject, GET on the key, optional Range header; 206 with Content-Range for a range",
-        "x-aws-actions": ["s3:GetObject"],
+        "x-aws-actions": [
+          "s3:GetObject"
+        ],
         "x-role": "read",
         "parameters": [
-          { "$ref": "#/components/parameters/bucket" },
-          { "name": "key", "in": "path", "required": true, "schema": { "type": "string" } },
-          { "name": "range", "in": "query", "required": false, "description": "Inclusive byte range, as in an HTTP Range header", "schema": { "$ref": "#/components/schemas/ByteRange" } }
+          {
+            "$ref": "#/components/parameters/bucket"
+          },
+          {
+            "name": "region",
+            "in": "path",
+            "required": true,
+            "description": "The bucket's region, from getBucket",
+            "schema": {
+              "type": "string",
+              "examples": [
+                "eu-west-1"
+              ]
+            }
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "description": "[start, end], inclusive, sent as Range: bytes=start-end",
+            "schema": {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              ],
+              "minItems": 2,
+              "maxItems": 2
+            }
+          }
         ],
         "responses": {
-          "200": { "description": "The whole object", "content": { "application/octet-stream": { "schema": { "type": "string", "contentEncoding": "binary" } } } },
-          "206": { "description": "The asked range", "content": { "application/octet-stream": { "schema": { "type": "string", "contentEncoding": "binary" } } } },
-          "416": { "description": "The range is past the end of the object: rejects with code InvalidRange (as the twin answers since 787735b)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AwsError" } } } },
-          "default": { "$ref": "#/components/responses/AwsError" }
-        }
-      }
-    },
-    "/buckets/{bucket}/cors-plan": {
-      "post": {
-        "operationId": "planCors",
-        "summary": "Make a plan that adds the site's CORS rule to a bucket. It never applies anything.",
-        "x-wire": "none beyond getBucket: the plan is built in the page",
-        "x-aws-actions": [],
-        "x-role": "read",
-        "parameters": [ { "$ref": "#/components/parameters/bucket" } ],
-        "responses": {
-          "200": { "description": "The plan, for the owner to Approve or not", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Plan" } } } },
-          "default": { "$ref": "#/components/responses/AwsError" }
-        }
-      }
-    },
-    "/plans/apply": {
-      "post": {
-        "operationId": "applyPlan",
-        "summary": "Apply a plan, only after the owner's Approve, with the change role",
-        "x-wire": "Cloud Control UpdateResource, then GetResourceRequestStatus until done",
-        "x-aws-actions": ["cloudformation:UpdateResource", "cloudformation:GetResourceRequestStatus"],
-        "x-aws-actions-pending": "handler permissions of AWS::S3::Bucket for update, to be confirmed by aws.c",
-        "x-role": "change",
-        "x-needs-approve": true,
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Plan" } } } },
-        "responses": {
-          "200": { "description": "The request's final status", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RequestStatus" } } } },
-          "default": { "$ref": "#/components/responses/AwsError" }
-        }
+          "200": {
+            "description": "The whole object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectBody"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "The asked range; contentRange set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectBody"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "The range is past the end of the object: rejects with code InvalidRange (as the twin answers since 787735b)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AwsError"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        },
+        "x-arguments": "getObject(bucket, region, key, [start, end])"
       }
     }
   },
   "components": {
     "parameters": {
-      "bucket": { "name": "bucket", "in": "path", "required": true, "schema": { "type": "string", "minLength": 3, "maxLength": 63 } }
+      "bucket": {
+        "name": "bucket",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 63
+        }
+      }
     },
     "schemas": {
-      "BucketSummary": {
-        "type": "object", "required": ["name"],
-        "properties": { "name": { "type": "string" } }
-      },
       "Bucket": {
-        "type": "object", "required": ["name", "region"],
+        "type": "object",
+        "required": [
+          "name",
+          "region"
+        ],
         "properties": {
-          "name": { "type": "string" },
-          "region": { "type": "string", "examples": ["eu-west-1"] },
-          "cors": { "type": ["object", "null"], "description": "CorsConfiguration as Cloud Control returns it, or null when the bucket has none" }
+          "name": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string",
+            "examples": [
+              "eu-west-1"
+            ]
+          },
+          "cors": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "CorsConfiguration as Cloud Control returns it, or null when the bucket has none"
+          }
         }
       },
       "ObjectPage": {
-        "type": "object", "required": ["folders", "files"],
+        "type": "object",
+        "required": [
+          "folders",
+          "files",
+          "next"
+        ],
         "properties": {
-          "folders": { "type": "array", "items": { "type": "string" }, "description": "CommonPrefixes" },
-          "files": { "type": "array", "items": { "$ref": "#/components/schemas/ObjectSummary" } },
-          "nextToken": { "type": ["string", "null"], "description": "NextContinuationToken; null on the last page" }
+          "folders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "CommonPrefixes"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ObjectSummary"
+            }
+          },
+          "next": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "NextContinuationToken when IsTruncated; null on the last page"
+          }
         }
       },
       "ObjectSummary": {
-        "type": "object", "required": ["key", "size"],
+        "type": "object",
+        "required": [
+          "key",
+          "size",
+          "modified"
+        ],
         "properties": {
-          "key": { "type": "string" },
-          "size": { "type": "integer", "minimum": 0 },
-          "lastModified": { "type": "string", "format": "date-time" }
-        }
-      },
-      "ByteRange": {
-        "type": "object", "required": ["start", "end"],
-        "properties": { "start": { "type": "integer", "minimum": 0 }, "end": { "type": "integer", "minimum": 0 } }
-      },
-      "Plan": {
-        "type": "object", "required": ["typeName", "identifier", "patch"],
-        "properties": {
-          "typeName": { "const": "AWS::S3::Bucket" },
-          "identifier": { "type": "string" },
-          "patch": { "type": "array", "description": "RFC 6902 JSON Patch, as Cloud Control UpdateResource takes", "items": { "type": "object" } }
-        }
-      },
-      "RequestStatus": {
-        "type": "object", "required": ["operationStatus"],
-        "properties": {
-          "operationStatus": { "type": "string", "enum": ["PENDING", "IN_PROGRESS", "SUCCESS", "FAILED", "CANCEL_IN_PROGRESS", "CANCEL_COMPLETE"] },
-          "statusMessage": { "type": "string" }
+          "key": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "modified": {
+            "type": "string",
+            "description": "LastModified as S3 sends it"
+          }
         }
       },
       "AwsError": {
-        "type": "object", "required": ["code", "message"],
-        "description": "S3 <Error><Code/><Message/></Error> or Cloud Control __type and message, made one shape; a CORS refusal shows as code NetworkError",
-        "properties": { "code": { "type": "string", "examples": ["NoSuchKey", "NoSuchBucket", "AccessDenied", "InvalidRange"] }, "message": { "type": "string" }, "status": { "type": "integer" } }
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "status"
+        ],
+        "description": "The promise rejects with an Error whose message is 'Code: Message' (as Platform.awsError makes), with .code and .status; from S3's <Error> XML or Cloud Control's __type and message. A bucket with no CORS rule for this site rejects with the browser's own TypeError: Failed to fetch, passed through unchanged, so the page can offer the CORS plan.",
+        "properties": {
+          "code": {
+            "type": "string",
+            "examples": [
+              "NoSuchKey",
+              "NoSuchBucket",
+              "AccessDenied",
+              "InvalidRange"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "examples": [
+              "NoSuchKey: The specified key does not exist."
+            ]
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      },
+      "ObjectBody": {
+        "type": "object",
+        "required": [
+          "status",
+          "contentType",
+          "contentRange",
+          "bytes"
+        ],
+        "properties": {
+          "status": {
+            "enum": [
+              200,
+              206
+            ]
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "contentRange": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bytes": {
+            "description": "Uint8Array of the body"
+          }
+        }
       }
     },
     "responses": {
-      "AwsError": { "description": "The promise rejects with this", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AwsError" } } } }
+      "AwsError": {
+        "description": "The promise rejects with this (or TypeError: Failed to fetch for a missing CORS rule)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AwsError"
+            }
+          }
+        }
+      }
     }
+  },
+  "x-not-in-s3api": {
+    "planCors": "design 01; plans are built by site/plan.js",
+    "applyPlan": "design 01; the change role applies a plan only after Approve, outside S3Api"
   }
 }
