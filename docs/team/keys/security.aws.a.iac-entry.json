@@ -1,0 +1,23 @@
+{
+  "id": "security-aws-a-sovereignwebsite",
+  "agent": "security.aws.a@SovereignWebsite.dinis",
+  "role": "Security reviewer on account A (AWS Platform programme): reviews of code, design and permissions only (no pen or live testing), with AppSec and adversarial sub-agents; keeps docs/security/risks.md. Takes over from security.aws.c.",
+  "how": "Made by the agent in its own session on 23 November 2026 with sgit pki keygen; public bundle from sgit pki export. Only the public half is here.",
+  "created": "2026-11-23",
+  "status": "active",
+  "session": "https://claude.ai/code/session_018yvwtNBPNd9zoeTUyhJ4YY",
+  "fingerprint": "sha256:b44c5ae2320a37f6",
+  "signing_fingerprint": "sha256:fdf1d1e313a66d28",
+  "bundle": {
+    "v": 1,
+    "encrypt": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA4Al3PPCkhMCFM4nqebK7\nczAKzFaXW4U8aX3Eelyy+TS9EqhA+XQYAlsP8RxXZVJRNBOLIBqLomk4gnkCB8wV\nAkyFa/Cl2nvtwJH3FjC3snsZb51+OyZejOP89DsbQ4rUGog0xmK5Ab3QhUGgzUuR\nMjVYwKQuXvgezy5WOZFTP9vMD9qFuOmhNevL+KJU3OHtRrYOd8Bi8GugWPFycP3J\n4BmiCB4kWrEso8B7sGeGjojjCMgz3HzfAIbDxcHvqGUX/+wBz9OvPJVFMvh8uCe6\n5ZOoHV5ThflVyyoHi0EmsTxwpftcvoJoTLrO5AZn7GUCnVIKc+58/txpjAlE6rVW\nGdPooKVJ4cOUZLA6uS4/ENB38Qidpu1i3Jgzpvrv3h791VjL6g5FatWoQI92G9Bp\nTx6PxvytyEuA8OJpzoKIb3hyljo2NuJymKxU81xiJnB473b1FohlA4EYRj0+O+S8\nZKv8L7mhKhFWWVfYWWHn0A0w+z+Vg/dBkGUmxGr9k7VQKDvLdQUfNAG4kNh2EyO/\nJAPxkbwTeFA6RGPd5fzWl4bGtlgaU6GJQKAEMilJT0qey8Gw2MYhlXl8TSSBuM/M\nF6LHB0zwqbZLEutvByab1SuS6qEMrrJWZCnOqP/egYheu8CsoXGLB7m5cqgf8x3o\nMnT9mFctOzc/9Rb1+nmnjWUCAwEAAQ==\n-----END PUBLIC KEY-----\n",
+    "sign": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEboU2yfkwOdILUQG5iQuqbon0wjnn\nMawdzq61sLf2m/lk3cwfWe3TgES+1EKMl90Ug7cyiHWtH3cyM6cN0q0Scg==\n-----END PUBLIC KEY-----\n",
+    "label": "security.aws.a@SovereignWebsite.dinis",
+    "fingerprint": "sha256:b44c5ae2320a37f6",
+    "signing_fingerprint": "sha256:fdf1d1e313a66d28"
+  },
+  "ssh_signing": {
+    "from": "bundle.sign",
+    "note": "build/check-signatures.mjs derives the OpenSSH form from bundle.sign and verifies each commit with git verify-commit."
+  }
+}
