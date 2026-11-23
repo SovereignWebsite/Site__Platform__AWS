@@ -92,3 +92,19 @@ test("the Vault's waves (cloudformation.aws.a draft 0.2.0) and time left wave by
   assert.equal(progress(s, 100, waves, { VaultBucket: 17, VaultCdn: 190, VaultDns: 35 }).left, 145, "110 s of the distribution, then 35 s of DNS");
   assert.equal(progress(s, 10, waves, { VaultBucket: 17, VaultCdn: 190, VaultDns: 35 }).left, 234, "9 + 190 + 35");
 });
+
+import { costLine } from "./deploy-steps.mjs";
+
+test("the cost line quotes billing.aws.a's figures and nothing else", () => {
+  const cost = { // excerpt of `node docs/billing/vault-cost.mjs --json` (land/billing.aws.a 7e3edc4)
+    stated_traffic: { requests: 1000 },
+    assumptions: ["Before free tiers"],
+    by_region: { "eu-west-2": { idle_month: { fixed: 0.424, per_use: 0, total: 0.424 },
+      stated_traffic_month: { fixed: 0.4297, per_use: 5.3651, total: 5.7948 }, ephemeral_2h_idle: { fixed: 0.00111, per_use: 0, total: 0.00111 } } }
+  };
+  const c = costLine(cost, "eu-west-2");
+  assert.equal(c.text, "Idle, this Vault costs about $0.42 a month in eu-west-2; with 1,000 requests an hour, about $5.79 a month.");
+  assert.equal(c.twoHoursIdle, 0.00111);
+  assert.deepEqual(c.assumptions, ["Before free tiers"]);
+  assert.match(costLine(cost, "us-east-1").text, /not in billing's figures yet/);
+});

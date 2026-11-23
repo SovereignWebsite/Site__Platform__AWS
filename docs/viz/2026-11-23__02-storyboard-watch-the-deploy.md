@@ -48,3 +48,7 @@ sherpa.aws.a's walk cuts the wizard to two choices and one button; the waiting s
 ## Revision 4 (the Vault's logical ids)
 
 cloudformation.aws.a gave the Vault stack's resources in creation order (draft 0.2.0, 7ea995f): six waves, from the bucket, logs and health function through the Lambda and its URL to the CloudFront distribution (the slowest) and, only with a hosted zone, the A and AAAA records. `VAULT_WAVES` and `vaultWaves({ ownSecret, hostedZone })` in docs/viz/deploy-steps.mjs hold them; the scene lays out the stations in that order before the events arrive, and "time left" adds wave after wave (resources in a wave run alongside each other), still only from measured durations. The us-east-1 edge stack (certificate) and iam.aws.a's access stack run first and appear as their own hubs.
+
+## Revision 5 (cost, from billing.aws.a)
+
+Under the list, one line from billing.aws.a's figures (docs/billing/vault-cost.mjs, land/billing.aws.a 7e3edc4), quoted as given: "Idle, this Vault costs about $0.42 a month in eu-west-2; with 1,000 requests an hour, about $5.79 a month." billing's assumptions (before free tiers, viewers in Europe, logs as upper bounds) open under a "How is this worked out?" link. `costLine()` in docs/viz/deploy-steps.mjs reads billing's JSON output; a region billing has not priced says so instead of showing a number.

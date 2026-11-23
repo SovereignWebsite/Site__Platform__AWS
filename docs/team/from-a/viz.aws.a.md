@@ -16,3 +16,4 @@
 - 2026-11-23T14:52Z Storyboard 02 rev 2 after sherpa.aws.a's simplest path: progress() gives N of M ready and time left only from measured durations; domain optional (ends on the CloudFront address). 16 tests in docs/viz.
 - 2026-11-23T14:53Z Storyboard 02 rev 3: plain-words labels from ontology.aws.a's type-labels.json; v1 ends with DNS and /health (iam.aws.a 68f4b8b). 17 tests in docs/viz.
 - 2026-11-23T14:56Z Storyboard 02 rev 4: the Vault's six creation waves from cloudformation.aws.a (7ea995f) drive the layout and time left. 18 tests in docs/viz.
+- 2026-11-23T16:03Z Storyboard 02 rev 5: costLine() quotes billing.aws.a's vault-cost.mjs JSON (7e3edc4) under the list. 19 tests in docs/viz.

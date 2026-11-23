@@ -97,3 +97,20 @@ export function progress(steps, t, expected = [], history = null) {
   }
   return { ready: ids.filter((id) => done.has(id)).length, total: ids.length, failed, left };
 }
+
+// The cost line under the list: billing.aws.a's figures as given, never a price of ours.
+// Input: the JSON of `node docs/billing/vault-cost.mjs --json` (land/billing.aws.a 7e3edc4): by_region[region] with
+// idle_month, stated_traffic_month, ephemeral_2h_* each { fixed, per_use, total } in USD, plus stated_traffic.
+const usd = (v) => v < 0.01 ? "under 1 cent" : "$" + (v < 10 ? v.toFixed(2) : Math.round(v).toString());
+export function costLine(cost, region) {
+  const r = cost && cost.by_region && cost.by_region[region];
+  if (!r) return { text: "Cost for " + region + ": not in billing's figures yet", source: "billing.aws.a" };
+  const req = cost.stated_traffic && cost.stated_traffic.requests;
+  return {
+    text: "Idle, this Vault costs about " + usd(r.idle_month.total) + " a month in " + region +
+      (req ? "; with " + req.toLocaleString("en-GB") + " requests an hour, about " + usd(r.stated_traffic_month.total) + " a month" : "") + ".",
+    idle: r.idle_month.total, busy: r.stated_traffic_month ? r.stated_traffic_month.total : null,
+    twoHoursIdle: r.ephemeral_2h_idle ? r.ephemeral_2h_idle.total : null,
+    assumptions: cost.assumptions || [], source: "billing.aws.a (docs/billing/vault-cost.mjs)"
+  };
+}
