@@ -1,6 +1,6 @@
 # Billing: what the AWS stack costs, and what it will cost
 
-Kept by billing.aws.c@SovereignWebsite.dinis, the AWS billing accountant Dinis Cruz named for pipeline P4: "the direct connection of billing to everything that happens, and including the ability to predict billing". Not accountant.c, which keeps the team's own agent spend.
+Kept by billing.aws.a@SovereignWebsite.dinis (from billing.aws.c on 23 Nov 2026), the AWS billing accountant Dinis Cruz named for pipeline P4: "the direct connection of billing to everything that happens, and including the ability to predict billing". Not accountant.c, which keeps the team's own agent spend.
 
 ## What a user will see (the aim)
 
@@ -10,8 +10,9 @@ Open any resource on the site (a bucket, a distribution, a Firehose stream) and 
 
 | File | What it is |
 |------|------------|
-| `prices.json` | The price book: 26 prices for S3, CloudFront, Lambda, Data Firehose, CloudTrail, Route 53 and Cost Explorer, London (eu-west-2) and Ireland (eu-west-1). Each row cites the AWS pricing page or the price data file that page loads to fill its tables, with the file's publication date. List prices in US dollars, before tax, free tiers, credits and discounts. |
+| `prices.json` | The price book: 30 prices for S3, CloudFront, Lambda, Data Firehose, CloudTrail, Route 53, Cost Explorer and data transfer out to the internet, London (eu-west-2) and Ireland (eu-west-1). Each row cites the AWS pricing page or the price data file that page loads to fill its tables, with the file's publication date. List prices in US dollars, before tax, free tiers, credits and discounts. |
 | `twin-estimate.mjs` | Runs the price book over the twin. It loads `site/twin.js` unchanged, talks to it through the same endpoints the page uses (Cloud Control, S3), reads the synthetic CloudFront logs and CloudTrail records, and prices them. Nothing reaches the network. `node docs/billing/twin-estimate.mjs` (or `--json`). |
+| `forecast.mjs` | The month ahead: scales the twin's hourly traffic to the calendar month (720 hours for November) and applies only the free tiers `prices.json` cites (CloudFront: 10 million requests and the first 1 TB out; then the Europe tiers). Lines with no cited free tier stay at list price and say so. `node docs/billing/forecast.mjs` (or `--json`, the shape a page can show). Tests: `node --test docs/billing/forecast.test.mjs`. Added by billing.aws.a. |
 | `check-prices.mjs` | Fails if any price lacks a source, a unit, or the exact label or quote from AWS's page. `node docs/billing/check-prices.mjs`. |
 
 ## First result on the twin
@@ -34,7 +35,7 @@ These are synthetic numbers. They show the model works, not what Dinis's account
 
 ## Next
 
-- Read the remaining pricing pages (Cloud Control, CloudWatch Logs vended delivery, S3 internet egress tiers, IAM and STS) and price or list each.
-- A monthly forecast from the twin's traffic, with the free tiers applied, as JSON a page can show.
+- Read the remaining pricing pages (Cloud Control, CloudWatch Logs vended delivery, IAM and STS) and price or list each. Internet data transfer out tiers for London and Ireland are copied (23 Nov, from AWS's data transfer price data, where 1 TB is 1,024 GB); any monthly free allowance for it is still to be read from the S3 page, so none is applied.
+- Done (forecast.mjs): a monthly forecast from the twin's traffic, with the cited free tiers applied, as JSON. On the twin, November 2026 comes to about $0.04 before free tiers and $0.01 after (S3 requests, Firehose and log PUTs; S3's free tier is not in the price book, so not applied).
 - With aws.c and architect.aws.c: a billing view on the site (a code path they agree), built on the twin first, with five UIs like every view.
 - When real data arrives: compare with Cost Explorer each day, and keep a log of the gap.

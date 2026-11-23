@@ -1,0 +1,22 @@
+{
+  "about": "Synthetic Route 53 seed for the twin, account 111122223333. Proposal for site/twin/data/route53.json. Route 53 is global: one endpoint, route53.amazonaws.com, signed as us-east-1. example.com is reserved for documentation (RFC 2606).",
+  "hosted_zones": [
+    {
+      "Id": "/hostedzone/Z0DEMOTWIN0001",
+      "Name": "example.com.",
+      "Config": { "PrivateZone": false, "Comment": "demo zone (made by stack demo-dns)" },
+      "Tags": [ { "Key": "aws:cloudformation:stack-name", "Value": "demo-dns" } ],
+      "records": [
+        { "Name": "example.com.", "Type": "NS", "TTL": 172800, "ResourceRecords": [ "ns-0000.awsdns-00.org.", "ns-0001.awsdns-01.co.uk." ] },
+        { "Name": "example.com.", "Type": "SOA", "TTL": 900, "ResourceRecords": [ "ns-0000.awsdns-00.org. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400" ] },
+        { "Name": "www.example.com.", "Type": "A", "AliasTarget": { "DNSName": "d111111abcdef8.cloudfront.net.", "EvaluateTargetHealth": false }, "made_by": "demo-dns/WwwAlias" },
+        { "Name": "old.example.com.", "Type": "CNAME", "TTL": 300, "ResourceRecords": [ "old.example.com.s3-website.eu-west-2.amazonaws.com" ], "made_by": null, "finding": "Made by no stack, and points at an S3 website bucket (old.example.com) that is not in the account: a dangling name. The map warns on it; removing it is a plan for aws.c and the owner's Approve." }
+      ]
+    }
+  ],
+  "notes": [
+    "NS names above are placeholders in AWS's naming shape, not real name servers to be queried.",
+    "The alias's AliasTarget.HostedZoneId is left out on purpose: CloudFront's fixed alias zone id should be copied from AWS's documentation by whoever lands this, not from memory.",
+    "SOA and NS are what Route 53 makes with every public zone; the map lists them but does not treat them as 'serving' anything."
+  ]
+}

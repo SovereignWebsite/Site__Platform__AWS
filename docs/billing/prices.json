@@ -14,7 +14,8 @@
     "cloudtrail_page": "https://aws.amazon.com/cloudtrail/pricing/",
     "route53_page": "https://aws.amazon.com/route53/pricing/",
     "cost_explorer_page": "https://aws.amazon.com/aws-cost-management/aws-cost-explorer/pricing/",
-    "cloudformation_page": "https://aws.amazon.com/cloudformation/pricing/"
+    "cloudformation_page": "https://aws.amazon.com/cloudformation/pricing/",
+    "datatransfer_data": { "url": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/datatransfer/USD/current/datatransfer.json", "published": "2026-11-19T10:58:41Z", "note": "AWS's regional data transfer price data. Read by billing.aws.a on 23 Nov 2026. Its tier ranges are in GB with 1 TB as 1,024 GB (10 TB ends at 10240)." }
   },
   "regions": {
     "eu-west-2": "EU (London)",
@@ -52,6 +53,11 @@
     { "id": "route53.hosted_zone.first25", "service": "Route 53", "unit": "zone-month", "global": 0.50, "source": "route53_page", "quote": "Standard Hosted Zones $0.50 per hosted zone per month for the first 25 hosted zones", "note": "Not prorated for partial months." },
     { "id": "route53.query.standard", "service": "Route 53", "unit": "query", "global": 0.0000004, "source": "route53_page", "quote": "Standard Queries $0.40 per million queries (first 1 billion queries per month)", "note": "Alias A/AAAA records mapped to the AWS services the page lists are not charged per query." },
 
+    { "id": "transfer.internet_out.next10tb", "service": "Data transfer", "unit": "GB", "eu-west-2": 0.09, "eu-west-1": 0.09, "source": "datatransfer_data", "label": "DataTransfer External Outbound Next 10 TB", "range_gb": [0, 10240], "note": "S3 (and EC2) data transfer out to the internet, direct, not through CloudFront. Same rate in London and Ireland. Any monthly free allowance is not in this file and is not applied." },
+    { "id": "transfer.internet_out.next40tb", "service": "Data transfer", "unit": "GB", "eu-west-2": 0.085, "eu-west-1": 0.085, "source": "datatransfer_data", "label": "DataTransfer External Outbound Next 40 TB", "range_gb": [10240, 51200] },
+    { "id": "transfer.internet_out.next100tb", "service": "Data transfer", "unit": "GB", "eu-west-2": 0.07, "eu-west-1": 0.07, "source": "datatransfer_data", "label": "DataTransfer External Outbound Next 100 TB", "range_gb": [51200, 153600] },
+    { "id": "transfer.internet_out.over150tb", "service": "Data transfer", "unit": "GB", "eu-west-2": 0.05, "eu-west-1": 0.05, "source": "datatransfer_data", "label": "DataTransfer External Outbound Greater than 150 TB", "range_gb": [153600, null] },
+
     { "id": "costexplorer.api.request", "service": "Cost Explorer", "unit": "request", "global": 0.01, "source": "cost_explorer_page", "quote": "Each request using your primary billing view ... will incur a cost of $0.01.", "note": "The page's billing view calls Cost Explorer: every refresh in real AWS mode costs a cent." }
   ],
   "not_priced_yet": [
@@ -59,7 +65,7 @@
     "Cloud Control API: pricing page not yet read.",
     "CloudFormation: the pricing page says charges apply to registry extensions (third-party resource types and hooks) per handler operation; it does not state a price for AWS::IAM resources in one line, so the sws-aws-platform stack is left unpriced, not called free.",
     "CloudWatch Logs vended log delivery (a possible path for CloudFront standard logs): not yet read.",
-    "S3 data transfer out to the internet (direct, not through CloudFront): the region price data was read but the tiers for EU (London) and EU (Ireland) are not yet copied.",
+    "Data transfer out to the internet: the tiers are copied (transfer.internet_out.*), but any monthly free allowance is not in the price data read, so none is applied yet; the S3 pricing page's own wording on it is still to be read.",
     "Free tiers for S3 and the AWS account-level credits: not applied; the model shows costs before them."
   ]
 }
