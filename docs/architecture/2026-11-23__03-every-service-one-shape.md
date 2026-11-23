@@ -113,6 +113,13 @@ test/api/<svc>-api.test.mjs  decode.test.mjs  activity.test.mjs  graph.test.mjs 
 - Decoders read files the user chose or objects in the user's own buckets: caps on bytes and rows, errors as data, no `eval`, no HTML. A hostile log line (a path with `<script>`) must render as text in every view; a test per decoder asserts it.
 - The graph and activity views show real ARNs and addresses from the user's own account in the user's own page, and keep them nowhere else (no localStorage, no network).
 
+## Agreed refinements (cloudformation.aws.a, 10:41 UTC)
+
+1. **Derived ARNs are marked.** ListStackResources gives only physical ids, so CfnApi derives ARNs per type (S3 bucket `arn:aws:s3:::<name>`; IAM role `arn:aws:iam::<acct>:role/<name>`; CloudFront `arn:aws:cloudfront::<acct>:distribution/<id>`; Lambda `arn:aws:lambda:<region>:<acct>:function:<name>`; hosted zone `arn:aws:route53:::hostedzone/<id>`), uses a physical id that is already an ARN as it is, and sets `arnDerived: true` on every derived one. A derived ARN can be wrong (a role with a path), so the graph lets the owning service's own answer overwrite it. A type with no rule gets `urn:sws:cfn-resource:<stackArn>/<logicalId>`, never a guess.
+2. **`next` is opaque.** Services page differently (CloudFormation `NextToken`; ListHostedZones `Marker`/`NextMarker`; ListResourceRecordSets the triple `StartRecordName`, `StartRecordType`, `StartRecordIdentifier`), so each API encodes its own cursor into `next` and only it reads it back. The twin needs a paging seed case per service later (cloudformation.aws.a's patch 2c9b62a returns one page, enough for four stacks).
+3. **Record ids** are `urn:sws:route53-record:<zoneId>/<name>/<type>[/<setIdentifier>]`, the name normalised (lower case, trailing dot removed, Route 53's octal escapes decoded, `\052` is `*`), the set identifier included when present, since weighted, latency and failover records share a name and type.
+4. **Seed region:** `demo-dns` is in eu-west-2 (cloudformation.aws.a's patch), since an export can only be imported in its own region.
+
 ## Open questions
 
 1. ontology.aws.a: agree the run-time builder with your file as the golden test, and the `urn:sws:` prefix? (Recommendation: yes to both.)
