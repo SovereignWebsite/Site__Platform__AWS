@@ -58,7 +58,19 @@ const fail = (m) => { throw new Error(m); };
   await pg.waitForSelector("text=JSON Lines");
   if (!/^#\/s3\/[^/]+\/cloudfront\/2026\/11\/21\/\d{2}\/.+\.gz$/.test(await pg.evaluate(() => location.hash))) fail("jump to the log file: " + await pg.evaluate(() => location.hash));
 
-  // 5. A folder over 500 MB in all is refused before anything is read, with the total shown.
+  // 5. Choosing the account again (List buckets) during a summary stops it: no log file is read after that.
+  // slow S3 down, and note each request when it is made (not when the slowed answer comes)
+  await pg.evaluate(() => { window.__made = []; const h = window.AwsTwin.handle; window.AwsTwin.handle = (u, i) => { window.__made.push(u); return new Promise((ok) => setTimeout(ok, 150)).then(() => h(u, i)); }; });
+  await pg.evaluate((h) => { location.hash = h; }, day);
+  await pg.waitForSelector("#s3-objects button:has-text('Summarise these logs')");
+  await pg.click("#s3-objects button:has-text('Summarise these logs')");
+  await pg.waitForFunction(() => /Summarising/.test(document.querySelector("#s3-status").textContent));
+  const at = await pg.evaluate(() => { document.querySelector("#s3-list-buckets").click(); return window.__made.length; });
+  await pg.waitForTimeout(1500);
+  const after = (await pg.evaluate(() => window.__made)).slice(at).filter((a) => /\.gz(\?|$)/.test(a));
+  if (after.length) fail("log files read after the account was chosen again: " + after.join(" "));
+
+  // 6. A folder over 500 MB in all is refused before anything is read, with the total shown.
   await pg.evaluate(() => {
     const h = window.AwsTwin.handle;
     window.AwsTwin.handle = (u, i) => {
@@ -67,6 +79,8 @@ const fail = (m) => { throw new Error(m); };
       return r.then((res) => res.text().then((t) => new Response(t.replace("</ListBucketResult>", extra + "</ListBucketResult>"), { status: res.status, headers: res.headers })));
     };
   });
+  await pg.evaluate((b) => { location.hash = "#/s3/" + b + "/"; }, logs);
+  await pg.waitForSelector("#s3-list >> text=cloudfront/");
   await pg.evaluate((h) => { location.hash = h; }, day);
   await pg.waitForSelector("#s3-objects button:has-text('Summarise these logs')");
   asks.length = 0;
@@ -76,6 +90,6 @@ const fail = (m) => { throw new Error(m); };
   if (asks.some((a) => /\.gz(\?|$)/.test(a))) fail("a file was read past the total ceiling");
 
   if (errors.length) fail("page errors: " + errors.join(" | "));
-  console.log("OK (s3 summary: offered on a folder of hourly logs only when LogView is loaded; " + files.length + " files read in the page, GETs to the logs bucket only; file:line opens the log; over 500 MB refused before reading)");
+  console.log("OK (s3 summary: offered on a folder of hourly logs only when LogView is loaded; " + files.length + " files read in the page, GETs to the logs bucket only; file:line opens the log; over 500 MB refused before reading; stops when the account is chosen again)");
   await br.close(); srv.close();
 })().catch((e) => { console.error("FAIL", e.message); process.exit(1); });
