@@ -40,8 +40,8 @@ eq(ids([...quiet, ...["10:00", "10:02", "10:04", "10:06"].map((m) => denied("202
 eq(ids([...quiet, ...["10:00", "10:15", "10:30", "10:45", "11:00"].map((m) => denied("2026-11-22T" + m + ":30Z"))]), [], "five refusals over an hour");
 
 // new address: a change from an address never seen before; a read from one is quiet; a service is not an address
-eq(ids([...quiet, rec({ eventName: "UpdateAssumeRolePolicy", eventTime: "2026-11-22T11:00:00Z", sourceIPAddress: "198.51.100.66", requestParameters: { roleName: "someone-elses-role" } })]), ["new-address"], "change from a new address");
-eq(ids([...quiet, rec({ eventName: "GetRole", readOnly: true, eventTime: "2026-11-22T11:00:00Z", sourceIPAddress: "198.51.100.66", requestParameters: { roleName: "x" } })]), [], "read from a new address");
+eq(ids([...quiet, rec({ eventName: "UpdateAssumeRolePolicy", eventTime: "2026-11-22T11:00:00Z", sourceIPAddress: "198.51.100.66", requestParameters: { roleName: "someone-elses-role" } })]), ["new-network"], "change from a new network");
+eq(ids([...quiet, rec({ eventName: "GetRole", readOnly: true, eventTime: "2026-11-22T11:00:00Z", sourceIPAddress: "198.51.100.66", requestParameters: { roleName: "x" } })]), [], "read from a new network");
 eq(ids([...quiet, rec({ eventName: "UpdateAssumeRolePolicy", eventTime: "2026-11-22T11:00:00Z", sourceIPAddress: "cloudformation.amazonaws.com", requestParameters: { roleName: "someone-elses-role" } })]), [], "service, not an address");
 
 // the R-008 story as the attack pack would play it: three alarms, newest first, each with its events and words
@@ -50,8 +50,8 @@ const story = [...quiet,
   rec({ eventSource: "cloudformation.amazonaws.com", awsRegion: "eu-west-2", eventName: "ExecuteChangeSet", eventTime: "2026-11-22T12:01:00Z", sourceIPAddress: "198.51.100.66", requestParameters: { stackName: "sws-aws-platform", changeSetName: "x" } }),
   rec({ eventName: "UpdateAssumeRolePolicy", eventTime: "2026-11-22T12:02:00Z", sourceIPAddress: "198.51.100.66", requestParameters: { roleName: "sovereignwebsite-factory-dns" } })];
 const got = alarms(story);
-eq(got.map((a) => a.rule), ["iam-trust-or-permissions", "hub-stack-change-applied", "new-address"], "R-008 story, newest first");
+eq(got.map((a) => a.rule), ["iam-trust-or-permissions", "hub-stack-change-applied", "new-network"], "R-008 story, newest first");
 if (got.some((a) => !a.words || !a.events.length || !a.level)) fail("alarm without words, events or level");
-eq(got[2].events[0].action, "CreateChangeSet", "new-address names the first call from that address");
+eq(got[2].events[0].action, "CreateChangeSet", "new-network names the first call from that network");
 eq(AL.rules.length, 5, "five rules listed");
-console.log("ok ct-alarms: 5 rules, 16 cases, R-008 story gives 3 alarms newest first");
+console.log("ok ct-alarms: 5 rules, 17 cases, R-008 story gives 3 alarms newest first");

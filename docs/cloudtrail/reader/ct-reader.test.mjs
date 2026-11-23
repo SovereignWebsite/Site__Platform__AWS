@@ -45,6 +45,14 @@ eq([e.targets, e.words], [[], "the change role called DescribeInstances on ec2"]
 const noRO = base({ eventID: "r", eventName: "GetRole", userIdentity: assumed("sws-aws-platform-read") }); delete noRO.readOnly;
 eq(R.normalise(noRO).change, true, "missing readOnly counts as a change");
 
+// privacy: network only, never the address
+eq([R.network("203.0.113.66"), R.network("2001:db8:85a3::8a2e:370:7334"), R.network("2001:DB8:0:1::1"), R.network("cloudformation.amazonaws.com"), R.network("nonsense")],
+  ["203.0.113.0/24", "2001:db8:85a3::/48", "2001:db8:0::/48", null, null], "network()");
+e = one({ eventName: "GetRole", sourceIPAddress: "203.0.113.66" });
+eq(e.from, { net: "203.0.113.0/24", service: null, city: null, country: null, agent: "test" }, "from holds the network");
+if (JSON.stringify(R.forGraph(e)).includes("203.0.113.66")) fail("the raw address reaches the graph");
+eq(one({ eventName: "GetRole", sourceIPAddress: "cloudformation.amazonaws.com" }).from.service, "cloudformation.amazonaws.com", "service as source");
+
 // inputs: duplicates, order, formats, junk
 const r1 = base({ eventID: "1", eventTime: "2026-11-22T10:00:01Z", eventName: "GetRole", userIdentity: assumed("sws-aws-platform-read") });
 const r2 = base({ eventID: "2", eventTime: "2026-11-22T10:00:02Z", eventName: "GetRole", userIdentity: assumed("sws-aws-platform-read") });
