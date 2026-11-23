@@ -115,3 +115,12 @@ details.history ul.grid > li { box-shadow: none; }
 pre.diff span { display: block; } pre.diff .add { background: var(--ok-soft); } pre.diff .del { background: var(--bad-soft); text-decoration: line-through; text-decoration-color: rgba(127,127,127,.5); }
 pre.diff .fold { color: var(--muted); font-style: italic; }
 details.full { margin-top: .6rem; } details.full summary { cursor: pointer; color: var(--muted); font-size: .86rem; }
+
+/* screenshot mode (mask.js) */
+.shot-bar { display: flex; flex-wrap: wrap; gap: .4rem 1rem; align-items: center; margin-top: .6rem; }
+.shot-bar label { display: inline-flex; gap: .4rem; align-items: center; }
+#screenshot-toggle[aria-pressed="true"] { background: var(--warn-soft); color: var(--warn); border-color: var(--warn); }
+.masked-input { -webkit-text-security: disc; }
+body.screenshot-names #s3-buckets button, body.screenshot-names #s3-objects .crumbs, body.screenshot-names #s3-objects > p,
+body.screenshot-names table.s3-table td:first-child, body.screenshot-names table.s3-table th:first-child,
+body.screenshot-names #s3-file h4, body.screenshot-names #s3-status, body.screenshot-names .viewer h4 { filter: blur(6px); }

@@ -71,12 +71,17 @@
     <span id="avatar" class="avatar" aria-hidden="true"></span>
     <div class="who-text">
       <div id="who" class="who"></div>
-      <div class="small">Google account ID <code id="sub"></code> <span id="restored" class="badge" hidden>restored from the sealed store</span></div>
+      <div class="small">Google account ID <code id="sub" data-mask></code> <span id="restored" class="badge" hidden>restored from the sealed store</span></div>
     </div>
     <div class="identity-actions">
+      <button type="button" id="screenshot-toggle" class="quiet" aria-pressed="false">Screenshot mode</button>
       <button type="button" id="sign-out" class="quiet">Sign out</button>
       <button type="button" id="forget-device" class="quiet">Forget this device</button>
     </div>
+  </div>
+  <div id="screenshot-bar" class="warning shot-bar" hidden>
+    <span>Screenshot mode: AWS account IDs, email addresses, your Google account ID and costs are hidden.</span>
+    <label><input type="checkbox" id="screenshot-names"> Also blur bucket and file names</label>
   </div>
   <p id="store-status" class="status"></p>
 </section>
@@ -163,5 +168,6 @@ A sovereign website, made with the <a href="https://sovereignwebsite.org/">open 
 <script src="zip.js"></script>
 <script src="highlight.js"></script>
 <script src="s3.js"></script>
+<script src="mask.js"></script>
 </body>
 </html>

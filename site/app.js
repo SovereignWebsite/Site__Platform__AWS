@@ -248,7 +248,7 @@
         });
       };
       list.appendChild(el("li", {}, [el("div", { class: "card-head" }, [el("strong", { text: acct.label }), badge]),
-        el("p", { class: "small", text: "Account ending " + acct.id.slice(-4) }),
+        el("p", { class: "small" }, [document.createTextNode("Account ending "), el("span", { "data-mask": "", text: acct.id.slice(-4) })]),
         el("div", { class: "row" }, [read, rm]), out, setup]));
     });
     renderPlans();
@@ -370,8 +370,17 @@
             if (!Plans.same(again, before)) throw new Error("The role changed since the plan was shown. Show the plan again.");
             return queryCall(c, "iam.amazonaws.com", "iam", { Action: "UpdateAssumeRolePolicy", Version: "2010-05-08",
               RoleName: plan.target_role, PolicyDocument: JSON.stringify(r.after) });
-          }).then(function () { return getRole(c, plan.target_role); }).then(function (now) {
-            // Checked by reading the role back: it must hold exactly the planned policy.
+          }).then(function () {
+            // Checked by reading the role back: it must hold the planned policy. IAM can take a few seconds to
+            // show a change, so read up to five times.
+            function readBack(n) {
+              return getRole(c, plan.target_role).then(function (now) {
+                if (Plans.same(now, r.after) || n >= 4) return now;
+                return new Promise(function (res) { setTimeout(res, 2000); }).then(function () { return readBack(n + 1); });
+              });
+            }
+            return readBack(0);
+          }).then(function (now) {
             var ok = Plans.same(now, r.after);
             if (ok && onApplied) setTimeout(onApplied, 1500);
             say(st, ok ? "Applied and checked: " + plan.target_role + (r.added ? " now trusts " + r.added.join(", ") : " no longer trusts " + r.removed.join(", ")) + "." : "Applied, but the role read back differs from the plan. Read it again.", ok ? "ok" : "bad");
@@ -461,7 +470,7 @@
     accounts = []; renderAccounts();
     if (window.SealedStore) SealedStore.forgetDevice().then(function () { say($("store-status"), "This device's key and everything sealed with it are deleted.", "ok"); });
   };
-  window.Platform = { assume: assume, jsonCall: jsonCall, xmlText: xmlText, awsError: awsError, el: el, say: say,
+  window.Platform = { diffView: diffView, assume: assume, jsonCall: jsonCall, xmlText: xmlText, awsError: awsError, el: el, say: say,
     accounts: function () { return accounts; }, signedIn: function () { return !!mem.idToken; } };
   initGoogle();
   loadAccounts().then(restore).then(renderAccounts).then(function () { return gisReady; }).then(autoSignIn);

@@ -54,8 +54,9 @@
   }
 
   // Same content, whatever the order of object keys (IAM does not keep it); arrays keep their order.
+  // IAM stores a list of one as the bare value (["a"] reads back as "a"), so for policies the two are the same.
   function canonical(x) {
-    if (Array.isArray(x)) return "[" + x.map(canonical).join(",") + "]";
+    if (Array.isArray(x)) return x.length === 1 ? canonical(x[0]) : "[" + x.map(canonical).join(",") + "]";
     if (x && typeof x === "object") return "{" + Object.keys(x).sort().map(function (k) { return JSON.stringify(k) + ":" + canonical(x[k]); }).join(",") + "}";
     return JSON.stringify(x);
   }
