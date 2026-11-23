@@ -70,6 +70,20 @@ eq(ids([...quiet, s3("PutObjectLegalHold", TB, { eventCategory: "Data", requestP
 eq(ids([...quiet, s3("PutBucketPolicy", TB)]), [], "a role changing the policy is not this rule");
 eq(ids([...quiet, s3("PutBucketPolicy", "sws-vault-templates-x", { userIdentity: ROOT })]), [], "not the templates bucket name");
 
+// templates bucket writes: only the publisher; each publication is a low notice
+const PUB = { type: "AssumedRole", sessionContext: { sessionIssuer: { type: "Role", arn: "arn:aws:iam::" + A + ":role/sws-vault-templates-publisher", userName: "sws-vault-templates-publisher" } } };
+const OTHER = { type: "AssumedRole", sessionContext: { sessionIssuer: { type: "Role", arn: "arn:aws:iam::" + A + ":role/sws-aws-platform-change", userName: "sws-aws-platform-change" } } };
+const put = (who, key, o) => s3("PutObject", TB, Object.assign({ userIdentity: who, eventCategory: "Data", requestParameters: { bucketName: TB, key } }, o));
+eq(ids([...quiet, put(PUB, "templates/vault-0.4.5.yaml")]), ["vault-templates-published"], "a release by the publisher");
+eq(alarms([...quiet, put(PUB, "templates/vault-0.4.5.yaml")])[0].level, "low", "a release is a low notice");
+eq(ids([...quiet, put(PUB, "templates/vault-0.4.5.yaml", { errorCode: "PreconditionFailed" })]), [], "a refused overwrite by the publisher is not a release");
+eq(ids([...quiet, put(OTHER, "templates/vault-0.4.5.yaml")]), ["vault-templates-write"], "another role writes a template");
+eq(ids([...quiet, put(OTHER, "notes/x", { errorCode: "AccessDenied" })]), ["vault-templates-write"], "a refused write elsewhere in the bucket");
+eq(ids([...quiet, put(ROOT, "templates/x.yaml")]), ["vault-templates-write"], "root writing a template");
+eq(ids([...quiet, s3("CompleteMultipartUpload", TB, { eventCategory: "Data", requestParameters: { bucketName: TB, key: "templates/big.yaml" } })]), ["vault-templates-write"], "multipart completion by another role");
+eq(AL.run(R.read({ Records: [...quiet, put(PUB, "templates/v.yaml")] }).events, { templatesPublisher: "arn:aws:iam::" + A + ":role/other-publisher" }).map((a) => a.rule), ["vault-templates-write"], "publisher set by ARN: the default role is now just another role");
+eq(ids([...quiet, s3("GetObject", TB, { eventCategory: "Data", readOnly: true, requestParameters: { bucketName: TB, key: "templates/v.yaml" } })]), [], "reads are quiet");
+
 // the R-008 story as the attack pack would play it: three alarms, newest first, each with its events and words
 const story = [...quiet,
   rec({ eventSource: "cloudformation.amazonaws.com", awsRegion: "eu-west-2", eventName: "CreateChangeSet", eventTime: "2026-11-22T12:00:00Z", sourceIPAddress: "198.51.100.66", requestParameters: { stackName: "sws-aws-platform", changeSetName: "x" } }),
@@ -79,5 +93,5 @@ const got = alarms(story);
 eq(got.map((a) => a.rule), ["iam-trust-or-permissions", "hub-stack-change-applied", "new-network"], "R-008 story, newest first");
 if (got.some((a) => !a.words || !a.events.length || !a.level)) fail("alarm without words, events or level");
 eq(got[2].events[0].action, "CreateChangeSet", "new-network names the first call from that network");
-eq(AL.rules.length, 7, "seven rules listed");
-console.log("ok ct-alarms: 7 rules, 47 cases (21 for R-021, 9 for the templates bucket), R-008 story gives 3 alarms newest first");
+eq(AL.rules.length, 9, "nine rules listed");
+console.log("ok ct-alarms: 9 rules, 56 cases (21 for R-021, 18 for the templates bucket), R-008 story gives 3 alarms newest first");

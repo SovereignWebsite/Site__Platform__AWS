@@ -14,6 +14,10 @@
   var TRAIL_CHANGES = set(["StopLogging", "DeleteTrail", "UpdateTrail", "PutEventSelectors", "PutInsightSelectors"]);
   var TRAIL_BUCKET_CHANGES = set(["PutBucketPolicy", "DeleteBucketPolicy", "PutBucketLifecycle", "PutBucketLifecycleConfiguration", "DeleteBucketLifecycle", "DeleteBucket"]);
 
+  var WRITES = set(["PutObject", "CopyObject", "CompleteMultipartUpload"]);
+  function objectKey(e) { var p = (e.raw && e.raw.requestParameters) || {}; return typeof p.key === "string" ? p.key : ""; }
+  function templatesObject(e) { return e.service === "s3" && names(e, "bucket").some(function (b) { return TEMPLATES_BUCKET.test(b); }); }
+  function isPublisher(e, ctx) { var p = ctx.templatesPublisher; return !!p && (e.who.arn === p || e.who.name === p); } // the role's ARN or name
   function names(e, type) { return e.targets.filter(function (t) { return t.type === type; }).map(function (t) { return t.name; }); }
   function hub(n) { return n === "sws-aws-platform" || PLATFORM.test(n); }
 
@@ -43,6 +47,15 @@
         if (e.service !== "s3" || !names(e, "bucket").some(function (b) { return TEMPLATES_BUCKET.test(b); })) return false;
         return (e.who.kind === "root" && /^(PutBucket|DeleteBucket)/.test(e.action || "")) || e.action === "PutObjectRetention" || e.action === "PutObjectLegalHold";
       } },
+    { id: "vault-templates-write", level: "high",
+      words: "Someone other than the publishing role wrote, or tried to write, an object in the Vault templates bucket.",
+      // Any key, not only templates/: the bucket policy lets only the publisher write anywhere. Copy and multipart
+      // completion are writes too. The publisher is opts.templatesPublisher (an ARN or role name; the stack takes it as
+      // the PublisherRoleArn parameter), "sws-vault-templates-publisher" by default (security.aws.a).
+      match: function (e, ctx) { return templatesObject(e) && WRITES[e.action] === 1 && !isPublisher(e, ctx); } },
+    { id: "vault-templates-published", level: "low",
+      words: "The publishing role published a template, so a new release is live.",
+      match: function (e, ctx) { return templatesObject(e) && WRITES[e.action] === 1 && !e.failed && isPublisher(e, ctx) && /^templates\//.test(objectKey(e)); } },
     { id: "refused-on-protected", level: "medium",
       words: "Someone tried, and was refused, to change the hub's roles, its stack, or CloudTrail.",
       match: function (e, ctx) { return e.failed && (hubRoles(e) || hubStack(e) || trail(e, ctx)); } },
@@ -74,9 +87,11 @@
       } }
   ];
 
-  // Returns alarms, newest first: { rule, level, words, events, time }.
-  function run(events) {
-    var alarms = [], ctx = { trailBuckets: Object.create(null) };
+  // Returns alarms, newest first: { rule, level, words, events, time }. Levels: high, medium, low (a notice).
+  // opts.templatesPublisher: the role allowed to publish Vault templates (ARN or role name).
+  function run(events, opts) {
+    opts = opts || {};
+    var alarms = [], ctx = { trailBuckets: Object.create(null), templatesPublisher: opts.templatesPublisher || "sws-vault-templates-publisher" };
     events.forEach(function (e) { var b = e.service === "cloudtrail" && e.raw && e.raw.requestParameters && e.raw.requestParameters.s3BucketName; if (typeof b === "string") ctx.trailBuckets[b] = 1; });
     RULES.forEach(function (r) {
       var groups = r.group ? r.group(events) : events.filter(function (e) { return r.match(e, ctx); }).map(function (e) { return [e]; });

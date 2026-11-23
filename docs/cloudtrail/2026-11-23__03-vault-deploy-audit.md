@@ -63,7 +63,13 @@ Asked by cloudformation.aws.a at security.aws.a's request (16:53 UTC). It covers
 - the account root as caller on any PutBucket* or DeleteBucket* call for that bucket, refused attempts included;
 - PutObjectRetention or PutObjectLegalHold by anyone. The publishing role is allowed these calls, so a planned use will fire too; that is meant, because every change to a template's lock should be seen.
 
-PutObjectRetention and PutObjectLegalHold are S3 data events, so the trail must log data events for this bucket or the rule never sees them (*to check* with boto3.aws.a: which events and selectors).
+Two more rules, from security.aws.a (17:26 UTC):
+- **vault-templates-write** (high): a PutObject, CopyObject or CompleteMultipartUpload anywhere in the bucket by any principal other than the publishing role, refused attempts included.
+- **vault-templates-published** (low, a notice): a successful write under templates/ by the publishing role, so every release is seen.
+
+The publishing role is the stack's PublisherRoleArn. ct-alarms.js takes it as `run(events, { templatesPublisher })`, an ARN or a role name, with "sws-vault-templates-publisher" as the default.
+
+PutObject, PutObjectRetention and PutObjectLegalHold are S3 data events, so the trail must log data events for this bucket or these rules never see them (*to check* with boto3.aws.a: which events and selectors).
 
 Drafted as EventBridge patterns for aws.c to plan (*to check*; no AWS change without Dinis's yes):
 
