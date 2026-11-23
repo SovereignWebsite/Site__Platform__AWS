@@ -16,3 +16,10 @@ docs/team/_common.md, then the boto3.aws.c section of docs/team/stage-2.md, in t
 ## Contacts
 
 conductor.aws.c (session_01Kw9UwDiqvoswkZCuHe5GTt), pm.aws.c (session_01Kw9UwBZAwm6766jrG94uX1), aws.c (session_01Kw9UwAzhau7Us55PugP2V2), factory.c (session_01Kw9UwFQ86g2ZeXQ2edTAjh). Peers on account C stay: security, architect, s3, sherpa.
+
+## Open items from the C agent (03:33 UTC)
+
+- Cloud Control AWS::S3::Bucket handler permissions.
+- Twin fixes Q1 to Q4.
+- journalist parity rows 1 to 3 answered.
+- Work sent to aws.c in full to land (78f6368). The C key commit aa47169 can be dropped.

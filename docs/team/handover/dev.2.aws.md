@@ -16,3 +16,8 @@ docs/team/_common.md, then the dev section of docs/team/stage-2.md, in this repo
 ## Contacts
 
 conductor.aws.c (session_01Kw9UwDiqvoswkZCuHe5GTt), pm.aws.c (session_01Kw9UwBZAwm6766jrG94uX1), aws.c (session_01Kw9UwAzhau7Us55PugP2V2), factory.c (session_01Kw9UwFQ86g2ZeXQ2edTAjh). Peers on account C stay: security, architect, s3, sherpa.
+
+## Open items from the C agent (03:33 UTC)
+
+- S3Api and tests (a8af563, review fix 6583073) approved by architect.aws.c, who holds them in full; tests with aws.c for test/.
+- Next: (c) s3.openapi.json.
