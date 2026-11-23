@@ -59,13 +59,13 @@ export function boardAt(steps, t) {
   return [...rows.values()];
 }
 
-// The Vault stack's resources in creation waves (cloudformation.aws.a, draft 0.2.0, 7ea995f,
+// The Vault stack's resources in creation waves (cloudformation.aws.a, 0.3.3, 35fa42c; first 0.2.0, 7ea995f;
 // docs/cloudformation/vault/vault.yaml). Conditional resources drop out by the customer's choices.
 export const VAULT_WAVES = [
   ["VaultBucket", "AccessToken", "VaultLogs", "HealthFunction"],
   ["VaultBucketPolicy", "VaultFunctionRole"],
   ["VaultFunction"],
-  ["VaultFunctionUrl", "VaultFunctionUrlPermission"],
+  ["VaultFunctionUrl", "VaultFunctionUrlPermission", "VaultFunctionInvokePermission"],
   ["VaultDistribution"],
   ["VaultRecordA", "VaultRecordAAAA"]
 ];

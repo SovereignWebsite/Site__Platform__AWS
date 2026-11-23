@@ -83,7 +83,8 @@ test("plain-words labels from ontology.aws.a's type-labels.json, and the health 
 import { vaultWaves, VAULT_WAVES } from "./deploy-steps.mjs";
 
 test("the Vault's waves (cloudformation.aws.a draft 0.2.0) and time left wave by wave", () => {
-  assert.equal(VAULT_WAVES.flat().length, 12);
+  assert.equal(VAULT_WAVES.flat().length, 13);
+  assert.ok(VAULT_WAVES[3].includes("VaultFunctionInvokePermission"), "0.3.3 adds it to wave 4");
   assert.deepEqual(vaultWaves().flat().includes("VaultRecordA"), false, "no hosted zone: no records");
   assert.deepEqual(vaultWaves({ ownSecret: true, hostedZone: true }).flat().includes("AccessToken"), false);
   assert.equal(vaultWaves({ hostedZone: true }).length, 6);
