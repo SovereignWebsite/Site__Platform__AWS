@@ -74,12 +74,12 @@ await test("jsonLines: columns in first-seen order, aligned rows, bad lines as e
   assert.deepEqual(names(t), ["a", "b", "c", "value"]);
   assert.deepEqual(plain(t.rows), [[1, "x", null, null], [2, null, true, null], [null, null, null, 42]].map((r) => r.map((v) => v === null ? undefined : v)).map((r) => plain(r)));
   assert.equal(t.errors.length, 1); assert.equal(t.errors[0].line, 4);
-  assert.deepEqual(plain(t.truncated), { rows: false, bytes: false }); assert.equal(t.rowsRead, 4);
+  assert.deepEqual(plain(t.truncated), { rows: false, bytes: false, columns: false }); assert.equal(t.rowsRead, 4);
 });
 
 await test("jsonLines: max rows, then truncated", () => {
   const t = D.jsonLines('{"n":1}\n{"n":2}\n{"n":3}\n', { max: 2 });
-  assert.equal(t.rows.length, 2); assert.deepEqual(plain(t.truncated), { rows: true, bytes: false }); assert.equal(t.rowsRead, 2);
+  assert.equal(t.rows.length, 2); assert.deepEqual(plain(t.truncated), { rows: true, bytes: false, columns: false }); assert.equal(t.rowsRead, 2);
 });
 
 await test("csv: RFC 4180 quotes, embedded delimiter, \"\" and newlines, CRLF, BOM", () => {
@@ -98,7 +98,7 @@ await test("csv: ragged rows and an open quote are errors with the line where th
 
 await test("csv: tab delimiter, max rows", () => {
   const t = D.csv("a\tb\n1\t2\n3\t4\n5\t6\n", { delimiter: "\t", max: 2 });
-  assert.deepEqual(plain(t.rows), [["1", "2"], ["3", "4"]]); assert.deepEqual(plain(t.truncated), { rows: true, bytes: false });
+  assert.deepEqual(plain(t.rows), [["1", "2"], ["3", "4"]]); assert.deepEqual(plain(t.truncated), { rows: true, bytes: false, columns: false });
   assert.equal(D.csv("a\n1\n2\n", { max: 2 }).truncated.rows, false, "exactly max rows is not truncated");
 });
 
@@ -113,7 +113,7 @@ await test("table: an array of objects, CloudTrail's { Records }, scalars", () =
 await test("limits: json() over the cap throws TooLarge; jsonLines and csv stop at the last whole line and say so", () => {
   assert.throws(() => D.json("x".repeat(2048), { maxBytes: 1024 }), (e) => e.code === "TooLarge");
   const jl = D.jsonLines('{"n":1}\n'.repeat(300), { maxBytes: 1000 });
-  assert.equal(jl.rows.length, 125); assert.deepEqual(plain(jl.errors), []); assert.deepEqual(plain(jl.truncated), { rows: false, bytes: true });
+  assert.equal(jl.rows.length, 125); assert.deepEqual(plain(jl.errors), []); assert.deepEqual(plain(jl.truncated), { rows: false, bytes: true, columns: false });
   const c = D.csv("a,b\n" + "1,2\n".repeat(300), { maxBytes: 100 });
   assert.equal(c.rows.length, 24); assert.deepEqual(plain(c.errors), []); assert.equal(c.truncated.bytes, true);
   // The cap falls inside a quoted field: that record is partial, not malformed, and is dropped quietly.
@@ -141,6 +141,21 @@ await test("column hints from the first 200 rows: number, time, text", () => {
   assert.deepEqual(plain(j.columns), [{ name: "bytes", hint: "number" }, { name: "when", hint: "time" }, { name: "ok", hint: "text" }]);
   const late = D.csv("v\n" + "1\n".repeat(200) + "word\n");
   assert.equal(late.columns[0].hint, "number", "row 201 is past the hint window");
+});
+
+await test("security R-019: __proto__ keys are columns, number hints do not backtrack, columns are capped", () => {
+  const t = D.jsonLines('{"__proto__":{"polluted":1},"a":1}\n{"constructor":2}\n');
+  assert.deepEqual(names(t), ["__proto__", "a", "constructor"]);
+  assert.equal({}.polluted, undefined, "Object.prototype untouched");
+  const slow = "1".repeat(20000) + "x", started = Date.now();
+  assert.equal(D.csv("v\n" + slow + "\n").columns[0].hint, "text");
+  assert.equal(D.jsonLines(JSON.stringify({ v: "1".repeat(5000) + "e" }) + "\n").columns[0].hint, "text");
+  assert.ok(Date.now() - started < 200, "hints in " + (Date.now() - started) + " ms");
+  const wide = Object.fromEntries(Array.from({ length: 600 }, (_, i) => ["c" + i, i]));
+  const w = D.table([wide]);
+  assert.equal(w.columns.length, 500); assert.equal(w.rows[0].length, 500); assert.equal(w.truncated.columns, true);
+  const wc = D.csv(Array.from({ length: 600 }, (_, i) => "c" + i).join(",") + "\n" + Array.from({ length: 600 }, (_, i) => i).join(",") + "\n");
+  assert.equal(wc.columns.length, 500); assert.equal(wc.truncated.columns, true); assert.deepEqual(plain(wc.errors), [], "a full-width row is not ragged");
 });
 
 await test("hostile values come back as they are, and decode.js has no eval, Function or HTML", () => {

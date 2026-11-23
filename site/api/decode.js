@@ -11,7 +11,7 @@
 //   Decode.table(value, { max })                -> table   (an array of objects, or CloudTrail's { Records })
 //
 //   table = { columns: [{ name, hint: "number" | "time" | "text" }], rows: [[...]], errors: [{ line, message }],
-//             truncated: { rows, bytes }, rowsRead }
+//             truncated: { rows, bytes, columns }, rowsRead }   (at most 500 columns)
 //
 // Rows are arrays aligned to columns (a missing value is undefined); columns in order of first appearance, with
 // a hint from the first 200 rows. A bad line is an errors entry, not a stop. Limits (design 03, refinement 5):
@@ -140,7 +140,8 @@
   }
 
   // A column's hint from its first 200 rows: number, time (ISO 8601 date or date-time), or text.
-  var TIME = /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/, NUMBER = /^\s*-?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?\s*$/;
+  // Non-overlapping patterns (no catastrophic backtracking, security R-019 b), and long cells are text without a test.
+  var TIME = /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/, NUMBER = /^\s*-?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\s*$/, HINT_CELL = 64;
   function hints(names, rows) {
     return names.map(function (name, c) {
       var seen = 0, num = 0, time = 0;
@@ -148,27 +149,35 @@
         var v = rows[r][c];
         if (v === undefined || v === null || v === "") continue;
         seen++;
-        if (typeof v === "number" || (typeof v === "string" && NUMBER.test(v))) num++;
-        else if (typeof v === "string" && TIME.test(v)) time++;
+        if (typeof v === "number") num++;
+        else if (typeof v === "string" && v.length <= HINT_CELL && NUMBER.test(v)) num++;
+        else if (typeof v === "string" && v.length <= HINT_CELL && TIME.test(v)) time++;
       }
       return { name: name, hint: seen && num === seen ? "number" : seen && time === seen ? "time" : "text" };
     });
   }
-  function result(names, rows, errors, truncRows, truncBytes, rowsRead) {
+  function result(names, rows, errors, truncRows, truncBytes, rowsRead, truncCols) {
     errors.sort(function (a, b) { return a.line - b.line; });
-    return { columns: hints(names, rows), rows: rows, errors: errors, truncated: { rows: !!truncRows, bytes: !!truncBytes }, rowsRead: rowsRead };
+    return { columns: hints(names, rows), rows: rows, errors: errors, truncated: { rows: !!truncRows, bytes: !!truncBytes, columns: !!truncCols }, rowsRead: rowsRead };
   }
 
   // Objects to aligned rows; columns in order of first appearance. A value that is not a plain object is one
   // column, "value".
+  // At most MAX_COLUMNS columns (security R-019 c: rows times columns is the table's size); keys past it are
+  // dropped and truncated.columns says so. The index has no prototype, so a key such as "__proto__" is a column.
+  var MAX_COLUMNS = 500;
   function tabulate(values) {
-    var names = [], index = {};
-    function col(k) { if (!(k in index)) { index[k] = names.length; names.push(k); } return index[k]; }
+    var names = [], index = Object.create(null), cut = false;
+    function col(k) { if (!(k in index)) { if (names.length >= MAX_COLUMNS) { cut = true; return; } index[k] = names.length; names.push(k); } }
     var keyed = values.map(function (v) {
       if (v && typeof v === "object" && !Array.isArray(v)) { Object.keys(v).forEach(col); return v; }
       col("value"); return { value: v };
     });
-    return { names: names, rows: keyed.map(function (v) { var r = new Array(names.length); for (var k in v) r[index[k]] = v[k]; return r; }) };
+    return { names: names, cut: cut, rows: keyed.map(function (v) {
+      var r = new Array(names.length);
+      Object.keys(v).forEach(function (k) { if (k in index) r[index[k]] = v[k]; });
+      return r;
+    }) };
   }
 
   function jsonLines(s, opts) {
@@ -182,7 +191,7 @@
       try { values.push(JSON.parse(l)); } catch (e) { errors.push({ line: i + 1, message: e.message }); }
     }
     var t = tabulate(values);
-    return result(t.names, t.rows, errors, truncRows, c.cut, read);
+    return result(t.names, t.rows, errors, truncRows, c.cut, read, t.cut);
   }
 
   // RFC 4180: the first record names the columns; quoted fields may hold the delimiter, "" and newlines.
@@ -220,23 +229,23 @@
       }
     }
     if (!records.length) return result([], [], errors, false, c.cut, 0);
-    var names = records[0].values, rows = [];
+    var width = records[0].values.length, names = records[0].values.slice(0, MAX_COLUMNS), cutCols = width > MAX_COLUMNS, rows = [];
     for (var r = 1; r < records.length && rows.length < max; r++) {
       var v = records[r].values;
-      if (v.length !== names.length) errors.push({ line: records[r].line, message: v.length + " fields where the header has " + names.length });
+      if (v.length !== width) errors.push({ line: records[r].line, message: v.length + " fields where the header has " + width });
       var row = new Array(names.length);
       for (var k = 0; k < names.length; k++) row[k] = v[k];
       rows.push(row);
     }
     if (records.length - 1 > max) truncRows = true;
-    return result(names, rows, errors, truncRows, c.cut, rows.length);
+    return result(names, rows, errors, truncRows, c.cut, rows.length, cutCols);
   }
 
   function table(value, opts) {
     var max = (opts && opts.max) || MAX_ROWS;
     var list = Array.isArray(value) ? value : value && Array.isArray(value.Records) ? value.Records : [value];
     var t = tabulate(list.slice(0, max));
-    return result(t.names, t.rows, [], list.length > max, false, t.rows.length);
+    return result(t.names, t.rows, [], list.length > max, false, t.rows.length, t.cut);
   }
 
   root.Decode = { sniff: sniff, gunzip: gunzip, text: text, json: json, jsonLines: jsonLines, csv: csv, table: table,

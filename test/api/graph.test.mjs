@@ -68,7 +68,7 @@ for (const b of buckets) {
   b.objects = []; let page = { next: undefined };
   do { page = await api.listObjects(b.name, b.region, { delimiter: "", token: page.next }); b.objects.push(...page.files.map((f) => ({ key: f.key, size: f.size, modified: f.modified }))); } while (page.next);
 }
-const g = ctx.Graph({ account: A });
+const g = ctx.Graph({ account: A, source: "twin" });
 g.add.s3(buckets);
 const trail = buckets.find((b) => b.name === ctx.AwsTwin.buckets.trail);
 for (const o of trail.objects.filter((o) => o.key.endsWith(".json.gz")))
@@ -230,6 +230,33 @@ ok(!/\beval\s*\(|new Function|innerHTML|document\.|localStorage|fetch\(/.test(re
   g2.add.activity({ events: [] }, { bucket: "b1", key: "AWSLogs/" + A + "/CloudTrail/eu-west-2/x.json.gz" });
   const rin = JSON.parse(JSON.stringify(g2.toJSON())).edges.find((x) => x.from === "urn:sws:region:eu-west-2" && x.rel === "in");
   ok(rin.evidence === "api" && rin.source === "Cloud Control GetResource; CloudTrail key path", "one edge, strongest evidence, both sources: " + JSON.stringify(rin));
+}
+
+// ---- security R-019 a: addresses and keys from files are data, never object keys that reach a prototype ----
+{
+  const c = ctx.Graph({ account: A }), lines = (ip, n) => [...Array(n)].map(() => JSON.stringify({ c_ip: ip, cs_uri_stem: "/vault/__proto__/files", sc_status: 403 }));
+  c.add.content([{ bucket: "b", key: "data/v.json", text: JSON.stringify({ vaults: [{ id: "__proto__" }, { id: "constructor" }] }) },
+    { bucket: "logs", key: "cf/__proto__-2026-11-22-10-00-00.gz", text: lines("__proto__", 5).concat(lines("constructor", 12)).join("\n") }], {});
+  const j = JSON.parse(JSON.stringify(c.toJSON()));
+  ok(({}).requests === undefined && ({}).polluted === undefined, "Object.prototype untouched");
+  ok(j.nodes.some((n) => n.id === "urn:sws:vault:__proto__") && !j.nodes.some((n) => n.id === "urn:sws:actor-ip:__proto__" || n.id === "urn:sws:actor-ip:constructor"), "vault ids are data; non-addresses are never actors");
+}
+
+// ---- security R-020: provenance on every node; file-only nodes and content or naming edges are claims ----
+{
+  ok(mine.about.endsWith("source: twin.") || mine.about.includes("source: "), "about names the source");
+  const t = ctx.Graph({ account: A, source: "twin" });
+  t.add.s3([{ name: "b1", region: "eu-west-2", cors: {}, objects: [{ key: "data/v.json", size: 1 }] }]);
+  t.add.content([{ bucket: "b1", key: "data/v.json", text: JSON.stringify({ vaults: [{ id: "v1", region: "eu-west-1" }] }) }], {});
+  t.add.activity({ events: [{ node: "urn:sws:cloudtrail-event:e1", words: "w", from: { ip: "203.0.113.9" }, who: { kind: "role", name: "r", arn: "arn:aws:iam::" + A + ":role/r" }, targets: [{ type: "object", id: "arn:aws:s3:::b1/data/v.json", name: "data/v.json" }] }] }, { bucket: "b1", key: "t.json.gz" });
+  const tj = JSON.parse(JSON.stringify(t.toJSON())), N = (id) => tj.nodes.find((n) => n.id === id);
+  ok(tj.nodes.every((n) => n.source === "twin") && tj.about.endsWith("source: twin."), "every node stamped twin");
+  ok(!N("arn:aws:s3:::b1").unverified && !N("arn:aws:s3:::b1/data/v.json").unverified && !N("urn:sws:account:" + A).unverified, "S3 answers and the account are verified");
+  ok(N("urn:sws:vault:v1").unverified && N("urn:sws:cloudtrail-event:e1").unverified && N("urn:sws:actor-ip:203.0.113.9").unverified && N("arn:aws:iam::" + A + ":role/r").unverified && N("urn:sws:region:eu-west-1").unverified, "file-only nodes are unverified, a role named only by a trail record too");
+  t.add.iam({ roles: [{ name: "r", arn: "arn:aws:iam::" + A + ":role/r", trust: { statements: [] } }] });
+  ok(!JSON.parse(JSON.stringify(t.toJSON())).nodes.find((n) => n.id === "arn:aws:iam::" + A + ":role/r").unverified, "IAM's answer verifies the role");
+  ok(ctx.Graph.verified({ evidence: "api" }) && ctx.Graph.verified({ evidence: "template" }) && !ctx.Graph.verified({ evidence: "content" }) && !ctx.Graph.verified({ evidence: "naming" }), "Graph.verified: api and template only");
+  ok(ctx.Graph({}).toJSON().about.endsWith("source: unknown."), "no source given: unknown, never assumed");
 }
 
 const uncovered = golden.edges.length - gs.edges.size - golden.edges.filter((e) => e.evidence === "curated" || e.evidence === "comment").length;

@@ -31,6 +31,13 @@
   function Graph(opts) {
     opts = opts || {};
     var nodes = new Map(), edges = new Map(), account = opts.account || null;
+    // Where the graph's facts come from (security R-020): "twin" or "aws", stamped on every node; and which nodes an
+    // AWS API answered for. A node only files or names speak for (an actor, a vault, an event, an inferred
+    // distribution or trail) is marked unverified: bucket contents can be planted, so such nodes and their content
+    // and naming edges must never feed an "unused", "safe to remove" or "replace" signal, and views show IAM and
+    // other API facts apart from file claims. Graph.verified(edge) says the same for an edge.
+    var source = opts.source === "aws" ? "aws" : opts.source === "twin" ? "twin" : "unknown", verified = new Set();
+    function vouch(id) { verified.add(id); return id; }
     var ids = {
       account: function () { return "urn:sws:account:" + account; },
       region: function (r) { return "urn:sws:region:" + r; },
@@ -57,7 +64,7 @@
       old.source = sources.join("; ");
     }
     function accountNode() {
-      if (account) node(ids.account(), "account", "A2", account);
+      if (account) vouch(node(ids.account(), "account", "A2", account)); // known from STS by the page
       return account ? ids.account() : null;
     }
     function region(r, evidence, source) {
@@ -70,15 +77,15 @@
     // S3: buckets with their region and CORS (getBucket), and objects (listObjects, flat).
     function s3(buckets) {
       buckets.forEach(function (b) {
-        var bid = node(ids.bucket(b.name), "bucket", "A2", b.name, { cfn_type: "AWS::S3::Bucket", browser_readable: !!b.cors });
-        if (b.region) edge(bid, "in", region(b.region, "api", "Cloud Control GetResource"), "api", "Cloud Control GetResource (RegionalDomainName)");
+        var bid = vouch(node(ids.bucket(b.name), "bucket", "A2", b.name, { cfn_type: "AWS::S3::Bucket", browser_readable: !!b.cors }));
+        if (b.region) edge(bid, "in", vouch(region(b.region, "api", "Cloud Control GetResource")), "api", "Cloud Control GetResource (RegionalDomainName)");
         // A CloudTrail bucket made by the console is named aws-cloudtrail-logs-<account>-<trail>: a naming inference.
         var tm = /^aws-cloudtrail-logs-\d{12}-(.+)$/.exec(b.name);
         if (tm) {
           node(ids.trail(tm[1]), "trail", "A2", tm[1], { cfn_type: "AWS::CloudTrail::Trail", inferred: true, note: "named by its bucket" });
           edge(ids.trail(tm[1]), "logs_to", bid, "naming", "bucket name aws-cloudtrail-logs-<account>-" + tm[1]);
         }
-        var byFolder = {};
+        var byFolder = Object.create(null);
         (b.objects || []).forEach(function (o) {
           var f = o.key.indexOf("/") >= 0 ? o.key.slice(0, o.key.lastIndexOf("/") + 1) : "";
           (byFolder[f] = byFolder[f] || []).push(o);
@@ -86,10 +93,10 @@
         Object.keys(byFolder).forEach(function (f) {
           var list = byFolder[f];
           if (f && list.length > GROUP) {
-            node(ids.prefix(b.name, f), "prefix", "A1", f + " (" + list.length + " objects)", { objects: list.length, bytes: list.reduce(function (s, o) { return s + (o.size || 0); }, 0) });
+            vouch(node(ids.prefix(b.name, f), "prefix", "A1", f + " (" + list.length + " objects)", { objects: list.length, bytes: list.reduce(function (s, o) { return s + (o.size || 0); }, 0) }));
             edge(bid, "holds", ids.prefix(b.name, f), "api", "S3 ListObjectsV2");
           } else list.forEach(function (o) {
-            node(ids.object(b.name, o.key), "object", "A1", o.key, { bytes: o.size, modified: o.modified });
+            vouch(node(ids.object(b.name, o.key), "object", "A1", o.key, { bytes: o.size, modified: o.modified }));
             edge(bid, "holds", ids.object(b.name, o.key), "api", "S3 ListObjectsV2");
           });
         });
@@ -149,7 +156,7 @@
       }
       files.forEach(function (f) {
         if (!CONFIG.test(f.key)) return;
-        var fid = ids.object(f.bucket, f.key), re = /\bs3:\/\/([a-z0-9][a-z0-9.-]{1,61}[a-z0-9])/g, m, seen = {};
+        var fid = ids.object(f.bucket, f.key), re = /\bs3:\/\/([a-z0-9][a-z0-9.-]{1,61}[a-z0-9])/g, m, seen = Object.create(null);
         while ((m = re.exec(f.text))) if (!seen[m[1]]) {
           seen[m[1]] = 1;
           edge(fid, "refers_to", ids.bucket(m[1]), "content", f.key + " (s3://" + m[1] + "/...)");
@@ -168,7 +175,7 @@
           if (siteId && f.bucket === o.site.bucket) edge(vid, "part_of", siteId, "content", f.key + " in the site's bucket");
         });
       });
-      var byIp = {};
+      var byIp = Object.create(null);
       files.forEach(function (f) {
         var m = LOG_KEY.exec(f.key);
         if (!m) return;
@@ -178,11 +185,11 @@
         var fid = ids.object(f.bucket, f.key), did = "urn:sws:cloudfront-distribution:" + m[1];
         node(did, "distribution", "A2", m[1], { cfn_type: "AWS::CloudFront::Distribution", inferred: true, note: "named by its log files" });
         edge(fid, "records", did, "naming", "log object key names " + m[1]);
-        var vaults = {};
+        var vaults = Object.create(null);
         lines.forEach(function (l) {
           var v = /^\/vault\/([^/?]+)/.exec(String(l.cs_uri_stem));
           if (v && /^\/vault\/[^/]+\/files/.test(l.cs_uri_stem)) vaults[v[1]] = 1;
-          var a = byIp[l.c_ip] = byIp[l.c_ip] || { requests: 0, refused: 0, files: {}, vaults: {} };
+          var ip = String(l.c_ip), a = byIp[ip] = byIp[ip] || { requests: 0, refused: 0, files: Object.create(null), vaults: Object.create(null) };
           a.requests++; if (+l.sc_status >= 400 && +l.sc_status < 500) a.refused++;
           a.files[f.key] = f.bucket; if (v) a.vaults[v[1]] = 1;
         });
@@ -205,16 +212,16 @@
     function role(arn, source, from) {
       var m = /^arn:aws:iam::\d{12}:role\/(.+)$/.exec(arn || "");
       if (!m) return;
-      node(arn, "role", "A4", m[1].split("/").pop(), { cfn_type: "AWS::IAM::Role" });
+      vouch(node(arn, "role", "A4", m[1].split("/").pop(), { cfn_type: "AWS::IAM::Role" })); // named by an API answer (Lambda, Firehose)
       edge(from, "runs_as", arn, "api", source);
     }
     // Lambda: each function, its region, and the role it runs as.
     function lambda(functions) {
       functions.forEach(function (f) {
         if (!f || !f.arn) return;
-        node(f.arn, "function", "A2", f.name, { cfn_type: "AWS::Lambda::Function", runtime: f.runtime, handler: f.handler, memory: f.memory, timeout: f.timeout,
+        vouch(f.arn); node(f.arn, "function", "A2", f.name, { cfn_type: "AWS::Lambda::Function", runtime: f.runtime, handler: f.handler, memory: f.memory, timeout: f.timeout,
           code_bytes: f.codeSize, code_sha256: f.codeSha256, modified: f.modified, description: f.description });
-        if (f.region) edge(f.arn, "in", region(f.region, "api", "Lambda ListFunctions (FunctionArn)"), "api", "Lambda ListFunctions (FunctionArn)");
+        if (f.region) edge(f.arn, "in", vouch(region(f.region, "api", "Lambda ListFunctions (FunctionArn)")), "api", "Lambda ListFunctions (FunctionArn)");
         role(f.role, "Lambda ListFunctions (Role)", f.arn);
       });
     }
@@ -224,8 +231,8 @@
     function firehose(streams) {
       streams.forEach(function (st) {
         if (!st || !st.arn) return;
-        node(st.arn, "stream", "A2", st.name, { cfn_type: "AWS::KinesisFirehose::DeliveryStream", status: st.status, stream_type: st.type });
-        if (st.region) edge(st.arn, "in", region(st.region, "api", "Firehose DescribeDeliveryStream (ARN)"), "api", "Firehose DescribeDeliveryStream (ARN)");
+        vouch(st.arn); node(st.arn, "stream", "A2", st.name, { cfn_type: "AWS::KinesisFirehose::DeliveryStream", status: st.status, stream_type: st.type });
+        if (st.region) edge(st.arn, "in", vouch(region(st.region, "api", "Firehose DescribeDeliveryStream (ARN)")), "api", "Firehose DescribeDeliveryStream (ARN)");
         (st.destinations || []).forEach(function (d) {
           if (d.kind !== "s3" || !d.bucket) return;
           var n = nodes.get(st.arn); n.s3_prefix = d.prefix; n.compression = d.compression; n.buffer_seconds = d.bufferSeconds;
@@ -245,35 +252,37 @@
     var GH = "token.actions.githubusercontent.com";
     function iam(o) {
       o = o || {};
-      (o.providers || []).forEach(function (p) { if (p && p.arn) node(p.arn, "identity_provider", "A4", p.url || p.arn, { cfn_type: "AWS::IAM::OIDCProvider" }); });
-      (o.roles || []).forEach(function (r) {
-        if (!r || !r.arn) return;
-        node(r.arn, "role", "A4", r.name, { cfn_type: "AWS::IAM::Role", last_used: r.lastUsed ? r.lastUsed.when : undefined,
+      (Array.isArray(o.providers) ? o.providers : []).forEach(function (p) { if (p && typeof p.arn === "string") vouch(node(p.arn, "identity_provider", "A4", p.url || p.arn, { cfn_type: "AWS::IAM::OIDCProvider" })); });
+      (Array.isArray(o.roles) ? o.roles : []).forEach(function (r) {
+        if (!r || typeof r.arn !== "string") return;
+        vouch(r.arn); node(r.arn, "role", "A4", r.name, { cfn_type: "AWS::IAM::Role", last_used: r.lastUsed ? r.lastUsed.when : undefined,
           boundary: r.boundary ? r.boundary.arn : undefined, service_linked: r.serviceLinked || undefined });
         var a = accountNode();
         if (a) edge(r.arn, "in", a, "api", "IAM GetRole");
-        ((r.trust && r.trust.statements) || []).forEach(function (st) {
-          if (st.effect !== "Allow") return;
-          st.principals.filter(function (p) { return p.kind === "federated"; }).forEach(function (p) {
+        var sts = r.trust && Array.isArray(r.trust.statements) ? r.trust.statements : [];
+        sts.forEach(function (st) {
+          if (!st || st.effect !== "Allow" || !Array.isArray(st.principals)) return;
+          st.principals.filter(function (p) { return p && p.kind === "federated" && typeof p.id === "string"; }).forEach(function (p) {
             var idp, host = (/:oidc-provider\/(.+)$/.exec(p.id) || [])[1];
-            if (p.id === "accounts.google.com") idp = node(GOOGLE, "identity_provider", "A4", "accounts.google.com", { note: "web identity federation; no IAM resource" });
-            else if (host) idp = node(p.id, "identity_provider", "A4", host, { cfn_type: "AWS::IAM::OIDCProvider" });
-            else if (/^arn:aws:iam::\d{12}:saml-provider\//.test(p.id)) idp = node(p.id, "identity_provider", "A4", p.id.split("/").pop(), { cfn_type: "AWS::IAM::SAMLProvider" });
+            if (p.id === "accounts.google.com") idp = vouch(node(GOOGLE, "identity_provider", "A4", "accounts.google.com", { note: "web identity federation; no IAM resource" }));
+            else if (host) idp = vouch(node(p.id, "identity_provider", "A4", host, { cfn_type: "AWS::IAM::OIDCProvider" }));
+            else if (/^arn:aws:iam::\d{12}:saml-provider\//.test(p.id)) idp = vouch(node(p.id, "identity_provider", "A4", p.id.split("/").pop(), { cfn_type: "AWS::IAM::SAMLProvider" }));
             else return;
             edge(r.arn, "trusts", idp, "api", "IAM GetRole (trust policy Principal Federated " + (host || p.id) + ")");
             if (host !== GH) return;
-            st.conditions.filter(function (c) { return c.key === GH + ":sub" && /^String(Equals|Like)$/.test(c.op.replace(/^For(Any|All)Value:/, "")); }).forEach(function (c) {
+            (Array.isArray(st.conditions) ? st.conditions : []).filter(function (c) { return c && Array.isArray(c.values) && c.key === GH + ":sub" && typeof c.op === "string" && /^String(Equals|Like)$/.test(c.op.replace(/^For(Any|All)Value:/, "")); }).forEach(function (c) {
               c.values.forEach(function (sub) {
                 var m = /^repo:([^@/]+)(?:@\d+)?\/([^@:]+)(?:@\d+)?:(.+)$/.exec(String(sub));
                 if (!m) return;
-                var pid = node("urn:sws:github-subject:" + m[1] + "/" + m[2] + ":" + m[3], "external_principal", "A4", m[2] + " (" + m[3].replace(":", " ") + ")", { subject: sub });
+                var pid = vouch(node("urn:sws:github-subject:" + m[1] + "/" + m[2] + ":" + m[3], "external_principal", "A4", m[2] + " (" + m[3].replace(":", " ") + ")", { subject: sub }));
                 edge(r.arn, "allows_subject", pid, "api", "IAM GetRole (trust policy condition " + GH + ":sub)");
               });
             });
           });
         });
-        (r.attached || []).forEach(function (p) {
-          if (!p || !p.arn) return;
+        (Array.isArray(r.attached) ? r.attached : []).forEach(function (p) {
+          if (!p || typeof p.arn !== "string") return;
+          vouch(p.arn);
           var aws = /^arn:aws:iam::aws:policy\//.test(p.arn);
           node(p.arn, "policy", "A2", p.name || p.arn.split("/").pop(), aws ? { cfn_type: "AWS::IAM::ManagedPolicy", aws_managed: true } : { cfn_type: "AWS::IAM::ManagedPolicy" });
           edge(r.arn, "has_policy", p.arn, "api", "IAM ListAttachedRolePolicies");
@@ -294,51 +303,60 @@
       });
     }
     function packagesFunctions() {
-      var fns = Array.from(nodes.values()).filter(function (n) { return n.type === "function"; });
+      var bySha256 = new Map(), byLabel = new Map();
+      nodes.forEach(function (n) {
+        if (n.type !== "function") return;
+        if (n.code_sha256 && !bySha256.has(n.code_sha256)) bySha256.set(n.code_sha256, n);
+        if (!byLabel.has(n.label)) byLabel.set(n.label, n);
+      });
       zips.forEach(function (z) {
         var oid = ids.object(z.bucket, z.key);
-        var bySha = z.sha256 && fns.filter(function (f) { return f.code_sha256 === z.sha256; })[0];
+        var bySha = z.sha256 && bySha256.get(z.sha256);
         if (bySha) return edge(oid, "packages", bySha.id, "api", "Lambda CodeSha256 equals the zip's SHA-256");
-        var byName = z.packageName && fns.filter(function (f) { return f.label === z.packageName; })[0];
+        var byName = z.packageName && byLabel.get(z.packageName);
         if (byName) edge(oid, "packages", byName.id, "naming", "zip name and dist-info METADATA (Name: " + z.packageName + "); CodeSha256 differs");
       });
     }
 
     // A distribution whose log files sit under a stream's prefix in that stream's bucket logs through that stream.
     function logsThroughStreams() {
-      var dists = Array.from(nodes.values()).filter(function (n) { return n.type === "distribution"; });
+      var dists = new Map();
+      nodes.forEach(function (n) { if (n.type === "distribution") dists.set(n.label, n); });
+      if (!dists.size) return;
       streamDests.forEach(function (sd) {
-        var under = ids.bucket(sd.bucket) + "/" + sd.prefix;
-        dists.forEach(function (d) {
-          var hit = Array.from(nodes.keys()).some(function (id) { return id.indexOf(under) === 0 && id.indexOf("/" + d.label + "-") > 0; });
-          if (hit) edge(d.id, "logs_to", sd.stream, "naming", "log files named after " + d.label + " sit under the stream's prefix " + (sd.prefix || "(none)"));
-        });
+        var under = ids.bucket(sd.bucket) + "/" + sd.prefix, named = new Set();
+        nodes.forEach(function (n, id) { var m = id.indexOf(under) === 0 && LOG_KEY.exec(id); if (m && dists.has(m[1])) named.add(m[1]); });
+        named.forEach(function (label) { edge(dists.get(label).id, "logs_to", sd.stream, "naming", "log files named after " + label + " sit under the stream's prefix " + (sd.prefix || "(none)")); });
       });
     }
 
     // An object names its bucket already: a bucket target with an object target in it is not a second edge.
     function actedOn(targets) {
-      return targets.filter(function (t) {
-        return !(t.type === "bucket" && targets.some(function (o) { return o.type === "object" && o.id.indexOf(t.id + "/") === 0; }));
-      });
+      var withObjects = new Set();
+      targets.forEach(function (o) { if (o && o.type === "object" && typeof o.id === "string") withObjects.add(o.id.slice(0, o.id.indexOf("/", "arn:aws:s3:::".length))); });
+      return targets.filter(function (t) { return t && typeof t.id === "string" && !(t.type === "bucket" && withObjects.has(t.id)); });
     }
 
     function toJSON() {
       logsThroughStreams();
       packagesFunctions();
-      var nodeList = Array.from(nodes.values()).map(function (n) { return Object.assign({}, n); });
+      var nodeList = Array.from(nodes.values()).map(function (n) {
+        var o = Object.assign({}, n); o.source = source;
+        if (!verified.has(n.id)) o.unverified = true;
+        return o;
+      });
       var edgeList = Array.from(edges.values()).map(function (e) { return Object.assign({}, e); });
       var have = new Set(nodeList.map(function (n) { return n.id; }));
       edgeList.forEach(function (e) {
         [e.from, e.to].forEach(function (end) {
-          if (!have.has(end)) { have.add(end); nodeList.push({ id: end, type: "unknown", label: end, altitude: "A2", dangling: true, note: "named by an edge; no adapter has described it yet" }); }
+          if (!have.has(end)) { have.add(end); nodeList.push({ id: end, type: "unknown", label: end, altitude: "A2", dangling: true, unverified: true, source: source, note: "named by an edge; no adapter has described it yet" }); }
         });
       });
       nodeList.sort(function (a, b) { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; });
       edgeList.sort(function (a, b) { var x = a.from + a.rel + a.to, y = b.from + b.rel + b.to; return x < y ? -1 : x > y ? 1 : 0; });
       var by = {};
       edgeList.forEach(function (e) { by[e.evidence] = (by[e.evidence] || 0) + 1; });
-      return { about: "Resource graph built in the page from the service APIs and the activity reader (site/api/graph.js).",
+      return { about: "Resource graph built in the page from the service APIs and the activity reader (site/api/graph.js); source: " + source + ".",
         evidence_levels: EVIDENCE.slice(), counts: { nodes: nodeList.length, edges: edgeList.length, by_evidence: by }, nodes: nodeList, edges: edgeList };
     }
 
@@ -365,5 +383,8 @@
     return Promise.all([sha, meta]).then(function (r) { return { sha256: r[0], packageName: r[1].packageName, entries: r[1].entries }; });
   };
 
+  // An edge an AWS API answered for (evidence api or template). content and naming edges come from what files say or
+  // from names, which bucket contents can plant (security R-020): show them as claims, never as proof.
+  Graph.verified = function (e) { return !!e && (e.evidence === "api" || e.evidence === "template"); };
   root.Graph = Graph;
 })(typeof window !== "undefined" ? window : globalThis);

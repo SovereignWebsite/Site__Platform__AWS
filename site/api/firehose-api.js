@@ -13,11 +13,13 @@
 // Errors: an Error whose message is "Code: Message", with .code and .status; a CORS TypeError passes through.
 (function (root) {
   "use strict";
+  var REGION_RE = /^[a-z]{2}(-[a-z]+)+-\d$/;
   function fail(code, message, status) { var e = new Error(code + ": " + message); e.code = code; e.status = status; return e; }
   function FirehoseApi(send, opts) {
     if (typeof send !== "function") throw new TypeError("FirehoseApi needs a send function");
     var account = opts && opts.account;
     function call(region, target, payload) {
+      if (!REGION_RE.test(String(region))) return Promise.reject(new TypeError("not an AWS region: " + region)); // it goes into a signed host name
       var url = "https://firehose." + region + ".amazonaws.com/";
       return send({ service: "firehose", region: region, method: "POST", url: url, body: JSON.stringify(payload),
         headers: { "content-type": "application/x-amz-json-1.1", "x-amz-target": "Firehose_20150804." + target } }).then(function (r) {

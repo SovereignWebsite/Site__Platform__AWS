@@ -135,7 +135,19 @@ ok(decodeURIComponent(sentPath.slice(1)) === oddKey, "odd key path decodes back 
 // Pure parts: URLs (path form for dotted names) and XML paging fields, against a fixed answer shaped like
 // the ListObjectsV2 example in AWS's S3 API reference.
 ok(S3Api.bucketUrl("a.b", "eu-west-1", "x y/z(1)", "") === "https://s3.eu-west-1.amazonaws.com/a.b/x%20y/z%281%29", "dotted bucket path form");
-ok(S3Api.bucketUrl("ab", "eu-west-1", "", "?list-type=2") === "https://ab.s3.eu-west-1.amazonaws.com/?list-type=2", "virtual-host form");
+ok(S3Api.bucketUrl("abc", "eu-west-1", "", "?list-type=2") === "https://abc.s3.eu-west-1.amazonaws.com/?list-type=2", "virtual-host form");
+// Names and regions go into a signed host: anything that is not one is refused before a request is made (security R-019).
+for (const [b, r] of [["ab", "eu-west-1"], ["evil.com/x", "eu-west-1"], ["Upper", "eu-west-1"], ["abc", "eu-west-1.evil.com"], ["abc", "../x"]]) {
+  let threw = false; try { S3Api.bucketUrl(b, r, "", ""); } catch (e) { threw = e instanceof TypeError; }
+  ok(threw, "refused " + b + " in " + r);
+}
+let calls = 0; const counting = S3Api(async () => { calls++; return new Response("", { status: 200 }); });
+for (const f of [() => counting.listObjects("abc", "evil.com"), () => counting.getObject("x/y", "eu-west-1", "k"), () => counting.getBucketCors("abc", "")]) {
+  try { await f(); fail("should reject"); } catch (e) { ok(e instanceof TypeError, "rejects " + e.message); }
+}
+ok(calls === 0, "no request made for a bad name or region");
+const big = S3Api(async () => new Response("<ListBucketResult><IsTruncated>false</IsTruncated><Contents><Key>a&#x110000;b&#99999999999;c</Key><Size>1</Size></Contents></ListBucketResult>", { status: 200 }));
+ok((await big.listObjects("abc", "eu-west-1")).files[0].key === "a&#x110000;b&#99999999999;c", "out-of-range entities stay as text");
 const paged = S3Api(async () => new Response(
   "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ListBucketResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\"><Name>bucket</Name><Prefix/><KeyCount>2</KeyCount>" +
   "<MaxKeys>2</MaxKeys><IsTruncated>true</IsTruncated><NextContinuationToken>1ueGcxLPRx1Tr/XYExHnhbYLgveDs2J/wm36Hy4vbOwM=</NextContinuationToken>" +

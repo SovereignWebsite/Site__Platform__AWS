@@ -12,6 +12,7 @@
 // body); a CORS TypeError passes through unchanged.
 (function (root) {
   "use strict";
+  var REGION_RE = /^[a-z]{2}(-[a-z]+)+-\d$/;
   function fail(code, message, status) { var e = new Error(code + ": " + message); e.code = code; e.status = status; return e; }
   function shape(f, region) {
     var r = /^arn:aws:lambda:([a-z0-9-]+):/.exec(f.FunctionArn || "");
@@ -23,6 +24,7 @@
   function LambdaApi(send) {
     if (typeof send !== "function") throw new TypeError("LambdaApi needs a send function");
     function get(region, path) {
+      if (!REGION_RE.test(String(region))) return Promise.reject(new TypeError("not an AWS region: " + region)); // it goes into a signed host name
       var url = "https://lambda." + region + ".amazonaws.com" + path;
       return send({ service: "lambda", region: region, method: "GET", url: url, headers: {}, body: "" }).then(function (r) {
         if (r.ok) return r.json();

@@ -81,6 +81,12 @@ await rejects(LambdaApi(async () => new Response(JSON.stringify({ Type: "User", 
   (e) => e.code === "TooManyRequestsException" && e.status === 429 && e.message === "TooManyRequestsException: slow down", "Lambda error code from x-amzn-errortype");
 await rejects(LambdaApi(async () => Promise.reject(new TypeError("Failed to fetch"))).functions(R), (e) => e instanceof TypeError, "a CORS refusal passes through");
 
+// ---- regions go into a signed host: anything else is refused before a request (security R-019) ----
+let made = 0; const count = async () => { made++; return new Response("{}", { status: 200 }); };
+for (const p of [LambdaApi(count).functions("eu-west-2.evil.com"), LambdaApi(count).function("../x", "f"), FirehoseApi(count).streams("EU-WEST-2"), FirehoseApi(count).stream("", "s")])
+  await rejects(p, (e) => e instanceof TypeError, "bad region refused");
+ok(made === 0, "no request made for a bad region");
+
 // ---- contracts ----
 const action = (rq) => {
   if (rq.service === "lambda") return /\/configuration$/.test(new URL(rq.url).pathname) ? "lambda:GetFunctionConfiguration" : "lambda:ListFunctions";

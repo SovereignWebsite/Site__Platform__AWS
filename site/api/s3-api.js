@@ -33,7 +33,7 @@
   // ---- a small reader for S3's flat XML (no DOMParser, so it runs in Node too) ----
   function unescape(s) {
     return s.replace(/&(#x[0-9a-fA-F]+|#[0-9]+|amp|lt|gt|quot|apos);/g, function (m, e) {
-      if (e[0] === "#") return String.fromCodePoint(e[1] === "x" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10));
+      if (e[0] === "#") { var c = e[1] === "x" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10); return c >= 0 && c <= 0x10ffff ? String.fromCodePoint(c) : m; }
       return { amp: "&", lt: "<", gt: ">", quot: "\"", apos: "'" }[e];
     });
   }
@@ -56,7 +56,11 @@
     });
   }
 
+  // Names and regions go into a signed host name: check them first (security R-019).
+  var REGION_RE = /^[a-z]{2}(-[a-z]+)+-\d$/, BUCKET_RE = /^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/;
   function bucketUrl(bucket, region, key, query) {
+    if (!BUCKET_RE.test(String(bucket))) throw new TypeError("not an S3 bucket name: " + bucket);
+    if (!REGION_RE.test(String(region))) throw new TypeError("not an AWS region: " + region);
     var path = "/" + (key ? key.split("/").map(uriEncode).join("/") : "");
     // Names with dots do not match S3's certificate as a host name: those take the path form.
     if (bucket.indexOf(".") >= 0) return "https://s3." + region + ".amazonaws.com/" + encodeURIComponent(bucket) + path + (query || "");
@@ -98,6 +102,7 @@
     }
 
     function listObjects(bucket, region, opts) {
+      try { bucketUrl(bucket, region, "", ""); } catch (e) { return Promise.reject(e); }
       opts = opts || {};
       var q = "?list-type=2", delim = opts.delimiter === undefined ? "/" : opts.delimiter;
       if (delim) q += "&delimiter=" + encodeURIComponent(delim);
@@ -119,6 +124,7 @@
     }
 
     function getObject(bucket, region, key, range) {
+      try { bucketUrl(bucket, region, "", ""); } catch (e) { return Promise.reject(e); }
       var h = range ? { range: "bytes=" + range[0] + "-" + range[1] } : {};
       return s3(region, bucketUrl(bucket, region, key), h).then(function (r) {
         if (r.status !== 200 && r.status !== 206) return xmlError(r);
@@ -129,6 +135,7 @@
     }
 
     function getBucketCors(bucket, region) {
+      try { bucketUrl(bucket, region, "", ""); } catch (e) { return Promise.reject(e); }
       return s3(region, bucketUrl(bucket, region, "", "?cors")).then(function (r) {
         if (r.status === 404) return r.clone().text().then(function (t) { return text(t, "Code") === "NoSuchCORSConfiguration" ? null : xmlError(r); });
         if (!r.ok) return xmlError(r);

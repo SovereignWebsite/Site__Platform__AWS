@@ -76,6 +76,19 @@ const roleXml = (extra) => "<GetRoleResponse><GetRoleResult><Role><Path>/aws-ser
 const sl = await IamApi(async () => new Response(roleXml("<PermissionsBoundary><PermissionsBoundaryType>Policy</PermissionsBoundaryType><PermissionsBoundaryArn>arn:aws:iam::" + A + ":policy/ReadBoundary</PermissionsBoundaryArn></PermissionsBoundary>"), { status: 200 })).role("AWSServiceRoleForSupport");
 ok(sl.serviceLinked && JSON.stringify(plain(sl.boundary)) === JSON.stringify({ type: "Policy", arn: "arn:aws:iam::" + A + ":policy/ReadBoundary" }) && sl.lastUsed === null && sl.trust.statements[0].principals[0].id === "support.amazonaws.com", "service-linked, boundary, plain-JSON trust, RoleLastUsed absent reads as null");
 
+// ---- security R-019: a literal % in plain JSON, a bad document in a list, __proto__ principal keys, big entities ----
+const pct = await IamApi(async () => new Response(roleXml("").replace(/<AssumeRolePolicyDocument>[^<]*</, '<AssumeRolePolicyDocument>{"Statement":[{"Effect":"Allow","Principal":{"AWS":"x"},"Action":"sts:AssumeRole","Condition":{"StringLike":{"aws:userid":"100%"}}}]}<'), { status: 200 })).role("x");
+ok(pct.trust.statements[0].conditions[0].values[0] === "100%", "a literal % in plain JSON is read, not decoded");
+const listXml = "<ListRolesResponse><ListRolesResult><Roles>" +
+  "<member><Path>/</Path><RoleName>bad</RoleName><Arn>arn:aws:iam::" + A + ":role/bad</Arn><CreateDate>2026-01-01T00:00:00Z</CreateDate><AssumeRolePolicyDocument>%7Bnot json</AssumeRolePolicyDocument></member>" +
+  "<member><Path>/</Path><RoleName>good&#x110000;</RoleName><Arn>arn:aws:iam::" + A + ":role/good</Arn><CreateDate>2026-01-01T00:00:00Z</CreateDate><AssumeRolePolicyDocument>" + encodeURIComponent(JSON.stringify({ Statement: [{ Effect: "Allow", Principal: { __proto__: "p", Service: "s" }, Action: "a" }] })) + "</AssumeRolePolicyDocument></member>" +
+  "</Roles><IsTruncated>false</IsTruncated></ListRolesResult></ListRolesResponse>";
+const lr = await IamApi(async () => new Response(listXml, { status: 200 })).roles();
+ok(lr.items.length === 2 && lr.items[0].trust.statements.length === 0 && /BadPolicyDocument/.test(lr.items[0].trustError), "one bad trust document does not fail the list");
+ok(lr.items[1].name === "good&#x110000;" && JSON.stringify(plain(lr.items[1].trust.statements[0].principals)) === JSON.stringify([{ kind: "service", id: "s" }]), "out-of-range entity kept as text; prototype keys are not principals");
+await rejects(IamApi(async () => new Response("<GetRolePolicyResponse><GetRolePolicyResult><PolicyDocument>%E0%A4%A</PolicyDocument></GetRolePolicyResult></GetRolePolicyResponse>", { status: 200 })).inlineDocument("r", "p"),
+  (e) => e.code === "BadPolicyDocument", "a malformed document is a BadPolicyDocument error");
+
 // ---- paging and errors over a recording send ----
 const xml = (s, st = 200) => new Response(s, { status: st, headers: { "content-type": "text/xml" } });
 const names = ["a", "b", "c", "d", "e"];
