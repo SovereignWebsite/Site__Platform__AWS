@@ -6,7 +6,8 @@
 // and, in access-stack mode, sws-vault-<id>-access (iam.aws.a's vault-access.yaml); every resource is named
 // sws-vault-<id>-* and tagged sws-vault=<id>. CloudFormation's own calls carry invokedBy or sourceIPAddress
 // cloudformation.amazonaws.com; in access-stack mode they also run as the role sws-vault-<id>-deploy.
-// *To check* (boto3.aws.a): the exact userIdentity of CloudFormation's calls in one-stack mode (no service role).
+// boto3.aws.a (note 09 addendum, b2a8e2c): with a service role, AssumedRole of that role with invokedBy; without one,
+// the caller with invokedBy; sourceIPAddress the service's DNS name. Consistent with AWS's pages, no example: confirm on a real trail.
 (function (root) {
   "use strict";
   var CFN = "cloudformation.amazonaws.com";
@@ -66,7 +67,7 @@
       var d = by[id], ev = d.events.slice().sort(function (a, b) { return a.time - b.time; }), lastApply = null, failedAfter = false, access = accessMode(ev, id);
       var counts = { calls: ev.length, failed: 0, byCloudFormation: 0, outOfBand: 0 };
       ev.forEach(function (e) {
-        if (d.regions.indexOf(e.region) < 0 && e.service !== "iam") d.regions.push(e.region); // IAM is global
+        if (d.regions.indexOf(e.region) < 0 && e.service !== "iam" && e.service !== "cloudfront") d.regions.push(e.region); // global services
         if (e.failed) counts.failed++;
         if (byCloudFormation(e, id, access)) { counts.byCloudFormation++; if (e.failed && lastApply) failedAfter = true; }
         else if (isOutOfBand(e, id, access)) counts.outOfBand++;

@@ -13,7 +13,7 @@ Who deployed what, where and when, for each Vault in a customer's account, read 
   - its resources, all named `sws-vault-<id>-*`;
   - the deploy role `sws-vault-<id>-deploy` as the caller.
 - **Who deployed:** the identity of the first applied stack call (CreateStack, UpdateStack, ExecuteChangeSet), never CloudFormation itself.
-- **Where:** the account and the regions (IAM is global, so it does not count as a region).
+- **Where:** the account and the regions (IAM and CloudFront are global, so they do not count as regions).
 - **When:** the first and last event.
 - **State:** the last applied stack call: created, updated or deleted. It is failed if that call was refused, or if a CloudFormation call after it failed. It is prepared if only change sets exist.
 - **Mode:** access-stack when the Vault stack names the deploy role as its service role; otherwise one-stack.
@@ -46,14 +46,16 @@ The platform alarms (ct-alarms.js) still run on the same events. Example: a chan
 - `docs/cloudtrail/scenarios/vault-deploy.js`: the twin-first scenario. It gives the records one access-stack deployment leaves, with options for out of band, refused and teardown. dev.1.aws.a uses it as the expected output: the twin derives its customer account's trail from its journal, and a test compares the two (step 4).
 - `docs/cloudtrail/reader/ct-deploy.test.mjs`: 37 cases (run: `node docs/cloudtrail/reader/ct-deploy.test.mjs`).
 
-## To check (boto3.aws.a)
+## Checked by boto3.aws.a (note 09 addendum, work/boto3.aws.a b2a8e2c; AWS's pages, 23 Nov 2026)
 
-- The identity on CloudFormation's own calls:
-  - access-stack mode: AssumedRole `sws-vault-<id>-deploy` with `invokedBy` cloudformation.amazonaws.com;
-  - one-stack mode: the caller's identity with `invokedBy`;
-  - in both, `sourceIPAddress` cloudformation.amazonaws.com.
-  ct-deploy.js takes `invokedBy` or `sourceIPAddress` as CloudFormation's sign; the role's name alone is not one.
-- The event names with version suffixes: CreateFunction20150331, CreateFunctionUrlConfig20211031, CreateDistribution2020_05_31.
+- **Identity on CloudFormation's own calls.** All three points are consistent with AWS's pages, but no page shows a CloudFormation example; confirm them on the first real trail.
+  - With the deploy role: AssumedRole of that role, with `invokedBy`.
+  - Without a role (one-stack mode): the caller, with `invokedBy`.
+  - `sourceIPAddress`: the service's DNS name.
+- **Event names:**
+  - CreateFunction20150331: confirmed.
+  - CreateFunctionUrlConfig: no suffix; corrected in the scenario.
+  - CloudFront: CreateDistributionWithTags when tags are passed, as vault.yaml does, in us-east-1; to confirm. Corrected in the scenario. CloudFront, like IAM, is global, so it does not count as a deployment's region.
 
 ## Decision for Dinis (to pm.aws.a's batch)
 
