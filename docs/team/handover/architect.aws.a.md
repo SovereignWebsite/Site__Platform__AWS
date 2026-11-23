@@ -30,7 +30,7 @@ This session's signing key (sha256:8699204a5b3a9875, signing sha256:2311c1b95a70
 - **dev.2.aws.a, work/dev.2.aws.a (head e129863 / 173a00c line):** site/api/ to designs 03 and 04: decode.js, activity.js, graph.js (adapters: s3, activity, content, lambda, firehose, zips, iam; trust and backend; privacy), all.js, lambda/firehose/iam APIs and contracts, s3-api getBucketCors, s3.openapi.json 0.4.0. Golden equal to ontology 18f89b8 on three packs (52/99). Waits for: CfnApi/Route53Api on cloudformation.aws.a's twin patch landing (aws.c); landing on R-010 (decision 3) or aws.c after security review. security.aws.a closed R-020 on 1cb0d20.
 - **dev.2.aws.a, work/dev.2.aws.a.iam-journal (852c1fe):** IAM twin answers on dev.1's journal; supersedes the twin.js changes on work/dev.2.aws.a.
 - **dev.1.aws.a, work/dev.1.aws.a:** design 02 step 1 (88831eb, journal folded into a world, golden 3690 = v0 at 4f9bc3c) and step 2 first half (74c254d, packs as data). Step 2 loader done and agreed (a00f63b). Next: commit 2, the 15 harness one-liners and app.js menu (for aws.c and Dinis; test/data/view.e2e to an http server, with data.aws.a), then the network split for the attack pack (privacy), golden re-taken.
-- **twin.js landing order for aws.c:** 88831eb, then 852c1fe, then step 2, then the network split.
+- **twin.js landing order for aws.c:** 88831eb, then 852c1fe, then step 2 (74c254d, a00f63b), then the network split (b44f852 to aaa8461, agreed at a7e9bcb 15:35: visitors 198.51.100.1-.239, operator alone in 192.0.2.0/24, attacker alone in 203.0.113.0/24, 198.51.100.240/28 kept for EC2).
 
 ## New since: Vault deploy into customers' accounts (Dinis, 14:55)
 
@@ -50,7 +50,7 @@ Review the EC2 twin patch (dev.2.aws.a or dev.1.aws.a) against that note.
 ## Who waits on what
 
 - **Dinis:** (1) Factory keys live (all .a agents); (2) decision 3 (R-010) for site/api/** and site/twin/** code; (3) yes for test/** one-liners in ~15 harnesses (dev.1's loader); (4) decision 6 (P-IAM-001 v2.4) before the twin gets platform-role boundaries; template v3 is a console apply (iam.aws.a's note in design 04).
-- **aws.c:** land cloudformation.aws.a's twin patch (blocks CfnApi/Route53Api); land the twin.js commits in the order above; separate the twin's client networks (visitors 198.51.100.0/24 and 192.0.2.0/24, attacker 203.0.113.0/24, operator 192.0.2.7) or accept dev.1.aws.a's commit for it.
+- **aws.c:** land cloudformation.aws.a's twin patch (blocks CfnApi/Route53Api); land the twin.js commits in the order above; land dev.1.aws.a's network split (done and agreed, a7e9bcb).
 - **ontology.aws.a, cloudtrail.aws.a, cloudformation.aws.a, ux.aws.a, iam.aws.a, boto3.aws.a, security.aws.a:** nothing open with the architect; all asks answered.
 
 ## Next steps
