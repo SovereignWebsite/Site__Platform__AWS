@@ -240,7 +240,7 @@
    }
   },
   "trust": {
-   "description": "R-020 (design 03, Trust of evidence): verified for api and template evidence (AWS's own answer, or the stack AWS deployed); claimed for content, naming and comment (anyone who can write the bucket can write it); curated stays curated. A node is verified if any verified edge names it, otherwise claimed. Claimed evidence may raise a question, never drive a plan.",
+   "description": "R-020 (design 03, Trust of evidence): verified for api and template evidence (AWS's own answer, or the stack AWS deployed); claimed for content, naming and comment (anyone who can write the bucket can write it); curated stays curated. A node is verified if any verified edge names it, else curated if any curated edge names it, else claimed. Claimed evidence may raise a question, never drive a plan.",
    "enum": [
     "verified",
     "claimed",

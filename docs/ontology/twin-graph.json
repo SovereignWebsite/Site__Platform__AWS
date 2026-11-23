@@ -101,7 +101,7 @@
    "type": "business_function",
    "label": "A visitor reads a vault's files",
    "altitude": "A5",
-   "trust": "claimed",
+   "trust": "curated",
    "backend": "twin"
   },
   {
@@ -112,7 +112,7 @@
    "cfn_type": "AWS::CloudFront::Distribution",
    "inferred": true,
    "note": "no CloudFront API in the twin; named by its log files",
-   "trust": "claimed",
+   "trust": "curated",
    "backend": "twin"
   },
   {
@@ -566,7 +566,7 @@
    "label": "Demo site",
    "altitude": "A3",
    "title": "Demo site",
-   "trust": "claimed",
+   "trust": "curated",
    "backend": "twin"
   },
   {
@@ -613,7 +613,7 @@
    "files": 42,
    "requests": 32,
    "share_of_requests": 0.142,
-   "trust": "claimed",
+   "trust": "curated",
    "backend": "twin"
   },
   {
@@ -624,7 +624,7 @@
    "files": 7,
    "requests": 29,
    "share_of_requests": 0.129,
-   "trust": "claimed",
+   "trust": "curated",
    "backend": "twin"
   }
  ],
