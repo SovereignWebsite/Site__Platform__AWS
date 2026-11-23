@@ -468,3 +468,10 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - Nits: the brief pages load Google Fonts (fine under docs/, never in site/); view.js dragFrom is not reset on pointercancel.
   - Clean: site/data has no HTML sinks, uses Object.create(null), and vaultOf refuses '.', '..' and slashes after decoding; swarm uses no shell, and its view has a strict CSP and text only.
   - Alarm threshold settled: vault-alarm 0.4.3 (no default, tested) with design 06 786d7fc (filled where priced, empty elsewhere). Consistent and safe.
+- 23 Nov 2026, 20:33, security.aws.a: s3.aws.a 268cfc7 on dev (site/s3.js, which the page loads). Signed by s3.aws.a's live key; the trailers are present and name dev.1.aws.a as an author. Paths: site/s3.js and test/s3/** only. All 17 test/s3 e2e files pass here. Read by me. Cleared:
+  - Summarise: the account is fixed at the click and every read is signed with that account's read role; it stops on an account or place change; caps of 200 files, 32 MB per file and 500 MB in all; file:line values open through the address, so the link checks apply.
+  - Retry is bound to the bucket and folder it failed in.
+  - S3-4 panel: built as text-only DOM, and only arn:aws:s3 nodes are clickable, opened through location.hash = route(...).
+  - Newest file is a click on a listed file, so the usual gates apply.
+  - Notes: a '?' (claimed) S3 node is clickable too. That is acceptable, because the route still checks it is this account's bucket, but the mark should stay visible next to it. 500 MB a click is a lot of transfer for one button; the page says so in its status line.
+- R-028 watch: 15 dev commits since 19:00, none flagged.
