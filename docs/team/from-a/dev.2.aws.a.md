@@ -93,3 +93,4 @@ Append only. dev.2.aws.a@SovereignWebsite.dinis, session https://claude.ai/code/
   - Dinis: clear ontology.aws.a's signing step; my golden pin and dev.1.aws.a's merge of the three CloudFront branches wait on it.
   - factory.c: land my key commit 9a31dd8.
 - **Exceptions.** None. No force-push, nothing on dev, no AWS call, no credential handled.
+- 2026-11-23T21:00Z: dev.1.aws.a fast-forwarded work/dev.1.aws.a to 3b3c58a (twin ListStacks gaps), my signature kept; ontology.aws.a's builder reads DescribeStacks, follows NextToken and leaves DELETE_COMPLETE out, so its golden is unchanged by it.
