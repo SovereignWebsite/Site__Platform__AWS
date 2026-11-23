@@ -5,14 +5,27 @@
 // graph (IAM, CloudFormation, Lambda, Firehose, zip contents, serves_from, curated) waits for its adapters and is counted.
 // Node 22, no network. Run: node test/api/graph.test.mjs
 import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import vm from "node:vm";
+
+// Each demo pack is a whole synthetic world, chosen when the twin loads: one process per pack.
+const PACK = process.env.GRAPH_TEST_PACK;
+if (!PACK) {
+  let failed = false;
+  for (const p of ["baseline", "attack", "surge"]) {
+    try { process.stdout.write(execFileSync(process.execPath, [fileURLToPath(import.meta.url)], { env: { ...process.env, GRAPH_TEST_PACK: p }, stdio: ["ignore", "pipe", "pipe"] }).toString()); }
+    catch (e) { process.stderr.write(String(e.stdout || "") + String(e.stderr || e.message)); failed = true; }
+  }
+  process.exit(failed ? 1 : 0);
+}
 
 const store = {};
 const ctx = {
   TextEncoder, TextDecoder, Uint8Array, Uint32Array, DataView, ArrayBuffer, Blob, Response, Headers, URL, URLSearchParams,
   CompressionStream, DecompressionStream, Promise, Error, TypeError, JSON, Date, Math, Number, String, RegExp, Object, Array, Map, Set,
   setTimeout, crypto: globalThis.crypto, console, btoa,
-  location: { search: "?twin", origin: "https://example.test" },
+  location: { search: "?twin&pack=" + PACK, origin: "https://example.test" },
   localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
   fetch: () => { throw new Error("a request left the page"); }
 };
@@ -21,8 +34,8 @@ vm.createContext(ctx);
 for (const f of ["sigv4.js", "twin.js", "transport.js", "api/s3-api.js", "api/decode.js", "api/activity.js", "api/graph.js"])
   vm.runInContext(readFileSync(new URL("../../site/" + f, import.meta.url), "utf8"), ctx, { filename: f });
 const here = (p) => new URL(p, import.meta.url);
-// Pinned copies (golden/README.md): dev's docs/ontology/ still has the older twin: ids until 849f77a lands.
-const goldenPath = here("golden/twin-graph.json"), schemaPath = here("golden/twin-graph.schema.json");
+// Pinned copies (golden/README.md): dev's docs/ontology/ still has the older twin: ids until bb9cac9 lands.
+const goldenPath = here("golden/twin-graph" + (PACK === "baseline" ? "" : "." + PACK) + ".json"), schemaPath = here("golden/twin-graph.schema.json");
 const golden = JSON.parse(readFileSync(goldenPath, "utf8")), schema = JSON.parse(readFileSync(schemaPath, "utf8"));
 let failures = 0, passed = 0;
 const ok = (c, m) => { if (c) passed++; else { failures++; console.error("FAIL", m); } };
@@ -96,11 +109,9 @@ const covered = (e, typeOf) => {
   if (e.rel === "refers_to" && e.evidence === "content") return true;
   if ((e.rel === "in" || e.rel === "part_of") && e.evidence === "content" && ft === "vault") return true;
   if (e.rel === "records" && e.evidence === "naming" && typeOf(e.to) === "distribution") return true;
-  if ((e.rel === "seen_in" || e.rel === "targeted") && e.evidence === "content" && ft === "actor") return true;
+  if ((e.rel === "seen_in" || e.rel === "targeted" || e.rel === "acted_on") && e.evidence === "content" && ft === "actor") return true;
   return false;
 };
-// refinement 6: actor-ip acted_on edges come from activity and are not in the builder's graph yet
-const extra = (e) => e.from.startsWith("urn:sws:actor-ip:") && e.rel === "acted_on";
 function slice(graph) {
   const typeOf = (id) => (graph.nodes.find((n) => n.id === id) || {}).type;
   const es = graph.edges.filter((e) => covered(e, typeOf));
@@ -109,20 +120,18 @@ function slice(graph) {
   const ends = new Set(es.flatMap((e) => [e.from, e.to]));
   return { edges: new Set(es.map((e) => [e.from, e.rel, e.to, e.evidence].join(" | "))), nodes: new Set(graph.nodes.filter((n) => ends.has(n.id)).map((n) => [n.id, n.type, n.altitude].join(" | "))) };
 }
-const gs = slice(golden), ms = slice({ nodes: mine.nodes, edges: mine.edges.filter((e) => !extra(e)) });
+const gs = slice(golden), ms = slice(mine);
 const missing = [...gs.edges].filter((x) => !ms.edges.has(x)), surplus = [...ms.edges].filter((x) => !gs.edges.has(x));
 ok(!missing.length, "edges in the golden graph the adapters should give:\n  " + missing.join("\n  "));
 ok(!surplus.length, "edges the adapters give that the golden graph lacks:\n  " + surplus.join("\n  "));
 const nMissing = [...gs.nodes].filter((x) => !ms.nodes.has(x)), nSurplus = [...ms.nodes].filter((x) => !gs.nodes.has(x));
 ok(!nMissing.length && !nSurplus.length, "nodes (id, type, altitude) differ:\n  missing " + nMissing.join("\n  missing ") + "\n  surplus " + nSurplus.join("\n  surplus "));
-// Every node the adapters made outright (not a dangling end) is in the golden graph with the same type and altitude,
-// apart from actor-ip nodes.
-const actorOnlyFromActivity = (n) => n.id.startsWith("urn:sws:actor-ip:") && !gNode.has(n.id);
-const offGolden = mine.nodes.filter((n) => !n.dangling && !actorOnlyFromActivity(n) && !(gNode.has(n.id) && gNode.get(n.id).type === n.type && gNode.get(n.id).altitude === n.altitude));
+// Every node the adapters made outright (not a dangling end) is in the golden graph with the same type and altitude.
+const offGolden = mine.nodes.filter((n) => !n.dangling && !(gNode.has(n.id) && gNode.get(n.id).type === n.type && gNode.get(n.id).altitude === n.altitude));
 ok(!offGolden.length, "every built node matches the golden graph: " + offGolden.map((n) => n.id + " " + n.type).join(", "));
 
 // ---- refinement 6: the caller's address acts on what the events touched ----
-const actorEdges = mine.edges.filter(extra);
+const actorEdges = mine.edges.filter((e) => e.from.startsWith("urn:sws:actor-ip:") && e.rel === "acted_on");
 ok(actorEdges.length > 0 && actorEdges.every((e) => e.rel === "acted_on" && e.evidence === "content"), "actor-ip nodes with acted_on edges");
 
 // ---- hostile names stay data ----
@@ -159,4 +168,5 @@ ok(!/\beval\s*\(|new Function|innerHTML|document\.|localStorage|fetch\(/.test(re
 
 const uncovered = golden.edges.length - gs.edges.size - golden.edges.filter((e) => e.evidence === "curated" || e.evidence === "comment").length;
 if (failures) { console.error(failures + " failed, " + passed + " passed"); process.exit(1); }
-console.log("OK (graph: " + passed + " checks; " + mine.nodes.length + " nodes, " + mine.edges.length + " edges; golden slice " + gs.nodes.size + " nodes and " + gs.edges.size + " edges equal; " + uncovered + " golden edges wait for the IAM, CloudFormation, Lambda and Firehose adapters, zip contents and serves_from)");
+if (ctx.AwsTwin.pack() !== PACK) { console.error("FAIL the twin loaded pack " + ctx.AwsTwin.pack() + ", not " + PACK); process.exit(1); }
+console.log("OK (graph, pack " + PACK + ": " + passed + " checks; " + mine.nodes.length + " nodes, " + mine.edges.length + " edges; golden slice " + gs.nodes.size + " nodes and " + gs.edges.size + " edges equal; " + uncovered + " golden edges wait for the IAM, CloudFormation, Lambda and Firehose adapters, zip contents and serves_from)");
