@@ -82,7 +82,10 @@
   // Bodies stay lazy: data.body is a recipe ({ text }, { gzipText } or { zip: [[name, text], ...] }), made into
   // bytes the first time something reads it, then kept, as v0 kept its promises.
   var journal = [];
-  function emptyWorld() { return { objects: {}, cors: {}, roles: {}, iam: {}, template: null, stackStatus: "CREATE_COMPLETE", changeSets: {}, requests: {} }; }
+  // Maps keyed by request values (bucket, key, role, change set names) have no prototype, so a name such as
+  // "__proto__" or "constructor" is only ever a missing entry (security.aws.a's note on 88831eb).
+  function map() { return Object.create(null); }
+  function emptyWorld() { return { objects: map(), cors: map(), roles: map(), iam: map(), template: null, stackStatus: "CREATE_COMPLETE", changeSets: map(), requests: map() }; }
   function bodyOf(spec) {
     if (spec.gzipText != null) return gzip(enc.encode(spec.gzipText));
     if (spec.zip) return makeZip(spec.zip);
@@ -95,7 +98,7 @@
   }
   // One small function per operation on the world: (world, entry) -> world changed in place.
   var OPS = {
-    "s3.putObject": function (w, e) { var d = e.data; (w.objects[d.bucket] = w.objects[d.bucket] || {})[d.key] = lazyObject(d); },
+    "s3.putObject": function (w, e) { var d = e.data; (w.objects[d.bucket] = w.objects[d.bucket] || map())[d.key] = lazyObject(d); },
     "s3.putBucketCors": function (w, e) { w.cors[e.data.bucket] = JSON.parse(JSON.stringify(e.data.cors)); },
     "s3.addCorsRule": function (w, e) { w.cors[e.data.bucket].CorsRules.push(JSON.parse(JSON.stringify(e.data.rule))); },
     "iam.createRole": function (w, e) { w.roles[e.data.name] = JSON.parse(JSON.stringify(e.data.trust)); if (e.data.details) w.iam[e.data.name] = JSON.parse(JSON.stringify(e.data.details)); },
@@ -258,7 +261,9 @@
   // 2026-11-23__06-iam-read-shapes.md, work/boto3.aws.a a83ea2f), except two it could not settle, marked here:
   // an empty <RoleLastUsed/> for a role not used in 400 days (AWS does not say empty or absent; readers take both),
   // and the error envelope (ErrorResponse > Error > Code, Message).
-  var AWS_MANAGED = { "arn:aws:iam::aws:policy/SecurityAudit": "SecurityAudit", "arn:aws:iam::aws:policy/job-function/ViewOnlyAccess": "ViewOnlyAccess" };
+  // Looked up by request values: no prototype, so __proto__ or constructor is a missing entry (security.aws.a, 852c1fe).
+  var AWS_MANAGED = Object.assign(Object.create(null), { "arn:aws:iam::aws:policy/SecurityAudit": "SecurityAudit", "arn:aws:iam::aws:policy/job-function/ViewOnlyAccess": "ViewOnlyAccess" });
+  function own(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
   function iamSeed() {
     var stmt = function (sid, action, resource, extra) { var o = { Sid: sid, Effect: "Allow", Action: action, Resource: resource }; for (var k in extra || {}) o[k] = extra[k]; return o; };
     var doc = function () { return { Version: "2012-10-17", Statement: [].slice.call(arguments) }; };
@@ -298,7 +303,10 @@
   function iamPage(list, form, itemXml, cap) {
     // IAM may return fewer than MaxItems even when more exist (AWS's IAM API reference, on IsTruncated); the twin
     // pages roles two at a time so the paging path runs. Marker is opaque: here, the index to start from.
-    var max = Math.min(+(form.get("MaxItems") || 100), cap || 1000), from = form.get("Marker") ? +atob(form.get("Marker")) : 0;
+    // A Marker the twin did not issue is a 400 InvalidInput, as IAM answers a bad one (security.aws.a, 852c1fe).
+    var max = Math.min(+(form.get("MaxItems") || 100), cap || 1000), from = 0;
+    if (form.get("Marker")) { try { from = +atob(form.get("Marker")); } catch (e) { from = NaN; } }
+    if (!(from >= 0 && from === Math.floor(from))) return null;
     var page = list.slice(from, from + max), more = from + max < list.length;
     return { items: page.map(itemXml).join(""), tail: "<IsTruncated>" + more + "</IsTruncated>" + (more ? "<Marker>" + btoa(String(from + max)) + "</Marker>" : "") };
   }
@@ -310,11 +318,13 @@
       (m.description ? "<Description>" + esc(m.description) + "</Description>" : "") + "<MaxSessionDuration>" + m.maxSession + "</MaxSessionDuration>" +
       (withLastUsed ? "<RoleLastUsed>" + (m.lastUsed ? "<LastUsedDate>" + m.lastUsed.when + "</LastUsedDate><Region>" + m.lastUsed.region + "</Region>" : "") + "</RoleLastUsed>" : "");
   }
+  function badMarker() { return xmlErr("InvalidInput", "Invalid Marker.", 400); }
   function iam(form, init) {
     if (!signed(init)) return xmlErr("MissingAuthenticationToken", "Request is missing Authentication Token", 403);
     var s = build(), A = form.get("Action"), name = form.get("RoleName"), page;
     if (A === "ListRoles") {
       page = iamPage(Object.keys(s.roles).sort(), form, function (n) { return "<member>" + iamRoleXml(s, n, false) + "</member>"; }, 2);
+      if (!page) return badMarker();
       return iamOk("ListRoles", "<Roles>" + page.items + "</Roles>" + page.tail);
     }
     if (A === "GetOpenIDConnectProvider") {
@@ -324,7 +334,7 @@
     if (A === "ListOpenIDConnectProviders")
       return iamOk("ListOpenIDConnectProviders", "<OpenIDConnectProviderList><member><Arn>arn:aws:iam::" + ACCOUNT + ":oidc-provider/token.actions.githubusercontent.com</Arn></member></OpenIDConnectProviderList>");
     if (A === "GetPolicy" || A === "GetPolicyVersion") {
-      var arn = form.get("PolicyArn"), pn = AWS_MANAGED[arn];
+      var arn = form.get("PolicyArn"), pn = own(AWS_MANAGED, arn) ? AWS_MANAGED[arn] : null;
       if (!pn) return xmlErr("NoSuchEntity", "Policy " + arn + " does not exist or is not attachable.", 404);
       var path = arn.slice("arn:aws:iam::aws:policy".length, arn.lastIndexOf("/") + 1);
       if (A === "GetPolicy") return iamOk("GetPolicy", "<Policy><PolicyName>" + pn + "</PolicyName><PolicyId>ANPATWIN" + ("0000000000000" + pn.length).slice(-13) + "</PolicyId><Arn>" + arn + "</Arn><Path>" + path + "</Path>" +
@@ -339,15 +349,17 @@
     if (A === "GetRole") return iamOk("GetRole", "<Role>" + iamRoleXml(s, name, true) + "</Role>");
     if (A === "ListAttachedRolePolicies") {
       page = iamPage(info.attached, form, function (a) { return "<member><PolicyName>" + esc(AWS_MANAGED[a] || a.split("/").pop()) + "</PolicyName><PolicyArn>" + esc(a) + "</PolicyArn></member>"; });
+      if (!page) return badMarker();
       return iamOk("ListAttachedRolePolicies", "<AttachedPolicies>" + page.items + "</AttachedPolicies>" + page.tail);
     }
     if (A === "ListRolePolicies") {
       page = iamPage(Object.keys(info.inline).sort(), form, function (n) { return "<member>" + esc(n) + "</member>"; });
+      if (!page) return badMarker();
       return iamOk("ListRolePolicies", "<PolicyNames>" + page.items + "</PolicyNames>" + page.tail);
     }
     if (A === "GetRolePolicy") {
       var pol = form.get("PolicyName");
-      if (!info.inline[pol]) return xmlErr("NoSuchEntity", "The role policy with name " + pol + " cannot be found.", 404);
+      if (!own(info.inline, pol)) return xmlErr("NoSuchEntity", "The role policy with name " + pol + " cannot be found.", 404);
       return iamOk("GetRolePolicy", "<RoleName>" + esc(name) + "</RoleName><PolicyName>" + esc(pol) + "</PolicyName><PolicyDocument>" + encodeURIComponent(JSON.stringify(info.inline[pol])) + "</PolicyDocument>");
     }
     if (A === "UpdateAssumeRolePolicy") {

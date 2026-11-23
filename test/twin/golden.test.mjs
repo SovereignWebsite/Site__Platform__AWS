@@ -60,3 +60,18 @@ for (const pack of PACKS) {
   checks += 6;
 }
 console.log("OK (twin golden: " + checks + " checks; 3 packs give v0's keys, sizes, ETags, types, dates, bucket properties and roles byte for byte; journal refolds to the same world)");
+// Names that are Object.prototype properties are only missing entries (security.aws.a's note on 88831eb).
+{
+  const twin = loadTwin("baseline");
+  const H = { authorization: "AWS4-HMAC-SHA256 Credential=ASIATWINCHANGE/20261122/us-east-1/iam/aws4_request, SignedHeaders=host, Signature=twin" };
+  for (const name of ["__proto__", "constructor", "toString", "hasOwnProperty"]) {
+    const r = await twin.handle("https://iam.amazonaws.com/", { method: "POST", headers: H, body: "Action=GetRole&RoleName=" + name });
+    assert.equal(r.status, 404, name + ": GetRole is NoSuchEntity");
+    const u = await twin.handle("https://iam.amazonaws.com/", { method: "POST", headers: H, body: "Action=UpdateAssumeRolePolicy&RoleName=" + name + "&PolicyDocument=" + encodeURIComponent('{"Version":"2012-10-17","Statement":[]}') });
+    assert.equal(u.status, 404, name + ": UpdateAssumeRolePolicy is NoSuchEntity");
+    const s3 = await twin.handle("https://" + name + ".s3.eu-west-2.amazonaws.com/", { headers: H });
+    assert.equal(s3.status, 404, name + ": S3 is NoSuchBucket");
+  }
+  assert.equal(Object.prototype.polluted, undefined, "no prototype touched");
+  console.log("OK (twin golden: prototype names are missing entries for IAM and S3)");
+}

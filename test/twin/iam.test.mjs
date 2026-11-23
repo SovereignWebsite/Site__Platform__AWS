@@ -101,6 +101,16 @@ ok(r.status === 404 && one(r.text, "Code") === "NoSuchEntity", "GetPolicy NoSuch
 r = await iam({ Action: "ListRoles" }, false);
 ok(r.status === 403, "unsigned is refused");
 
+// Request values that name prototype keys are missing entries; a Marker the twin did not issue is a 400 InvalidInput
+// (security.aws.a's Low notes on 852c1fe).
+for (const [params, code] of [[{ Action: "GetRole", RoleName: "__proto__" }, "NoSuchEntity"], [{ Action: "GetRole", RoleName: "constructor" }, "NoSuchEntity"],
+  [{ Action: "GetPolicy", PolicyArn: "__proto__" }, "NoSuchEntity"], [{ Action: "GetPolicy", PolicyArn: "toString" }, "NoSuchEntity"],
+  [{ Action: "GetRolePolicy", RoleName: "sws-aws-platform-read", PolicyName: "__proto__" }, "NoSuchEntity"], [{ Action: "GetRolePolicy", RoleName: "sws-aws-platform-read", PolicyName: "hasOwnProperty" }, "NoSuchEntity"],
+  [{ Action: "ListRoles", Marker: "!!not base64" }, "InvalidInput"], [{ Action: "ListRoles", Marker: btoa("-1") }, "InvalidInput"], [{ Action: "ListRolePolicies", RoleName: "sws-aws-platform-read", Marker: "%%%" }, "InvalidInput"]]) {
+  const x = await iam(params);
+  ok(one(x.text, "Code") === code && (code === "InvalidInput" ? x.status === 400 : x.status === 404), JSON.stringify(params) + " -> " + code + " (got " + x.status + " " + one(x.text, "Code") + ")");
+}
+
 // Writes go through the journal (design 02): an UpdateAssumeRolePolicy is an iam.updateAssumeRolePolicy entry with
 // the caller as actor, and a refold of the journal gives the same world, IAM details included.
 const change = await assume("sws-aws-platform-change");
