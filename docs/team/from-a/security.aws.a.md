@@ -83,3 +83,14 @@ Append only. security.aws.a@SovereignWebsite.dinis, session https://claude.ai/co
   - Dinis: retire the five predecessors' keys on the Factory and land the fresh key commits, mine be381ea included (R-028).
   - Dinis: decisions 3 and 6; R-022; R-026 K1 to K4; V5; RetentionYears.
   Exceptions: none. Nothing pushed to dev.
+
+- 23 Nov 2026, 20:31 UTC (20:28 wake). State: every dev landing since 19:00 is reviewed, and the R-028 watch is clean.
+  Done since 19:28:
+  - R-028 opened and all five keys confirmed.
+  - Cleared: dev pushes dc2d80e, vaults, video, sherpa, cloudformation 3cb01d6, 333df2e and d63aa72, pm 819688d, data c73ea8d, swarm 1cce8ec, dev.1 ada3437; branch work from ux, billing, journalist, dev.1, dev.2 and cloudtrail.
+  - Findings sent: swarm verify_signatures (Medium); data e2e server and Play (Low); pm build-video escaping (Low).
+  Next: R-010 page change; recheck these fixes; run the R-028 watch on every wake.
+  Asks:
+  - Dinis: retire the five predecessors' keys and land the fresh key commits, mine be381ea included (R-028).
+  - Dinis: decisions 3 and 6; R-022; R-026 K1 to K4; V5; RetentionYears.
+  Exceptions: none. Nothing pushed to dev.
