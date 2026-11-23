@@ -21,7 +21,7 @@ api.distribution(id)          -> distribution + { logging, defaultRoot }       G
 api.functions({ next, stage }) -> { items: [fn], next }                       ListFunctions
 distribution = { id, arn, domain, aliases: [host], enabled, status, priceClass, origins: [origin],
                  functions: [{ arn, event, behaviour }], lastModified }
-origin       = { id, domain, kind, target, path, oac }
+origin       = { id, domain, kind, target, path, oac, customHeaders: [name] }
 fn           = { name, arn, runtime, stage, status, lastModified }
 ```
 
@@ -31,6 +31,8 @@ fn           = { name, arn, runtime, stage, status, lastModified }
   - `<bucket>.s3-website-<region>.amazonaws.com` or `.s3-website.<region>.`: kind `s3-website`, target the bucket's ARN.
   - `<url-id>.lambda-url.<region>.on.aws`: kind `lambda-url`, target `null` (a Function URL id does not name its function; resolving it needs Lambda's `ListFunctionUrlConfigs` per function, step 2).
   - anything else: kind `custom`, target `null`; the domain is shown as text, never fetched.
+- **Origin custom headers: names only** (iam.aws.a): `OriginCustomHeaders` come back with their values, which are often a shared secret between CloudFront and the origin (the Vault's Function URL may rely on one). CloudFrontApi keeps the header names and drops every value as it parses, before anything can render, log, cache or put it in the graph; a test plants a value and checks it appears nowhere in the API's output. Same for any `OriginAccessControl` signing detail beyond its id.
+- **No function code:** `ListFunctions` is metadata only; `DescribeFunction` and `GetFunction` (which return code) are not called and not in the contract.
 - **functions**: the default behaviour's and each cache behaviour's function associations (`viewer-request`, `viewer-response`), with the behaviour's path pattern (`*` for the default).
 - **logging**: `GetDistribution` gives the legacy standard logging bucket and prefix when it is on (`{ bucket, prefix }` or `null`). Standard logging v2 (deliveries to S3, CloudWatch Logs or Firehose) is configured through CloudWatch Logs' delivery APIs, not CloudFront's (*check*), so it is step 2.
 - **Errors, paging, Decode:** as S3Api and CfnApi (design 03): `Error` with `.code` and `.status`, opaque `next`, a CORS `TypeError` passes through, XML parsed with the same small member walker CfnApi uses (no DOMParser, no HTML).
@@ -65,6 +67,6 @@ Not in v1: cache policies, origin request policies, OAC details beyond its id, i
 
 - **boto3.aws.a:** the *check* items: endpoint and version path, paging names, `ARN` in the summary, CORS on CloudFront's API, list actions' resource scoping, standard logging v2's configuration APIs and object naming through Firehose.
 - **ontology.aws.a:** the relation name for distribution to function; the merge rule for `urn:sws:cloudfront-distribution:<name>`; the golden re-run after step 2.
-- **iam.aws.a:** three CloudFront reads for template v3, beside design 04's nine.
+- **iam.aws.a:** agreed (18:41Z): the three reads, inline statement plus ReadBoundary in v3's console apply; condition taken: custom header names only, values dropped in the API layer with a test; no DescribeFunction or GetFunction.
 - **dev.2.aws.a and dev.1.aws.a:** steps 1 and 2 once the checks are back.
 - **security.aws.a:** origin domains are shown as text and never fetched; nothing new in the CSP.
