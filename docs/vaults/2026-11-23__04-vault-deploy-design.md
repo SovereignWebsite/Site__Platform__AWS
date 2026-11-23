@@ -18,19 +18,20 @@ Stated by sgit.ai (site v0.7.87; [self-hosting](https://sgit.ai/docs/self-host-f
 ## 1. The shape, recommended
 
 ```
-customer's account, chosen region (stack "vault")        us-east-1 (stack "vault-edge", only with a domain)
-  S3 bucket   <-- Lambda (SG/Send, s3 mode) <-- Function URL        ACM certificate for the domain
-  Secrets Manager secret (the access token)          ^
-                                                     |
-  Route 53 alias  -->  CloudFront distribution  -----+   (origin: the Function URL)
+customer's account, chosen region (stack sws-vault-<id>)            us-east-1 (stack sws-vault-<id>-edge, only with a domain)
+  S3 bucket  <--  Lambda (SG/Send, s3 mode)  <--  Function URL        ACM certificate for the domain
+  Secrets Manager secret (the access token)            ^
+                                                       |
+  CloudFront distribution (*.cloudfront.net) ----------+   /health answered by a CloudFront Function
+  Route 53 alias --> the same distribution (phase 2, with a domain)
 ```
 
 **Lambda, not Fargate or EC2, first.** It scales to zero (a Vault nobody uses costs almost nothing, which also suits ephemeral deployments, plan step 11), has no instance to patch, and sgit.ai names it as a target with `s3` storage. Fargate needs a load balancer that is billed by the hour; EC2 is plan step 10, the second path.
 
 **Two phases, so the customer has a working Vault before any DNS:**
 
-1. **Deploy** (stack `vault`, the chosen region): bucket, secret, function, Function URL. The output is an `https://<id>.lambda-url.<region>.on.aws/` endpoint that answers the health check. A customer can stop here.
-2. **Domain** (stack `vault-edge` in us-east-1, then an update of `vault`): certificate, CloudFront, DNS. CloudFront takes certificates from us-east-1 only, and one CloudFormation stack creates resources in one region, so the certificate is its own small stack (*check*). A Function URL takes no custom domain of its own, which is why CloudFront sits in front (*check*).
+1. **Deploy** (stack `sws-vault-<id>`, the chosen region): bucket, secret, function, Function URL, and a CloudFront distribution in front of it on its own `*.cloudfront.net` address, which also answers `/health` (section 4a). The output is that address. A customer can stop here.
+2. **Domain** (stack `sws-vault-<id>-edge` in us-east-1, then an update of the first): certificate, the domain on the same distribution, DNS. CloudFront takes certificates from us-east-1 only, and one CloudFormation stack creates resources in one region, so the certificate is its own small stack (*check*). A Function URL takes no custom domain of its own, which is why CloudFront sits in front (*check*).
 
 ## 2. What the customer's account holds
 
@@ -47,10 +48,11 @@ customer's account, chosen region (stack "vault")        us-east-1 (stack "vault
 | Function URL | vault | Auth type NONE at the AWS layer: the server's own token gates every route (*check* with security.aws.a that this is acceptable; the alternative, IAM auth, breaks sgit and browser clients) |
 | CloudWatch log group | vault | Retention set (not "never expire"); retention period a decision for the customer, default proposed 30 days |
 | ACM certificate | vault-edge | DNS validated; automatic when the domain's hosted zone is in this account (*check*) |
-| CloudFront distribution | vault (update) | Origin: the Function URL; HTTPS only; caching off for `/api/*` except `-imm-` objects, which the API marks immutable (design 02); the custom domain as alternate name |
+| CloudFront distribution | vault | Origin: the Function URL; HTTPS only; caching off for `/api/*` except `-imm-` objects, which the API marks immutable (design 02); `/health` answered by a CloudFront Function (section 4a); the custom domain added as alternate name in phase 2 |
+| CloudFront Function | vault | `sws-vault-<id>-health`: answers `/health` only (section 4a) |
 | Route 53 records | vault (update) | Alias A and AAAA to the distribution, only when the hosted zone is in this account |
 
-Outputs of `vault`: `Endpoint` (the domain if set, else the Function URL), `HealthCheck` (the endpoint plus `/api/info/health`), `TokenSecretArn` (the ARN, never the value), `BucketName`, and, when DNS is elsewhere, `DnsRecords` (the CNAME the customer must create at their DNS provider and the certificate's validation record).
+Outputs of `vault`: `Endpoint` (the domain if set, else the CloudFront address), `HealthCheck` (the endpoint plus `/api/info/health`), `TokenSecretArn` (the ARN, never the value), `BucketName`, and, when DNS is elsewhere, `DnsRecords` (the CNAME the customer must create at their DNS provider and the certificate's validation record).
 
 ## 3. Inputs: the fewest that work
 
@@ -72,14 +74,27 @@ The **account id** is not an input to the stack: the customer deploys in whateve
 
 Five steps, two of them optional: matches the plan's "at most five".
 
+## 4a. `/health`: proof the page can read (iam.aws.a's progress design, 68f4b8b on work/iam.aws.a)
+
+The page has no credential in the customer's account, so at the end it proves the deployment from outside: `GET https://<domain or CloudFront address>/health` answers, with CORS for the deploy page's origin only,
+
+```json
+{ "vault_id": "<id>", "template_version": "<version>", "template_sha256": "<sha256 of the published template file>" }
+```
+
+- **Not the SG/Send server.** Its own health route (`/api/info/health`) needs the access token and returns neither field, and the server is not ours to change. So `/health` is a **CloudFront Function** on the viewer request for that one path: it returns this fixed JSON and the CORS headers and never reaches the function or the bucket. CloudFront Functions can return a response themselves and their code can be inline in the template with the stack's values substituted (*check*, boto3.aws.a). This is why CloudFront is in phase 1: it gives the Vault a stable address and `/health` even without a domain.
+- **`template_sha256`.** A file cannot contain its own hash. The template carries a constant `TemplateVersion`; the published file's sha256 is in the deploy page's own index of published templates (one immutable URL per version, iam.aws.a's pinned-template section). Two options for the JSON: (a) return `template_version` only and the page looks up the sha256 in its index (recommended: nothing the customer can edit); (b) the quick-create link also passes the sha256 as a parameter, returned as given, which proves only what the link said.
+- **CORS:** `Access-Control-Allow-Origin` is the deploy page's exact origin (a template parameter with the published default), never `*`; `GET` only; no credentials. The vault routes' own CORS stay the server's (not stated on sgit.ai; section 8).
+- **What it proves:** that this address runs a stack made from that template version with that Vault id. Not that the Vault works: the customer's own check with the token (section 4, step 3) does that.
+
 ## 5. The twin (plan step 4)
 
-The twin's "customer account" needs, for this design: CloudFormation create and update of the two stacks with their events (the page shows progress from them), the resources of section 2 as Cloud Control reads, a Function URL host that answers `/api/info/health` with 401 without the token and `{"status":"ok"}` with it, and DNS that "goes live" at the end. The vault routes behind that endpoint are the vault twin of design 02, so the worked example (docs/vaults/example/) can run against a twin customer's Vault unchanged. Agreed by architect.aws.a (15:00 UTC, carried in docs/team/handover/architect.aws.a.md): the twin's router maps the customer's Function URL host (later its custom domain) to the vault service twin, answering from that customer account's own world (one journal per account); the batch route stays 501 until the SG/Send library source is in hand.
+The twin's "customer account" needs, for this design: CloudFormation create and update of the two stacks with their events (the page shows progress from them), the resources of section 2 as Cloud Control reads, a CloudFront address in front of a Function URL host that answers `/api/info/health` with 401 without the token and `{"status":"ok"}` with it, `/health` with section 4a's JSON and CORS for the deploy page's origin, and DNS that "goes live" at the end. The vault routes behind that endpoint are the vault twin of design 02, so the worked example (docs/vaults/example/) can run against a twin customer's Vault unchanged. Agreed by architect.aws.a (15:00 UTC, carried in docs/team/handover/architect.aws.a.md): the twin's router maps the customer's Function URL host (later its custom domain) to the vault service twin, answering from that customer account's own world (one journal per account); the batch route stays 501 until the SG/Send library source is in hand.
 
 ## 6. Security notes (for security.aws.a and iam.aws.a)
 
 1. The token lives only in the customer's Secrets Manager and the customer's own clients. Our page, our agents and our logs never see it. If it goes into the function as an environment variable (the server reads `SGRAPH_SEND__ACCESS_TOKEN`), it is visible to anyone who can read the function's configuration in that account: iam.aws.a to weigh a dynamic reference against reading the secret at start-up (which needs a change in the server, so a question for its owners).
-2. The Function URL is public. The server's token gates every route, but anything public is scanned (the twin's attack pack shows the pattern). CloudFront in phase 2 adds a place for rate limiting or AWS WAF later; not in v1, to keep it simple and cheap.
+2. The Function URL is public. The server's token gates every route, but anything public is scanned (the twin's attack pack shows the pattern). CloudFront adds a place for rate limiting or AWS WAF later; not in v1, to keep it simple and cheap. The Function URL stays reachable directly as well as through CloudFront; restricting it to CloudFront only (origin access control for Lambda Function URLs, *check*) is a hardening step for security.aws.a to weigh.
 3. Bucket data outlives the stack (`Retain`). Deleting a customer's data is never a side effect.
 4. The image is pulled from a public registry by tag. Pin it by digest in the template, so a re-pushed tag cannot change what a customer runs.
 
