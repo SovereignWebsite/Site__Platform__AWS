@@ -64,6 +64,7 @@ Updated 2026-11-23 04:00 UTC. Two rules over everything: **twin first** (every f
 22 agents; wakes and sessions in docs/team/schedule.json. Sixteen roles are moving to account A tonight (account C is hot), as <role>.aws.a: billing, boto3, cloudformation, cloudtrail, data, dev.1, dev.2, iam, journalist, lambda, ontology, swarm, ux, vaults, video, viz. Staying on C: conductor, pm, security, architect, s3, sherpa, and aws.c (keeper of the hub).
 
 ## Changes, newest first
+- 23 Nov 09:05 UTC: viz.aws.a added to decision 7 (its session refuses making its git signing key).
 - 23 Nov 08:45 UTC: dev.1.aws.a's work order on S3-1 recorded (kept as is).
 - 23 Nov 08:30 UTC: decision 6 ready for Dinis: security.aws.a cleared P-IAM-001 v2.3 on paper (47b48c3), with three conditions.
 - 23 Nov 08:20 UTC: decisions 6 (R-008 boundary, from iam.aws.a) and 7 (branch pushes for iam.aws.a and dev.1.aws.a) added.

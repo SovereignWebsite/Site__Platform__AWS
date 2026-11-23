@@ -1,6 +1,6 @@
 # Decisions for Dinis: AWS Platform
 
-Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 08:50 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a".
+Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 09:05 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a".
 
 Nothing here stops the team: the agents are building on the twin. Decision 3 holds dev.2.aws.a's code (site/api/**, test/api/**) on its branch.
 
@@ -49,12 +49,12 @@ Nothing here stops the team: the agents are building on the twin. Decision 3 hol
 - **Recommended:** (a), by iam.aws.a and security.aws.a (4b7271d on work/security.aws.a): remove TheDnsRoleTrustPolicy from the change role and its boundary in the same apply. A boundary on the DNS role would not make (b) safe, since that role's own rights (the Factory's docs/aws-oidc.md) can repoint the site's CNAME. DNS-trust edits are rare. If (a) or (b), decision 4 folds into it. R-008 stays Open until applied.
 - **Blocks:** R-008 closing. A change to AWS, so yours.
 
-### 7. Two account A agents cannot push their branches
-- **Asks:** iam.aws.a and dev.1.aws.a, through conductor.aws.a
-- **What:** each session refuses to push its work/<role>.aws.a branch (iam.aws.a also cannot reach the Factory) until you allow it in that session. Their work stays local until then.
-- **Options:** (a) say yes in iam.aws.a's session (https://claude.ai/code/session_018yvwtLi5HNUo32ot6ApGm8) and in dev.1.aws.a's session; (b) leave it.
-- **Recommended:** (a). Pushing a work branch is not dev or main.
-- **Blocks:** the v2.2 draft reaching security review, and dev.1.aws.a's work.
+### 7. Three account A agents cannot push their work
+- **Asks:** iam.aws.a, dev.1.aws.a and viz.aws.a, through conductor.aws.a
+- **What:** iam.aws.a and dev.1.aws.a: each session refuses to push its work/<role>.aws.a branch (iam.aws.a also cannot reach the Factory). viz.aws.a is one step earlier: its session refuses turning its sgit signing key into a git SSH signing key (the step _common.md describes and you allowed for every AWS agent at 03:00 UTC), so six commits sit unsigned and local. Their work stays local until then; iam.aws.a's v2.4 (decision 6) is among it.
+- **Options:** (a) say yes in each session: iam.aws.a (https://claude.ai/code/session_018yvwtLi5HNUo32ot6ApGm8) and dev.1.aws.a (https://claude.ai/code/session_018yvwtLV1iZjUCMEKz1PZ51) to push their work branch; viz.aws.a (https://claude.ai/code/session_018yvwtLMhfsoY8D8duFRbSs) to make its git signing key, then push; (b) for viz.aws.a, allow unsigned pushes to work/viz.aws.a instead; (c) leave it.
+- **Recommended:** (a). A work branch is not dev or main, and signed commits keep the rule every agent follows; (b) would need re-signing before anything lands.
+- **Blocks:** the v2.4 draft reaching GitHub, dev.1.aws.a's S3 work and R-016 fix, viz.aws.a's six commits (P1).
 
 ## Not needed yet
 - **Which models scoped access may call (pipeline P7):** recommended, Amazon Bedrock models in your own account, through roles the site issues with budgets; anything outside AWS would need a server, which these sites do not have. Asked when P7 starts.
