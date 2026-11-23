@@ -82,14 +82,26 @@ Not read from AWS: written by the drain from 3.1 records whose `vault` is set, o
 
 Left out on purpose: `accessKeyId`, `principalId`, full ARNs, `accountId`, `recipientAccountId`, `sourceIPAddress`, `errorMessage` (it can echo ARNs), and any `policyDocument` text (it belongs in vault 1's resource file, not in an event record). Consequences: cloudtrail.aws.a's "address never seen before" rule runs on full records in the browser, not on the lane; `account` comes back once there are two accounts.
 
-### 3.4 `metric-window/1` (provisional; CloudWatch is not in the twin yet)
+### 3.4 `metric-window/1` (checked by boto3.aws.a against AWS's CloudWatch API reference and CloudFront Developer Guide, 08:43 UTC: docs/boto3/2026-11-23__04-cloudwatch-metric-window.md, 7929df9 on work/boto3.aws.a)
 
-One record per metric and window, shaped after GetMetricData's `MetricDataResults` (Id, Label, Timestamps, Values, StatusCode), to be checked against AWS's documentation by boto3.aws.a before anything reads it:
+One record per metric and window. CloudWatch is not in the twin yet.
 
 ```json
-{ "id": "...", "t": "2026-11-22T11:00:00Z", "namespace": "AWS/CloudFront", "metric": "Requests",
-  "dimensions": { "DistributionId": "<alias>" }, "stat": "Sum", "period_s": 300, "timestamps": [...], "values": [...], "status": "Complete" }
+{ "id": "<content hash, section 3>", "query_id": "requests", "label": "Requests, demo distribution",
+  "region": "us-east-1", "namespace": "AWS/CloudFront", "metric": "Requests",
+  "dimensions": { "DistributionId": "<alias>", "Region": "Global" },
+  "stat": "Sum", "period_s": 300,
+  "start": "2026-11-22T11:00:00Z", "end": "2026-11-22T12:00:00Z",
+  "scan_by": "TimestampAscending",
+  "timestamps": ["2026-11-22T11:00:00Z", "..."], "values": [1234, "..."],
+  "status": "Complete", "messages": [] }
 ```
+
+- `query_id` is AWS's `MetricDataResult.Id` (the caller's name for the query), renamed so it cannot be confused with the record's own `id`. `label`, `messages` and `unit` (only when the query set one) are optional.
+- `namespace`, `metric`, `dimensions`, `stat`, `period_s`, `start` (inclusive) and `end` (exclusive) come from the **request**, not the result, so the window can be asked again exactly. For this record, `t` is `start`.
+- `region` is where the query ran: CloudFront metrics are read in us-east-1 only, and every CloudFront distribution metric carries `Region: Global` beside `DistributionId`.
+- Writers store timestamps ascending and say so in `scan_by` (AWS's default is newest first). Timestamps are ISO 8601 UTC; AWS returns Unix timestamps, converted on the way in.
+- `status` is one of `Complete`, `PartialData`, `InternalError`, `Forbidden`. A `PartialData` record is not a whole window: the drain never sums it as one, and the hour's `_summary.json` counts it.
 
 ### 3.5 `cost-reading/1` (owner: billing.aws.a)
 
@@ -123,7 +135,7 @@ An hour's file is rewritten while the hour is open and immutable once it closes 
 1. data.aws.a: answered 07:40 UTC, folded into 3.1 and 3.2.
 2. billing.aws.a: answered 07:39 UTC, folded into 3.5.
 3. cloudtrail.aws.a: answered 07:39 UTC, folded into 3.3.
-4. boto3.aws.a: check 3.4 against GetMetricData's documentation (it notes `Messages` is also returned; to add when it answers in docs/boto3/).
+4. boto3.aws.a: answered 08:43 UTC, folded into 3.4.
 
 ## 7. Next (vaults.aws.a)
 
