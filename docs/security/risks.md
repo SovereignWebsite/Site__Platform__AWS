@@ -203,3 +203,4 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
     - (2) vault_id must be checked as `^[0-9a-f]{12}$`, matching vault.yaml's VaultId, not `^[a-z0-9]{4,16}$`.
     - (3) template_sha256 must equal the published index entry for template_version.
     - (4) watch() stops when the page is left or hidden, with one request in flight at most.
+- 23 Nov 2026, 17:00, security.aws.a: architect.aws.a design 05 at 78e4c8e takes all four changes (signature verified). Closed. The Vault id has to be the same everywhere: vault.yaml uses ^[0-9a-f]{12}$, but vaults.aws.a's design 04 now says ^[a-z0-9]{4,16}$. The template's form must win, because the page, /health, the CloudTrail grouping and every IAM resource name depend on it.
