@@ -402,23 +402,58 @@
   }
 
   // JSON, formatted and coloured, built from DOM nodes (never from HTML strings).
+  // Large values stay quick: a list or object shows its first JSON_PAGE entries and a button for the next page, and
+  // one nested two levels down with more than JSON_FOLD entries starts folded and is built only when opened. Each
+  // opening bracket is a button that folds and unfolds its value (keyboard: Tab to it, Enter); unfolded, the text is
+  // exactly the JSON (no markers added), so a copy of it is valid JSON.
+  var JSON_PAGE = 200, JSON_FOLD = 50;
   function jsonView(value) {
     var pre = P.el("pre", { class: "json" });
-    function span(cls, text) { var s = document.createElement("span"); s.className = cls; s.textContent = text; pre.appendChild(s); }
-    function text(t) { pre.appendChild(document.createTextNode(t)); }
-    function walk(v, ind) {
-      var pad = "  ".repeat(ind + 1), end = "  ".repeat(ind);
-      if (Array.isArray(v)) {
-        if (!v.length) return text("[]");
-        text("[\n"); v.forEach(function (x, i) { text(pad); walk(x, ind + 1); text(i < v.length - 1 ? ",\n" : "\n"); }); text(end + "]");
-      } else if (v && typeof v === "object") {
-        var ks = Object.keys(v); if (!ks.length) return text("{}");
-        text("{\n"); ks.forEach(function (k, i) { text(pad); span("j-key", JSON.stringify(k)); text(": "); walk(v[k], ind + 1); text(i < ks.length - 1 ? ",\n" : "\n"); }); text(end + "}");
-      } else if (typeof v === "string") span("j-str", JSON.stringify(v));
-      else if (typeof v === "number") span("j-num", String(v));
-      else span("j-lit", String(v));
+    function span(to, cls, text) { var s = document.createElement("span"); s.className = cls; s.textContent = text; to.appendChild(s); }
+    function text(to, t) { to.appendChild(document.createTextNode(t)); }
+    function walk(to, v, ind) {
+      var arr = Array.isArray(v);
+      if (!arr && !(v && typeof v === "object")) {
+        if (typeof v === "string") return span(to, "j-str", JSON.stringify(v));
+        return span(to, typeof v === "number" ? "j-num" : "j-lit", String(v));
+      }
+      var ks = arr ? null : Object.keys(v), n = arr ? v.length : ks.length;
+      if (!n) return text(to, arr ? "[]" : "{}");
+      var pad = "  ".repeat(ind + 1), end = "  ".repeat(ind), built = 0;
+      var what = n + (arr ? (n === 1 ? " item" : " items") : (n === 1 ? " key" : " keys"));
+      var fold = P.el("button", { type: "button", class: "j-fold", "aria-expanded": "true", title: "Fold " + what,
+        style: "font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer" });
+      fold.textContent = arr ? "[" : "{";
+      var body = document.createElement("span"), shut = P.el("span", { class: "j-shut" });
+      function page() {
+        var to2 = Math.min(n, built + JSON_PAGE);
+        if (!built) text(body, "\n");
+        for (var i = built; i < to2; i++) {
+          text(body, pad);
+          if (!arr) { span(body, "j-key", JSON.stringify(ks[i])); text(body, ": "); }
+          walk(body, arr ? v[i] : v[ks[i]], ind + 1);
+          text(body, i < n - 1 ? ",\n" : "\n");
+        }
+        built = to2;
+        if (built < n) {
+          var lead = document.createTextNode(pad), tail = document.createTextNode("\n");
+          var more = P.el("button", { type: "button", class: "quiet j-more", text: "Show " + Math.min(JSON_PAGE, n - built) + " more of " + (n - built) });
+          more.onclick = function () { lead.remove(); more.remove(); tail.remove(); page(); };
+          body.appendChild(lead); body.appendChild(more); body.appendChild(tail);
+        } else text(body, end);
+      }
+      function setOpen(open) {
+        if (open && !built) page();
+        // Folded, the value reads "{ 12 keys }"; open, the hint is empty, so the text on the page is the JSON itself.
+        body.hidden = !open; shut.textContent = open ? "" : " " + what + " ";
+        fold.setAttribute("aria-expanded", open ? "true" : "false");
+        fold.title = (open ? "Fold " : "Unfold ") + what;
+      }
+      fold.onclick = function () { setOpen(fold.getAttribute("aria-expanded") !== "true"); };
+      to.appendChild(fold); to.appendChild(body); to.appendChild(shut); text(to, arr ? "]" : "}");
+      setOpen(!(ind >= 2 && n > JSON_FOLD));
     }
-    walk(value, 0);
+    walk(pre, value, 0);
     return pre;
   }
 
