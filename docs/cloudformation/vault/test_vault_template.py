@@ -27,6 +27,9 @@ def walk(x):
 v = load("vault.yaml")
 R = v["Resources"]
 
+# A cap on concurrency by default (security.aws.a condition c).
+check(v["Parameters"]["ReservedConcurrency"].get("Default") not in (None, ""), "no default concurrency cap")
+
 # Ids: fixed length, hex, no dash, so names never overlap between Vaults.
 check(v["Parameters"]["VaultId"]["AllowedPattern"] == "^[0-9a-f]{12}$", "VaultId pattern")
 # The image is pinned by digest.
@@ -40,7 +43,7 @@ for b in [dc["DefaultCacheBehavior"]] + dc.get("CacheBehaviors", []):
 check(not any(r["Type"] == "AWS::CloudFront::CachePolicy" for r in R.values()), "custom cache policy present")
 
 # Data and audit trail are kept on delete.
-for n in ("VaultBucket", "VaultLogs"):
+for n in ("VaultBucket", "VaultBucketPolicy", "VaultLogs"):
     check(R[n].get("DeletionPolicy") == "Retain", f"{n} DeletionPolicy")
 
 # Names: every named resource is sws-vault-<id>-* (the deploy role's scope).

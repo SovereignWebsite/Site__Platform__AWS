@@ -3,12 +3,12 @@ Description: >-
   One SG/Send Vault (the Secure Send S3 API) in this account and region, stack sws-vault-<id>: an S3 bucket for the
   vault store, the server as a Lambda behind a Function URL, CloudFront in front (with /health for the deploy page),
   and optionally the customer's own domain. Run with RoleARN = the deploy role of stack sws-vault-<id>-access
-  (iam.aws.a, step 3). DRAFT 0.3.1 by cloudformation.aws.a, 23 Nov 2026. Not for use on a real account: see
+  (iam.aws.a, step 3). DRAFT 0.3.2 by cloudformation.aws.a, 23 Nov 2026. Not for use on a real account: see
   docs/cloudformation/2026-11-23__vault-stack-03.md.
 
 Metadata:
   SovereignWebsite:
-    TemplateVersion: 0.3.1-draft
+    TemplateVersion: 0.3.2-draft
     Pinning: served only as an immutable, versioned object whose sha256 the deploy page shows next to the button.
     CreatesNoRoleForUs: true
   AWS::CloudFormation::Interface:
@@ -57,11 +57,12 @@ Parameters:
     AllowedValues: [arm64, x86_64]
   ReservedConcurrency:
     Type: String
-    Default: ""
+    Default: "10"
     AllowedPattern: "^$|^[1-9][0-9]{0,3}$"
     Description: >-
-      Optional cap on how many copies of the server run at once (the Function URL is public). Empty means no cap.
-      Reserving needs spare concurrency in the account, which new accounts may not have.
+      Cap on how many copies of the server run at once (the Function URL is public; security.aws.a condition c).
+      Raise it as the Vault grows; empty removes the cap. Reserving needs spare concurrency in the account: a new
+      account with a low Lambda quota may refuse it (then ask AWS for a higher quota, or empty this).
 
 Conditions:
   HasDomain: !Not [!Equals [!Ref DomainName, ""]]
@@ -102,6 +103,10 @@ Resources:
 
   VaultBucketPolicy:
     Type: AWS::S3::BucketPolicy
+    # Retain with the bucket: the kept bucket stays TLS-only and this-account-only, and the deploy role holds no
+    # s3:DeleteBucketPolicy (iam.aws.a's vault-access.yaml), so Delete would fail the stack's deletion.
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Bucket: !Ref VaultBucket
       PolicyDocument:
@@ -236,7 +241,7 @@ Resources:
           if (event.request.method === "OPTIONS") return { statusCode: 204, statusDescription: "No Content", headers: h };
           if (event.request.method !== "GET") return { statusCode: 405, statusDescription: "Method Not Allowed", headers: h };
           return { statusCode: 200, statusDescription: "OK", headers: h,
-            body: { encoding: "text", data: JSON.stringify({ vault_id: "${VaultId}", template_version: "0.3.1-draft" }) } };
+            body: { encoding: "text", data: JSON.stringify({ vault_id: "${VaultId}", template_version: "0.3.2-draft" }) } };
         }
 
   # ---- CloudFront in front, from phase 1 ----
@@ -330,4 +335,4 @@ Outputs:
   Region:
     Value: !Ref AWS::Region
   TemplateVersion:
-    Value: 0.3.1-draft
+    Value: 0.3.2-draft
