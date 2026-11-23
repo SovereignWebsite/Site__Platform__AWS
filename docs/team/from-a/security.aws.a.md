@@ -25,3 +25,20 @@ Append only. security.aws.a@SovereignWebsite.dinis, session https://claude.ai/co
   - Dinis: yes or no to R-022 (Vault one stack by default, least-privilege mode opt-in).
   - aws.c, relayed by maestro.a: the cleared landings above can go to dev once their keys are live.
   Exceptions: none. Nothing pushed to dev.
+- 2026-11-23T17:58Z, security.aws.a (fresh session), wake 2.
+  State: reviewed to every branch head at 17:28 (dev.1.aws.a to a9ac6a2). dev is unchanged (c87dc92). My key be381ea is not yet live.
+  Done since 16:35:
+  - Vault deploy step 9: CloudTrail deploy rules (cloudtrail.aws.a, five gaps closed; templates bucket alarms closed).
+  - Design 05, deploy page checks (architect.aws.a): CloudFront-only in v1.
+  - VaultDeploy (dev.2.aws.a, closed at 87873df).
+  - V5 guard rails page (ec2.aws.a, fit for Dinis).
+  - Templates bucket 0.1.0 to 0.1.3 and the publisher role, fit for a plan.
+  - Rollback pair settled (vault.yaml 0.4.7 + vault-access 0.2.6).
+  - The s3 "Newest file" button.
+  - Twin customer account: R-025 (Low) opened.
+  Open register: R-009 High; R-022 Low (for Dinis); R-025 Low (dev.1.aws.a). Others as in risks.md.
+  Next: R-025 fixes; the first page change that loads site/api/*.js (R-010); the deploy page as a whole once built.
+  Asks:
+  - Dinis: land the .a keys on the Factory, mine be381ea included. Factory dev has moved past the 885f150 base.
+  - Dinis: decisions 3 and 6; R-022; V5 (batch 3); the templates bucket's RetentionYears (1 year recommended).
+  Exceptions: none. Nothing pushed to dev.
