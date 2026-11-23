@@ -147,3 +147,44 @@ Dinis: "when I go to bed, there's no blockers and you guys can just continue." A
 Known limits overnight:
 - **No live AWS data.** Only Dinis's browser can sign in to his AWS. Agents work from the code, AWS's public documentation and the twin, with synthetic data. Real data arrives when he next signs in.
 - **New AWS permissions** need his Approve on the site; they are prepared as plans, reviewed by the security agents overnight, and wait for the morning.
+
+---
+
+# Part 4 (Dinis, ~04:20 UTC): the twin as the place everything is built
+
+## 17. Build on the twin first
+
+"you should be building everything on Twins for now." The owner will still approve real AWS plans (template v2.1 is waiting, reviewed by security), but no work waits on that: every feature is built and shown on the twin first. The whole site must work on the twin: "I should be able to access the entire site. On Twins".
+
+## 18. Every area has "try the twin"
+
+"Yes, every area should have try the twin." Each area site links to the twin, so anyone can use the consoles without an AWS account.
+
+## 19. Scenarios and demo packs
+
+- **Several twin data sets** ("demo packs"), loaded on demand. Loading one changes everything: "the whole UI gets restructured, gets loaded, gets modified".
+- **Scenarios**, for example an attack in progress, or extra traffic flying around: "here's the attack ... or this some extra traffic flying around. That'd be quite cool."
+- **Synthetic users** (visitors, admins) making changes through the website, so the twin moves like a real system.
+
+## 20. A twin you can browse and edit
+
+- "I should be able to browse the twin. I should be able to edit the twin. I should be able to manipulate the data through the twins". The twin is an abstraction that makes data easy to create, without going through AWS's official channels.
+- Edit it directly, with sliders and data generators (synthetic data generation): for example, create many buckets at once.
+- Three ways in: **start from scratch** and feed data from outside; **preload** a pack and then feed data; **instrument** the data from outside. Each comes with its own tools and UIs for getting at the data.
+
+## 21. Altitudes
+
+Several altitudes, each its own abstraction layer, closer and closer to the business function. At the top: only the business function ("the user sends a file, the user creates a vault"). At the bottom: the atoms. In between: cells, molecules, organs, people, civilisation. Every altitude has its own visualisation and its own semantic graph, connected to the others: that is how side effects become visible. "thinking graphs, always." Editing the twin directly makes this practical.
+
+## 22. Data you can follow
+
+- Colour coding and seeing the data are powerful, and the next step is connecting it. A zip holding CloudFront logs: normalise the records, view them in different ways, and in a "link" mode click any value (a path, an IP, a bucket, a vault id) to go to the resource it refers to. "This will be a crazy way to do investigations."
+- Some of these views would be powerful in 3D.
+
+## 23. Who does what (proposed by aws.c)
+
+- **The twin's engine** (packs, scenarios, synthetic users, editing, generators, external feeds): the architect designs (design 02 onward), the developers build, starting in the hub's `site/twin*`.
+- **Altitudes and the graph per altitude:** ontology.aws.c (pipeline P2) with the architect.
+- **Normalise and link the data (investigation mode):** data.aws.c, starting with the CloudFront logs the twin already seeds.
+- **Attack and traffic scenarios:** security.aws.c writes them (what an attack looks like in the logs), viz.aws.c shows them (pipeline P1), all on the twin.
+- **3D views:** design.aws.c and viz.aws.c, as one of each view's five UIs.
