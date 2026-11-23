@@ -7,7 +7,7 @@ iam.aws.a, 23 Nov 2026 ~15:20 UTC. Builds on [01-least-privilege.md](01-least-pr
 | Role | Trusted by | Purpose |
 |---|---|---|
 | `sws-vault-<id>-deploy` (bootstrap stack) | `cloudformation.amazonaws.com` only, with `aws:SourceAccount` = `<acct>`; `aws:SourceArn` like `arn:aws:cloudformation:*:<acct>:stack/sws-vault-<id>*/*` if CloudFormation sets it (*open*, security 1) | The service role both Vault stacks run with |
-| `sws-vault-<id>-fn` (Vault stack) | `lambda.amazonaws.com` only, with `aws:SourceAccount` = `<acct>` | The function's runtime rights; carries the Vault boundary |
+| `sws-vault-<id>-api` (Vault stack) | `lambda.amazonaws.com` only, with `aws:SourceAccount` = `<acct>` | The function's runtime rights; carries the Vault boundary |
 
 The deploy role is not a principal the customer's users assume; their console user needs only `cloudformation:*Stack*` on `stack/sws-vault-<id>*` and `iam:PassRole` on the deploy role.
 
@@ -17,8 +17,8 @@ The deploy role is not a principal the customer's users assume; their console us
 |---|---|---|
 | S3 | CreateBucket, PutBucketPublicAccessBlock, PutEncryptionConfiguration, PutBucketVersioning, PutBucketPolicy, PutBucketTagging, GetBucket* | `arn:aws:s3:::sws-vault-<id>-*`. **No DeleteBucket** (design 04's Retain: data is never deleted as a side effect, so the role cannot) |
 | Secrets Manager | CreateSecret, DescribeSecret, DeleteSecret, TagResource, GetRandomPassword | `secret:sws-vault-<id>-*`; GetRandomPassword on `*` (it names no resource). No GetSecretValue (see "The token" below) |
-| IAM | CreateRole, DeleteRole, GetRole, PutRolePolicy, DeleteRolePolicy, TagRole | `role/sws-vault-<id>-fn` only; CreateRole **only with** `iam:PermissionsBoundary` = the Vault boundary's ARN |
-| IAM | PassRole | `role/sws-vault-<id>-fn`, `iam:PassedToService` = `lambda.amazonaws.com` |
+| IAM | CreateRole, DeleteRole, GetRole, PutRolePolicy, DeleteRolePolicy, TagRole | `role/sws-vault-<id>-api` only; CreateRole **only with** `iam:PermissionsBoundary` = the Vault boundary's ARN |
+| IAM | PassRole | `role/sws-vault-<id>-api`, `iam:PassedToService` = `lambda.amazonaws.com` |
 | Lambda | CreateFunction, GetFunction, UpdateFunctionCode, UpdateFunctionConfiguration, DeleteFunction, TagResource, Create/Get/Update/DeleteFunctionUrlConfig, AddPermission, RemovePermission | `function:sws-vault-<id>-*`; CreateFunctionUrlConfig and AddPermission with `lambda:FunctionUrlAuthType` = the agreed auth type (below); AddPermission's `lambda:Principal` limited to what step 1 names (security 3) |
 | Lambda image | the registry reads for the image | *open*: design 04 says Lambda images come from ECR in the same region; which repository, and whose, decides this row |
 | Logs | CreateLogGroup, PutRetentionPolicy, DeleteLogGroup, TagResource | `log-group:/aws/lambda/sws-vault-<id>-*` |
@@ -32,7 +32,7 @@ The deploy role is not a principal the customer's users assume; their console us
 
 ## The function's role and the Vault boundary
 
-`sws-vault-<id>-fn`: S3 on `arn:aws:s3:::sws-vault-<id>-data` and its objects, the actions the server uses (*open* until its source is read: design 04 section 8); `secretsmanager:GetSecretValue` on the one secret if the server reads it at start-up; logs on its own log group. The Vault boundary (bootstrap stack) is the same list: the most the function can ever do, whatever the Vault template says.
+`sws-vault-<id>-api`: S3 on `arn:aws:s3:::sws-vault-<id>-data` and its objects, the actions the server uses (*open* until its source is read: design 04 section 8); `secretsmanager:GetSecretValue` on the one secret if the server reads it at start-up; logs on its own log group. The Vault boundary (bootstrap stack) is the same list: the most the function can ever do, whatever the Vault template says.
 
 **A role that trusts another account (security 2).** A boundary caps rights, not who may assume the role. So: the deploy role cannot call UpdateAssumeRolePolicy at all (denied); the function role's trust is set at create, `lambda.amazonaws.com` only; and the bucket's policy refuses any principal outside the customer's account (`aws:PrincipalAccount` not equal to `<acct>`), plus non-TLS requests.
 
@@ -72,3 +72,9 @@ Points 1 to 6 accepted and the two gaps accepted as recorded. Ruling on the Func
 **Token (point 18).** The token in the function's configuration (dynamic reference) is acceptable in the twin only. Before the first real customer the server should read the secret at start-up (design 04 section 8 question 3, with the server's owners). For Dinis's batch.
 
 **Still waiting on Dinis** (vaults.aws.a, f4704f1): the server's S3 actions (question 2, decision 8) for the function role and the boundary; the image's ECR source (question 4: the official template's way, or an ECR repository per region in our account pulled across accounts, which would add a cross-account read to the deploy role's image row).
+
+## Against cloudformation.aws.a's Vault stack 0.2.0 (7ea995f)
+
+Settled in 0.2.0: names `sws-vault-<id>-*` (the function role is `sws-vault-<id>-api`, renamed here to match; the bucket `sws-vault-<id>-data-<acct>-<region>`, inside the `sws-vault-<id>-*` scope); the boundary `policy/sws-vault-<id>-boundary` lives in the `-access` stack and the Vault stack only references it; ImageUri must be an ECR URI pinned by `@sha256` digest (AllowedPattern). On the digest: if the image comes from an ECR repository of ours, we are the customer's supply chain; the digest is what lets them check it stays the image they were shown.
+
+Still to settle with cloudformation.aws.a: the bucket and the log group are `DeletionPolicy: Delete`; design 04, security.aws.a and this role say Retain (the deploy role has no s3:DeleteBucket or logs:DeleteLogGroup, so with Delete the stack's teardown would fail on them). And VaultId is `^[a-z0-9]{4,12}$`: safe from prefix collisions because every name has "-" after the id, but security.aws.a asked for a fixed length (12 hex).
