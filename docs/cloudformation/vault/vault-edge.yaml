@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Stack sws-vault-<id>-edge: the certificate for a Vault's own domain. CloudFront takes certificates from us-east-1
+  only, so this stack runs there, whatever region the Vault is in. With the domain's hosted zone in this account, ACM
+  validates by DNS on its own; with DNS elsewhere, the stack waits until the customer creates the validation record
+  that CloudFormation shows in the stack's events. Its output goes into the Vault stack's CertificateArn.
+  DRAFT 0.2.0 by cloudformation.aws.a, 23 Nov 2026.
+
+Metadata:
+  SovereignWebsite:
+    TemplateVersion: 0.2.0-draft
+
+Parameters:
+  VaultId:
+    Type: String
+    AllowedPattern: "^[a-z0-9]{4,12}$"
+  DomainName:
+    Type: String
+    AllowedPattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
+    Description: The Vault's own domain, for example vault.example.com.
+  HostedZoneId:
+    Type: String
+    Default: ""
+    Description: The Route 53 hosted zone holding DomainName, if it is in this account. Empty means DNS is elsewhere.
+
+Conditions:
+  HasZone: !Not [!Equals [!Ref HostedZoneId, ""]]
+
+Rules:
+  OnlyInUsEast1:
+    Assertions:
+      - Assert: !Equals [!Ref AWS::Region, us-east-1]
+        AssertDescription: CloudFront uses certificates from us-east-1 only. Run this stack in us-east-1.
+
+Resources:
+  VaultCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref DomainName
+      ValidationMethod: DNS
+      DomainValidationOptions: !If
+        - HasZone
+        - - DomainName: !Ref DomainName
+            HostedZoneId: !Ref HostedZoneId
+        - !Ref AWS::NoValue
+      Tags:
+        - { Key: sws-vault, Value: !Ref VaultId }
+
+Outputs:
+  CertificateArn:
+    Value: !Ref VaultCertificate
