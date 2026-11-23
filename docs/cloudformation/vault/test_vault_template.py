@@ -125,6 +125,7 @@ check(all("SecretString" not in str(o) for o in v["Outputs"].values()), "token i
 e = load("vault-edge.yaml")
 check(e["Parameters"]["VaultId"]["AllowedPattern"] == "^[0-9a-f]{12}$", "edge VaultId pattern")
 check("OnlyInUsEast1" in e["Rules"], "edge us-east-1 rule")
+check("SomethingToMake" in e["Rules"], "edge stack can be created with nothing in it")
 check(e["Parameters"]["EnableRateLimit"]["Default"] == "false", "rate limit on by default before Dinis decides")
 check(e["Resources"]["VaultWebAcl"]["Properties"]["Scope"] == "CLOUDFRONT", "web ACL scope")
 check(e["Resources"]["VaultWebAcl"]["Properties"]["Name"] == {"Fn::Sub": "sws-vault-${VaultId}-waf"}, "web ACL name")
