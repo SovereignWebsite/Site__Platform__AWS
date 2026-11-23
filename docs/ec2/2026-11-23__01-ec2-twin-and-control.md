@@ -87,8 +87,8 @@ New journal operations, one small function each (the OPS table). Writes made by 
 | `ec2.createSecurityGroup` | `arn:aws:ec2:<region>:<account>:security-group/<id>` | name, description, vpc, rules |
 | `ec2.registerImage` | `...:image/<id>` | name, architecture, created |
 | `ec2.importKeyPairName` | `...:key-pair/<id>` | name, fingerprint, type (no material, ever) |
-| `ec2.runInstance` | `...:instance/<id>` | every field of the instance, state `pending`, and its `settles` (2d) |
-| `ec2.setState` | `...:instance/<id>` | `{ from, to, reason, settles: { to, at } or none }` |
+| `ec2.runInstance` | `...:instance/<id>` | every field of the instance, state `pending`; the entry's `schedule` holds the settle (2d) |
+| `ec2.setState` | `...:instance/<id>` | `{ from, to, reason }`; a transition's entry carries a `schedule` (2d) |
 | `ec2.forget` | `...:instance/<id>` | none: a terminated instance leaves the answers |
 | `ec2.setTags`, `ec2.removeTags` | any taggable ARN (instance, security group, image) | tags |
 
@@ -103,10 +103,10 @@ EC2's states: `pending` to `running`; `stopping` to `stopped`; `shutting-down` t
 **A read never writes** (architect.aws.a): the journal must not depend on whether or when someone looked, replay of an export must equal the live session, and design 02 step 3 needs every role-actor entry to match exactly one CloudTrail record. So settles are clock-driven, design 02's mechanism for timed steps:
 
 - A start goes `stopped`, `pending`, `running`, so StartInstances carries a `pending` settle like RunInstances.
-- The transition entry carries its settle: `ec2.setState { from: "running", to: "stopping", settles: { to: "stopped", at: t + 30000 } }` (RunInstances: `pending`, settles to `running`).
-- When the twin clock passes `at`, the twin emits `ec2.setState { from: "stopping", to: "stopped" }` with actor `aws:ec2` and why `clock.settle`. CloudTrail derives nothing from it (AWS logs no API call for a settle).
+- The transition entry carries its settle in the twin clock's generic form (dev.1.aws.a, a7d93d2 on work/dev.1.aws.a): `ec2.setState { from: "running", to: "stopping" }` with `schedule: [{ at: t + 30000, op: "ec2.setState", target, data: { from: "stopping", to: "stopped" }, actor: "aws:ec2", why: "clock.settle" }]` (RunInstances and StartInstances: `pending`, scheduling `running`).
+- The clock emits each scheduled entry at `t = at`, in `at` order, by catch-up only; a refold rebuilds the pending list. CloudTrail derives nothing from these entries (AWS logs no API call for a settle).
 - "Terminated stays visible, then goes" is a settle too: an `ec2.forget` entry at the end of the period.
-- The twin's one clock (dev.1.aws.a's, shared with stack events) gives `now()` and `tick(ms)`. When it is paused, as in tests, nothing settles until `tick`.
+- The twin's one clock (`AwsTwin.clock`: `now()`, `tick(ms)`, `pause()`, `resume()`, `at(iso)`, shared with stack events) settles nothing while paused until `tick`; test 2h.9 is the same property clock.test already checks, run on EC2 entries.
 - The delays (proposed: running after 20 s, stopped after 30 s, terminated after 15 s, forgotten after about an hour: AWS says "usually less than one hour", so this is a pack value, not a promise) are twin choices, not AWS figures, and live in the pack, not in code.
 
 Stopped instances keep their tags, private address and root volume, and lose a public address that was not an Elastic IP (*check*); the twin does the same so the read page shows what Dinis would see.
