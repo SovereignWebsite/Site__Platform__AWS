@@ -446,3 +446,4 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - It touches only docs/vaults/** and vaults' own from-a and hand-over.
   - docs/vaults/example passes 9 of 9 tests, and there are no secrets or real account ids (the 12-digit matches are timestamps).
   - R-028 watch: 3 dev commits since 19:00, none signed by a predecessor's key.
+- 23 Nov 2026, 19:49, security.aws.a: ux.aws.a 93e3476, its merge of dev (9abc97d) and dffba73 (the design README index and a wake note; signatures verified; docs only). Cleared. Against dev it touches only docs/design/**, ux's from-a and its own key files.
