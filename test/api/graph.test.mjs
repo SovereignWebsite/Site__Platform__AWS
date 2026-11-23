@@ -146,10 +146,7 @@ function slice(graph) {
   const regions = new Set(es.flatMap((e) => [e.from, e.to]).filter((id) => typeOf(id) === "region"));
   graph.edges.filter((e) => e.rel === "in" && regions.has(e.from) && typeOf(e.to) === "account").forEach((e) => es.push(e));
   const ends = new Set(es.flatMap((e) => [e.from, e.to]));
-  // has_policy: the builder reads it from the stack's template, IamApi from ListAttachedRolePolicies; with one edge
-  // per from, rel, to and the strongest evidence kept, the two differ only in evidence until the builder reads IAM's
-  // attached policies too (design 04), so it is compared without its evidence.
-  return { edges: new Set(es.map((e) => [e.from, e.rel, e.to, e.rel === "has_policy" ? "(any)" : e.evidence, e.trust].join(" | "))), nodes: new Set(graph.nodes.filter((n) => ends.has(n.id)).map((n) => [n.id, n.type, n.altitude, n.trust].join(" | "))) };
+  return { edges: new Set(es.map((e) => [e.from, e.rel, e.to, e.evidence, e.trust].join(" | "))), nodes: new Set(graph.nodes.filter((n) => ends.has(n.id)).map((n) => [n.id, n.type, n.altitude, n.trust].join(" | "))) };
 }
 const gs = slice(golden), ms = slice(mine);
 const missing = [...gs.edges].filter((x) => !ms.edges.has(x)), surplus = [...ms.edges].filter((x) => !gs.edges.has(x));

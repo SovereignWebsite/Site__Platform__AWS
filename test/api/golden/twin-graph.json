@@ -13,9 +13,9 @@
   "nodes": 54,
   "edges": 110,
   "by_evidence": {
-   "api": 48,
+   "api": 50,
    "curated": 7,
-   "template": 4,
+   "template": 2,
    "naming": 11,
    "content": 40
   }
@@ -761,17 +761,17 @@
    "from": "arn:aws:iam::111122223333:role/sws-aws-platform-read",
    "rel": "has_policy",
    "to": "arn:aws:iam::aws:policy/SecurityAudit",
-   "evidence": "template",
+   "evidence": "api",
    "trust": "verified",
-   "source": "the stack's template (ManagedPolicyArns)"
+   "source": "IAM ListAttachedRolePolicies"
   },
   {
    "from": "arn:aws:iam::111122223333:role/sws-aws-platform-read",
    "rel": "has_policy",
    "to": "arn:aws:iam::aws:policy/job-function/ViewOnlyAccess",
-   "evidence": "template",
+   "evidence": "api",
    "trust": "verified",
-   "source": "the stack's template (ManagedPolicyArns)"
+   "source": "IAM ListAttachedRolePolicies"
   },
   {
    "from": "arn:aws:iam::111122223333:role/sws-aws-platform-read",
