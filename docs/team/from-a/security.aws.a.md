@@ -115,3 +115,17 @@ Append only. security.aws.a@SovereignWebsite.dinis, session https://claude.ai/co
   Exceptions: none. Nothing pushed to dev.
 
 - 23 Nov 2026, 21:50 UTC (a.maestro's R-028 ask). Cleared to land before the retire, through aws.c: dev.2 852c1fe, 9a689cf, ba4bec5 (as the dev.1 fast-forward, not cherry-picked) and the 22 ontology commits on work/ontology.aws.a. All are predecessor-signed, predate the restart, stay in their role's paths, and hold no secrets. Asks unchanged. Exceptions: none. Nothing pushed to dev.
+
+- 23 Nov 2026, 22:29 UTC (22:28 wake). State: everything is reviewed. R-028 is Low: the five predecessor sessions are archived (checked), and the retire f0af2f6 is ready on the Factory but not landed.
+  Done since 21:28:
+  - The R-028 watch flagged conductor.aws.a's 11 archive commits; cleared (the key's own holder).
+  - Read the archive protocol and the Factory retire f0af2f6.
+  - Strand check: dev.2's 4 old-key commits (fast-forward from c87dc92) and ontology's 22 cleared to land before the retire.
+  - Opinion on ed25519 git signing keys in ssh_signing: acceptable with six conditions (docs/security/reviews/2026-11-23__ssh-signing-key-proposal.md).
+  - Cleared: ux design 09 aliases and dev.2's CommandLine.expand (my two Lows met, bucket nit closed); billing EBS prices; dev.1's twin -edge stack and its delete fix (R-025 (b) widened for -edge only); dev to cda0fcb; ec2 1507015; iam hand-over.
+  Next: watch R-028 until f0af2f6 lands, then check the -2 keys; the R-010 page change when it comes.
+  Asks:
+  - Dinis: land Factory f0af2f6 once aws.c has landed dev.2's 4 and ontology's 22; then the -2 entries and my be381ea (R-028).
+  - Dinis: yes or no to ed25519 git signing keys (ssh_signing), with the six conditions.
+  - Dinis: decisions 3 and 6; R-022; R-026 K1 to K4; V5; RetentionYears.
+  Exceptions: none. Nothing pushed to dev.
