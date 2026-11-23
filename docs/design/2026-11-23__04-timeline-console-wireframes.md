@@ -7,7 +7,7 @@ ux.aws.a@SovereignWebsite.dinis, 23 Nov 2026. The second console after Files (de
 All from site/twin.js, nothing assumed:
 
 - **CloudTrail records**: two, in two regions: an S3 `GetObject` on the demo site (eu-west-2, 22 Nov 10:01 UTC, by the read role) and an IAM `UpdateAssumeRolePolicy` on `sovereignwebsite-factory-dns` (us-east-1, 22 Nov 10:04 UTC), which is a change by the change role.
-- **CloudFront log hours**: one gzip of JSON Lines per hour, 20 to 22 Nov, 09:00 to 11:00 UTC, each line enriched with country and vault id. The attack pack adds a scanner at 203.0.113.66 on 22 Nov, louder each hour; the surge pack adds ten times the traffic on one vault's files.
+- **CloudFront log hours**: one gzip of JSON Lines per hour, 20 to 22 Nov, 09:00 to 11:00 UTC, each line enriched with country and vault id. The attack pack adds a scanner (one address) on 22 Nov, louder each hour; the surge pack adds ten times the traffic on one vault's files.
 - **Plans applied in the twin**: each Apply in the twin should add a CloudTrail record (cloudtrail.aws.a's first twin task), so the visitor's own actions appear on the timeline.
 
 So the demo story is already in the data: on 22 Nov a trust policy changes at 10:04, and in the attack pack a scanner gets louder from 09:00. The Timeline's job is to show both on one axis.
@@ -24,7 +24,7 @@ So the demo story is already in the data: on 22 Nov a trust policy changes at 10
 +----------------------------------------------------------------------------------+
 |  Worth a look (2)                                                                |
 |  ! 22 Nov 10:04  the change role rewrote who may assume sovereignwebsite-...dns  |
-|  ! 22 Nov 09-11  one address (203.0.113.66) sent n requests, mostly 403 and 404  |
+|  ! 22 Nov 09-11  one network (n.n.n.0/24, NL) sent n requests, mostly 403/404    |
 +----------------------------------------------------------------------------------+
 |  20 Nov            21 Nov            22 Nov                       [day|hour|min] |
 |  requests ..▂▃▂.......▂▃▂.......▂▅█...   (CloudFront logs, per hour)             |
@@ -35,7 +35,7 @@ So the demo story is already in the data: on 22 Nov a trust policy changes at 10
 |  Events in the brush (n)          [Changes only] [Show reads] [Failed]   [/]     |
 |  10:04:40  IAM  change role   rewrote who may assume sovereignwebsite-...-dns  > |
 |  10:01:02  S3   read role     read data/vaults.json in demo-site               > |
-|  11:00     CDN  203.0.113.66  n requests in this hour, n blocked               > |
+|  11:00     CDN  n.n.n.0/24    n requests in this hour, n blocked               > |
 +----------------------------------------------------------------------------------+
 ```
 
@@ -44,6 +44,12 @@ So the demo story is already in the data: on 22 Nov a trust policy changes at 10
 - **The brush** selects a time range; the list below shows only that range. Zoom is day, hour or minute; the axis is always UTC, said once in the header and in every time ("10:04 UTC" on hover).
 - **Lines in plain words** ("the change role rewrote who may assume ..."), from the event shape's `words`; the service and actor short, the raw record one click away (`>`).
 - Counts shown as `n` here are filled from the data.
+
+### Privacy
+
+Visitor addresses from the CloudFront logs are shown only as their network (/24 or /48) with country, never whole (Dinis, 23 Nov ~11:15 UTC, in data.aws.a's session). The "From" address of a CloudTrail record is the caller of AWS (here the owner's own browser), shown as AWS records it; screenshot mode masks it.
+
+**Finding for the twin (data.aws.a, architect.aws.a):** every synthetic visitor and the attack pack's scanner are in 203.0.113.0/24, so once addresses are cut to /24 the scanner is indistinguishable from normal visitors and the "one network" alarm cannot fire. Suggest spreading normal visitors across the three documentation ranges (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24, RFC 5737) and giving the scanner a network of its own, so the demo still tells its story under the privacy rule.
 
 ### 2.2 Desktop: one event open (`#/timeline/event/<eventID>`)
 
