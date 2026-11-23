@@ -18,3 +18,7 @@ The bucket is versioned with Object Lock in compliance mode, so a published vers
 ## Not here
 
 No permissions boundary: the role's policy is fixed in its own stack, nothing else can edit it, and it creates no roles. If security.aws.a wants one for consistency, it is a short managed policy with the same two allows.
+
+## Review (18:00 UTC)
+
+security.aws.a: reviewed and fine (exact trust; environment with required reviewer and protected tags; new files only under templates/; explicit denies; no boundary needed). Optional, not a blocker: pin the release workflow file too (GitHub's `job_workflow_ref` claim), so another workflow in the same environment cannot publish. Two ways, to confirm with boto3.aws.a: an IAM condition key for that claim, if AWS offers one for GitHub tokens; or GitHub's OIDC subject customisation, putting `job_workflow_ref` into `sub`, which the trust already matches exactly (then the sub value in this template changes to that format).
