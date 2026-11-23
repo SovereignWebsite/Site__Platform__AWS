@@ -1,0 +1,233 @@
+diff --git a/site/twin.js b/site/twin.js
+index 3f73196..e481d2f 100644
+--- a/site/twin.js
++++ b/site/twin.js
+@@ -894,6 +894,99 @@
+       "</MetricDataResults><Messages/></GetMetricDataResult><ResponseMetadata><RequestId>twin-metrics</RequestId></ResponseMetadata></GetMetricDataResponse>");
+   }
+ 
++  // CloudWatch Logs (JSON 1.1, target prefix Logs_20140328), read only: DescribeLogGroups and FilterLogEvents for the
++  // Lambda log groups. lambda.aws.a, 23 Nov 2026. Built from the same hourly log files as the metrics above, so a
++  // function's log lines, its GetMetricData numbers and the delivered CloudFront logs agree: one START, END and REPORT
++  // per invocation (Duration in REPORT is the request's time_taken for demo-handler, the metric's hourly mean for
++  // demo-log-enricher), an [ERROR] line for each vault request answered 4xx or 5xx (the metric's Errors), one log
++  // stream per function and hour. demo-nightly-report's group exists with no events in these hours. Synthetic.
++  var LOG_RETENTION = 30;
++  function logGroupOf(fn) { return "/aws/lambda/" + fn; }
++  function logsJson(o, status) { return new Response(JSON.stringify(o), { status: status || 200, headers: { "content-type": "application/x-amz-json-1.1" } }); }
++  function logsErr(type, msg, status) { return logsJson({ __type: type, message: msg }, status || 400); }
++  function uuidOf(s) { var h = etag(enc.encode(s)); return h.slice(0, 8) + "-" + h.slice(8, 12) + "-4" + h.slice(13, 16) + "-8" + h.slice(17, 20) + "-" + h.slice(20, 32); }
++  function lambdaLogEvents(fn) {
++    var s = build(); // the cache is kept on the world, not enumerable, as hoursOf does, so a refold makes it afresh
++    if (!s._lambdaLogs) Object.defineProperty(s, "_lambdaLogs", { value: Object.create(null), enumerable: false, configurable: true });
++    if (s._lambdaLogs[fn]) return s._lambdaLogs[fn];
++    var ev = [], mem = FN[fn].MemorySize;
++    var iso = function (t) { return new Date(t).toISOString(); };
++    hoursOf(s).forEach(function (h, hi) {
++      var stream = h.at.slice(0, 10).replace(/-/g, "/") + "/[$LATEST]" + etag(enc.encode(fn + "@" + h.at)), runs = [];
++      if (fn === "demo-handler") h.lines.forEach(function (l, li) {
++        if (!/^\/vault\/[^/]+\/files/.test(l.cs_uri_stem)) return;
++        runs.push({ t: Date.parse(l.timestamp), ms: l.time_taken * 1000, id: uuidOf(fn + h.at + li),
++          err: l.sc_status >= 400 ? "Request refused with " + l.sc_status + ": " + l.cs_method + " " + l.cs_uri_stem : "" });
++      });
++      if (fn === "demo-log-enricher") for (var q = 0; q < 4; q++) {
++        var at = Date.parse(h.at) + q * 900000 + 30000, n = h.lines.filter(function (l) { return Math.floor(+l.timestamp.slice(14, 16) / 15) === q; }).length;
++        runs.push({ t: at, ms: 40 + h.lines.length * 0.8 / 4, id: uuidOf(fn + h.at + q), info: "Enriched " + n + " records" });
++      }
++      runs.sort(function (a, b) { return a.t - b.t; }).forEach(function (r, k) {
++        var end = r.t + Math.max(1, Math.round(r.ms)), used = Math.min(mem, 48 + ((hi * 7 + k * 3) % 23));
++        var add = function (t, m) { ev.push({ logStreamName: stream, timestamp: t, message: m, ingestionTime: t + 1800 + ((k * 37) % 900) }); };
++        add(r.t, "START RequestId: " + r.id + " Version: $LATEST\n");
++        if (r.info) add(r.t + 1, "[INFO]\t" + iso(r.t + 1) + "\t" + r.id + "\t" + r.info + "\n");
++        if (r.err) add(r.t + 1, "[ERROR]\t" + iso(r.t + 1) + "\t" + r.id + "\t" + r.err + "\n");
++        add(end, "END RequestId: " + r.id + "\n");
++        add(end, "REPORT RequestId: " + r.id + "\tDuration: " + r.ms.toFixed(2) + " ms\tBilled Duration: " + Math.ceil(r.ms) + " ms\tMemory Size: " + mem + " MB\tMax Memory Used: " + used + " MB\t\n");
++      });
++    });
++    ev.sort(function (a, b) { return a.timestamp - b.timestamp; });
++    ev.forEach(function (e, i) { e.eventId = String(e.timestamp) + pad(i, 10); }); // unique and ordered; AWS's ids are longer, opaque digit strings
++    return (s._lambdaLogs[fn] = ev);
++  }
++  // A filter pattern for unstructured events, as CloudWatch Logs reads one: every plain term must appear, no -term may,
++  // and if there are ?terms at least one must; "quoted phrases" match whole; matching is case-sensitive. JSON ({...}),
++  // space-delimited ([...]) and regex (%...%) patterns are not in the twin yet.
++  function logFilter(p) {
++    p = String(p || "").trim();
++    if (!p) return function () { return true; };
++    if (/^[{[%]/.test(p)) return null;
++    var all = [], none = [], any = [];
++    (p.match(/[?-]?"[^"]*"|\S+/g) || []).forEach(function (t) {
++      var list = t[0] === "?" ? any : t[0] === "-" ? none : all, w = list === all ? t : t.slice(1);
++      list.push(w.replace(/^"([^"]*)"$/, "$1"));
++    });
++    return function (m) {
++      return all.every(function (w) { return m.indexOf(w) >= 0; }) && !none.some(function (w) { return m.indexOf(w) >= 0; }) &&
++        (!any.length || any.some(function (w) { return m.indexOf(w) >= 0; }));
++    };
++  }
++  function logs(target, body, init) {
++    if (!signed(init)) return logsErr("MissingAuthenticationTokenException", "Missing Authentication Token", 403);
++    var q; try { q = JSON.parse(body || "{}"); } catch (e) { return logsErr("SerializationException", "Body is not JSON"); }
++    if (!q || typeof q !== "object") return logsErr("SerializationException", "Body is not a JSON object");
++    var groups = Object.keys(FN).sort().map(logGroupOf), arnOf = function (g) { return "arn:aws:logs:" + REGION + ":" + ACCOUNT + ":log-group:" + g; };
++    if (target === "DescribeLogGroups") {
++      var pre = typeof q.logGroupNamePrefix === "string" ? q.logGroupNamePrefix : "";
++      return logsJson({ logGroups: groups.filter(function (g) { return g.indexOf(pre) === 0; }).map(function (g) {
++        var fn = g.slice(12), bytes = lambdaLogEvents(fn).reduce(function (a, e) { return a + e.message.length; }, 0);
++        return { logGroupName: g, creationTime: Date.parse(FN[fn].LastModified.replace("+0000", "Z")), retentionInDays: LOG_RETENTION, metricFilterCount: 0,
++          arn: arnOf(g) + ":*", storedBytes: bytes, logGroupClass: "STANDARD", logGroupArn: arnOf(g) };
++      }) });
++    }
++    if (target !== "FilterLogEvents") return logsErr("UnknownOperationException", "Not in the twin yet: logs " + target);
++    if (q.logGroupName && q.logGroupIdentifier) return logsErr("InvalidParameterException", "LogGroup name and LogGroup ARN are mutually exclusive parameters.");
++    var g = String(q.logGroupIdentifier || q.logGroupName || "").replace(/^arn:aws:logs:[a-z0-9-]+:\d{12}:log-group:/, "").replace(/:\*$/, "");
++    if (groups.indexOf(g) < 0) return logsErr("ResourceNotFoundException", "The specified log group does not exist.");
++    if (q.logStreamNames && q.logStreamNamePrefix) return logsErr("InvalidParameterException", "logStreamNames and logStreamNamePrefix are mutually exclusive parameters.");
++    var limit = q.limit === undefined ? 10000 : q.limit;
++    if (!(limit >= 1 && limit <= 10000 && limit === Math.floor(limit))) return logsErr("InvalidParameterException", "1 validation error detected: Value at 'limit' failed to satisfy constraint: Member must have value between 1 and 10000");
++    var match = logFilter(q.filterPattern);
++    if (!match) return logsErr("InvalidParameterException", "Not in the twin yet: JSON, space-delimited and regex filter patterns");
++    var from = 0;
++    if (q.nextToken !== undefined) { var tk = /^twin-(\d+)$/.exec(String(q.nextToken)); if (!tk) return logsErr("InvalidParameterException", "The specified nextToken is invalid."); from = +tk[1]; }
++    var names = Array.isArray(q.logStreamNames) ? q.logStreamNames : null, prefix = typeof q.logStreamNamePrefix === "string" ? q.logStreamNamePrefix : null;
++    var hit = lambdaLogEvents(g.slice(12)).filter(function (e) {
++      return (q.startTime === undefined || e.timestamp >= q.startTime) && (q.endTime === undefined || e.timestamp <= q.endTime) &&
++        (!names || names.indexOf(e.logStreamName) >= 0) && (prefix === null || e.logStreamName.indexOf(prefix) === 0) && match(e.message);
++    });
++    var page = hit.slice(from, from + limit), out = { events: page.map(function (e) { return Object.assign({}, e); }) };
++    if (from + limit < hit.length) out.nextToken = "twin-" + (from + limit);
++    return logsJson(out);
++  }
++
+   // Answer a request as AWS would. Returns a Promise of a Response, or null if the host is not AWS.
+   var AWS_HOST = /(^|\.)amazonaws\.com$/;
+   function handle(url, init) {
+@@ -918,6 +1011,7 @@
+       else if (/^cloudcontrolapi\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudcontrol((hdr(init, "x-amz-target") || "").split(".")[1], body, init, host);
+       else if (/^lambda\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = lambda(url, init);
+       else if (/^monitoring\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudwatch(new URLSearchParams(body), init);
++      else if (/^logs\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = logs((hdr(init, "x-amz-target") || "").split(".")[1], body, init);
+       else if (/^firehose\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = firehose((hdr(init, "x-amz-target") || "").split(".")[1], body, init);
+       else if (/\.?s3\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = s3(url, init);
+       else p = xmlErr("NotImplemented", "The twin does not answer " + host + " yet. Twin mode never calls real AWS.", 501);
+diff --git a/test/README.md b/test/README.md
+index 4692e1c..95d64a0 100644
+--- a/test/README.md
++++ b/test/README.md
+@@ -11,6 +11,7 @@ Run from the repository root (Node 22; the end-to-end test needs Playwright and
+     node test/twin/s3-fidelity.test.mjs
+     node test/twin/lambda-firehose.test.mjs
+     node test/twin/cloudwatch.test.mjs
++    node test/twin/logs.test.mjs
+ 
+ - `plan`, `sigv4`, `zip`, `highlight`, `mask`: the pure modules (sigv4 against AWS's published vectors; zip against Python-made zips read only by byte ranges).
+ - `page.e2e.cjs`: the whole page in Chromium with Google, STS, IAM, CloudFormation, Cloud Control and S3 stubbed. The stubs copy what real AWS did (a list of one read back as the bare value; condition keys reordered; a bucket change refused outside its region).
+@@ -19,3 +20,4 @@ Run from the repository root (Node 22; the end-to-end test needs Playwright and
+ - `twin/s3-fidelity.test.mjs`: the twin's S3 answers against AWS's documented wire format (ListObjectsV2 paging, the three Range forms with Content-Range, 416, a dotted bucket by path, CloudTrail files per region), and that its data does not depend on call order. Node only.
+ - `twin/lambda-firehose.test.mjs`: the twin's Lambda (ListFunctions, GetFunctionConfiguration) and Firehose (ListDeliveryStreams, DescribeDeliveryStream) read calls in the shapes AWS documents; demo-handler's CodeSize and CodeSha256 are its zip's; the stream writes to the logs bucket; unsigned calls refused. Node only.
+ - `twin/cloudwatch.test.mjs`: the twin's CloudWatch GetMetricData (Query protocol): Firehose records equal the lines in each delivered log file, demo-handler invocations equal the vault API requests in them, errors appear only in the attack pack on 22 Nov, order and time window as asked, unsigned and write calls refused. Node only.
++- `twin/logs.test.mjs`: the twin's CloudWatch Logs (DescribeLogGroups, FilterLogEvents, JSON 1.1): START, END and REPORT per Lambda invocation, agreeing with GetMetricData and the delivered CloudFront logs (demo-handler REPORT Duration is each request's time_taken; [ERROR] lines equal the metric's Errors in the attack pack); time window, stream prefix, filter patterns (terms, ?terms, -terms, phrases), paging, the ARN form, AWS's error names, unsigned and write calls refused. Node only.
+diff --git a/test/twin/logs.test.mjs b/test/twin/logs.test.mjs
+new file mode 100644
+index 0000000..a2a62bc
+--- /dev/null
++++ b/test/twin/logs.test.mjs
+@@ -0,0 +1,98 @@
++// The twin's CloudWatch Logs (JSON 1.1, Logs_20140328): DescribeLogGroups lists the three Lambda log groups;
++// FilterLogEvents gives START, END and REPORT per invocation, and they agree with GetMetricData and the delivered
++// CloudFront logs (demo-handler: one invocation per vault API request, REPORT Duration its time_taken; errors only in
++// the attack pack on 22 Nov; demo-log-enricher: 4 runs an hour); time window, stream prefix, filter patterns, paging,
++// the ARN form, errors as AWS names them; unsigned calls refused. Node 22; no network.
++import { readFileSync } from "node:fs";
++const fail = (m) => { console.error("FAIL", m); process.exit(1); };
++const src = readFileSync(new URL("../../site/twin.js", import.meta.url), "utf8");
++globalThis.window = globalThis;
++const load = (search) => { globalThis.location = { origin: "http://localhost", search }; new Function(src)(); return globalThis.AwsTwin; };
++const auth = { authorization: "AWS4-HMAC-SHA256 Credential=ASIATWINREAD/x" };
++const LOGS = "https://logs.eu-west-2.amazonaws.com/";
++const call = async (T, target, q, h) => {
++  const r = await T.handle(LOGS, { method: "POST", headers: Object.assign({ "content-type": "application/x-amz-json-1.1", "x-amz-target": "Logs_20140328." + target }, h === undefined ? auth : h), body: JSON.stringify(q) });
++  return { status: r.status, type: r.headers.get("content-type"), j: await r.json() };
++};
++const ok = async (T, target, q) => { const r = await call(T, target, q); if (r.status !== 200) fail(target + " " + r.status + " " + JSON.stringify(r.j)); return r.j; };
++const ms = (iso) => Date.parse(iso);
++const day = (d) => ({ startTime: ms("2026-11-" + d + "T00:00:00Z"), endTime: ms("2026-11-" + d + "T23:59:59Z") });
++const lines = async (T, d, h) => {
++  const key = "cloudfront/2026/11/" + d + "/" + h + "/demo-distribution-1-2026-11-" + d + "-" + h + "-00-00.gz";
++  const r = await T.handle("https://" + T.buckets.logs + ".s3.eu-west-2.amazonaws.com/" + key, { method: "GET", headers: auth });
++  return (await new Response(r.body.pipeThrough(new DecompressionStream("gzip"))).text()).trim().split("\n").map((l) => JSON.parse(l));
++};
++const metric = async (T, fn, name, stat, start, end) => {
++  const p = { Action: "GetMetricData", Version: "2010-08-01", StartTime: start, EndTime: end, "MetricDataQueries.member.1.Id": "m1",
++    "MetricDataQueries.member.1.MetricStat.Metric.Namespace": "AWS/Lambda", "MetricDataQueries.member.1.MetricStat.Metric.MetricName": name,
++    "MetricDataQueries.member.1.MetricStat.Metric.Dimensions.member.1.Name": "FunctionName", "MetricDataQueries.member.1.MetricStat.Metric.Dimensions.member.1.Value": fn,
++    "MetricDataQueries.member.1.MetricStat.Period": "3600", "MetricDataQueries.member.1.MetricStat.Stat": stat };
++  const x = await (await T.handle("https://monitoring.eu-west-2.amazonaws.com/", { method: "POST", headers: auth, body: new URLSearchParams(p).toString() })).text();
++  return [...(/<Values>(.*?)<\/Values>/.exec(x) || ["", ""])[1].matchAll(/<member>([^<]*)<\/member>/g)].map((a) => +a[1]);
++};
++const api = (L) => L.filter((l) => /^\/vault\/[^/]+\/files/.test(l.cs_uri_stem));
++
++let T = load("");
++// DescribeLogGroups
++const lg = await ok(T, "DescribeLogGroups", {});
++if (lg.logGroups.map((g) => g.logGroupName).join() !== "/aws/lambda/demo-handler,/aws/lambda/demo-log-enricher,/aws/lambda/demo-nightly-report") fail("groups " + JSON.stringify(lg.logGroups.map((g) => g.logGroupName)));
++const g0 = lg.logGroups[0];
++if (g0.arn !== "arn:aws:logs:eu-west-2:" + T.account + ":log-group:/aws/lambda/demo-handler:*" || g0.logGroupArn !== g0.arn.slice(0, -2) || !(g0.storedBytes > 0) || typeof g0.creationTime !== "number") fail("group shape " + JSON.stringify(g0));
++if ((await ok(T, "DescribeLogGroups", { logGroupNamePrefix: "/aws/lambda/demo-n" })).logGroups.length !== 1) fail("prefix");
++// demo-handler on 21 Nov, 10:00 to 10:59: one invocation per vault API request in that hour's file, REPORT = time_taken
++const hour = { startTime: ms("2026-11-21T10:00:00Z"), endTime: ms("2026-11-21T10:59:59.999Z") };
++const ev = (await ok(T, "FilterLogEvents", Object.assign({ logGroupName: "/aws/lambda/demo-handler" }, hour))).events;
++const A = api(await lines(T, "21", "10"));
++const starts = ev.filter((e) => e.message.startsWith("START RequestId: ")), reports = ev.filter((e) => e.message.startsWith("REPORT RequestId: "));
++if (starts.length !== A.length || reports.length !== A.length || ev.filter((e) => e.message.startsWith("END ")).length !== A.length) fail("invocations " + starts.length + " vs " + A.length + " requests");
++if (!/^START RequestId: [0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-8[0-9a-f]{3}-[0-9a-f]{12} Version: \$LATEST\n$/.test(starts[0].message)) fail("START line " + JSON.stringify(starts[0].message));
++if (!/^REPORT RequestId: \S+\tDuration: \d+\.\d\d ms\tBilled Duration: \d+ ms\tMemory Size: 256 MB\tMax Memory Used: \d+ MB\t\n$/.test(reports[0].message)) fail("REPORT line " + JSON.stringify(reports[0].message));
++const durs = reports.map((e) => +/Duration: ([\d.]+) ms/.exec(e.message)[1]).sort((a, b) => a - b), want = A.map((l) => +(l.time_taken * 1000).toFixed(2)).sort((a, b) => a - b);
++if (durs.join() !== want.join()) fail("durations differ from time_taken");
++const avg = await metric(T, "demo-handler", "Duration", "Average", "2026-11-21T10:00:00Z", "2026-11-21T11:00:00Z");
++if (Math.abs(avg[0] - durs.reduce((a, b) => a + b, 0) / durs.length) > 0.01) fail("REPORT mean " + avg[0] + " vs metric");
++for (let i = 1; i < ev.length; i++) if (ev[i].timestamp < ev[i - 1].timestamp) fail("not in time order");
++if (new Set(ev.map((e) => e.eventId)).size !== ev.length || new Set(ev.map((e) => e.logStreamName)).size !== 1) fail("event ids or one stream per hour");
++if (!/^2026\/11\/21\/\[\$LATEST\][0-9a-f]{32}$/.test(ev[0].logStreamName) || !(ev[0].ingestionTime > ev[0].timestamp)) fail("stream name or ingestion " + JSON.stringify(ev[0]));
++if (ev.some((e) => e.message.startsWith("[ERROR]"))) fail("errors on a normal day");
++// the enricher: 4 runs an hour, as the metric says
++const en = (await ok(T, "FilterLogEvents", Object.assign({ logGroupIdentifier: "arn:aws:logs:eu-west-2:" + T.account + ":log-group:/aws/lambda/demo-log-enricher:*" }, hour))).events;
++if (en.filter((e) => e.message.startsWith("START")).length !== 4) fail("enricher runs " + en.length);
++const enriched = en.filter((e) => e.message.startsWith("[INFO]")).reduce((a, e) => a + +/Enriched (\d+) records/.exec(e.message)[1], 0);
++if (enriched !== (await lines(T, "21", "10")).length) fail("enricher records " + enriched);
++// the nightly report did not run in these hours
++if ((await ok(T, "FilterLogEvents", { logGroupName: "/aws/lambda/demo-nightly-report" })).events.length !== 0) fail("nightly report ran by day");
++// filter patterns: plain terms, ?terms, -terms, "phrases"; paging with nextToken; stream prefix
++const all = (await ok(T, "FilterLogEvents", Object.assign({ logGroupName: "/aws/lambda/demo-handler" }, day("21")))).events;
++const rep = (await ok(T, "FilterLogEvents", Object.assign({ logGroupName: "/aws/lambda/demo-handler", filterPattern: "REPORT" }, day("21")))).events;
++if (!rep.length || rep.length !== all.filter((e) => e.message.includes("REPORT")).length) fail("REPORT filter");
++const se = (await ok(T, "FilterLogEvents", Object.assign({ logGroupName: "/aws/lambda/demo-handler", filterPattern: "?START ?END" }, day("21")))).events;
++if (se.length !== 2 * rep.length) fail("?START ?END " + se.length);
++if ((await ok(T, "FilterLogEvents", Object.assign({ logGroupName: "/aws/lambda/demo-handler", filterPattern: "RequestId -REPORT -START" }, day("21")))).events.length !== rep.length) fail("-terms");
++if ((await ok(T, "FilterLogEvents", Object.assign({ logGroupName: "/aws/lambda/demo-handler", filterPattern: "\"Memory Size: 256 MB\"" }, day("21")))).events.length !== rep.length) fail("phrase");
++if ((await ok(T, "FilterLogEvents", Object.assign({ logGroupName: "/aws/lambda/demo-handler", filterPattern: "report" }, day("21")))).events.length !== 0) fail("case-insensitive match");
++let got = [], tok;
++do { const p = await ok(T, "FilterLogEvents", Object.assign({ logGroupName: "/aws/lambda/demo-handler", limit: 5 }, day("21"), tok ? { nextToken: tok } : {})); if (p.events.length > 5) fail("limit"); got = got.concat(p.events); tok = p.nextToken; } while (tok);
++if (got.map((e) => e.eventId).join() !== all.map((e) => e.eventId).join()) fail("paging lost or repeated events");
++const s0 = all[0].logStreamName;
++if ((await ok(T, "FilterLogEvents", { logGroupName: "/aws/lambda/demo-handler", logStreamNamePrefix: s0 })).events.some((e) => e.logStreamName !== s0)) fail("stream prefix");
++// errors, as AWS names them, and refusals
++const bad = [
++  [{ logGroupName: "/aws/lambda/nope" }, 400, "ResourceNotFoundException"],
++  [{ logGroupName: "/aws/lambda/demo-handler", logGroupIdentifier: "/aws/lambda/demo-handler" }, 400, "InvalidParameterException"],
++  [{ logGroupName: "/aws/lambda/demo-handler", limit: 0 }, 400, "InvalidParameterException"],
++  [{ logGroupName: "/aws/lambda/demo-handler", nextToken: "x" }, 400, "InvalidParameterException"],
++  [{ logGroupName: "/aws/lambda/demo-handler", filterPattern: "{ $.level = \"ERROR\" }" }, 400, "InvalidParameterException"],
++  [{ logGroupName: "constructor" }, 400, "ResourceNotFoundException"],
++  [{ logGroupName: "/aws/lambda/__proto__" }, 400, "ResourceNotFoundException"]];
++for (const [q, st, type] of bad) { const r = await call(T, "FilterLogEvents", q); if (r.status !== st || r.j.__type !== type) fail(JSON.stringify(q) + " -> " + r.status + " " + JSON.stringify(r.j)); }
++if ((await call(T, "PutLogEvents", {})).j.__type !== "UnknownOperationException") fail("write call answered");
++if ((await call(T, "FilterLogEvents", { logGroupName: "/aws/lambda/demo-handler" }, {})).status !== 403) fail("unsigned call answered");
++if ((await call(T, "DescribeLogGroups", {})).type !== "application/x-amz-json-1.1") fail("content type");
++// the attack pack: [ERROR] lines on 22 Nov equal the metric's Errors
++T = load("?pack=attack"); T.reset();
++const errs = (await ok(T, "FilterLogEvents", Object.assign({ logGroupName: "/aws/lambda/demo-handler", filterPattern: "\"[ERROR]\"" }, day("22")))).events;
++const mErr = (await metric(T, "demo-handler", "Errors", "Sum", "2026-11-22T00:00:00Z", "2026-11-23T00:00:00Z")).reduce((a, b) => a + b, 0);
++if (!errs.length || errs.length !== mErr) fail("attack errors " + errs.length + " vs metric " + mErr);
++if (!/^\[ERROR\]\t2026-11-22T\S+Z\t\S+\tRequest refused with 4\d\d: /.test(errs[0].message)) fail("ERROR line " + JSON.stringify(errs[0].message));
++console.log("ok twin/logs (" + all.length + " events on 21 Nov for demo-handler; " + errs.length + " errors in the attack pack)");
