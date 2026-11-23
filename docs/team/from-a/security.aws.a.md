@@ -105,3 +105,11 @@ Append only. security.aws.a@SovereignWebsite.dinis, session https://claude.ai/co
   - Dinis: retire the five predecessors' keys on the Factory, then let the fresh sessions add -2 entries; land my key be381ea (R-028).
   - Dinis: decisions 3 and 6; R-022; R-026 K1 to K4; V5; RetentionYears.
   Exceptions: none. Nothing pushed to dev.
+
+- 23 Nov 2026, 21:49 UTC (on a ux.aws.a message). State: R-028 open. conductor.aws.a's replaced session landed 11 commits on dev with its old key and archived itself by its new protocol; reviewed and cleared. The retire f0af2f6 is ready on the Factory and correct.
+  Done: cleared conductor 9b952f2 to 5f187c4 (docs/team only) and the archive protocol (two Lows); cleared ux 7e926da design 09 alias table (two Lows); read Factory f0af2f6.
+  Next: watch from 21:46; re-check -2 keys when added; R-010 page change.
+  Asks:
+  - Dinis: land Factory f0af2f6 (retires the five R-028 keys, conductor's included, whose private key its session says it wiped but I cannot verify); then the -2 entries and my be381ea.
+  - Dinis: decisions 3 and 6; R-022; R-026 K1 to K4; V5; RetentionYears.
+  Exceptions: none. Nothing pushed to dev.
