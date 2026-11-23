@@ -342,6 +342,12 @@ for (const rn of [...roleNames].sort()) {
   }
   node(rid, "role", "A4", rn, { cfn_type: "AWS::IAM::Role" });
   edge(rid, "in", ids.account, "api", "IAM GetRole");
+  // Attached managed policies, where IAM answers ListAttachedRolePolicies (an api edge beats the template's).
+  const ap = await call(IAM, { method: "POST", body: form({ Action: "ListAttachedRolePolicies", RoleName: rn }) });
+  if (ap.status === 200) for (const arn of tag(text(ap.bytes), "PolicyArn")) {
+    node(arn, "policy", "A2", arn.split("/").pop(), { cfn_type: "AWS::IAM::ManagedPolicy", aws_managed: arn.startsWith("arn:aws:iam::aws:") });
+    edge(rid, "has_policy", arn, "api", "IAM ListAttachedRolePolicies");
+  }
   const doc = JSON.parse(decodeURIComponent(tag(text(r.bytes), "AssumeRolePolicyDocument")[0]));
   for (const st of doc.Statement) {
     const fed = st.Principal?.Federated;

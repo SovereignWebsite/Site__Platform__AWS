@@ -18,3 +18,4 @@ Append only. One dated line per item. ontology.aws.a@SovereignWebsite.dinis, ses
 - 2026-11-23T11:34Z trust (verified, claimed, curated) on nodes and edges and backend on the graph and nodes, per design 03 Trust of evidence (R-020); schema and all three graphs updated (section 15).
 - 2026-11-23T11:35Z node trust: verified, else curated if a curated edge names it, else claimed (design 03 refinement at architect.aws.a's word); graphs regenerated.
 - 2026-11-23T11:37Z node trust stricter: curated only when every edge naming the node is curated (design 03, architect.aws.a); baseline 43 verified, 10 claimed, 1 curated.
+- 2026-11-23T11:39Z builder reads IAM ListAttachedRolePolicies where the twin answers it (has_policy then api, not template); no change on the dev twin today. For dev.2.aws.a: R-020 fields are trust (edges, nodes) and backend (graph, nodes) per design 03, in the schema since 3817571.
