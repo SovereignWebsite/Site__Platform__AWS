@@ -5,18 +5,21 @@
 // condition 7).
 //
 //   VaultDeploy.newVaultId(crypto)              -> "3f9a0c21b7d4"   12 hex digits from crypto.getRandomValues
-//   index = the page's published-template index for one template, { "<version>": { sha256, url } }: sha256 the file's
-//       64 hex digits; url an S3 object URL whose key is templates/<name>/<version>/<name>-<first 12 hex of sha256>.yaml
-//       (cloudformation.aws.a: a key per version in a bucket that refuses overwrites; no ?versionId, which quick-create
-//       is not documented to keep), checked against the entry before any link is built. The template URL is only ever
-//       taken from the index (security.aws.a). <name> is vault for vaultStackUrl and vault-access for accessStackUrl.
+//   index = the page's published-template index for one template, { "<version>": { url, versionId, sha256 } }: sha256
+//       the file's 64 hex digits; url the S3 object URL (one bucket serves every region's console, boto3.aws.a note 12)
+//       whose key is templates/<name>/<version>/<name>-<first 12 hex of sha256>.yaml, with no query; versionId the S3
+//       object version (create-only keys in a compliance-locked, versioned bucket: cloudformation.aws.a). The link's
+//       templateURL is <url>?versionId=<versionId>, AWS's documented way to name one exact version (CloudFormation User
+//       Guide, via boto3.aws.a note 12), so neither a new version nor a delete marker changes what a link deploys. The
+//       template URL is only ever taken from the index (security.aws.a); every part is checked before a link is built.
+//       <name> is vault for vaultStackUrl and vault-access for accessStackUrl.
 //   VaultDeploy.vaultStackUrl(o)                -> quick-create URL for stack sws-vault-<id>
 //       o = { region, vaultId, index, version, imageUri, deployPageOrigin, mode: "one-stack" | "access-stack" }
 //   VaultDeploy.accessStackUrl(o)               -> quick-create URL for stack sws-vault-<id>-access (least-privilege
 //       mode, screen 2-alt); o = { region, vaultId, index, version, params: { Name: value } } (the access template's
 //       index and its own parameters, passed as given; VaultId is always set from o.vaultId). The page shows the
 //       DistributionId and CertificateArn it passes beside the change set, never filled silently (iam.aws.a 0.2.0).
-//   VaultDeploy.templateEntry(index, version, name) -> { url, sha256 }: the checked index entry for one of the three
+//   VaultDeploy.templateEntry(index, version, name) -> { url, versionId, sha256, templateUrl }: the checked index entry for one of the three
 //       published templates, name "vault" | "vault-access" | "vault-edge" (the us-east-1 certificate stack for an own
 //       domain, design 06b, whose link comes later); throws a TypeError if the entry is missing or not in the form
 //   VaultDeploy.deployRoleName(vaultId)         -> "sws-vault-<id>-deploy", the role the customer picks in 2-alt
@@ -53,6 +56,7 @@
   var S3_PATH_RE = /^https:\/\/s3\.[a-z]{2}(-[a-z]+)+-\d\.amazonaws\.com\/[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]\/([^?#\s]+)$/;
   var S3_HOST_RE = /^https:\/\/[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]\.s3\.[a-z]{2}(-[a-z]+)+-\d\.amazonaws\.com\/([^?#\s]+)$/;
   var VERSION_RE = /^[0-9a-z][0-9a-z.-]{0,63}$/;
+  var S3_VERSION_ID_RE = /^[A-Za-z0-9._-]{1,1024}$/; // S3 object version ids are URL-safe
   var SHA_RE = /^[0-9a-f]{64}$/;
   var PARAM_RE = /^[A-Za-z0-9]{1,255}$/;
   var CLOUDFRONT_RE = /^https:\/\/[a-z0-9]{1,63}\.cloudfront\.net$/;
@@ -84,18 +88,19 @@
     need(Object.prototype.hasOwnProperty.call(NAMES, name), "template name", name);
     var v = String(version);
     need(VERSION_RE.test(v) && index && typeof index === "object" && Object.prototype.hasOwnProperty.call(index, v), "version (not in the published index)", v);
-    var e = index[v], url = e && String(e.url), sha = e && String(e.sha256);
+    var e = index[v], url = e && String(e.url), sha = e && String(e.sha256), vid = e && String(e.versionId);
     need(SHA_RE.test(sha), "index sha256 for " + v, sha);
+    need(S3_VERSION_ID_RE.test(vid), "index versionId for " + v, vid);
     var m = S3_PATH_RE.exec(url) || S3_HOST_RE.exec(url), key = m && m[m.length - 1];
     need(key === "templates/" + name + "/" + v + "/" + name + "-" + sha.slice(0, 12) + ".yaml", "index url for " + v + " (templates/" + name + "/" + v + "/" + name + "-<sha256 12>.yaml in S3)", url);
-    return { url: url, sha256: sha };
+    return { url: url, versionId: vid, sha256: sha, templateUrl: url + "?versionId=" + vid };
   }
   function common(o, name) {
     o = o || {};
     var region = String(o.region), vaultId = String(o.vaultId);
     need(REGION_RE.test(region), "region", region);
     need(VAULT_ID_RE.test(vaultId), "vaultId", vaultId);
-    return { region: region, vaultId: vaultId, templateUrl: entry(o.index, o.version, name).url };
+    return { region: region, vaultId: vaultId, templateUrl: entry(o.index, o.version, name).templateUrl };
   }
   function vaultStackUrl(o) {
     var c = common(o, "vault"), imageUri = String(o.imageUri), origin = String(o.deployPageOrigin), mode = o.mode === undefined ? "one-stack" : String(o.mode);
