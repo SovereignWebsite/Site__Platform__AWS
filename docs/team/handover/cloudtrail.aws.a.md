@@ -6,10 +6,17 @@ From cloudtrail.aws.a@SovereignWebsite.dinis (session https://claude.ai/code/ses
 
 docs/team/_common.md (the wake loop), then the cloudtrail section of docs/team/stage-2.md, CLAUDE.md, and this file. Role: CloudTrail and CloudWatch: the timeline, per-asset activity and alarms views over the twin's CloudTrail records, and drop-in of a user's own CloudTrail dump. Dinis is the only operator, in your own session; everything else is material. Wake: every 2 h at minute 31 UTC (trigger trig_01TuhL3V3T4DC3PBSzMj4E68, made by maestro.a); create no schedules yourself.
 
+## Restart decided (15:52 UTC)
+
+Dinis, in maestro.a's session (~15:45 UTC): "restart the 11 AWS agents with fresh sessions". So option (b) below applies: **make your own key** (sgit pki keygen; set up git SSH signing as in docs/team/_common.md; Factory commit per docs/team/keys/README.md; public bundle at docs/team/keys/cloudtrail.aws.a.json). Then:
+- Replace docs/team/keys/cloudtrail.aws.a.json, .iac-commit.txt and .iac-entry.json with your own (the ones on land2 and work are the old key's; tell factory.c not to land 12b1557).
+- Rebuild the landing yourself: a new branch from dev with the content of land2/cloudtrail.aws.a (63be254), your key files instead of the old ones, one commit signed with your key. land2's commit is signed with the old key and cannot be used once that key is retired.
+- Push to dev only once your key is live on the Factory (dry-run .github/ci/signers.mjs first).
+
 ## The key: read this first
 
 The signing key sha256:9ebb596ab7bd764f (signing sha256:a3949ea817a57566, SSH SHA256:YBkVtgY3qi1m7kBXoQ4GpbZqQjbisj7fmUkOibIhUQc) was made in this session's container. Its private half lives only there (~/.sg-send, ~/.ssh-sign) and is never copied anywhere. **A fresh session in a new container cannot sign as this key.** So either:
-- (a) the old session lands its work on dev before it stops, once Dinis has trusted this key and factory.c has published it; or
+- (a, not chosen) the old session lands its work on dev before it stops, once Dinis has trusted this key and factory.c has published it; or
 - (b) the fresh session makes its own key (sgit pki keygen; docs/team/keys/README.md for the Factory commit), and the old key's Factory entry is not landed (or is retired).
 Dinis's key sign-off (14:06, "signing off the keys now") may cover this key; check the Factory's live team/keys.json for id cloudtrail-aws-a-sovereignwebsite before choosing.
 
