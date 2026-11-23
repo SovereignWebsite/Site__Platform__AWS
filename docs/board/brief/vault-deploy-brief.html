@@ -100,7 +100,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
 <div class="wrap">
   <header>
     <div>
-      <h1>Deploy a Vault: twelve decisions</h1>
+      <h1>Deploy a Vault: thirteen decisions</h1>
       <p class="sub">AWS Platform programme · from <span class="t-mono">docs/board/decisions.md</span>, 23 Nov 2026, 15:30 UTC (batch 2) · kept by pm.aws.a</p>
     </div>
     <div class="tabs" role="tablist" aria-label="View">
@@ -139,10 +139,10 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
 
 <script type="application/json" id="storyboard">
 {
- "title": "Deploy a Vault: twelve decisions",
+ "title": "Deploy a Vault: thirteen decisions",
  "source": "docs/board/decisions.md, batch 2, on work/pm.aws.a, 23 Nov 15:30 UTC",
  "made_by": "pm.aws.a@SovereignWebsite.dinis",
- "answer": "V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a, V11 b, V12 a",
+ "answer": "V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a, V11 b, V12 a, V13 b+c+d",
  "scenes": [
   {
    "id": "intro",
@@ -152,8 +152,8 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
    "beats": [
     [
      0,
-     "Twelve decisions about deploying a Vault into a customer's AWS account, EC2 and short-lived deployments.",
-     "Twelve tiles, V1 to V12."
+     "Thirteen decisions about deploying a Vault into a customer's AWS account, EC2 and short-lived deployments.",
+     "Thirteen tiles, V1 to V13."
     ],
     [
      6,
@@ -167,7 +167,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
     ]
    ],
    "panel": {
-    "what": "Twelve decisions from conductor.aws.a's plan (ea9f61d), the first drafts of steps 1 to 3 and security's review of the page design (d38c93b): vaults.aws.a (eec9d24), cloudformation.aws.a (42677c7), iam.aws.a (68f4b8b). Answer by number in pm.aws.a's session.",
+    "what": "Thirteen decisions from conductor.aws.a's plan (ea9f61d), the first drafts of steps 1 to 3 and security's review of the page design (d38c93b): vaults.aws.a (eec9d24), cloudformation.aws.a (42677c7), iam.aws.a (68f4b8b). Answer by number in pm.aws.a's session.",
     "answer": true
    }
   },
@@ -617,14 +617,56 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
    }
   },
   {
+   "id": "v13",
+   "eyebrow": "V13 · Security R-026 (Medium)",
+   "title": "Denial of wallet on a customer's Vault",
+   "dur": 16,
+   "beats": [
+    [
+     0,
+     "Behind CloudFront every request is billed at the edge. A flood of ten thousand a second costs about 45 dollars an hour.",
+     "Requests flood into CloudFront; the meter climbs; Lambda's own line stays capped."
+    ],
+    [
+     8,
+     "Recommended: a budget action that disables the distribution at the customer's cap, a kill switch on the page, and plain words on cost.",
+     "The b, c and d chips light as recommended."
+    ]
+   ],
+   "panel": {
+    "asks": "security.aws.a (R-026, a0a0069); billing.aws.a's model (ddddb44)",
+    "what": "A customer's Vault behind CloudFront has no ceiling on request charges: about $44 to $46 an hour at 10,000 requests a second in London. Reserved concurrency caps only the Lambda part.",
+    "options": [
+     [
+      "a",
+      "An AWS WAF rate rule, opt-in once its cost is confirmed."
+     ],
+     [
+      "b",
+      "A Budgets alert plus an action that disables the distribution at a cap the customer sets."
+     ],
+     [
+      "c",
+      "A kill switch on the deploy page."
+     ],
+     [
+      "d",
+      "Say it plainly on the page's What it costs."
+     ]
+    ],
+    "rec": "b",
+    "blocks": "Recommended by security.aws.a: b and c in the first version, with d's wording. Blocks the deploy page's cost wording, not the twin."
+   }
+  },
+  {
    "id": "outro",
    "eyebrow": "Your answer",
-   "title": "One line answers all twelve",
+   "title": "One line answers all thirteen",
    "dur": 10,
    "beats": [
     [
      0,
-     "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a, V11 b, V12 a.",
+     "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a, V11 b, V12 a, V13 b, c and d.",
      "The full answer line, large."
     ],
     [
@@ -678,10 +720,10 @@ function optionRow(opts, rec, tShow, tRec, notRec=[]) {
 /* ---------- the scenes, drawn ---------- */
 const VIS = {
 intro(){
-  const n=[['V1','Where it lives','acc'],['V2','CloudFormation','acc'],['V3','Sign-in','risk'],['V4','EC2 path','acc'],['V5','Guard rails','risk'],['V6','ec2.aws.a','acc'],['V7','Audit trail','risk'],['V8','Progress','risk'],['V9','Templates','acc'],['V10','Server image','acc'],['V11','Launches','risk'],['V12','DNS privacy','risk']];
+  const n=[['V1','Where it lives','acc'],['V2','CloudFormation','acc'],['V3','Sign-in','risk'],['V4','EC2 path','acc'],['V5','Guard rails','risk'],['V6','ec2.aws.a','acc'],['V7','Audit trail','risk'],['V8','Progress','risk'],['V9','Templates','acc'],['V10','Server image','acc'],['V11','Launches','risk'],['V12','DNS privacy','risk'],['V13','Wallet','risk']];
   let s = txt(W/2,70,'Deploy a Vault','t-xl') + cue(0.2, txt(W/2,104,'into a customer\'s AWS account · EC2 · short-lived deployments','t-m t-mute'));
-  n.forEach((d,i)=>{ const x=30+(i%6)*152, y=130+Math.floor(i/6)*118, c=d[2]==='risk'?'bx-risk':'bx-acc';
-    s += cue(0.8+i*0.3, box(x,y,138,100,c) + txt(x+69,y+50,d[0],'t-l '+(d[2]==='risk'?'t-risk':'t-acc')) + txt(x+69,y+80,d[1],'t-s'), 'pop'); });
+  n.forEach((d,i)=>{ const x=28+(i%7)*130, y=130+Math.floor(i/7)*118, c=d[2]==='risk'?'bx-risk':'bx-acc';
+    s += cue(0.8+i*0.3, box(x,y,120,100,c) + txt(x+60,y+50,d[0],'t-l '+(d[2]==='risk'?'t-risk':'t-acc')) + txt(x+60,y+80,d[1],'t-s'), 'pop'); });
   s += cue(4, txt(70,384,'red: trust or safety · amber: scope or access','t-s t-mute','start'));
   s += cue(6, box(180,398,600,40,'bx-ok',20) + txt(W/2,423,'Twin first: nothing real until you answer','t-s t-ok'));
   s += cue(11, txt(W/2,480,SB.answer,'t-m'));
@@ -819,10 +861,22 @@ v12(){
   s += optionRow(['a','b'],'a',6,7);
   return s;
 },
+v13(){
+  let s = lbox(40,150,170,80,'flood','bx-risk','t-m','10,000 req/s');
+  s += cue(0.6, lbox(300,150,200,80,'CloudFront','bx-acc','t-m','billed per request'));
+  s += cue(1.2, lbox(600,150,160,80,'Lambda','bx','t-m','capped'));
+  s += path('p13a','M210 190 L298 190','ln-risk',0.6,1.2)+`<path d="M500 190 L598 190" class="ln dash"/>`;
+  s += cue(2, txt(400,270,'about $44 to $46 an hour','t-l t-risk'));
+  s += cue(3, txt(680,270,'about $0.84 an hour','t-s t-mute'));
+  s += cue(8.5, lbox(800,140,130,46,'budget stop','bx-ok','t-s') + lbox(800,196,130,46,'kill switch','bx-ok','t-s'));
+  s += optionRow(['a','b','c','d'],'b',8,8.5);
+  s += cue(8.7, (()=>{const x0=(W-(4*150+3*14))/2; return [2,3].map(i=>{const x=x0+i*164; return box(x,452,150,40,'bx-ok',20)+txt(x+22,478,['a','b','c','d'][i],'t-m t-ok')+txt(x+86,477,'recommended','t-s t-ok');}).join('');})(), 'pop');
+  return s;
+},
 outro(){
   let s = txt(W/2,150,'Recommended','t-m t-mute');
   s += cue(0.3, txt(W/2,226,'V1 a · V2 a · V3 a · V4 b · V5 b','t-l'), 'pop');
-  s += cue(0.6, txt(W/2,266,'V6 a · V7 c · V8 a · V9 a · V10 a · V11 b · V12 a','t-l'), 'pop');
+  s += cue(0.6, txt(W/2,266,'V6 a · V7 c · V8 a · V9 a · V10 a · V11 b · V12 a','t-l') + txt(W/2,300,'V13 b + c + d','t-l'), 'pop');
   s += cue(5, txt(W/2,330,'Answer in pm.aws.a\'s session','t-m'));
   s += cue(5.6, txt(W/2,358,'claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B','t-mono t-mute'));
   s += cue(6.2, txt(W/2,420,'Twin first: nothing real until you answer.','t-s t-ok'));

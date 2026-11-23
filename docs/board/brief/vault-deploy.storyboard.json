@@ -1,14 +1,14 @@
 {
  "format": "studio-storyboard/0",
  "slug": "aws-vault-deploy-2026-11-23",
- "title": "Deploy a Vault: twelve decisions",
+ "title": "Deploy a Vault: thirteen decisions",
  "audience": "Dinis",
  "requested_by": "pm.aws.a@SovereignWebsite.dinis",
- "summary": "Batch 2 on the AWS Platform programme's decisions page (23 Nov 2026 15:30 UTC): twelve decisions on deploying a Vault into a customer's AWS account, EC2 and short-lived deployments, from conductor.aws.a's plan and the first drafts of steps 1 to 3. Nothing runs outside the twin until Dinis answers.",
+ "summary": "Batch 2 on the AWS Platform programme's decisions page (23 Nov 2026 15:30 UTC): thirteen decisions on deploying a Vault into a customer's AWS account, EC2 and short-lived deployments, from conductor.aws.a's plan and the first drafts of steps 1 to 3. Nothing runs outside the twin until Dinis answers.",
  "beats": [
   {
    "id": "b1",
-   "narration": "Twelve decisions on deploying a Vault for a customer. Nothing real runs until you answer.",
+   "narration": "Thirteen decisions on deploying a Vault for a customer. Nothing real runs until you answer.",
    "visual": {
     "kind": "svg",
     "src": "intro",
@@ -40,14 +40,14 @@
   },
   {
    "id": "b3",
-   "narration": "V2. Recommended: CloudFormation first; Terraform follows one-to-one once the template settles.",
+   "narration": "V2. Recommended: CloudFormation first, Terraform later.",
    "visual": {
     "kind": "svg",
     "src": "v2",
     "caption": "V2: CloudFormation first",
     "at": 0,
-    "play": 5,
-    "end": 4.4
+    "play": 3.1,
+    "end": 2.5
    },
    "facts": [
     "s-cfn",
@@ -56,14 +56,14 @@
   },
   {
    "id": "b4",
-   "narration": "V3. Recommended: the customer's own console, by a one-click link. No credential reaches our page; no role trusts us.",
+   "narration": "V3. Recommended: a one-click link in the customer's own console. No credential reaches us.",
    "visual": {
     "kind": "svg",
     "src": "v3",
     "caption": "V3: how the customer signs in",
     "at": 0,
-    "play": 8.2,
-    "end": 7.6
+    "play": 6.2,
+    "end": 5.6
    },
    "facts": [
     "s-iam",
@@ -152,14 +152,14 @@
   },
   {
    "id": "b10",
-   "narration": "V9. Recommended: read access to sgit.ai's official templates; build from the Lambda one.",
+   "narration": "V9. Recommended: read access to sgit.ai's official templates.",
    "visual": {
     "kind": "svg",
     "src": "v9",
     "caption": "V9: the official templates",
     "at": 0,
-    "play": 5.8,
-    "end": 5.2
+    "play": 3.8,
+    "end": 3.2
    },
    "facts": [
     "s-vaults",
@@ -214,15 +214,31 @@
    ]
   },
   {
+   "id": "b11c",
+   "narration": "V13. A flood through CloudFront has no ceiling. Recommended: a budget stop, a kill switch, plain words.",
+   "visual": {
+    "kind": "svg",
+    "src": "v13",
+    "caption": "V13: denial of wallet",
+    "at": 0,
+    "play": 7.4,
+    "end": 6.8
+   },
+   "facts": [
+    "s-r026",
+    "s-flood"
+   ]
+  },
+  {
    "id": "b12",
-   "narration": "All a, except V4 and V5, b, V7, c, and V11, b. Answer in pm.aws.a's session.",
+   "narration": "Answers on screen. Answer in pm.aws.a's session.",
    "visual": {
     "kind": "svg",
     "src": "outro",
-    "caption": "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a (if the official template settles nothing), V11 b, V12 a",
+    "caption": "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a (if the official template settles nothing), V11 b, V12 a, V13 b+c+d",
     "at": 0,
-    "play": 7,
-    "end": 6.4
+    "play": 3.4,
+    "end": 2.8
    },
    "facts": [
     "s-plan"
@@ -632,6 +648,58 @@
    ],
    "recommendation": "a",
    "why": "architect.aws.a (design 05, 2b95ddc). Blocks nothing."
+  },
+  {
+   "id": "V13",
+   "question": "V13. R-026: how is a customer's Vault protected from a request flood's bill?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. AWS WAF rate rule, opt-in once its cost is confirmed",
+     "good": [
+      "Stops the flood at the edge"
+     ],
+     "bad": [
+      "Its own cost, not yet priced"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. Budgets alert plus an action that disables the distribution at the customer's cap",
+     "good": [
+      "A hard ceiling the customer sets"
+     ],
+     "bad": [
+      "The Vault goes offline at the cap"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "c",
+     "label": "c. A kill switch on the deploy page",
+     "good": [
+      "The customer can stop it at once"
+     ],
+     "bad": [
+      "Needs someone watching"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "d",
+     "label": "d. Say it plainly on What it costs",
+     "good": [
+      "No surprise"
+     ],
+     "bad": [
+      "Words alone stop nothing"
+     ],
+     "blocks": []
+    }
+   ],
+   "recommendation": "b",
+   "why": "security.aws.a recommends b and c in the first version, with d's wording."
   }
  ],
  "connections": {
@@ -723,6 +791,18 @@
    "id": "s-arch-05",
    "title": "architect.aws.a: design 05, the deploy page's checks (2b95ddc)",
    "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/commit/2b95ddc",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-r026",
+   "title": "security.aws.a: R-026, denial of wallet (a0a0069)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/a0a0069/docs/security/risks.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-flood",
+   "title": "billing.aws.a: flood.mjs, edge requests not capped by concurrency (ddddb44)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/commit/ddddb44",
    "read": "2026-11-23"
   }
  ],
