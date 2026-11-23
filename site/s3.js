@@ -79,7 +79,7 @@
     box.appendChild(P.el("p", { text: name + " does not answer this site yet. S3 lets a web page read a bucket only when the bucket's CORS rules allow it. This plan adds one rule: GET and HEAD, from " + location.origin + " only. Rules already there are kept." }));
     var now = plan.before ? JSON.stringify(plan.before, null, 2) : "", after = JSON.stringify(plan.after, null, 2);
     box.appendChild(P.el("h4", { text: "What changes (- removed, + added)" }));
-    box.appendChild(P.diffView(now, after));
+    box.appendChild(P.diffView(now, after, P.jsonLine));
     box.appendChild(P.el("details", { class: "full" }, [P.el("summary", { text: "All the CORS rules, now and after" }),
       P.el("h4", { text: "Now" }), P.el("pre", { text: now || "(none)" }), P.el("h4", { text: "After you approve" }), P.el("pre", { text: after })]));
     var go = P.el("button", { type: "button", class: "approve", text: "Approve and add the rule to " + name });
@@ -242,7 +242,7 @@
     Zip.list(fetchRange, size).then(function (entries) {
       if (!current()) return;
       var files = entries.filter(function (e) { return !e.dir; });
-      box.appendChild(P.el("p", { class: "small", text: files.length + " files inside; listed by reading " + human(got) + " of " + human(size) + "." }));
+      box.appendChild(P.el("p", { class: "small", text: files.length + " files inside; " + (got >= size ? "a small zip, so it was read whole (" + human(size) + ")." : "listed by reading " + human(got) + " of " + human(size) + ".") }));
       var filter = P.el("input", { type: "search", class: "filter", placeholder: "Filter the files inside", "aria-label": "Filter the files inside" });
       var tbody = P.el("tbody", {});
       var viewer = P.el("div", { class: "viewer" }), inside = 0;
@@ -300,6 +300,8 @@
     accts.forEach(function (a) { sel.appendChild(P.el("option", { value: a.id, text: a.label })); });
     if (keep) sel.value = keep;
     var lb = $("s3-list-buckets"); if (lb) lb.disabled = !accts.length;
+    // In the twin, open with the buckets listed: there is one synthetic account and nothing to choose.
+    if (window.AwsTransport && AwsTransport.isTwin() && P.signedIn() && accts.length && !state.acct && lb && lb.onclick) lb.onclick();
   }
   function init() {
     $("s3-list-buckets").onclick = function () {
