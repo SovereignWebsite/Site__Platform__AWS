@@ -68,6 +68,7 @@
   // the "v0" stream with v0's seed, so step 1 gives byte-for-byte v0's output; latency has its own, as before, so the
   // data never depends on how many calls came first.
   var streams = {};
+  var DELETED_KEEP = 50; // deleted stacks kept per account once their name is used again (see cloudformation.createStack)
   function rng(name, seed) {
     if (streams[name]) return streams[name];
     var s = seed;
@@ -158,8 +159,15 @@
     "cloudcontrol.requestFailed": function (w, e) { w.requests[e.data.token] = e.data.message; },
     // ---- Customer accounts (deploy plan step 4): stacks in another account, keyed account -> "region/name" ----
     "cloudformation.createStack": function (w, e) {
-      var d = e.data, a = w.accounts[d.account] || (w.accounts[d.account] = { stacks: map() });
-      a.stacks[d.region + "/" + d.name] = { name: d.name, kind: d.kind, mode: d.mode || null, region: d.region, account: d.account, stackId: d.stackId, roleArn: d.roleArn || null,
+      var d = e.data, a = w.accounts[d.account] || (w.accounts[d.account] = { stacks: map() }), key = d.region + "/" + d.name, was = a.stacks[key];
+      // A name used again after a delete: the deleted stack stays, found by its stack id (and in ListStacks), as AWS keeps it.
+      // Only the last DELETED_KEEP of them per account, so create, delete and reuse cycles cannot grow the world without
+      // end (security.aws.a's nit on 5591cad; the twin's bound, AWS keeps deleted stacks for 90 days).
+      if (was && was.status === "DELETE_COMPLETE") {
+        var gone = a.deleted || (a.deleted = map()); gone[was.stackId] = was;
+        var ks = Object.keys(gone); for (var q = 0; q < ks.length - DELETED_KEEP; q++) delete gone[ks[q]];
+      }
+      a.stacks[key] = { name: d.name, kind: d.kind, mode: d.mode || null, region: d.region, account: d.account, stackId: d.stackId, roleArn: d.roleArn || null,
         params: d.params, created: e.t, status: "CREATE_IN_PROGRESS", resources: map(), outputs: [], ids: d.ids,
         events: [{ id: d.stackId.split("/").pop() + "-" + e.seq, t: e.t, logical: d.name, physical: d.stackId, type: "AWS::CloudFormation::Stack", status: "CREATE_IN_PROGRESS", reason: "User Initiated" }] };
     },
@@ -647,8 +655,24 @@
         ["2026-11-21T16:39:30Z", "Handler", "AWS::Lambda::Function", "UPDATE_COMPLETE"],
         ["2026-11-21T16:39:00Z", "demo-lambda", "AWS::CloudFormation::Stack", "UPDATE_ROLLBACK_IN_PROGRESS", "The following resource(s) failed to update: [Handler]."],
         ["2026-11-21T16:38:10Z", "Handler", "AWS::Lambda::Function", "UPDATE_FAILED", "(twin) The dependencies zip for v1.1.0 is not in the bucket."],
-        ["2026-11-21T16:38:00Z", "demo-lambda", "AWS::CloudFormation::Stack", "UPDATE_IN_PROGRESS", "User Initiated"]] }
+        ["2026-11-21T16:38:00Z", "demo-lambda", "AWS::CloudFormation::Stack", "UPDATE_IN_PROGRESS", "User Initiated"]] },
+    // A deleted stack: ListStacks keeps a deleted stack for 90 days, DescribeStacks finds it by its stack id only
+    // (boto3.aws.a's review of patch 01, docs/boto3/2026-11-23__19-twin-cloudformation-reads.md).
+    { name: "demo-site-old", region: "eu-west-2", id: "00000000-0000-4000-8000-0000000c0005", created: "2026-11-10T09:00:00Z", deleted: "2026-11-17T12:00:00Z", status: "DELETE_COMPLETE",
+      description: "An earlier demo site, deleted on 17 November.", resources: [],
+      events: [["2026-11-17T12:00:00Z", "demo-site-old", "AWS::CloudFormation::Stack", "DELETE_COMPLETE"], ["2026-11-17T11:58:00Z", "demo-site-old", "AWS::CloudFormation::Stack", "DELETE_IN_PROGRESS", "User Initiated"],
+        ["2026-11-10T09:02:00Z", "demo-site-old", "AWS::CloudFormation::Stack", "CREATE_COMPLETE"], ["2026-11-10T09:00:00Z", "demo-site-old", "AWS::CloudFormation::Stack", "CREATE_IN_PROGRESS", "User Initiated"]] }
   ];
+  // ListStacks in both accounts: StackStatusFilter.member.N if given, paged on NextToken, in the order given. ListStacks takes
+  // no page size; the twin's pages are small so that every reader has to follow NextToken. The token is the twin's own.
+  var LIST_STACKS_PAGE = 3;
+  function listStacksPage(rows, form, statusOf) {
+    var want = []; for (var f = 1; f <= 32; f++) { var fv = form.get("StackStatusFilter.member." + f); if (fv) want.push(fv); }
+    rows = rows.filter(function (x) { return !want.length || want.indexOf(statusOf(x)) >= 0; });
+    var tok = form.get("NextToken"), at = 0;
+    if (tok) { var m = /^twin-stacks-([1-9][0-9]{0,3})$/.exec(tok); if (!m || +m[1] >= rows.length) return null; at = +m[1]; }
+    return { rows: rows.slice(at, at + LIST_STACKS_PAGE), next: at + LIST_STACKS_PAGE < rows.length ? "twin-stacks-" + (at + LIST_STACKS_PAGE) : null };
+  }
   function stackArn(st) { return "arn:aws:cloudformation:" + st.region + ":" + ACCOUNT + ":stack/" + st.name + "/" + st.id; }
   function stackStatus(s, st) { return st.name === "sws-aws-platform" ? s.stackStatus : st.status; }
   function stackUpdated(s, st) { return st.name === "sws-aws-platform" ? s.stackUpdated : st.updated; }
@@ -662,22 +686,29 @@
   // The read calls. Each answers for the stacks in the region of the endpoint called, as real CloudFormation does.
   function cfnRead(s, A, form, region) {
     var here = STACKS.filter(function (st) { return st.region === region; });
+    var gone = function (st) { return st.status === "DELETE_COMPLETE"; }, live = here.filter(function (st) { return !gone(st); });
+    // By name only a live stack; by stack id a deleted one too, as AWS answers.
     var find = function () {
-      var n = form.get("StackName"), st = here.filter(function (x) { return x.name === n || stackArn(x) === n; })[0];
+      var n = form.get("StackName"), st = here.filter(function (x) { return (x.name === n && !gone(x)) || stackArn(x) === n; })[0];
       return st || null;
     };
     var missing = function () { return xmlErr("ValidationError", "Stack with id " + form.get("StackName") + " does not exist", 400); };
     var wrap = function (name, inner) { return xml("<" + name + "Response><" + name + "Result>" + inner + "</" + name + "Result></" + name + "Response>"); };
-    if (A === "ListStacks") return wrap("ListStacks", "<StackSummaries>" + members(here, function (st) {
-      return el("StackId", stackArn(st)) + el("StackName", st.name) + el("TemplateDescription", st.description) + el("CreationTime", st.created) + el("LastUpdatedTime", stackUpdated(s, st)) + el("StackStatus", stackStatus(s, st));
-    }) + "</StackSummaries>");
+    if (A === "ListStacks") {
+      var pg = listStacksPage(here, form, function (st) { return stackStatus(s, st); }); // in the seed's order, as before
+      if (!pg) return xmlErr("ValidationError", "Invalid NextToken", 400);
+      return wrap("ListStacks", "<StackSummaries>" + members(pg.rows, function (st) {
+        return el("StackId", stackArn(st)) + el("StackName", st.name) + el("TemplateDescription", st.description) + el("CreationTime", st.created) + el("LastUpdatedTime", stackUpdated(s, st)) +
+          el("DeletionTime", st.deleted) + el("StackStatus", stackStatus(s, st));
+      }) + "</StackSummaries>" + el("NextToken", pg.next));
+    }
     if (A === "DescribeStacks") {
-      var list = form.get("StackName") ? [find()] : here;
+      var list = form.get("StackName") ? [find()] : live;
       if (!list[0] && form.get("StackName")) return missing();
       return wrap("DescribeStacks", "<Stacks>" + members(list, function (st) {
         return el("StackId", stackArn(st)) + el("StackName", st.name) + el("Description", st.description) +
           "<Parameters>" + members(st.parameters, function (p) { return el("ParameterKey", p[0]) + el("ParameterValue", p[1]); }) + "</Parameters>" +
-          el("CreationTime", st.created) + el("LastUpdatedTime", stackUpdated(s, st)) + el("StackStatus", stackStatus(s, st)) +
+          el("CreationTime", st.created) + el("LastUpdatedTime", stackUpdated(s, st)) + el("DeletionTime", st.deleted) + el("StackStatus", stackStatus(s, st)) +
           "<Outputs>" + members(st.outputs, function (o) { return el("OutputKey", o[0]) + el("OutputValue", o[1]) + el("ExportName", o[2]); }) + "</Outputs>";
       }) + "</Stacks>");
     }
@@ -697,12 +728,12 @@
       }) + "</StackEvents>");
     }
     if (A === "ListExports") {
-      var ex = []; here.forEach(function (st) { (st.outputs || []).forEach(function (o) { if (o[2]) ex.push([stackArn(st), o[2], o[1]]); }); });
+      var ex = []; live.forEach(function (st) { (st.outputs || []).forEach(function (o) { if (o[2]) ex.push([stackArn(st), o[2], o[1]]); }); });
       return wrap("ListExports", "<Exports>" + members(ex, function (e) { return el("ExportingStackId", e[0]) + el("Name", e[1]) + el("Value", e[2]); }) + "</Exports>");
     }
     if (A === "ListImports") {
       // An export can only be imported in its own region, so both lists are per region.
-      var name = form.get("ExportName"), by = here.filter(function (st) { return (st.imports || []).indexOf(name) >= 0; });
+      var name = form.get("ExportName"), by = live.filter(function (st) { return (st.imports || []).indexOf(name) >= 0; });
       if (!by.length) return xmlErr("ValidationError", "Export '" + name + "' is not imported by any stack.", 400);
       return wrap("ListImports", "<Imports>" + members(by, function (st) { return esc(st.name); }) + "</Imports>");
     }
@@ -738,7 +769,10 @@
       [["VaultFunctionUrl", "AWS::Lambda::Url", 2], ["VaultFunctionUrlPermission", "AWS::Lambda::Permission", 1], ["VaultFunctionInvokePermission", "AWS::Lambda::Permission", 1]],
       [["VaultDistribution", "AWS::CloudFront::Distribution", 240]],
       [["VaultRecordA", "AWS::Route53::RecordSet", 35], ["VaultRecordAAAA", "AWS::Route53::RecordSet", 35]]
-    ]
+    ],
+    // sws-vault-<id>-edge, in us-east-1 only (vault-edge.yaml 0.6.1): the certificate if there is a domain, the WAF web ACL if
+    // the rate limit is on. The seconds are the twin's own; with DNS elsewhere the certificate waits (stackSchedule).
+    edge: [[["VaultCertificate", "AWS::CertificateManager::Certificate", 180], ["VaultWebAcl", "AWS::WAFv2::WebACL", 30]]]
   };
   function vaultIds(account, region, name) {
     // Each stack its own stream, seeded from its name, so two stacks do not share ids (R-025 (d)).
@@ -747,7 +781,10 @@
     var r = rng("vault.ids:" + account + "/" + region + "/" + name + "@" + journal.length, seed), pick = function (abc, n) { var o = ""; for (var i = 0; i < n; i++) o += abc[Math.floor(r() * abc.length)]; return o; };
     var lower = "abcdefghijklmnopqrstuvwxyz0123456789", upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     return { stack: pick("0123456789abcdef", 8) + "-" + pick("0123456789abcdef", 4) + "-11ef-" + pick("0123456789abcdef", 4) + "-" + pick("0123456789abcdef", 12),
-      url: pick(lower, 32), distribution: "E" + pick(upper, 13), cfDomain: "d" + pick(lower, 13) + ".cloudfront.net", secret: pick("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 6) };
+      url: pick(lower, 32), distribution: "E" + pick(upper, 13), cfDomain: "d" + pick(lower, 13) + ".cloudfront.net", secret: pick("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 6),
+      // Drawn after the others, so a Vault stack's earlier ids are as before.
+      cert: uuid(), acl: uuid(), valName: pick("0123456789abcdef", 32), valValue: pick("0123456789abcdef", 32) + "." + pick("abcdefghijklmnopqrstuvwxyz", 10) };
+    function uuid() { var h = "0123456789abcdef"; return pick(h, 8) + "-" + pick(h, 4) + "-4" + pick(h, 3) + "-" + pick("89ab", 1) + pick(h, 3) + "-" + pick(h, 12); }
   }
   function physicalOf(st, logical) {
     var id = st.params.VaultId, a = st.account, rg = st.region, x = st.ids;
@@ -757,10 +794,13 @@
       VaultBucketPolicy: "sws-vault-" + id + "-data-" + a + "-" + rg, VaultFunctionRole: "sws-vault-" + id + "-api", VaultFunction: "sws-vault-" + id + "-api",
       VaultFunctionUrl: "arn:aws:lambda:" + rg + ":" + a + ":function:sws-vault-" + id + "-api", VaultFunctionUrlPermission: "sws-vault-" + id + "-api-url",
       VaultFunctionInvokePermission: "sws-vault-" + id + "-api-invoke", VaultDistribution: x.distribution,
-      VaultRecordA: st.params.DomainName || "", VaultRecordAAAA: st.params.DomainName || "" }[logical] || "";
+      VaultRecordA: st.params.DomainName || "", VaultRecordAAAA: st.params.DomainName || "",
+      VaultCertificate: "arn:aws:acm:" + rg + ":" + a + ":certificate/" + x.cert, VaultWebAcl: "arn:aws:wafv2:" + rg + ":" + a + ":global/webacl/sws-vault-" + id + "-waf/" + x.acl }[logical] || "";
   }
   function stackOutputs(st) {
     var p = st.params, x = st.ids, id = p.VaultId, a = st.account, rg = st.region, kv = function (k, v) { return { OutputKey: k, OutputValue: v }; };
+    if (st.kind === "edge") return [].concat(p.DomainName ? [kv("CertificateArn", physicalOf(st, "VaultCertificate"))] : [],
+      p.EnableRateLimit === "true" ? [kv("WebAclArn", physicalOf(st, "VaultWebAcl"))] : []);
     if (st.kind === "access") return [kv("DeployRoleArn", "arn:aws:iam::" + a + ":role/sws-vault-" + id + "-deploy"), kv("BoundaryArn", "arn:aws:iam::" + a + ":policy/sws-vault-" + id + "-boundary")];
     var base = p.DomainName ? "https://" + p.DomainName : "https://" + x.cfDomain;
     var out = [kv("Endpoint", base), kv("HealthCheck", base + "/api/info/health"), kv("DeployCheck", "https://" + x.cfDomain + "/health"),
@@ -774,6 +814,8 @@
     var waves = VAULT_WAVES[st.kind].map(function (wv) {
       return wv.filter(function (r) {
         if (st.kind === "vault" && r[0] === "VaultBoundary") return st.mode === "one-stack";
+        if (r[0] === "VaultCertificate") return !!st.params.DomainName;
+        if (r[0] === "VaultWebAcl") return st.params.EnableRateLimit === "true";
         return !/^VaultRecordA/.test(r[0]) || (st.params.DomainName && st.params.HostedZoneId);
       });
     }).filter(function (wv) { return wv.length; });
@@ -787,12 +829,20 @@
     // ROLLBACK_COMPLETE with no outputs. After boto3.aws.a's note 13 (work/boto3.aws.a 6b96561). The twin's own
     // choices, where AWS does not document them: the wording "Resource creation cancelled", the failure reasons, and
     // what a failed or cancelled resource shows in the rollback (DELETE_COMPLETE, or DELETE_SKIPPED if Retain).
-    var fail = st.failure, touched = [];
+    var fail = st.failure, touched = [], waiting = false;
     for (var wi = 0; wi < waves.length; wi++) {
       var wv = waves[wi], end = at, failing = fail && wv.some(function (r) { return r[0] === fail.logical; });
       var fAt = failing ? at + fail.after * 1000 : Infinity;
       wv.forEach(function (r) {
         ev(at, r[0], r[1], "CREATE_IN_PROGRESS");
+        // DNS elsewhere: ACM waits for its validation record, which CloudFormation shows in the events (vault-edge.yaml); the
+        // twin cannot see the customer's DNS, so the certificate, and the stack, stay in progress. The wording is the twin's.
+        if (r[0] === "VaultCertificate" && !st.params.HostedZoneId) {
+          ev(at + 400, r[0], r[1], "CREATE_IN_PROGRESS", { physical: physicalOf(st, r[0]), reason: "Resource creation Initiated" });
+          ev(at + 20000, r[0], r[1], "CREATE_IN_PROGRESS", { physical: physicalOf(st, r[0]), reason: "Content of DNS Record is: {Name: _" + st.ids.valName + "." + st.params.DomainName +
+            ".,Type: CNAME,Value: _" + st.ids.valValue + ".acm-validations.aws.}" });
+          waiting = true; return;
+        }
         if (at + 400 < fAt) ev(at + 400, r[0], r[1], "CREATE_IN_PROGRESS", { physical: physicalOf(st, r[0]), reason: "Resource creation Initiated" });
         var doneAt = at + r[2] * 1000;
         if (r[0] === (fail || {}).logical && failing) touched.push([r, "failed"]);
@@ -816,6 +866,7 @@
         ev(t + 500, st.name, "AWS::CloudFormation::Stack", "ROLLBACK_COMPLETE", { physical: st.stackId });
         return out;
       }
+      if (waiting) return out;
       at = end + 1000;
     }
     ev(at, st.name, "AWS::CloudFormation::Stack", "CREATE_COMPLETE", { physical: st.stackId, outputs: stackOutputs(st) });
@@ -832,14 +883,18 @@
     var s = build(), A = form.get("Action"), acc = s.accounts[account] || { stacks: map() };
     // By name, a deleted stack is gone; by stack id it is still found (DELETE_COMPLETE), as AWS answers.
     var live = function (x) { return x.status !== "DELETE_COMPLETE"; };
-    var find = function (n) { var st = n && acc.stacks[region + "/" + n]; if (st && !live(st)) st = null; if (!st && n) Object.keys(acc.stacks).forEach(function (k) { if (acc.stacks[k].stackId === n && acc.stacks[k].region === region) st = acc.stacks[k]; }); return st || null; };
+    // Every stack the account has had: the current ones by region and name, and deleted ones whose name was used again.
+    var every = function () { var out = Object.keys(acc.stacks).map(function (k) { return acc.stacks[k]; }); if (acc.deleted) Object.keys(acc.deleted).forEach(function (k) { out.push(acc.deleted[k]); }); return out; };
+    var find = function (n) { var st = n && acc.stacks[region + "/" + n]; if (st && !live(st)) st = null; if (!st && n) every().forEach(function (x) { if (x.stackId === n && x.region === region) st = x; }); return st || null; };
     var NS = " xmlns=\"http://cloudformation.amazonaws.com/doc/2010-05-15/\"";
     if (A === "CreateStack") {
-      var name = form.get("StackName") || "", params = map(), m = /^sws-vault-([0-9a-f]{12})(-access)?$/.exec(name);
+      var name = form.get("StackName") || "", params = map(), m = /^sws-vault-([0-9a-f]{12})(-access|-edge)?$/.exec(name);
       formParams(form, "Parameters").forEach(function (kv) { params[kv[0]] = kv[1]; });
-      if (!m) return cfnErr("ValidationError", "The twin's customer account holds Vault stacks only: sws-vault-<12 hex digits> or sws-vault-<12 hex digits>-access.");
-      // Bounds (security.aws.a, R-025 (b)): the twin's region only, and at most CUSTOMER_STACKS stacks in the account.
-      if (region !== REGION) return cfnErr("ValidationError", "The twin's customer account is in " + REGION + " only.");
+      if (!m) return cfnErr("ValidationError", "The twin's customer account holds Vault stacks only: sws-vault-<12 hex digits>, or that with -access or -edge.");
+      // Bounds (security.aws.a, R-025 (b)): the twin's region only (us-east-1 for the -edge stack only, which must be
+      // there: vault-edge.yaml's rule OnlyInUsEast1), and at most CUSTOMER_STACKS stacks in the account.
+      if (m[2] === "-edge" && region !== "us-east-1") return cfnErr("ValidationError", "CloudFront takes certificates and web ACLs from us-east-1 only. Run this stack in us-east-1.");
+      if (m[2] !== "-edge" && region !== REGION) return cfnErr("ValidationError", "The twin's customer account is in " + REGION + " only (and us-east-1 for the -edge stack).");
       if (Object.keys(acc.stacks).filter(function (k) { return live(acc.stacks[k]); }).length >= CUSTOMER_STACKS && !find(name)) return cfnErr("LimitExceededException", "The twin's customer account holds at most " + CUSTOMER_STACKS + " stacks.");
       // vault.yaml's AllowedPattern, checked before anything is made, as CloudFormation does (R-025 (c)).
       if (params.ImageUri != null && (params.ImageUri.length > 512 || !IMAGE_PATTERN.test(params.ImageUri)))
@@ -849,8 +904,8 @@
       var existing = find(name);
       if (existing && existing.status !== "DELETE_COMPLETE") return cfnErr("AlreadyExistsException", "Stack [" + name + "] already exists");
       var caps = []; for (var c = 1; c <= 8; c++) { var cv = form.get("Capabilities.member." + c); if (cv) caps.push(cv); }
-      if (caps.indexOf("CAPABILITY_NAMED_IAM") < 0) return cfnErr("InsufficientCapabilitiesException", "Requires capabilities : [CAPABILITY_NAMED_IAM]");
-      var kind = m[2] ? "access" : "vault", roleArn = form.get("RoleARN") || null, mode = null, collides = false;
+      if (m[2] !== "-edge" && caps.indexOf("CAPABILITY_NAMED_IAM") < 0) return cfnErr("InsufficientCapabilitiesException", "Requires capabilities : [CAPABILITY_NAMED_IAM]");
+      var kind = m[2] === "-access" ? "access" : m[2] === "-edge" ? "edge" : "vault", roleArn = form.get("RoleARN") || null, mode = null, collides = false;
       if (kind === "vault") {
         mode = params.DeployMode || "one-stack";
         if (mode !== "one-stack" && mode !== "access-stack") return cfnErr("ValidationError", "Parameter 'DeployMode' must be one of AllowedValues");
@@ -861,6 +916,17 @@
         // One-stack mode makes its own boundary; an -access stack's boundary of the same name makes the create fail.
         collides = mode === "one-stack" && !!access && access.status === "CREATE_COMPLETE";
         params.DeployMode = mode;
+      }
+      if (kind === "edge") {
+        // vault-edge.yaml's parameter rules, then its rule SomethingToMake (0.6.1): no domain and no rate limit is refused
+        // with the rule's own AssertDescription.
+        params.EnableRateLimit = params.EnableRateLimit || "false"; params.RateLimit = params.RateLimit || "1000"; params.RateWindowSec = params.RateWindowSec || "300";
+        if (["false", "true"].indexOf(params.EnableRateLimit) < 0) return cfnErr("ValidationError", "Parameter 'EnableRateLimit' must be one of AllowedValues");
+        if (["60", "120", "300", "600"].indexOf(params.RateWindowSec) < 0) return cfnErr("ValidationError", "Parameter 'RateWindowSec' must be one of AllowedValues");
+        if (!/^[0-9]{1,10}$/.test(params.RateLimit) || +params.RateLimit < 10 || +params.RateLimit > 2000000000) return cfnErr("ValidationError", "Parameter 'RateLimit' must be a number from 10 to 2000000000 (the twin's wording)");
+        if (params.DomainName && (params.DomainName.length > 253 || !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(params.DomainName))) return cfnErr("ValidationError", "Parameter 'DomainName' must match pattern of vault-edge.yaml");
+        if (params.HostedZoneId && !/^Z[A-Z0-9]{1,31}$/.test(params.HostedZoneId)) return cfnErr("ValidationError", "Parameter 'HostedZoneId' must match pattern ^$|^Z[A-Z0-9]{1,31}$");
+        if (!params.DomainName && params.EnableRateLimit !== "true") return cfnErr("ValidationError", "Nothing to create. Give a DomainName (for a certificate) or set EnableRateLimit to true.");
       }
       var ids = vaultIds(account, region, name), stackId = "arn:aws:cloudformation:" + region + ":" + account + ":stack/" + name + "/" + ids.stack;
       var plain = {}; Object.keys(params).forEach(function (k) { plain[k] = params[k]; });
@@ -909,7 +975,12 @@
       var ok = xml("<DeleteStackResponse" + NS + "><ResponseMetadata><RequestId>twin</RequestId></ResponseMetadata></DeleteStackResponse>");
       // A stack already deleted (found by its id) deletes quietly too, and stays DELETE_COMPLETE (security.aws.a, 5dc4519).
       if (!sd || sd.status === "DELETE_IN_PROGRESS" || sd.status === "DELETE_COMPLETE") return ok;
-      if (/_IN_PROGRESS$/.test(sd.status)) return cfnErr("ValidationError", "Stack [" + sd.name + "] is in " + sd.status + " state and can not be deleted until it settles (the twin's rule).");
+      // The exception: an -edge stack whose certificate waits on DNS elsewhere has nothing more scheduled and would never
+      // settle, so it holds one of the account's slots for good unless it can go (security.aws.a's note on 1845b40). It
+      // can: the waiting certificate is deleted with the rest. AWS lets a stack being created be deleted too; the twin
+      // keeps its stricter rule for every other case.
+      var waitingEdge = sd.kind === "edge" && sd.status === "CREATE_IN_PROGRESS" && !s.pending.some(function (p) { return p.entry.target === sd.stackId; });
+      if (/_IN_PROGRESS$/.test(sd.status) && !waitingEdge) return cfnErr("ValidationError", "Stack [" + sd.name + "] is in " + sd.status + " state and can not be deleted until it settles (the twin's rule).");
       var t0 = nowIso(), at = Date.parse(t0) + 1000, sched = [], base = { account: account, region: region, name: sd.name };
       var ev = function (ms, logical, type, status, extra) { sched.push({ at: new Date(ms).toISOString(), op: "cloudformation.stackEvent", target: sd.stackId,
         data: Object.assign({ logical: logical, type: type, status: status }, base, extra || {}), actor: "aws:cloudformation", why: "clock.settle" }); };
@@ -918,7 +989,7 @@
         ev(at, sd.name, "AWS::CloudFormation::Stack", "DELETE_FAILED", { physical: sd.stackId, reason: "Role " + sd.roleArn + " is invalid or cannot be assumed" });
       } else {
         var made = sd.events.slice().reverse().map(function (x) { return x.logical; })
-          .filter(function (l, i, a) { return l !== sd.name && a.indexOf(l) === i && sd.resources[l] && sd.resources[l].status === "CREATE_COMPLETE"; });
+          .filter(function (l, i, a) { return l !== sd.name && a.indexOf(l) === i && sd.resources[l] && (sd.resources[l].status === "CREATE_COMPLETE" || (waitingEdge && sd.resources[l].status === "CREATE_IN_PROGRESS")); });
         var took = { "AWS::CloudFront::Distribution": 300, "AWS::Route53::RecordSet": 35, "AWS::IAM::Role": 5 };
         made.reverse().forEach(function (l) {
           var rs = sd.resources[l], keep = /^Retain/.test(DELETION[l] || "");
@@ -934,14 +1005,14 @@
       return ok;
     }
     if (A === "ListStacks") {
-      // Every stack in the region, newest first, filtered by StackStatusFilter.member.N if given (as AWS does).
-      var want = []; for (var f = 1; f <= 32; f++) { var fv = form.get("StackStatusFilter.member." + f); if (fv) want.push(fv); }
-      var rows = Object.keys(acc.stacks).map(function (k) { return acc.stacks[k]; }).filter(function (x) { return x.region === region && (!want.length || want.indexOf(x.status) >= 0); })
-        .sort(function (a, b) { return a.created < b.created ? 1 : a.created > b.created ? -1 : 0; });
-      return xml("<ListStacksResponse" + NS + "><ListStacksResult><StackSummaries>" + rows.map(function (x) {
+      // Every stack in the region, newest first, filtered and paged as in the platform account (listStacksPage).
+      var pg = listStacksPage(every().filter(function (x) { return x.region === region; })
+        .sort(function (a, b) { return a.created < b.created ? 1 : a.created > b.created ? -1 : 0; }), form, function (x) { return x.status; });
+      if (!pg) return cfnErr("ValidationError", "Invalid NextToken");
+      return xml("<ListStacksResponse" + NS + "><ListStacksResult><StackSummaries>" + pg.rows.map(function (x) {
         return "<member><StackId>" + esc(x.stackId) + "</StackId><StackName>" + esc(x.name) + "</StackName><CreationTime>" + x.created + "</CreationTime><StackStatus>" + x.status +
           "</StackStatus><DriftInformation><StackDriftStatus>NOT_CHECKED</StackDriftStatus></DriftInformation></member>";
-      }).join("") + "</StackSummaries></ListStacksResult></ListStacksResponse>");
+      }).join("") + "</StackSummaries>" + (pg.next ? "<NextToken>" + pg.next + "</NextToken>" : "") + "</ListStacksResult></ListStacksResponse>");
     }
     if (A === "ListStackResources") {
       var st3 = find(form.get("StackName"));
@@ -1419,6 +1490,64 @@
       return answer(url, init, host);
     });
   }
+  // ---- Route 53: three reads (cloudformation.aws.a's seed, docs/cloudformation/seed/route53.json; boto3.aws.a note 20) ----
+  // ListHostedZones, GetHostedZone and ListResourceRecordSets for the platform account; every other Route 53 call is a
+  // 501. Global: route53.amazonaws.com, rest-xml. CORS on the real endpoint is per the SDK v2 metadata and is to be
+  // confirmed with one real call (aws.c, with Dinis's approval); each answer says so in an x-twin-note header. The
+  // twin's own choices, where AWS's documentation does not say: maxitems 1 to 100 for zones and 1 to 300 for records,
+  // a record start that must name an existing record, the error wording, and the seed's record order. The www alias's
+  // AliasTarget.HostedZoneId is left out, as in the seed (CloudFront's fixed alias zone id needs a source).
+  var R53_NS = " xmlns=\"https://route53.amazonaws.com/doc/2013-04-01/\"", R53_NOTE = "CORS per SDK v2 metadata, confirm with one real call";
+  var R53_ZONES = [{ id: "Z0DEMOTWIN0001", name: "example.com.", comment: "demo zone (made by stack demo-dns)", ns: ["ns-0000.awsdns-00.org", "ns-0001.awsdns-01.co.uk"],
+    records: [
+      { name: "example.com.", type: "NS", ttl: 172800, values: ["ns-0000.awsdns-00.org.", "ns-0001.awsdns-01.co.uk."] },
+      { name: "example.com.", type: "SOA", ttl: 900, values: ["ns-0000.awsdns-00.org. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400"] },
+      { name: "www.example.com.", type: "A", alias: { dns: "d111111abcdef8.cloudfront.net.", health: false } },
+      // Made by no stack, and points at an S3 website bucket that is not in the account: a dangling name (the seed's finding).
+      { name: "old.example.com.", type: "CNAME", ttl: 300, values: ["old.example.com.s3-website.eu-west-2.amazonaws.com"] }
+    ] }];
+  function r53(body, status) { var r = xml("<?xml version=\"1.0\"?>" + body, status); r.headers.set("x-twin-note", R53_NOTE); return r; }
+  function r53Err(code, msg, status) { return r53("<ErrorResponse" + R53_NS + "><Error><Type>Sender</Type><Code>" + code + "</Code><Message>" + esc(msg) + "</Message></Error><RequestId>twin</RequestId></ErrorResponse>", status || 400); }
+  function r53Max(q, top) { var v = q.has("maxitems") ? q.get("maxitems") : String(top); return /^[0-9]{1,3}$/.test(v) && +v >= 1 && +v <= top ? +v : null; }
+  function r53Zone(z) {
+    return "<HostedZone><Id>/hostedzone/" + z.id + "</Id><Name>" + esc(z.name) + "</Name><CallerReference>twin-" + z.id + "</CallerReference><Config><Comment>" + esc(z.comment) +
+      "</Comment><PrivateZone>false</PrivateZone></Config><ResourceRecordSetCount>" + z.records.length + "</ResourceRecordSetCount></HostedZone>";
+  }
+  function r53Record(r) {
+    return "<ResourceRecordSet><Name>" + esc(r.name) + "</Name><Type>" + r.type + "</Type>" + (r.alias
+      ? "<AliasTarget><DNSName>" + esc(r.alias.dns) + "</DNSName><EvaluateTargetHealth>" + r.alias.health + "</EvaluateTargetHealth></AliasTarget>"
+      : "<TTL>" + r.ttl + "</TTL><ResourceRecords>" + r.values.map(function (v) { return "<ResourceRecord><Value>" + esc(v) + "</Value></ResourceRecord>"; }).join("") + "</ResourceRecords>") + "</ResourceRecordSet>";
+  }
+  function route53(url, init) {
+    var u = new URL(url), q = u.searchParams, m = /^\/2013-04-01\/hostedzone(?:\/([^\/]+)(\/rrset)?)?$/.exec(u.pathname);
+    if (!m || (init.method || "GET").toUpperCase() !== "GET")
+      return r53Err("NotImplemented", "The twin answers three Route 53 reads only: ListHostedZones, GetHostedZone and ListResourceRecordSets. Twin mode never calls real AWS.", 501);
+    if (m[1] === undefined) {
+      var zmax = r53Max(q, 100);
+      if (zmax === null) return r53Err("InvalidInput", "maxitems must be a whole number from 1 to 100 (the twin's bound).");
+      var zfrom = 0, mk = q.get("marker");
+      if (mk) { zfrom = R53_ZONES.map(function (z) { return z.id; }).indexOf(mk); if (zfrom < 0) return r53Err("InvalidInput", "The marker is not valid."); }
+      var zp = R53_ZONES.slice(zfrom, zfrom + zmax), zmore = zfrom + zmax < R53_ZONES.length;
+      return r53("<ListHostedZonesResponse" + R53_NS + "><HostedZones>" + zp.map(r53Zone).join("") + "</HostedZones><Marker>" + esc(mk || "") + "</Marker><IsTruncated>" + zmore + "</IsTruncated>" +
+        (zmore ? "<NextMarker>" + R53_ZONES[zfrom + zmax].id + "</NextMarker>" : "") + "<MaxItems>" + zmax + "</MaxItems></ListHostedZonesResponse>");
+    }
+    if (!/^Z[A-Z0-9]{1,32}$/.test(m[1])) return r53Err("InvalidInput", "The hosted zone id is not valid.");
+    var zone = R53_ZONES.filter(function (z) { return z.id === m[1]; })[0];
+    if (!zone) return r53Err("NoSuchHostedZone", "No hosted zone found with ID: " + m[1], 404);
+    if (!m[2]) return r53("<GetHostedZoneResponse" + R53_NS + ">" + r53Zone(zone) + "<DelegationSet><NameServers>" + zone.ns.map(function (n) { return "<NameServer>" + n + "</NameServer>"; }).join("") +
+      "</NameServers></DelegationSet></GetHostedZoneResponse>");
+    var rmax = r53Max(q, 300);
+    if (rmax === null) return r53Err("InvalidInput", "maxitems must be a whole number from 1 to 300 (the twin's bound).");
+    var rs = zone.records, rfrom = 0;
+    if (q.has("name")) {
+      rfrom = -1;
+      for (var i = 0; i < rs.length; i++) if (rs[i].name === q.get("name") && (!q.has("type") || rs[i].type === q.get("type")) && !q.has("identifier")) { rfrom = i; break; }
+      if (rfrom < 0) return r53Err("InvalidInput", "The start record is not in the zone (the twin's bound).");
+    } else if (q.has("type") || q.has("identifier")) return r53Err("InvalidInput", "type and identifier need a name.");
+    var rp = rs.slice(rfrom, rfrom + rmax), rnext = rs[rfrom + rmax];
+    return r53("<ListResourceRecordSetsResponse" + R53_NS + "><ResourceRecordSets>" + rp.map(r53Record).join("") + "</ResourceRecordSets><IsTruncated>" + !!rnext + "</IsTruncated>" +
+      (rnext ? "<NextRecordName>" + esc(rnext.name) + "</NextRecordName><NextRecordType>" + rnext.type + "</NextRecordType>" : "") + "<MaxItems>" + rmax + "</MaxItems></ListResourceRecordSetsResponse>");
+  }
   function answer(url, init, host) {
     var body = typeof init.body === "string" ? init.body : "";
     // The customer's account has only its CloudFormation stacks and, from them, its CloudFront distributions and functions
@@ -1439,6 +1568,7 @@
       else if (/^firehose\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = firehose((hdr(init, "x-amz-target") || "").split(".")[1], body, init);
       else if (/\.?s3\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = s3(url, init);
       else if (host === "cloudfront.amazonaws.com") p = cloudfront(url, init, customerOf(init) || ACCOUNT);
+      else if (host === "route53.amazonaws.com") p = route53(url, init);
       else p = xmlErr("NotImplemented", "The twin does not answer " + host + " yet. Twin mode never calls real AWS.", 501);
     } catch (e) { p = xmlErr("InternalFailure", e.message, 500); }
     return Promise.resolve(p).then(function (r) { return new Promise(function (res) { setTimeout(function () { res(r); }, 60 + lag() * 120); }); });
