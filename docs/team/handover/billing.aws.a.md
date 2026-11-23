@@ -43,6 +43,7 @@ Dinis asked (14:55 UTC) for Vault deploys into customers' AWS accounts and for e
 - Wait for step 1's resource list (vaults.aws.a: S3, Lambda, API, CloudFront, Route 53) and step 2's template (cloudformation.aws.a) before pricing; price from those, not from a guess at the design.
 - Gaps in the price book for this: API Gateway, EC2 (the second deploy path), and anything else step 1 names; add each from AWS's public price data with exact labels, or list it under not_priced_yet.
 - Mind the fixed monthly items in an hourly figure: route53.hosted_zone.first25 is $0.50 per zone per month and the Route 53 page says it is not prorated, so a two-hour ephemeral Vault still pays a whole month for a new zone. Show fixed and per-use costs apart, per region (eu-west-2, eu-west-1 first).
+- viz.aws.a storyboard 02 "watch a Vault deploy" (work/viz.aws.a 4ca25a3) wants an hourly "cost so far" during a deployment: give the script a per-hour series (fixed costs at the hour they are incurred, per-use costs accruing) that viz can read.
 - Output: a script beside forecast.mjs (for example docs/billing/vault-cost.mjs) with tests, giving cost per region per hour and per month, idle and under a stated traffic, as JSON for D5's decision page.
 
 ## Next steps
