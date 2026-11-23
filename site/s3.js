@@ -295,8 +295,9 @@
         newest.onclick = function () {
           var best = null;
           Array.prototype.forEach.call($("s3-list").querySelectorAll("tr.file"), function (tr) { if (!best || tr.dataset.when > best.dataset.when) best = tr; });
-          if (!best) return P.say(st, "No files listed in this folder" + (state.more ? " yet; Load more, or open a folder." : "; open a folder."), "ok");
-          best.querySelector("button").click();
+          if (best) return best.querySelector("button").click();
+          if (state.more) return P.say(st, "No files listed in this folder yet; Load more, or open a folder.", "ok");
+          newestBelow(b, region, state.prefix, newest);
         };
         box.appendChild(P.el("div", { class: "toolbar" }, [filter, search].concat(clear ? [clear] : []).concat([refresh, newest]).concat(sum ? [sum] : [])));
         var table = P.el("table", { class: "s3-table" });
@@ -342,7 +343,48 @@
   // A file named by a link opens with no click only when the listing gave its size and it is small enough to show
   // (or a zip, read by byte ranges). Otherwise the folder is shown and the file waits for a click, so a link alone
   // cannot make the page download a large object (R-016, security.aws.a).
+  // "Newest file" in a folder of folders (sherpa walk 7): follow the last folder by name at each level (for date-named
+  // log folders, .../2026/11/23/18/, that is the newest) until a folder holds files, then open its most recently
+  // changed file, as a click on it would. Bounded: at most NEWEST_DEPTH levels and NEWEST_PAGES listing pages each,
+  // through the listing cache. The file opens once its folder is listed, through the address.
+  var NEWEST_DEPTH = 8, NEWEST_PAGES = 10, clicked = null;
+  function newestBelow(b, region, prefix, btn) {
+    var st = $("s3-status"), my = state.view;
+    btn.disabled = true; P.say(st, "Looking for the newest file under " + b + "/" + prefix + "...");
+    function level(pfx, depth) {
+      var files = [], folders = [];
+      function page(token, n) {
+        return fetchList(b, region, pfx, token, false).then(function (got) {
+          var d = got.d;
+          Array.prototype.forEach.call(d.getElementsByTagName("CommonPrefixes"), function (cp) { folders.push(cp.getElementsByTagName("Prefix")[0].textContent); });
+          Array.prototype.forEach.call(d.getElementsByTagName("Contents"), function (o) {
+            var k = o.getElementsByTagName("Key")[0].textContent; if (k === pfx) return;
+            files.push({ key: k, size: +o.getElementsByTagName("Size")[0].textContent, when: (o.getElementsByTagName("LastModified")[0] || {}).textContent || "" });
+          });
+          var nt = d.getElementsByTagName("NextContinuationToken")[0];
+          if (nt && n + 1 < NEWEST_PAGES && my === state.view) return page(nt.textContent, n + 1);
+        });
+      }
+      return page(null, 0).then(function () {
+        if (my !== state.view) return null;
+        if (files.length) return files.reduce(function (a, f) { return f.when > a.when ? f : a; });
+        if (!folders.length || depth + 1 >= NEWEST_DEPTH) return null;
+        folders.sort();
+        return level(folders[folders.length - 1], depth + 1);
+      });
+    }
+    level(prefix, 0).then(function (f) {
+      btn.disabled = false;
+      if (my !== state.view) return;
+      if (!f) return P.say(st, "No file found under " + b + "/" + prefix + " (looked " + NEWEST_DEPTH + " folders deep, following the last folder by name).", "ok");
+      // A click: the file opens with its listed size once its folder is listed, whatever the link gates say.
+      clicked = { key: f.key, size: f.size };
+      state.prefix = f.key.slice(0, f.key.lastIndexOf("/") + 1); arrive = true; listObjects(null, f.key);
+    }).catch(function (e) { btn.disabled = false; if (my === state.view) fail(st, e, function () { newestBelow(b, region, prefix, btn); }, region); });
+  }
   function linked(key, box, arriving) {
+    if (clicked && clicked.key === key) { var c = clicked; clicked = null; openFile(key, c.size); if (arriving !== false) land($("s3-file").firstChild); return; }
+    clicked = null;
     var size = state.sizes[key], name = key.split("/").pop(), zip = window.Zip && Zip.isZip(key) && size > 22;
     var why = !(size >= 0) ? name + " is not in the part of this folder listed so far; find it in the list (Load more) and click it to open it."
       : !zip && size > LIMITS.show ? name + " is " + human(size) + ", more than a link opens by itself; click it in the list to open it." : "";
@@ -498,8 +540,14 @@
     var m = /^arn:aws:s3:::([^/]+)(?:\/(.*))?$/.exec(String(n && n.id || ""));
     return m && (n.type === "bucket" || n.type === "object" || n.type === "prefix") ? { bucket: m[1], key: m[2] || "" } : null;
   }
-  function nameEl(n) {
-    var t = s3Target(n), label = nodeName(n);
+  // mark: "?" or "~" for a claimed or curated line, put right after the name as well as at the line's start, so a
+  // clickable claimed name is never read as fact (security.aws.a on 268cfc7).
+  function nameEl(n, mark) {
+    var t = s3Target(n), label = nodeName(n), el = nameOnly(n, t, label);
+    if (!mark) return el;
+    return P.el("span", { class: "c-named" }, [el, P.el("span", { class: "c-mark", text: mark, title: MARK_SAYS[mark], "aria-label": MARK_SAYS[mark] })]);
+  }
+  function nameOnly(n, t, label) {
     if (!t) return P.el("span", { class: "c-name", text: label });
     var b = P.el("button", { type: "button", class: "linkish c-name", text: label, title: t.bucket + "/" + t.key });
     b.onclick = function () { location.hash = route(t.bucket, t.key); };
@@ -518,8 +566,8 @@
       li.appendChild(document.createTextNode((l.via ? "A file here " : "") + l.words + " "));
       if (l.nodes.length > 3) {
         li.appendChild(document.createTextNode(l.nodes.length + " " + l.otype + "s: "));
-        li.appendChild(nameEl(l.nodes[0])); li.appendChild(document.createTextNode(" ... ")); li.appendChild(nameEl(l.nodes[l.nodes.length - 1]));
-      } else { li.appendChild(nameEl(l.nodes[0])); li.appendChild(document.createTextNode(" (" + l.otype + ")")); }
+        li.appendChild(nameEl(l.nodes[0], l.mark)); li.appendChild(document.createTextNode(" ... ")); li.appendChild(nameEl(l.nodes[l.nodes.length - 1], l.mark));
+      } else { li.appendChild(nameEl(l.nodes[0], l.mark)); li.appendChild(document.createTextNode(" (" + l.otype + ")")); }
       li.appendChild(P.el("span", { class: "small c-how", text: "  [" + l.how + "]" }));
       ul.appendChild(li);
     });
