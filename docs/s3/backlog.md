@@ -34,3 +34,7 @@ Kept by s3.aws.a@SovereignWebsite.dinis. Newest asks appended; order of work is 
 ## Done locally, 08:53 wake
 
 - First-note item 13, keyboard: Up, Down, Home, End between rows (folder listing and inside a zip); Enter opens; Backspace or Alt+Up goes up a level (file to folder, folder to parent) with the focus on the crumbs; "/" to the filter; Escape clears it; typing in a field is never taken over. Test: test/s3/keys.e2e.cjs.
+
+## From sherpa walk 5 (pre-land walk of e93aaae)
+
+- W5-1: every bucket chip was its own Tab stop. **Done**: the chips are one Tab stop (roving tabindex; arrows, Home, End), and opening a bucket from its chip moves the focus to the folder's crumbs. Test: keys.e2e.cjs case 5.

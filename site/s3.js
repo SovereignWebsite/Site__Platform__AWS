@@ -71,7 +71,13 @@
     if (!state.acct) state.acct = P.accounts().filter(function (a) { return a.id === $("s3-account").value; })[0] || P.accounts()[0] || null;
     return state.acct;
   }
-  function press(name) { Array.prototype.forEach.call($("s3-buckets").querySelectorAll("button"), function (x) { x.setAttribute("aria-pressed", x.textContent === name ? "true" : "false"); }); }
+  // The bucket chips are one Tab stop (roving tabindex, as the tabs are): the pressed chip, or the first; the arrow
+  // keys move between chips (sherpa walk 5: one Tab per bucket before, hundreds on a real account).
+  function press(name) {
+    var all = $("s3-buckets").querySelectorAll("button"), on = null;
+    Array.prototype.forEach.call(all, function (x) { var p = x.textContent === name; x.setAttribute("aria-pressed", p ? "true" : "false"); if (p) on = x; });
+    Array.prototype.forEach.call(all, function (x, i) { x.tabIndex = x === on || (!on && i === 0) ? 0 : -1; });
+  }
   function apply(r) {
     if (!r) return;
     var st = $("s3-status");
@@ -121,9 +127,10 @@
       names.sort();
       names.forEach(function (n) {
         var b = P.el("button", { type: "button", text: n, "aria-pressed": "false" });
-        b.onclick = function () { press(n); openBucket(n); };
+        b.onclick = function () { press(n); openBucket(n, null, true); };
         out.appendChild(P.el("li", {}, [b]));
       });
+      press(state.bucket || "");
       P.say(st, names.length + " bucket" + (names.length === 1 ? "" : "s") + ".", "ok");
       if (then) then(names);
     }).catch(function (e) { if (my === state.view) P.say(st, e.message + (/AccessDenied|not authorized/.test(e.message) ? " (The account needs template v2: see step 3.)" : ""), "bad"); });
@@ -131,9 +138,10 @@
 
   // ---- a bucket: check its CORS rule, offer the plan, then list ----
   // at: { prefix, key } when opened from an address; otherwise the bucket's top.
-  function openBucket(name, at) {
+  // focus: opened from its chip, so the focus moves on to the folder's crumbs once listed.
+  function openBucket(name, at, focus) {
     state.bucket = name; state.prefix = ""; state.key = ""; state.bucketRegion = null;
-    if (!at) { arrive = false; go(name, ""); }
+    if (!at) { arrive = !!focus; go(name, ""); }
     var my = newView(true), st = $("s3-status"), box = $("s3-objects"); box.textContent = ""; $("s3-file").textContent = "";
     P.say(st, "Reading " + name + "'s settings...");
     read().then(function (c) { return cc(c, "GetResource", { TypeName: "AWS::S3::Bucket", Identifier: name }); }).then(function (j) {
@@ -725,6 +733,12 @@
       t.value = ""; t.dispatchEvent(new Event("input")); ev.preventDefault(); return;
     }
     if (typing(t)) return;
+    var chips = t.closest && t.closest("#s3-buckets");
+    if (chips && /^(ArrowRight|ArrowLeft|ArrowDown|ArrowUp|Home|End)$/.test(k) && !ev.altKey) {
+      var bs = Array.prototype.slice.call(chips.querySelectorAll("button")), at = bs.indexOf(t);
+      var to = k === "Home" ? 0 : k === "End" ? bs.length - 1 : (at + (/Right|Down/.test(k) ? 1 : -1) + bs.length) % bs.length;
+      bs.forEach(function (x, i) { x.tabIndex = i === to ? 0 : -1; }); bs[to].focus(); ev.preventDefault(); return;
+    }
     var table = t.closest && t.closest(".s3-table");
     if (table && !ev.altKey && /^(ArrowDown|ArrowUp|Home|End)$/.test(k)) {
       var rows = Array.prototype.filter.call(table.querySelectorAll("tbody tr"), function (tr) { return !tr.hidden; })
