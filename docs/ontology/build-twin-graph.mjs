@@ -82,14 +82,14 @@ function edge(from, rel, to, evidence, source) {
   return k;
 }
 const ids = {
-  account: "twin:account/" + ACCOUNT,
-  region: (r) => "twin:region/" + r,
+  account: "urn:sws:account:" + ACCOUNT,
+  region: (r) => "urn:sws:region:" + r,
   bucket: (b) => "arn:aws:s3:::" + b,
   object: (b, k) => "arn:aws:s3:::" + b + "/" + k,
   prefix: (b, p) => "arn:aws:s3:::" + b + "/" + p + "*",
   role: (n) => "arn:aws:iam::" + ACCOUNT + ":role/" + n,
-  vault: (v) => "twin:vault/" + v,
-  site: "twin:site/demo",
+  vault: (v) => "urn:sws:vault:" + v,
+  site: "urn:sws:site:demo",
 };
 node(ids.account, "account", "A2", ACCOUNT, { note: "the example account AWS uses in its own documentation; synthetic" });
 function region(r, evidence, source) { node(ids.region(r), "region", "A2", r); edge(ids.region(r), "in", ids.account, evidence, source); return ids.region(r); }
@@ -154,7 +154,7 @@ for (const v of vaults) {
 }
 
 // CloudFront logs: the key names the distribution; the lines name the paths and visitors
-const DIST = (name) => "twin:cloudfront/distribution/" + name;
+const DIST = (name) => "urn:sws:cloudfront-distribution:" + name;
 const vaultPath = /^\/vault\/([^/]+)\/files/;
 const visitors = new Set();
 const perVault = {}; // vault -> requests for its paths
@@ -192,7 +192,7 @@ for (const [v, n] of Object.entries(perVault)) if (nodes.has(ids.vault(v))) Obje
 // of known bad addresses. Normal visitors stay a count on the bucket, not a node each.
 for (const [ip, a] of Object.entries(byIp).sort()) {
   if (a.requests < 10 || a.refused / a.requests < 0.8) continue;
-  const aid = "twin:actor/ip/" + ip;
+  const aid = "urn:sws:actor-ip:" + ip;
   node(aid, "actor", "A4", ip + " (refused " + a.refused + " of " + a.requests + ")", {
     ocsf_class: "HTTP Activity", src_ip: ip, requests: a.requests, refused: a.refused, first: a.first, last: a.last,
     user_agents: [...a.agents].sort(), distinct_paths: a.paths.size, rule: "at least 10 requests, at least 80% refused (4xx)" });
@@ -269,7 +269,7 @@ const CFN = "https://cloudformation.eu-west-2.amazonaws.com/";
 const stacks = tag(text((await call(CFN, { method: "POST", body: form({ Action: "DescribeStacks" }) })).bytes), "member").map((m) => ({ name: tag(m, "StackName")[0], status: tag(m, "StackStatus")[0] }));
 const tmpl = unesc(tag(text((await call(CFN, { method: "POST", body: form({ Action: "GetTemplate" }) })).bytes), "TemplateBody")[0] || "");
 const STACK = (n) => "arn:aws:cloudformation:eu-west-2:" + ACCOUNT + ":stack/" + n;
-const GOOGLE = "twin:idp/accounts.google.com";
+const GOOGLE = "urn:sws:idp:accounts.google.com";
 for (const s of stacks) {
   node(STACK(s.name), "stack", "A2", s.name, { cfn_type: "AWS::CloudFormation::Stack", status: s.status, note: "a real stack ARN ends in a stack id; the twin has none" });
   edge(STACK(s.name), "in", region("eu-west-2", "api", "CloudFormation DescribeStacks (endpoint region)"), "api", "CloudFormation DescribeStacks (endpoint region)");
@@ -293,7 +293,7 @@ for (const s of stacks) {
 }
 
 // ---- CloudTrail: the files hold records; records name who acted and on what ----
-const TRAIL = (n) => "twin:cloudtrail/trail/" + n;
+const TRAIL = (n) => "urn:sws:cloudtrail-trail:" + n;
 const tm = /^aws-cloudtrail-logs-\d{12}-(.+)$/.exec(B.trail);
 if (tm) {
   node(TRAIL(tm[1]), "trail", "A2", tm[1], { cfn_type: "AWS::CloudTrail::Trail", inferred: true, note: "no CloudTrail API in the twin; named by its bucket" });
@@ -305,7 +305,7 @@ for (const o of objectsOf[B.trail]) {
   const rr = /\/CloudTrail\/([a-z0-9-]+)\//.exec(o.key);
   if (rr) edge(ids.object(B.trail, o.key), "in", region(rr[1], "content", "CloudTrail key path"), "content", "CloudTrail key path (AWSLogs/<account>/CloudTrail/<region>/)");
   for (const r of JSON.parse(text(gunzipSync(await get(B.trail, o.key)))).Records) {
-    const eid = "twin:event/cloudtrail/" + r.eventID;
+    const eid = "urn:sws:cloudtrail-event:" + r.eventID;
     const target = r.requestParameters?.key ? r.requestParameters.key : r.requestParameters?.roleName || "";
     node(eid, "event", "A1", r.eventSource.split(".")[0] + " " + r.eventName + (target ? " " + target : ""), { ocsf_class: "API Activity", time: r.eventTime, src_ip: r.sourceIPAddress, read_only: r.readOnly });
     edge(ids.object(B.trail, o.key), "records", eid, "content", "CloudTrail Records");
@@ -349,7 +349,7 @@ for (const rn of [...roleNames].sort()) {
         // repo:<owner>@<id>/<repo>@<id>:environment:<env>  (GitHub's immutable-id form)
         const m = /^repo:([^@/]+)(?:@\d+)?\/([^@:]+)(?:@\d+)?:(.+)$/.exec(sub);
         if (!m) continue;
-        const pid = "twin:github/" + m[1] + "/" + m[2] + ":" + m[3];
+        const pid = "urn:sws:github-subject:" + m[1] + "/" + m[2] + ":" + m[3];
         node(pid, "external_principal", "A4", m[2] + " (" + m[3].replace(":", " ") + ")", { subject: sub });
         edge(rid, "allows_subject", pid, "api", "IAM GetRole (trust policy condition " + GH + ":sub)");
       }
@@ -358,7 +358,7 @@ for (const rn of [...roleNames].sort()) {
 }
 
 // ---- curated: what no file says on its own, asserted by the ontologist and marked so ----
-const VRF = "twin:function/visitor-reads-vault-files";
+const VRF = "urn:sws:business-function:visitor-reads-vault-files";
 node(VRF, "business_function", "A5", "A visitor reads a vault's files");
 edge(VRF, "part_of", ids.site, "curated", "ontology rule: the demo site serves the vaults' files");
 for (const n of [...nodes.values()].filter((n) => n.type === "vault")) edge(VRF, "refers_to", n.id, "curated", "ontology rule: the function is about each vault");
@@ -387,7 +387,7 @@ function validate(g) {
   const idRe = new RegExp(S.node.properties.id.pattern), seen = new Set();
   for (const n of g.nodes) {
     for (const k of S.node.required) if (!(k in n)) errs.push("node " + n.id + ": missing " + k);
-    if (!idRe.test(n.id)) errs.push("node " + n.id + ": id is neither an ARN nor twin:");
+    if (!idRe.test(n.id)) errs.push("node " + n.id + ": id is neither an ARN nor urn:sws:");
     if (seen.has(n.id)) errs.push("node " + n.id + ": duplicate id"); seen.add(n.id);
     if (!S.node_type.enum.includes(n.type)) errs.push("node " + n.id + ": unknown type " + n.type);
     if (!S.altitude.enum.includes(n.altitude)) errs.push("node " + n.id + ": unknown altitude " + n.altitude);

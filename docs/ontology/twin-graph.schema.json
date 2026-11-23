@@ -41,7 +41,7 @@
    "type": "object",
    "required": ["id", "type", "label", "altitude"],
    "properties": {
-    "id": { "type": "string", "description": "The ARN where AWS defines one, otherwise a twin: URI.", "pattern": "^(arn:aws:|twin:)" },
+    "id": { "type": "string", "description": "The ARN where AWS defines one, otherwise a stable derived URN, urn:sws:<kind>:<name>, the same for the twin and a real account.", "pattern": "^(arn:aws:|urn:sws:[a-z0-9-]+:)" },
     "type": { "$ref": "#/$defs/node_type" },
     "label": { "type": "string", "minLength": 1 },
     "altitude": { "$ref": "#/$defs/altitude" },

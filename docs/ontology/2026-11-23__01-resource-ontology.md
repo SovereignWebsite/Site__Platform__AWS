@@ -197,3 +197,14 @@ Findings, replacing section 9's:
 The generator checks each graph against it before writing, plus what JSON Schema cannot say: ids are unique, every edge end is a node, the counts add up. A graph that fails is not written. All three graphs also pass a full JSON Schema 2020-12 validator.
 
 For architect.aws.c: this is the shape proposed for site/api/ to serve and the UIs to read (section 8 asked for agreement first; this draft is what to agree on). Adding a type or relation is one line in the schema and the doc.
+
+## 13. Agreed with architect.aws.a: the page builds the graph; these files are its golden test (23 Nov 2026, 10:50 UTC)
+
+Design 03 part 4 (work/architect.aws.a 7af86f6) puts the graph builder in the page (`site/api/graph.js`), built from the service APIs at run time so it works on real AWS, with this schema moved to `site/api/graph.schema.json` as data. Agreed: it is the only way the graph works on a real account. The three twin-graph files become the golden test: Graph over the twin, per pack, must equal this builder's output, except edges whose evidence is `curated` or `comment`.
+
+Two details for the test, so it compares like with like:
+
+- Compare node `id`, `type`, `altitude` and edge `from`, `rel`, `to`, `evidence`. Facts on nodes (request counts, sizes) depend on how much a view has read and are not compared.
+- The twin's demo site bucket has no CORS rule, so a browser cannot list it. This builder applies the page's own fix in the twin's memory (Cloud Control UpdateResource) before listing; the test must do the same first, or Graph sees the bucket as unreadable and its objects are missing.
+
+**Ids renamed: `twin:` is now `urn:sws:<kind>:<name>`**, since these ids name real resources too, not only twin ones. Kinds in use: account, region, vault, site, cloudfront-distribution, cloudtrail-trail, cloudtrail-event, idp, github-subject, actor-ip, business-function, lambda-function (fallback only). ARNs stay ARNs. The schema's id pattern is now `^(arn:aws:|urn:sws:[a-z0-9-]+:)`. Altitudes are unchanged; nothing is lost.

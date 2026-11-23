@@ -21,7 +21,7 @@
  },
  "nodes": [
   {
-   "id": "twin:account/111122223333",
+   "id": "urn:sws:account:111122223333",
    "type": "account",
    "label": "111122223333",
    "altitude": "A2",
@@ -75,13 +75,13 @@
    "browser_readable": true
   },
   {
-   "id": "twin:function/visitor-reads-vault-files",
+   "id": "urn:sws:business-function:visitor-reads-vault-files",
    "type": "business_function",
    "label": "A visitor reads a vault's files",
    "altitude": "A5"
   },
   {
-   "id": "twin:cloudfront/distribution/demo-distribution-1",
+   "id": "urn:sws:cloudfront-distribution:demo-distribution-1",
    "type": "distribution",
    "label": "demo-distribution-1",
    "altitude": "A2",
@@ -90,7 +90,7 @@
    "note": "no CloudFront API in the twin; named by its log files"
   },
   {
-   "id": "twin:event/cloudtrail/00000000-0000-4000-8000-000000000001",
+   "id": "urn:sws:cloudtrail-event:00000000-0000-4000-8000-000000000001",
    "type": "event",
    "label": "s3 GetObject data/vaults.json",
    "altitude": "A1",
@@ -100,7 +100,7 @@
    "read_only": true
   },
   {
-   "id": "twin:event/cloudtrail/00000000-0000-4000-8000-000000000002",
+   "id": "urn:sws:cloudtrail-event:00000000-0000-4000-8000-000000000002",
    "type": "event",
    "label": "iam UpdateAssumeRolePolicy sovereignwebsite-factory-dns",
    "altitude": "A1",
@@ -110,14 +110,14 @@
    "read_only": false
   },
   {
-   "id": "twin:github/SovereignWebsite/SovereignWebsite__Factory:environment:apply",
+   "id": "urn:sws:github-subject:SovereignWebsite/SovereignWebsite__Factory:environment:apply",
    "type": "external_principal",
    "label": "SovereignWebsite__Factory (environment apply)",
    "altitude": "A4",
    "subject": "repo:SovereignWebsite@358722364/SovereignWebsite__Factory@1464324035:environment:apply"
   },
   {
-   "id": "twin:github/SovereignWebsite/SovereignWebsite__IaC:environment:apply",
+   "id": "urn:sws:github-subject:SovereignWebsite/SovereignWebsite__IaC:environment:apply",
    "type": "external_principal",
    "label": "SovereignWebsite__IaC (environment apply)",
    "altitude": "A4",
@@ -176,7 +176,7 @@
    "cfn_type": "AWS::IAM::OIDCProvider"
   },
   {
-   "id": "twin:idp/accounts.google.com",
+   "id": "urn:sws:idp:accounts.google.com",
    "type": "identity_provider",
    "label": "accounts.google.com",
    "altitude": "A4",
@@ -380,19 +380,19 @@
    "bytes": 14532
   },
   {
-   "id": "twin:region/eu-west-1",
+   "id": "urn:sws:region:eu-west-1",
    "type": "region",
    "label": "eu-west-1",
    "altitude": "A2"
   },
   {
-   "id": "twin:region/eu-west-2",
+   "id": "urn:sws:region:eu-west-2",
    "type": "region",
    "label": "eu-west-2",
    "altitude": "A2"
   },
   {
-   "id": "twin:region/us-east-1",
+   "id": "urn:sws:region:us-east-1",
    "type": "region",
    "label": "us-east-1",
    "altitude": "A2"
@@ -457,7 +457,7 @@
    "logical_id": "PlatformRead"
   },
   {
-   "id": "twin:site/demo",
+   "id": "urn:sws:site:demo",
    "type": "site",
    "label": "Demo site",
    "altitude": "A3",
@@ -485,7 +485,7 @@
    "buffer_seconds": 900
   },
   {
-   "id": "twin:cloudtrail/trail/demo",
+   "id": "urn:sws:cloudtrail-trail:demo",
    "type": "trail",
    "label": "demo",
    "altitude": "A2",
@@ -494,7 +494,7 @@
    "note": "no CloudTrail API in the twin; named by its bucket"
   },
   {
-   "id": "twin:vault/vault-demo-001",
+   "id": "urn:sws:vault:vault-demo-001",
    "type": "vault",
    "label": "vault-demo-001",
    "altitude": "A5",
@@ -503,7 +503,7 @@
    "share_of_requests": 0.142
   },
   {
-   "id": "twin:vault/vault-demo-002",
+   "id": "urn:sws:vault:vault-demo-002",
    "type": "vault",
    "label": "vault-demo-002",
    "altitude": "A5",
@@ -516,21 +516,21 @@
   {
    "from": "arn:aws:cloudformation:eu-west-2:111122223333:stack/sws-aws-platform",
    "rel": "in",
-   "to": "twin:region/eu-west-2",
+   "to": "urn:sws:region:eu-west-2",
    "evidence": "api",
    "source": "CloudFormation DescribeStacks (endpoint region)"
   },
   {
    "from": "arn:aws:firehose:eu-west-2:111122223333:deliverystream/demo-cloudfront-logs",
    "rel": "in",
-   "to": "twin:region/eu-west-2",
+   "to": "urn:sws:region:eu-west-2",
    "evidence": "api",
    "source": "Firehose DescribeDeliveryStream (ARN)"
   },
   {
    "from": "arn:aws:firehose:eu-west-2:111122223333:deliverystream/demo-cloudfront-logs",
    "rel": "part_of",
-   "to": "twin:site/demo",
+   "to": "urn:sws:site:demo",
    "evidence": "curated",
    "source": "ontology rule: the demo site's serving and logging path"
   },
@@ -558,21 +558,21 @@
   {
    "from": "arn:aws:iam::111122223333:role/sovereignwebsite-factory-dns",
    "rel": "allows_subject",
-   "to": "twin:github/SovereignWebsite/SovereignWebsite__Factory:environment:apply",
+   "to": "urn:sws:github-subject:SovereignWebsite/SovereignWebsite__Factory:environment:apply",
    "evidence": "api",
    "source": "IAM GetRole (trust policy condition token.actions.githubusercontent.com:sub)"
   },
   {
    "from": "arn:aws:iam::111122223333:role/sovereignwebsite-factory-dns",
    "rel": "allows_subject",
-   "to": "twin:github/SovereignWebsite/SovereignWebsite__IaC:environment:apply",
+   "to": "urn:sws:github-subject:SovereignWebsite/SovereignWebsite__IaC:environment:apply",
    "evidence": "api",
    "source": "IAM GetRole (trust policy condition token.actions.githubusercontent.com:sub)"
   },
   {
    "from": "arn:aws:iam::111122223333:role/sovereignwebsite-factory-dns",
    "rel": "in",
-   "to": "twin:account/111122223333",
+   "to": "urn:sws:account:111122223333",
    "evidence": "api",
    "source": "IAM GetRole"
   },
@@ -586,7 +586,7 @@
   {
    "from": "arn:aws:iam::111122223333:role/sws-aws-platform-change",
    "rel": "in",
-   "to": "twin:account/111122223333",
+   "to": "urn:sws:account:111122223333",
    "evidence": "api",
    "source": "IAM GetRole"
   },
@@ -600,7 +600,7 @@
   {
    "from": "arn:aws:iam::111122223333:role/sws-aws-platform-change",
    "rel": "trusts",
-   "to": "twin:idp/accounts.google.com",
+   "to": "urn:sws:idp:accounts.google.com",
    "evidence": "api",
    "source": "IAM GetRole (trust policy Principal Federated accounts.google.com)"
   },
@@ -621,7 +621,7 @@
   {
    "from": "arn:aws:iam::111122223333:role/sws-aws-platform-read",
    "rel": "in",
-   "to": "twin:account/111122223333",
+   "to": "urn:sws:account:111122223333",
    "evidence": "api",
    "source": "IAM GetRole"
   },
@@ -635,14 +635,14 @@
   {
    "from": "arn:aws:iam::111122223333:role/sws-aws-platform-read",
    "rel": "trusts",
-   "to": "twin:idp/accounts.google.com",
+   "to": "urn:sws:idp:accounts.google.com",
    "evidence": "api",
    "source": "IAM GetRole (trust policy Principal Federated accounts.google.com)"
   },
   {
    "from": "arn:aws:lambda:eu-west-2:111122223333:function:demo-handler",
    "rel": "in",
-   "to": "twin:region/eu-west-2",
+   "to": "urn:sws:region:eu-west-2",
    "evidence": "api",
    "source": "Lambda ListFunctions (FunctionArn)"
   },
@@ -656,7 +656,7 @@
   {
    "from": "arn:aws:lambda:eu-west-2:111122223333:function:demo-log-enricher",
    "rel": "in",
-   "to": "twin:region/eu-west-2",
+   "to": "urn:sws:region:eu-west-2",
    "evidence": "api",
    "source": "Lambda ListFunctions (FunctionArn)"
   },
@@ -670,7 +670,7 @@
   {
    "from": "arn:aws:lambda:eu-west-2:111122223333:function:demo-nightly-report",
    "rel": "in",
-   "to": "twin:region/eu-west-2",
+   "to": "urn:sws:region:eu-west-2",
    "evidence": "api",
    "source": "Lambda ListFunctions (FunctionArn)"
   },
@@ -684,189 +684,189 @@
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/09/demo-distribution-1-2026-11-20-09-00-00.gz",
    "rel": "records",
-   "to": "twin:cloudfront/distribution/demo-distribution-1",
+   "to": "urn:sws:cloudfront-distribution:demo-distribution-1",
    "evidence": "naming",
    "source": "log object key names demo-distribution-1"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/09/demo-distribution-1-2026-11-20-09-00-00.gz",
    "rel": "refers_to",
-   "to": "twin:vault/vault-demo-001",
+   "to": "urn:sws:vault:vault-demo-001",
    "evidence": "content",
    "source": "log lines (cs_uri_stem /vault/vault-demo-001/files)"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/09/demo-distribution-1-2026-11-20-09-00-00.gz",
    "rel": "refers_to",
-   "to": "twin:vault/vault-demo-002",
+   "to": "urn:sws:vault:vault-demo-002",
    "evidence": "content",
    "source": "log lines (cs_uri_stem /vault/vault-demo-002/files)"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/10/demo-distribution-1-2026-11-20-10-00-00.gz",
    "rel": "records",
-   "to": "twin:cloudfront/distribution/demo-distribution-1",
+   "to": "urn:sws:cloudfront-distribution:demo-distribution-1",
    "evidence": "naming",
    "source": "log object key names demo-distribution-1"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/10/demo-distribution-1-2026-11-20-10-00-00.gz",
    "rel": "refers_to",
-   "to": "twin:vault/vault-demo-001",
+   "to": "urn:sws:vault:vault-demo-001",
    "evidence": "content",
    "source": "log lines (cs_uri_stem /vault/vault-demo-001/files)"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/10/demo-distribution-1-2026-11-20-10-00-00.gz",
    "rel": "refers_to",
-   "to": "twin:vault/vault-demo-002",
+   "to": "urn:sws:vault:vault-demo-002",
    "evidence": "content",
    "source": "log lines (cs_uri_stem /vault/vault-demo-002/files)"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/11/demo-distribution-1-2026-11-20-11-00-00.gz",
    "rel": "records",
-   "to": "twin:cloudfront/distribution/demo-distribution-1",
+   "to": "urn:sws:cloudfront-distribution:demo-distribution-1",
    "evidence": "naming",
    "source": "log object key names demo-distribution-1"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/11/demo-distribution-1-2026-11-20-11-00-00.gz",
    "rel": "refers_to",
-   "to": "twin:vault/vault-demo-001",
+   "to": "urn:sws:vault:vault-demo-001",
    "evidence": "content",
    "source": "log lines (cs_uri_stem /vault/vault-demo-001/files)"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/11/demo-distribution-1-2026-11-20-11-00-00.gz",
    "rel": "refers_to",
-   "to": "twin:vault/vault-demo-002",
+   "to": "urn:sws:vault:vault-demo-002",
    "evidence": "content",
    "source": "log lines (cs_uri_stem /vault/vault-demo-002/files)"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/09/demo-distribution-1-2026-11-21-09-00-00.gz",
    "rel": "records",
-   "to": "twin:cloudfront/distribution/demo-distribution-1",
+   "to": "urn:sws:cloudfront-distribution:demo-distribution-1",
    "evidence": "naming",
    "source": "log object key names demo-distribution-1"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/09/demo-distribution-1-2026-11-21-09-00-00.gz",
    "rel": "refers_to",
-   "to": "twin:vault/vault-demo-001",
+   "to": "urn:sws:vault:vault-demo-001",
    "evidence": "content",
    "source": "log lines (cs_uri_stem /vault/vault-demo-001/files)"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/09/demo-distribution-1-2026-11-21-09-00-00.gz",
    "rel": "refers_to",
-   "to": "twin:vault/vault-demo-002",
+   "to": "urn:sws:vault:vault-demo-002",
    "evidence": "content",
    "source": "log lines (cs_uri_stem /vault/vault-demo-002/files)"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/10/demo-distribution-1-2026-11-21-10-00-00.gz",
    "rel": "records",
-   "to": "twin:cloudfront/distribution/demo-distribution-1",
+   "to": "urn:sws:cloudfront-distribution:demo-distribution-1",
    "evidence": "naming",
    "source": "log object key names demo-distribution-1"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/10/demo-distribution-1-2026-11-21-10-00-00.gz",
    "rel": "refers_to",
-   "to": "twin:vault/vault-demo-001",
+   "to": "urn:sws:vault:vault-demo-001",
    "evidence": "content",
    "source": "log lines (cs_uri_stem /vault/vault-demo-001/files)"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/10/demo-distribution-1-2026-11-21-10-00-00.gz",
    "rel": "refers_to",
-   "to": "twin:vault/vault-demo-002",
+   "to": "urn:sws:vault:vault-demo-002",
    "evidence": "content",
    "source": "log lines (cs_uri_stem /vault/vault-demo-002/files)"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/11/demo-distribution-1-2026-11-21-11-00-00.gz",
    "rel": "records",
-   "to": "twin:cloudfront/distribution/demo-distribution-1",
+   "to": "urn:sws:cloudfront-distribution:demo-distribution-1",
    "evidence": "naming",
    "source": "log object key names demo-distribution-1"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/11/demo-distribution-1-2026-11-21-11-00-00.gz",
    "rel": "refers_to",
-   "to": "twin:vault/vault-demo-001",
+   "to": "urn:sws:vault:vault-demo-001",
    "evidence": "content",
    "source": "log lines (cs_uri_stem /vault/vault-demo-001/files)"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/11/demo-distribution-1-2026-11-21-11-00-00.gz",
    "rel": "refers_to",
-   "to": "twin:vault/vault-demo-002",
+   "to": "urn:sws:vault:vault-demo-002",
    "evidence": "content",
    "source": "log lines (cs_uri_stem /vault/vault-demo-002/files)"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/09/demo-distribution-1-2026-11-22-09-00-00.gz",
    "rel": "records",
-   "to": "twin:cloudfront/distribution/demo-distribution-1",
+   "to": "urn:sws:cloudfront-distribution:demo-distribution-1",
    "evidence": "naming",
    "source": "log object key names demo-distribution-1"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/09/demo-distribution-1-2026-11-22-09-00-00.gz",
    "rel": "refers_to",
-   "to": "twin:vault/vault-demo-001",
+   "to": "urn:sws:vault:vault-demo-001",
    "evidence": "content",
    "source": "log lines (cs_uri_stem /vault/vault-demo-001/files)"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/09/demo-distribution-1-2026-11-22-09-00-00.gz",
    "rel": "refers_to",
-   "to": "twin:vault/vault-demo-002",
+   "to": "urn:sws:vault:vault-demo-002",
    "evidence": "content",
    "source": "log lines (cs_uri_stem /vault/vault-demo-002/files)"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/10/demo-distribution-1-2026-11-22-10-00-00.gz",
    "rel": "records",
-   "to": "twin:cloudfront/distribution/demo-distribution-1",
+   "to": "urn:sws:cloudfront-distribution:demo-distribution-1",
    "evidence": "naming",
    "source": "log object key names demo-distribution-1"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/10/demo-distribution-1-2026-11-22-10-00-00.gz",
    "rel": "refers_to",
-   "to": "twin:vault/vault-demo-001",
+   "to": "urn:sws:vault:vault-demo-001",
    "evidence": "content",
    "source": "log lines (cs_uri_stem /vault/vault-demo-001/files)"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/10/demo-distribution-1-2026-11-22-10-00-00.gz",
    "rel": "refers_to",
-   "to": "twin:vault/vault-demo-002",
+   "to": "urn:sws:vault:vault-demo-002",
    "evidence": "content",
    "source": "log lines (cs_uri_stem /vault/vault-demo-002/files)"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/11/demo-distribution-1-2026-11-22-11-00-00.gz",
    "rel": "records",
-   "to": "twin:cloudfront/distribution/demo-distribution-1",
+   "to": "urn:sws:cloudfront-distribution:demo-distribution-1",
    "evidence": "naming",
    "source": "log object key names demo-distribution-1"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/11/demo-distribution-1-2026-11-22-11-00-00.gz",
    "rel": "refers_to",
-   "to": "twin:vault/vault-demo-001",
+   "to": "urn:sws:vault:vault-demo-001",
    "evidence": "content",
    "source": "log lines (cs_uri_stem /vault/vault-demo-001/files)"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/11/demo-distribution-1-2026-11-22-11-00-00.gz",
    "rel": "refers_to",
-   "to": "twin:vault/vault-demo-002",
+   "to": "urn:sws:vault:vault-demo-002",
    "evidence": "content",
    "source": "log lines (cs_uri_stem /vault/vault-demo-002/files)"
   },
@@ -936,14 +936,14 @@
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
    "rel": "in",
-   "to": "twin:region/eu-west-2",
+   "to": "urn:sws:region:eu-west-2",
    "evidence": "api",
    "source": "Cloud Control GetResource (RegionalDomainName)"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
    "rel": "part_of",
-   "to": "twin:site/demo",
+   "to": "urn:sws:site:demo",
    "evidence": "curated",
    "source": "ontology rule: the demo site's serving and logging path"
   },
@@ -964,7 +964,7 @@
   {
    "from": "arn:aws:s3:::111122223333--demo-lambda-deps--eu-west-2",
    "rel": "in",
-   "to": "twin:region/eu-west-2",
+   "to": "urn:sws:region:eu-west-2",
    "evidence": "api",
    "source": "Cloud Control GetResource (RegionalDomainName)"
   },
@@ -978,14 +978,14 @@
   {
    "from": "arn:aws:s3:::111122223333--demo-site--eu-west-2/data/vaults.json",
    "rel": "refers_to",
-   "to": "twin:vault/vault-demo-001",
+   "to": "urn:sws:vault:vault-demo-001",
    "evidence": "content",
    "source": "data/vaults.json"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-site--eu-west-2/data/vaults.json",
    "rel": "refers_to",
-   "to": "twin:vault/vault-demo-002",
+   "to": "urn:sws:vault:vault-demo-002",
    "evidence": "content",
    "source": "data/vaults.json"
   },
@@ -1027,42 +1027,42 @@
   {
    "from": "arn:aws:s3:::111122223333--demo-site--eu-west-2",
    "rel": "in",
-   "to": "twin:region/eu-west-2",
+   "to": "urn:sws:region:eu-west-2",
    "evidence": "api",
    "source": "Cloud Control GetResource (RegionalDomainName)"
   },
   {
    "from": "arn:aws:s3:::111122223333--demo-site--eu-west-2",
    "rel": "part_of",
-   "to": "twin:site/demo",
+   "to": "urn:sws:site:demo",
    "evidence": "curated",
    "source": "ontology rule: the demo site's serving and logging path"
   },
   {
    "from": "arn:aws:s3:::aws-cloudtrail-logs-111122223333-demo/AWSLogs/111122223333/CloudTrail/eu-west-2/2026/11/22/111122223333_CloudTrail_eu-west-2_20261122T1005Z_demo.json.gz",
    "rel": "in",
-   "to": "twin:region/eu-west-2",
+   "to": "urn:sws:region:eu-west-2",
    "evidence": "content",
    "source": "CloudTrail key path (AWSLogs/<account>/CloudTrail/<region>/)"
   },
   {
    "from": "arn:aws:s3:::aws-cloudtrail-logs-111122223333-demo/AWSLogs/111122223333/CloudTrail/eu-west-2/2026/11/22/111122223333_CloudTrail_eu-west-2_20261122T1005Z_demo.json.gz",
    "rel": "records",
-   "to": "twin:event/cloudtrail/00000000-0000-4000-8000-000000000001",
+   "to": "urn:sws:cloudtrail-event:00000000-0000-4000-8000-000000000001",
    "evidence": "content",
    "source": "CloudTrail Records"
   },
   {
    "from": "arn:aws:s3:::aws-cloudtrail-logs-111122223333-demo/AWSLogs/111122223333/CloudTrail/us-east-1/2026/11/22/111122223333_CloudTrail_us-east-1_20261122T1005Z_demo.json.gz",
    "rel": "in",
-   "to": "twin:region/us-east-1",
+   "to": "urn:sws:region:us-east-1",
    "evidence": "content",
    "source": "CloudTrail key path (AWSLogs/<account>/CloudTrail/<region>/)"
   },
   {
    "from": "arn:aws:s3:::aws-cloudtrail-logs-111122223333-demo/AWSLogs/111122223333/CloudTrail/us-east-1/2026/11/22/111122223333_CloudTrail_us-east-1_20261122T1005Z_demo.json.gz",
    "rel": "records",
-   "to": "twin:event/cloudtrail/00000000-0000-4000-8000-000000000002",
+   "to": "urn:sws:cloudtrail-event:00000000-0000-4000-8000-000000000002",
    "evidence": "content",
    "source": "CloudTrail Records"
   },
@@ -1083,7 +1083,7 @@
   {
    "from": "arn:aws:s3:::aws-cloudtrail-logs-111122223333-demo",
    "rel": "in",
-   "to": "twin:region/eu-west-2",
+   "to": "urn:sws:region:eu-west-2",
    "evidence": "api",
    "source": "Cloud Control GetResource (RegionalDomainName)"
   },
@@ -1097,147 +1097,147 @@
   {
    "from": "arn:aws:s3:::demo.static.example",
    "rel": "in",
-   "to": "twin:region/eu-west-2",
+   "to": "urn:sws:region:eu-west-2",
    "evidence": "api",
    "source": "Cloud Control GetResource (RegionalDomainName)"
   },
   {
-   "from": "twin:cloudfront/distribution/demo-distribution-1",
+   "from": "urn:sws:business-function:visitor-reads-vault-files",
+   "rel": "part_of",
+   "to": "urn:sws:site:demo",
+   "evidence": "curated",
+   "source": "ontology rule: the demo site serves the vaults' files"
+  },
+  {
+   "from": "urn:sws:business-function:visitor-reads-vault-files",
+   "rel": "refers_to",
+   "to": "urn:sws:vault:vault-demo-001",
+   "evidence": "curated",
+   "source": "ontology rule: the function is about each vault"
+  },
+  {
+   "from": "urn:sws:business-function:visitor-reads-vault-files",
+   "rel": "refers_to",
+   "to": "urn:sws:vault:vault-demo-002",
+   "evidence": "curated",
+   "source": "ontology rule: the function is about each vault"
+  },
+  {
+   "from": "urn:sws:cloudfront-distribution:demo-distribution-1",
    "rel": "logs_to",
    "to": "arn:aws:firehose:eu-west-2:111122223333:deliverystream/demo-cloudfront-logs",
    "evidence": "naming",
    "source": "log files named after demo-distribution-1 sit under the stream's prefix cloudfront/"
   },
   {
-   "from": "twin:cloudfront/distribution/demo-distribution-1",
+   "from": "urn:sws:cloudfront-distribution:demo-distribution-1",
    "rel": "part_of",
-   "to": "twin:site/demo",
+   "to": "urn:sws:site:demo",
    "evidence": "curated",
    "source": "ontology rule: the demo site's serving and logging path"
   },
   {
-   "from": "twin:cloudfront/distribution/demo-distribution-1",
+   "from": "urn:sws:cloudfront-distribution:demo-distribution-1",
    "rel": "serves_from",
    "to": "arn:aws:s3:::111122223333--demo-site--eu-west-2",
    "evidence": "content",
    "source": "index.html ('Served from S3 through CloudFront')"
   },
   {
-   "from": "twin:cloudtrail/trail/demo",
-   "rel": "logs_to",
-   "to": "arn:aws:s3:::aws-cloudtrail-logs-111122223333-demo",
-   "evidence": "naming",
-   "source": "bucket name aws-cloudtrail-logs-<account>-demo"
-  },
-  {
-   "from": "twin:event/cloudtrail/00000000-0000-4000-8000-000000000001",
+   "from": "urn:sws:cloudtrail-event:00000000-0000-4000-8000-000000000001",
    "rel": "acted_as",
    "to": "arn:aws:iam::111122223333:role/sws-aws-platform-read",
    "evidence": "content",
    "source": "CloudTrail userIdentity.sessionContext.sessionIssuer"
   },
   {
-   "from": "twin:event/cloudtrail/00000000-0000-4000-8000-000000000001",
+   "from": "urn:sws:cloudtrail-event:00000000-0000-4000-8000-000000000001",
    "rel": "acted_on",
    "to": "arn:aws:s3:::111122223333--demo-site--eu-west-2/data/vaults.json",
    "evidence": "content",
    "source": "CloudTrail requestParameters (bucketName, key)"
   },
   {
-   "from": "twin:event/cloudtrail/00000000-0000-4000-8000-000000000001",
+   "from": "urn:sws:cloudtrail-event:00000000-0000-4000-8000-000000000001",
    "rel": "signed_in_via",
-   "to": "twin:idp/accounts.google.com",
+   "to": "urn:sws:idp:accounts.google.com",
    "evidence": "content",
    "source": "CloudTrail webIdFederationData.federatedProvider"
   },
   {
-   "from": "twin:event/cloudtrail/00000000-0000-4000-8000-000000000002",
+   "from": "urn:sws:cloudtrail-event:00000000-0000-4000-8000-000000000002",
    "rel": "acted_as",
    "to": "arn:aws:iam::111122223333:role/sws-aws-platform-change",
    "evidence": "content",
    "source": "CloudTrail userIdentity.sessionContext.sessionIssuer"
   },
   {
-   "from": "twin:event/cloudtrail/00000000-0000-4000-8000-000000000002",
+   "from": "urn:sws:cloudtrail-event:00000000-0000-4000-8000-000000000002",
    "rel": "acted_on",
    "to": "arn:aws:iam::111122223333:role/sovereignwebsite-factory-dns",
    "evidence": "content",
    "source": "CloudTrail requestParameters.roleName"
   },
   {
-   "from": "twin:event/cloudtrail/00000000-0000-4000-8000-000000000002",
+   "from": "urn:sws:cloudtrail-event:00000000-0000-4000-8000-000000000002",
    "rel": "signed_in_via",
-   "to": "twin:idp/accounts.google.com",
+   "to": "urn:sws:idp:accounts.google.com",
    "evidence": "content",
    "source": "CloudTrail webIdFederationData.federatedProvider"
   },
   {
-   "from": "twin:function/visitor-reads-vault-files",
-   "rel": "part_of",
-   "to": "twin:site/demo",
-   "evidence": "curated",
-   "source": "ontology rule: the demo site serves the vaults' files"
+   "from": "urn:sws:cloudtrail-trail:demo",
+   "rel": "logs_to",
+   "to": "arn:aws:s3:::aws-cloudtrail-logs-111122223333-demo",
+   "evidence": "naming",
+   "source": "bucket name aws-cloudtrail-logs-<account>-demo"
   },
   {
-   "from": "twin:function/visitor-reads-vault-files",
-   "rel": "refers_to",
-   "to": "twin:vault/vault-demo-001",
-   "evidence": "curated",
-   "source": "ontology rule: the function is about each vault"
-  },
-  {
-   "from": "twin:function/visitor-reads-vault-files",
-   "rel": "refers_to",
-   "to": "twin:vault/vault-demo-002",
-   "evidence": "curated",
-   "source": "ontology rule: the function is about each vault"
-  },
-  {
-   "from": "twin:region/eu-west-1",
+   "from": "urn:sws:region:eu-west-1",
    "rel": "in",
-   "to": "twin:account/111122223333",
+   "to": "urn:sws:account:111122223333",
    "evidence": "content",
    "source": "data/vaults.json (region)"
   },
   {
-   "from": "twin:region/eu-west-2",
+   "from": "urn:sws:region:eu-west-2",
    "rel": "in",
-   "to": "twin:account/111122223333",
+   "to": "urn:sws:account:111122223333",
    "evidence": "api",
    "source": "Cloud Control GetResource"
   },
   {
-   "from": "twin:region/us-east-1",
+   "from": "urn:sws:region:us-east-1",
    "rel": "in",
-   "to": "twin:account/111122223333",
+   "to": "urn:sws:account:111122223333",
    "evidence": "content",
    "source": "CloudTrail key path"
   },
   {
-   "from": "twin:vault/vault-demo-001",
+   "from": "urn:sws:vault:vault-demo-001",
    "rel": "in",
-   "to": "twin:region/eu-west-2",
+   "to": "urn:sws:region:eu-west-2",
    "evidence": "content",
    "source": "data/vaults.json (region)"
   },
   {
-   "from": "twin:vault/vault-demo-001",
+   "from": "urn:sws:vault:vault-demo-001",
    "rel": "part_of",
-   "to": "twin:site/demo",
+   "to": "urn:sws:site:demo",
    "evidence": "content",
    "source": "data/vaults.json in the site's bucket"
   },
   {
-   "from": "twin:vault/vault-demo-002",
+   "from": "urn:sws:vault:vault-demo-002",
    "rel": "in",
-   "to": "twin:region/eu-west-1",
+   "to": "urn:sws:region:eu-west-1",
    "evidence": "content",
    "source": "data/vaults.json (region)"
   },
   {
-   "from": "twin:vault/vault-demo-002",
+   "from": "urn:sws:vault:vault-demo-002",
    "rel": "part_of",
-   "to": "twin:site/demo",
+   "to": "urn:sws:site:demo",
    "evidence": "content",
    "source": "data/vaults.json in the site's bucket"
   }
