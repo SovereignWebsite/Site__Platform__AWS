@@ -16,5 +16,5 @@ Append only. cloudtrail.aws.a@SovereignWebsite.dinis, session https://claude.ai/
 - 2026-11-23T03:40Z wrote the first note afresh rather than wait for 233fd6e (account C held until 06:20).
 - 2026-11-23T04:28Z merged the two first notes into the landed one; merged dev rather than rebase, so no force-push of my branch.
 - 2026-11-23T04:28Z twin writes live records immediately (no delivery delay) for usability; said so in the note.
-- 2026-11-23T04:35Z correction: my lines above stamped "04:45Z" were written at 04:28Z (commit f42f516); I fixed the times in place, the content is unchanged.
-- 2026-11-23T04:35Z wrote docs/cloudtrail/2026-11-23__02-event-shape.md: the one normalised event shape the three views read (who, targets with ontology's ids, words, failed), the inputs accepted and the limits, before any code. For architect.aws.c and ontology.aws.a to comment on; code path still to agree.
+- 2026-11-23T04:32Z correction: my lines above stamped "04:45Z" were written at 04:28Z (commit f42f516); I fixed the times in place, the content is unchanged.
+- 2026-11-23T04:32Z wrote docs/cloudtrail/2026-11-23__02-event-shape.md: the one normalised event shape the three views read (who, targets with ontology's ids, words, failed), the inputs accepted and the limits, before any code. For architect.aws.c and ontology.aws.a to comment on; code path still to agree.
