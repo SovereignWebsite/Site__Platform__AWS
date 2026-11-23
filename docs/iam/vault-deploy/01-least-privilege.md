@@ -14,7 +14,16 @@ iam.aws.a, 23 Nov 2026 ~15:05 UTC, for docs/team/plan-vault-deploy.md (work/cond
 | B. Customer's sign-in in the page | The customer signs in to their own identity provider in the page and assumes a role in their account (as this site does for Dinis). | Nothing directly, but our page code runs with the customer's role while they are signed in (R-002's shape, now in someone else's account). | Later, only with the R-002 split (a page with no other code on it) and only for read and teardown. |
 | C. Cross-account role trusting our account | The customer's role trusts an AWS account of ours, with an ExternalId. | Whatever that role allows, at any time, until the customer deletes it. | No. It makes us a standing path into every customer account, and a target. |
 
-Under A, progress and "DNS is live" come from outside the account: the page polls the public endpoint (DNS answer, HTTPS on the domain) and the customer pastes the stack's outputs or the page reads them from the quick-create return. No read role is needed. If the plan's progress view (step 5, step 7) needs the stack's events live, that is choice B for reads only, and a decision for Dinis.
+## How the page learns progress without a credential (sherpa.aws.a's open question)
+
+Under A the page holds nothing in the customer's account, so it cannot read the stack's events. What it can do, in order of the customer's wait:
+
+1. **While the stack runs:** the customer's own console shows the events (they are already there, having pressed Create). The page shows what is happening in words and a time estimate from the template (viz.aws.a, step 7, can draw the expected resources appearing, marked "expected", not "seen").
+2. **When it ends, with a custom domain:** the page knows the domain (the customer typed it), so it polls without any credential: DNS for the name (a public DNS-over-HTTPS resolver, which needs a CSP connect-src entry: security.aws.a to agree), then `GET https://<domain>/health`.
+3. **When it ends, without a custom domain:** the CloudFront address is random, so the page cannot find it alone. The customer copies one value, the Vault's address, from the stack's Outputs tab into the page. One paste, no secret: an address is public.
+4. **Proof it is the right Vault:** the Vault's `/health` answers, with CORS for the deploy page's origin only, `{ vault_id, template_sha256, version }`. The page compares template_sha256 with the template it linked, so "live" means "live and running exactly the template you were shown".
+
+Not recommended for the first version: **a read role the stack creates** (choice B for reads), trusting Google with `aud` = the deploy page's client ID and `sub` = the customer's Google subject, allowed only `cloudformation:DescribeStacks` and `DescribeStackEvents` on `stack/sws-vault-<id>/*`. It gives live events, but it brings back a sign-in step that sherpa.aws.a cut, and it is a second trust ask: while the customer is signed in, any script in our page can read that stack. Offer it later as an opt-in if customers ask for live events in our page.
 
 ## The deploy role (the stack's CloudFormation service role)
 
@@ -40,6 +49,14 @@ Shape of the deploy role's policy (actions to be filled from step 1's template; 
 
 Lessons carried over from this site's own roles (P-IAM-001, security.aws.a's B1 and B2): no `Resource: "*"` on any write; the boundary cannot be edited, swapped or removed by the role it caps; no PassRole without `iam:PassedToService`; no trust edits to roles outside the Vault.
 
+## The template the customer runs (security.aws.a's position 2)
+
+The quick-create link points at one pinned template file: a URL that names its version and never changes after publication (a new version is a new URL). The page shows its sha256 beside the button and links the file, so the customer, or their security team, can read and check it before pressing Create. The same sha256 comes back from the Vault's `/health` at the end.
+
+## Teardown (security.aws.a's position 4)
+
+Deleting the Vault stack removes only what it made: every resource carries `sws-vault=<id>` and is named `sws-vault-<id>-*`, and the deploy role cannot touch anything else. DNS goes first or together with its target: the stack makes every DNS record depend on the resource it points at, so CloudFormation deletes the record before the CloudFront distribution or API it names, and a dangling name cannot be taken over. The bootstrap stack (deploy role and boundary) is deleted last, by the customer, once the Vault stack is gone.
+
 ## The Vault boundary
 
 A customer-managed policy in the bootstrap stack, the most any role the Vault stack creates may ever do: the Vault's runtime needs (its buckets' objects, its own logs), named by step 1. The deploy role can create roles only with this boundary attached, so even a mistaken or tampered Vault template cannot give a Lambda function more than the boundary.
@@ -52,7 +69,7 @@ A customer-managed policy in the bootstrap stack, the most any role the Vault st
 ## Open, for the batch (pm.aws.a)
 
 1. D3: choice A for the first version (recommended), B later for reads and teardown, never C.
-2. Live progress: public-endpoint polling only (A), or a read-only role in the customer's account (B), which is a second trust ask.
+2. Live progress: none in the first version (the customer's console shows it; the page checks DNS and /health at the end, with one paste when there is no custom domain), or a read role in the customer's account (B), which is a sign-in step and a second trust ask. Recommended: the first.
 3. Region and domain: whether the customer's hosted zone already exists (the deploy role then edits records in it) or the stack creates one (then the customer delegates the name servers themselves, outside AWS).
 
 ## Next
