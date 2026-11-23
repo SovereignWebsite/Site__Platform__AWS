@@ -11,6 +11,8 @@
 //                                            optionally which bucket serves a site: { name, bucket }
 //   g.add.lambda(functions)                  LambdaApi functions (items of functions(), or function())
 //   g.add.firehose(streams)                  FirehoseApi stream() results
+//   g.add.iam({ roles, providers })          IamApi role() results, each with .attached (attached() items), and
+//                                            providers() (optional)
 //   g.add.zips([{ bucket, key, sha256, packageName, entries }])   deployment packages; the facts come from
 //                                            Graph.zipFacts(bytes) -> Promise<{ sha256, packageName, entries }>
 //   g.toJSON()                               -> { about, evidence_levels, counts, nodes, edges } (schema shape)
@@ -45,9 +47,14 @@
       nodes.set(id, n);
       return id;
     }
+    // One edge per from, rel, to: the strongest evidence wins, and every source that gave it is kept (design 04).
     function edge(from, rel, to, evidence, source) {
       var k = from + "\u0000" + rel + "\u0000" + to, old = edges.get(k);
-      if (!old || EVIDENCE.indexOf(evidence) < EVIDENCE.indexOf(old.evidence)) edges.set(k, { from: from, rel: rel, to: to, evidence: evidence, source: source });
+      if (!old) return edges.set(k, { from: from, rel: rel, to: to, evidence: evidence, source: source });
+      var sources = old.source.split("; ");
+      if (sources.indexOf(source) < 0) sources.push(source);
+      if (EVIDENCE.indexOf(evidence) < EVIDENCE.indexOf(old.evidence)) { old.evidence = evidence; sources.unshift(sources.splice(sources.indexOf(source), 1)[0]); }
+      old.source = sources.join("; ");
     }
     function accountNode() {
       if (account) node(ids.account(), "account", "A2", account);
@@ -232,6 +239,47 @@
         });
       });
     }
+    // IAM (design 04): each role is in the account; its trust policy's federated principals are identity providers
+    // it trusts; a GitHub OIDC trust's sub conditions name the repositories and environments it allows; its attached
+    // managed policies are policies it has. Service and account principals make no edge (the builder makes none).
+    var GH = "token.actions.githubusercontent.com";
+    function iam(o) {
+      o = o || {};
+      (o.providers || []).forEach(function (p) { if (p && p.arn) node(p.arn, "identity_provider", "A4", p.url || p.arn, { cfn_type: "AWS::IAM::OIDCProvider" }); });
+      (o.roles || []).forEach(function (r) {
+        if (!r || !r.arn) return;
+        node(r.arn, "role", "A4", r.name, { cfn_type: "AWS::IAM::Role", last_used: r.lastUsed ? r.lastUsed.when : undefined });
+        var a = accountNode();
+        if (a) edge(r.arn, "in", a, "api", "IAM GetRole");
+        ((r.trust && r.trust.statements) || []).forEach(function (st) {
+          if (st.effect !== "Allow") return;
+          st.principals.filter(function (p) { return p.kind === "federated"; }).forEach(function (p) {
+            var idp, host = (/:oidc-provider\/(.+)$/.exec(p.id) || [])[1];
+            if (p.id === "accounts.google.com") idp = node(GOOGLE, "identity_provider", "A4", "accounts.google.com", { note: "web identity federation; no IAM resource" });
+            else if (host) idp = node(p.id, "identity_provider", "A4", host, { cfn_type: "AWS::IAM::OIDCProvider" });
+            else if (/^arn:aws:iam::\d{12}:saml-provider\//.test(p.id)) idp = node(p.id, "identity_provider", "A4", p.id.split("/").pop(), { cfn_type: "AWS::IAM::SAMLProvider" });
+            else return;
+            edge(r.arn, "trusts", idp, "api", "IAM GetRole (trust policy Principal Federated " + (host || p.id) + ")");
+            if (host !== GH) return;
+            st.conditions.filter(function (c) { return c.key === GH + ":sub" && /^String(Equals|Like)$/.test(c.op.replace(/^For(Any|All)Value:/, "")); }).forEach(function (c) {
+              c.values.forEach(function (sub) {
+                var m = /^repo:([^@/]+)(?:@\d+)?\/([^@:]+)(?:@\d+)?:(.+)$/.exec(String(sub));
+                if (!m) return;
+                var pid = node("urn:sws:github-subject:" + m[1] + "/" + m[2] + ":" + m[3], "external_principal", "A4", m[2] + " (" + m[3].replace(":", " ") + ")", { subject: sub });
+                edge(r.arn, "allows_subject", pid, "api", "IAM GetRole (trust policy condition " + GH + ":sub)");
+              });
+            });
+          });
+        });
+        (r.attached || []).forEach(function (p) {
+          if (!p || !p.arn) return;
+          var aws = /^arn:aws:iam::aws:policy\//.test(p.arn);
+          node(p.arn, "policy", "A2", p.name || p.arn.split("/").pop(), aws ? { cfn_type: "AWS::IAM::ManagedPolicy", aws_managed: true } : { cfn_type: "AWS::IAM::ManagedPolicy" });
+          edge(r.arn, "has_policy", p.arn, "api", "IAM ListAttachedRolePolicies");
+        });
+      });
+    }
+
     // Deployment packages: a zip whose SHA-256 is a function's CodeSha256 packages that function (Lambda's own
     // identity for a package: evidence api); failing that, a zip whose dist-info METADATA names a function by name
     // (naming). Decided in toJSON, so zips and functions can be added in either order.
@@ -293,7 +341,7 @@
         evidence_levels: EVIDENCE.slice(), counts: { nodes: nodeList.length, edges: edgeList.length, by_evidence: by }, nodes: nodeList, edges: edgeList };
     }
 
-    return { add: { s3: s3, activity: activity, content: content, lambda: lambda, firehose: firehose, zips: addZips }, toJSON: toJSON, ids: ids };
+    return { add: { s3: s3, activity: activity, content: content, lambda: lambda, firehose: firehose, zips: addZips, iam: iam }, toJSON: toJSON, ids: ids };
   }
 
   // A zip's facts for add.zips: its SHA-256 (base64, as Lambda's CodeSha256), the package name its

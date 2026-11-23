@@ -10,9 +10,9 @@
  ],
  "counts": {
   "nodes": 55,
-  "edges": 110,
+  "edges": 114,
   "by_evidence": {
-   "api": 44,
+   "api": 48,
    "curated": 7,
    "template": 4,
    "naming": 11,
@@ -428,36 +428,28 @@
    "type": "role",
    "label": "demo-cloudfront-logs-firehose",
    "altitude": "A4",
-   "cfn_type": "AWS::IAM::Role",
-   "dangling": true,
-   "note": "named by Firehose DescribeDeliveryStream (demo-cloudfront-logs); IAM GetRole says NoSuchEntity"
+   "cfn_type": "AWS::IAM::Role"
   },
   {
    "id": "arn:aws:iam::111122223333:role/demo-handler-role",
    "type": "role",
    "label": "demo-handler-role",
    "altitude": "A4",
-   "cfn_type": "AWS::IAM::Role",
-   "dangling": true,
-   "note": "named by Lambda ListFunctions (demo-handler); IAM GetRole says NoSuchEntity"
+   "cfn_type": "AWS::IAM::Role"
   },
   {
    "id": "arn:aws:iam::111122223333:role/demo-log-enricher-role",
    "type": "role",
    "label": "demo-log-enricher-role",
    "altitude": "A4",
-   "cfn_type": "AWS::IAM::Role",
-   "dangling": true,
-   "note": "named by Lambda ListFunctions (demo-log-enricher); IAM GetRole says NoSuchEntity"
+   "cfn_type": "AWS::IAM::Role"
   },
   {
    "id": "arn:aws:iam::111122223333:role/demo-nightly-report-role",
    "type": "role",
    "label": "demo-nightly-report-role",
    "altitude": "A4",
-   "cfn_type": "AWS::IAM::Role",
-   "dangling": true,
-   "note": "named by Lambda ListFunctions (demo-nightly-report); IAM GetRole says NoSuchEntity"
+   "cfn_type": "AWS::IAM::Role"
   },
   {
    "id": "arn:aws:iam::111122223333:role/sovereignwebsite-factory-dns",
@@ -580,6 +572,34 @@
    "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
    "evidence": "api",
    "source": "Firehose DescribeDeliveryStream (BucketARN)"
+  },
+  {
+   "from": "arn:aws:iam::111122223333:role/demo-cloudfront-logs-firehose",
+   "rel": "in",
+   "to": "urn:sws:account:111122223333",
+   "evidence": "api",
+   "source": "IAM GetRole"
+  },
+  {
+   "from": "arn:aws:iam::111122223333:role/demo-handler-role",
+   "rel": "in",
+   "to": "urn:sws:account:111122223333",
+   "evidence": "api",
+   "source": "IAM GetRole"
+  },
+  {
+   "from": "arn:aws:iam::111122223333:role/demo-log-enricher-role",
+   "rel": "in",
+   "to": "urn:sws:account:111122223333",
+   "evidence": "api",
+   "source": "IAM GetRole"
+  },
+  {
+   "from": "arn:aws:iam::111122223333:role/demo-nightly-report-role",
+   "rel": "in",
+   "to": "urn:sws:account:111122223333",
+   "evidence": "api",
+   "source": "IAM GetRole"
   },
   {
    "from": "arn:aws:iam::111122223333:role/sovereignwebsite-factory-dns",

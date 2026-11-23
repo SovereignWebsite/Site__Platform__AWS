@@ -1,8 +1,8 @@
 // Graph (site/api/graph.js) over the twin, built as a page would: S3Api for buckets and objects (after the CORS fix
 // a user's Approve would make), Activity.fromBytes for the trail files, then the golden test of design 03,
 // refinement 7: against ontology.aws.a's twin-graph.json, compare node id, type, altitude and edge from, rel, to,
-// evidence, on the part of the graph the adapters built so far cover (S3, CloudTrail files, what files say, Lambda, Firehose, zips). The rest of the golden
-// graph (IAM, CloudFormation, serves_from, curated) waits for its adapters and is counted.
+// evidence, on the part of the graph the adapters built so far cover (S3, CloudTrail files, what files say, Lambda, Firehose, zips, IAM). The rest of the golden
+// graph (CloudFormation, serves_from, curated) waits for its adapters and is counted.
 // Node 22, no network. Run: node test/api/graph.test.mjs
 import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -24,17 +24,17 @@ const store = {};
 const ctx = {
   TextEncoder, TextDecoder, Uint8Array, Uint32Array, DataView, ArrayBuffer, Blob, Response, Headers, URL, URLSearchParams,
   CompressionStream, DecompressionStream, Promise, Error, TypeError, JSON, Date, Math, Number, String, RegExp, Object, Array, Map, Set,
-  setTimeout, crypto: globalThis.crypto, console, btoa,
+  setTimeout, crypto: globalThis.crypto, console, btoa, atob, encodeURIComponent, decodeURIComponent,
   location: { search: "?twin&pack=" + PACK, origin: "https://example.test" },
   localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
   fetch: () => { throw new Error("a request left the page"); }
 };
 ctx.window = ctx; ctx.globalThis = ctx;
 vm.createContext(ctx);
-for (const f of ["sigv4.js", "twin.js", "transport.js", "zip.js", "api/all.js", "api/s3-api.js", "api/lambda-api.js", "api/firehose-api.js", "api/decode.js", "api/activity.js", "api/graph.js"])
+for (const f of ["sigv4.js", "twin.js", "transport.js", "zip.js", "api/all.js", "api/s3-api.js", "api/lambda-api.js", "api/firehose-api.js", "api/iam-api.js", "api/decode.js", "api/activity.js", "api/graph.js"])
   vm.runInContext(readFileSync(new URL("../../site/" + f, import.meta.url), "utf8"), ctx, { filename: f });
 const here = (p) => new URL(p, import.meta.url);
-// Pinned copies (golden/README.md): dev's docs/ontology/ still has the older twin: ids until bb9cac9 lands.
+// Pinned copies (golden/README.md): ontology.aws.a's builder run against this branch's twin.
 const goldenPath = here("golden/twin-graph" + (PACK === "baseline" ? "" : "." + PACK) + ".json"), schemaPath = here("golden/twin-graph.schema.json");
 const golden = JSON.parse(readFileSync(goldenPath, "utf8")), schema = JSON.parse(readFileSync(schemaPath, "utf8"));
 let failures = 0, passed = 0;
@@ -96,6 +96,11 @@ for (const b of buckets) for (const o of b.objects.filter((o) => ctx.Zip.isZip(o
   zipFacts.push(Object.assign({ bucket: b.name, key: o.key }, await ctx.Graph.zipFacts((await api.getObject(b.name, b.region, o.key)).bytes)));
 ok(zipFacts.length > 0 && zipFacts.every((z) => /^[A-Za-z0-9+/]{43}=$/.test(z.sha256)), "zip facts: " + JSON.stringify(zipFacts.map((z) => [z.key, z.packageName, z.entries])));
 g.add.zips(zipFacts);
+// IAM: every role, its trust and attached policies, and the OIDC providers.
+const iamApi = ctx.IamApi(readSend);
+const roles = await Promise.all((await ctx.IamApi.all((next) => iamApi.roles({ next }))).items.map(async (r) =>
+  Object.assign(await iamApi.role(r.name), { attached: (await ctx.IamApi.all((next) => iamApi.attached(r.name, { next }))).items })));
+g.add.iam({ roles, providers: await iamApi.providers() });
 const mine = JSON.parse(JSON.stringify(g.toJSON()));
 
 // ---- schema: enums, required fields, id form, every edge end a node, counts ----
@@ -122,6 +127,10 @@ const covered = (e, typeOf) => {
   if (["runs_as", "writes_to", "transforms_with"].includes(e.rel) && e.evidence === "api") return true;
   if (e.rel === "logs_to" && e.evidence === "naming" && ft === "distribution") return true;
   if (e.rel === "packages") return true;
+  // IAM adapter
+  if (e.rel === "in" && e.evidence === "api" && ft === "role") return true;
+  if ((e.rel === "trusts" || e.rel === "allows_subject") && e.evidence === "api") return true;
+  if (e.rel === "has_policy") return true;
   // content adapter
   if (e.rel === "refers_to" && e.evidence === "content") return true;
   if ((e.rel === "in" || e.rel === "part_of") && e.evidence === "content" && ft === "vault") return true;
@@ -135,7 +144,10 @@ function slice(graph) {
   const regions = new Set(es.flatMap((e) => [e.from, e.to]).filter((id) => typeOf(id) === "region"));
   graph.edges.filter((e) => e.rel === "in" && regions.has(e.from) && typeOf(e.to) === "account").forEach((e) => es.push(e));
   const ends = new Set(es.flatMap((e) => [e.from, e.to]));
-  return { edges: new Set(es.map((e) => [e.from, e.rel, e.to, e.evidence].join(" | "))), nodes: new Set(graph.nodes.filter((n) => ends.has(n.id)).map((n) => [n.id, n.type, n.altitude].join(" | "))) };
+  // has_policy: the builder reads it from the stack's template, IamApi from ListAttachedRolePolicies; with one edge
+  // per from, rel, to and the strongest evidence kept, the two differ only in evidence until the builder reads IAM's
+  // attached policies too (design 04), so it is compared without its evidence.
+  return { edges: new Set(es.map((e) => [e.from, e.rel, e.to, e.rel === "has_policy" ? "(any)" : e.evidence].join(" | "))), nodes: new Set(graph.nodes.filter((n) => ends.has(n.id)).map((n) => [n.id, n.type, n.altitude].join(" | "))) };
 }
 const gs = slice(golden), ms = slice(mine);
 const missing = [...gs.edges].filter((x) => !ms.edges.has(x)), surplus = [...ms.edges].filter((x) => !gs.edges.has(x));
@@ -192,7 +204,34 @@ ok(!/\beval\s*\(|new Function|innerHTML|document\.|localStorage|fetch\(/.test(re
   ok(JSON.stringify(pk) === JSON.stringify(["a.zip>f1:api", "b.zip>f2:naming"]), "packages rules " + JSON.stringify(pk));
 }
 
+// ---- IAM rules, and one edge per from, rel, to with the strongest evidence and both sources ----
+{
+  const i = ctx.Graph({ account: A }), R = "arn:aws:iam::" + A + ":role/", OIDC = (h) => "arn:aws:iam::" + A + ":oidc-provider/" + h;
+  const st = (effect, principals, conditions = []) => ({ effect, actions: ["sts:AssumeRoleWithWebIdentity"], notActions: [], principals, notPrincipals: [], conditions });
+  i.add.iam({ roles: [
+    { name: "a", arn: R + "a", trust: { statements: [st("Allow", [{ kind: "federated", id: OIDC("token.actions.githubusercontent.com") }], [{ op: "StringLike", key: "token.actions.githubusercontent.com:sub", values: ["repo:org/app:ref:refs/heads/main", "not-a-subject"] }])] } },
+    { name: "b", arn: R + "b", trust: { statements: [st("Allow", [{ kind: "federated", id: OIDC("oidc.example.test") }], [{ op: "StringEquals", key: "oidc.example.test:sub", values: ["repo:org/app:x"] }])] } },
+    { name: "c", arn: R + "c", trust: { statements: [st("Deny", [{ kind: "federated", id: "accounts.google.com" }]), st("Allow", [{ kind: "service", id: "lambda.amazonaws.com" }, { kind: "aws", id: "arn:aws:iam::444455556666:root" }])] } },
+    { name: "d", arn: R + "d", trust: { statements: [st("Allow", [{ kind: "federated", id: "arn:aws:iam::" + A + ":saml-provider/Corp" }])] }, attached: [{ name: "Mine", arn: "arn:aws:iam::" + A + ":policy/Mine" }] }
+  ] });
+  const j = JSON.parse(JSON.stringify(i.toJSON())), e = (f, r, t) => j.edges.find((x) => x.from === f && x.rel === r && x.to === t);
+  ok(e(R + "a", "allows_subject", "urn:sws:github-subject:org/app:ref:refs/heads/main") && j.edges.filter((x) => x.rel === "allows_subject").length === 1, "GitHub sub under StringLike; non-subjects skipped");
+  ok(e(R + "b", "trusts", OIDC("oidc.example.test")) && !j.edges.some((x) => x.from === R + "b" && x.rel === "allows_subject"), "another OIDC provider is trusted, with no GitHub subjects");
+  ok(!j.edges.some((x) => x.from === R + "c" && x.rel === "trusts"), "Deny statements and service or account principals make no trusts edge");
+  ok(e(R + "d", "trusts", "arn:aws:iam::" + A + ":saml-provider/Corp") && e(R + "d", "has_policy", "arn:aws:iam::" + A + ":policy/Mine") && !j.nodes.find((n) => n.id.endsWith(":policy/Mine")).aws_managed, "SAML provider; a customer managed policy");
+  const m = ctx.Graph({ account: A });
+  m.add.iam({ roles: [{ name: "x", arn: R + "x", trust: { statements: [] }, attached: [{ name: "P", arn: "arn:aws:iam::aws:policy/P" }] }] });
+  const me = JSON.parse(JSON.stringify(m.toJSON())).edges.find((x) => x.rel === "has_policy");
+  ok(me.evidence === "api" && me.source === "IAM ListAttachedRolePolicies", "has_policy from IAM");
+  // The same edge again from a weaker source (as a stack template would give it): one edge, api kept, both sources.
+  const g2 = ctx.Graph({ account: A });
+  g2.add.s3([{ name: "b1", region: "eu-west-2", cors: {}, objects: [] }]);
+  g2.add.activity({ events: [] }, { bucket: "b1", key: "AWSLogs/" + A + "/CloudTrail/eu-west-2/x.json.gz" });
+  const rin = JSON.parse(JSON.stringify(g2.toJSON())).edges.find((x) => x.from === "urn:sws:region:eu-west-2" && x.rel === "in");
+  ok(rin.evidence === "api" && rin.source === "Cloud Control GetResource; CloudTrail key path", "one edge, strongest evidence, both sources: " + JSON.stringify(rin));
+}
+
 const uncovered = golden.edges.length - gs.edges.size - golden.edges.filter((e) => e.evidence === "curated" || e.evidence === "comment").length;
 if (failures) { console.error(failures + " failed, " + passed + " passed"); process.exit(1); }
 if (ctx.AwsTwin.pack() !== PACK) { console.error("FAIL the twin loaded pack " + ctx.AwsTwin.pack() + ", not " + PACK); process.exit(1); }
-console.log("OK (graph, pack " + PACK + ": " + passed + " checks; " + mine.nodes.length + " nodes, " + mine.edges.length + " edges; golden slice " + gs.nodes.size + " nodes and " + gs.edges.size + " edges equal; " + uncovered + " golden edges wait for the IAM and CloudFormation adapters and serves_from)");
+console.log("OK (graph, pack " + PACK + ": " + passed + " checks; " + mine.nodes.length + " nodes, " + mine.edges.length + " edges; golden slice " + gs.nodes.size + " nodes and " + gs.edges.size + " edges equal; " + uncovered + " golden edges wait for the CloudFormation adapter and serves_from)");
