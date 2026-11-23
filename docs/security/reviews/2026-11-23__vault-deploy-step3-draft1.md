@@ -71,3 +71,35 @@ Items 1 to 6 are to settle before the action lists are drawn, and 7 to 12 when t
     - Word it that way in the page and the article.
 
 Items 1 to 12 above still stand. 68f4b8b covers my five starting positions, not these twelve.
+
+## Addendum, 15:40: draft 2 (iam.aws.a 339295f, 02-deploy-role.md) and the Function URL ruling
+
+Points 1 to 6 are taken in well. Both gaps are written down honestly; I accept them as recorded.
+
+### Ruling: Function URL auth type
+
+- **Phase 1: NONE, accepted for v1, with conditions.** Without them, phase 1 is not ready for a real customer.
+  - a. **The token.**
+    - At least 32 random bytes (GetRandomPassword).
+    - Compared in constant time.
+    - Never in a URL or query string; a header only.
+    - Never logged.
+  - b. **Every route needs the token, except one.** That one is /health, which answers only vault id, template sha256 and version, so the deploy page can check it. That needs an exact list of routes in step 2's review.
+  - c. **Denial of wallet.** Unauthenticated requests still invoke and bill the function. So:
+    - set reserved concurrency on the function (a small cap, a stack parameter);
+    - show the cost of a flood in billing.aws.a's step 8.
+  - d. **The resource permission.** The deploy role may add a `Principal: "*"` permission only for `lambda:InvokeFunctionUrl`, with `lambda:FunctionUrlAuthType` = NONE. Never `lambda:InvokeFunction` for `*`.
+  - e. **Risks.** Record it in the risks as a public endpoint, as iam.aws.a proposes. It gets a row when code exists.
+- **Phase 2: AWS_IAM with CloudFront origin access control, as the target.**
+  - As I recall the AWS documentation, OAC for Lambda Function URLs needs the client to send the body's SHA-256 in `x-amz-content-sha256` for PUT and POST. That is the open question for boto3.aws.a to confirm, not a fact here.
+  - If it holds, either CloudFront can't front sgit's uploads with IAM auth, or the clients add that header. Phase 2 stays NONE with the token until then.
+
+### Further points on draft 2
+
+17. **Name prefixes collide if ids can contain `-`.** Every scope is `sws-vault-<id>-*`, and the SourceArn uses `sws-vault-<id>*`.
+    - Example: ids `ab` and `ab-c` overlap, so Vault `ab`'s deploy role could reach Vault `ab-c`'s bucket. The SourceArn's `<id>*` also matches `<id>2`.
+    - Fix: the id is lower-case hex or base32, a fixed length, with no `-`, enforced by the template's `AllowedPattern`. The SourceArn names the two stacks exactly (`stack/sws-vault-<id>/*`, `stack/sws-vault-<id>-access/*`), with no `*` after the id.
+18. **The token gap, interim.** A dynamic reference leaves the token readable through `lambda:GetFunctionConfiguration` by anyone in the customer's account with that right. Acceptable in the twin. For a real customer, I recommend the server change (it reads the secret at start-up) before the first real deployment. That is a decision for Dinis in the batch, not mine.
+19. **Logs at teardown.** DeleteLogGroup removes the Vault's own audit trail on teardown. Retain the log group (same reason as the bucket), or say so in the customer text. That also feeds step 9.
+20. **The deploy role's own guard.** Deny the deploy role every action on its own role (`role/sws-vault-<id>-deploy`) and on the boundary policy. Deny `cloudformation:*` on stacks other than the two named ones. This repeats item 9.
+21. **Secrets Manager.** Keep `PutResourcePolicy` and `ReplicateSecretToRegions` out of the allow list. Draft 2 already leaves them out; keep it that way.
