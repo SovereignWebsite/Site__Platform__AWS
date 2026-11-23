@@ -13,6 +13,10 @@
 //   g.add.firehose(streams)                  FirehoseApi stream() results
 //   g.add.iam({ roles, providers })          IamApi roles() items or role() results, each with .attached, and
 //                                            providers() (optional)
+//   g.add.cfn({ stacks, exports })          CfnApi stacks() items or stack() results, each with .resources (resources()
+//                                            items) and optionally .importers: [{ export, stack }] (importers() per
+//                                            export the stack exports: the export's name and an importing stack's name);
+//                                            exports() items (optional, to check an export is the stack's own)
 //   g.add.zips([{ bucket, key, sha256, packageName, entries }])   deployment packages; the facts come from
 //                                            Graph.zipFacts(bytes) -> Promise<{ sha256, packageName, entries }>
 //   g.toJSON()                               -> { about, evidence_levels, counts, nodes, edges } (schema shape)
@@ -283,6 +287,56 @@
     // it trusts; a GitHub OIDC trust's sub conditions name the repositories and environments it allows; its attached
     // managed policies are policies it has. Service and account principals make no edge (the builder makes none).
     var GH = "token.actions.githubusercontent.com";
+    // CloudFormation: each stack, its region, and what it made (made_by, from ListStackResources). A resource's id is
+    // its ARN from CfnApi; a derived one (arnDerived, design 03 refinement 1) gives way, at toJSON, to the node the
+    // owning service described with the same type and name (a role with a path); urn:sws:cfn-resource ids are always
+    // rebuilt from the stack's ARN, so a stack read by name or by ARN gives the same graph. A resource no adapter
+    // describes becomes a node of its own here, typed from its CloudFormation type where the schema has one.
+    // A stack that imports another's export refers_to it (ListImports).
+    var CFN_TYPE = { "AWS::S3::Bucket": ["bucket", "A2"], "AWS::IAM::Role": ["role", "A4"], "AWS::Lambda::Function": ["function", "A2"],
+      "AWS::CloudFront::Distribution": ["distribution", "A2"], "AWS::Route53::RecordSet": ["record", "A2"], "AWS::KinesisFirehose::DeliveryStream": ["stream", "A2"],
+      "AWS::CloudFormation::Stack": ["stack", "A2"] };
+    var cfnMade = [];
+    function cfn(o) {
+      o = o || {};
+      var byName = Object.create(null), exportsBy = Object.create(null);
+      (Array.isArray(o.stacks) ? o.stacks : []).forEach(function (st) {
+        if (!st || typeof st.arn !== "string" || typeof st.name !== "string") return;
+        vouch(node(st.arn, "stack", "A2", st.name, { cfn_type: "AWS::CloudFormation::Stack", status: st.status || undefined, updated: st.updated || undefined }));
+        if (st.region) edge(st.arn, "in", vouch(region(st.region, "api", "CloudFormation ListStacks (StackId)")), "api", "CloudFormation ListStacks (StackId)");
+        byName[st.region + "\u0000" + st.name] = st.arn;
+        (Array.isArray(st.resources) ? st.resources : []).forEach(function (r) {
+          if (!r || typeof r.logicalId !== "string" || typeof r.arn !== "string") return;
+          var id = r.arn.indexOf("urn:sws:cfn-resource:") === 0 ? "urn:sws:cfn-resource:" + st.arn + "/" + r.logicalId : r.arn;
+          cfnMade.push({ id: id, derived: !!r.arnDerived, type: r.type, physicalId: r.physicalId, logicalId: r.logicalId, status: r.status, stack: st.arn });
+        });
+      });
+      (Array.isArray(o.exports) ? o.exports : []).forEach(function (x) { if (x && x.name && x.stackArn) exportsBy[x.name] = x.stackArn; });
+      (Array.isArray(o.stacks) ? o.stacks : []).forEach(function (st) {
+        if (!st || !Array.isArray(st.importers)) return;
+        st.importers.forEach(function (imp) {
+          var by = byName[st.region + "\u0000" + (imp && imp.stack)], ex = imp && imp.export;
+          if (by && ex && exportsBy[ex] === st.arn) edge(by, "refers_to", st.arn, "api", "CloudFormation ListImports (" + ex + ")");
+        });
+      });
+    }
+    function cfnResolve() {
+      cfnMade.splice(0).forEach(function (m) {
+        var id = m.id;
+        if (m.derived && !nodes.has(id)) {
+          var same = []; nodes.forEach(function (n) { if (n.cfn_type === m.type && n.label === m.physicalId) same.push(n.id); });
+          if (same.length === 1) id = same[0];
+        }
+        if (!nodes.has(id)) {
+          var t = Object.prototype.hasOwnProperty.call(CFN_TYPE, m.type) ? CFN_TYPE[m.type] : ["unknown", "A2"];
+          var prev = ctxTrust; ctxTrust = { trust: "verified", source: "CloudFormation ListStackResources" };
+          try { node(id, t[0], t[1], m.physicalId || m.logicalId, { cfn_type: m.type, physical_id: m.physicalId || undefined, logical_id: m.logicalId, arn_derived: m.derived || undefined, status: m.status || undefined }); }
+          finally { ctxTrust = prev; }
+        }
+        edge(id, "made_by", m.stack, "api", "CloudFormation ListStackResources");
+      });
+    }
+
     function iam(o) {
       o = o || {};
       (Array.isArray(o.providers) ? o.providers : []).forEach(function (p) { if (p && typeof p.arn === "string") vouch(node(p.arn, "identity_provider", "A4", p.url || p.arn, { cfn_type: "AWS::IAM::OIDCProvider" })); });
@@ -373,6 +427,7 @@
     function nodeTrust(id) { return nodeTrustMap ? nodeTrustMap.get(id) || "claimed" : "claimed"; }
     var nodeTrustMap = null;
     function toJSON() {
+      cfnResolve();
       logsThroughStreams();
       packagesFunctions();
       // Node trust from the edges that name it (design 03): verified wins, then claimed, curated only if nothing else.
@@ -410,6 +465,7 @@
         lambda: as("verified", "Lambda ListFunctions", lambda),
         firehose: as("verified", "Firehose DescribeDeliveryStream", firehose),
         iam: as("verified", "IAM ListRoles, GetRole and ListAttachedRolePolicies", iam),
+        cfn: as("verified", "CloudFormation ListStacks, DescribeStacks and ListStackResources", cfn),
         activity: as("claimed", "CloudTrail log files in a bucket", activity),
         content: as("claimed", "files in a bucket", content),
         zips: as("claimed", "zip files in a bucket", addZips)
