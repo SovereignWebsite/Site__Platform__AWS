@@ -1,0 +1,695 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CfnApi (browser)",
+    "version": "0.1.0",
+    "summary": "The browser-side contract of CfnApi (site/api/cfn-api.js): CloudFormation stack reads.",
+    "description": "This site has no server. The paths are logical names for the methods of the browser object CfnApi, not URLs anything listens on; operationId is the method name and parameters are its arguments in order. Each operation lists in x-aws-actions the CloudFormation action it needs on real AWS; iam.aws.a and aws.c check the list against the read role in template v3 before anything calls real AWS. Six read actions, each answering for the region of the endpoint called. Reads only: no change sets, drift detection or templates. CloudFormation is regional: cloudformation.<region>.amazonaws.com, Query protocol, Version 2010-05-15."
+  },
+  "servers": [],
+  "x-browser-global": "CfnApi",
+  "x-design": "docs/architecture/2026-11-23__03-every-service-one-shape.md, part 1 and refinements 1 to 3 (work/architect.aws.a); docs/cloudformation/2026-11-23__seed-and-read-api.md",
+  "x-not-in-cfnapi": {
+    "GetTemplate": "templates belong to the plan flow (plan.js), not to the read view",
+    "DetectStackDrift": "left out by cloudformation.aws.a's sketch: it starts work in the account",
+    "DescribeStackResources": "unpaged (100 resources); ListStackResources is used"
+  },
+  "components": {
+    "schemas": {
+      "AwsError": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "status"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "examples": [
+              "ValidationError",
+              "AccessDenied"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      },
+      "Stack": {
+        "type": "object",
+        "required": [
+          "name",
+          "arn",
+          "region",
+          "status"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "arn": {
+            "type": "string",
+            "description": "AWS's StackId"
+          },
+          "region": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "description": "AWS's own value, e.g. UPDATE_ROLLBACK_COMPLETE"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "StackDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Stack"
+          },
+          {
+            "type": "object",
+            "required": [
+              "parameters",
+              "outputs"
+            ],
+            "properties": {
+              "parameters": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "key"
+                  ],
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              },
+              "outputs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "key",
+                    "value"
+                  ],
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "exportName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "Resource": {
+        "type": "object",
+        "required": [
+          "logicalId",
+          "type",
+          "status",
+          "arn",
+          "arnDerived"
+        ],
+        "properties": {
+          "logicalId": {
+            "type": "string"
+          },
+          "physicalId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "updated": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "arn": {
+            "type": "string",
+            "description": "The physical id when it is an ARN; else derived for S3 buckets, IAM roles, CloudFront distributions, Lambda functions and hosted zones (arnDerived true); else urn:sws:cfn-resource:<stack>/<logicalId>"
+          },
+          "arnDerived": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Event": {
+        "type": "object",
+        "required": [
+          "id",
+          "time",
+          "logicalId",
+          "type",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "logicalId": {
+            "type": "string"
+          },
+          "physicalId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "Export": {
+        "type": "object",
+        "required": [
+          "name",
+          "value",
+          "stackArn"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "stackArn": {
+            "type": "string"
+          },
+          "stack": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "responses": {
+      "AwsError": {
+        "description": "The promise rejects with an Error ('Code: Message', .code, .status), or the browser's TypeError for a CORS refusal",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AwsError"
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/{region}/stacks": {
+      "get": {
+        "operationId": "stacks",
+        "summary": "One page of the region's stacks (DELETE_COMPLETE left out unless deleted)",
+        "x-arguments": "stacks(region, { next, deleted })",
+        "x-wire": "CloudFormation ListStacks (NextToken)",
+        "x-aws-actions": [
+          "cloudformation:ListStacks"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "region",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z]{2}(-[a-z]+)+-\\d$"
+            }
+          },
+          {
+            "name": "next",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "deleted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of stacks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "next"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Stack"
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Opaque cursor (CloudFormation's NextToken); null at the end"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        }
+      }
+    },
+    "/{region}/stacks/{stack}": {
+      "get": {
+        "operationId": "stack",
+        "summary": "One stack with its parameters and outputs",
+        "x-arguments": "stack(region, nameOrArn)",
+        "x-wire": "CloudFormation DescribeStacks (StackName)",
+        "x-aws-actions": [
+          "cloudformation:DescribeStacks"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "region",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z]{2}(-[a-z]+)+-\\d$"
+            }
+          },
+          {
+            "name": "stack",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The stack's name or ARN (StackId)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The stack",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StackDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        }
+      }
+    },
+    "/{region}/stacks/{stack}/resources": {
+      "get": {
+        "operationId": "resources",
+        "summary": "One page of what the stack made, each with an ARN",
+        "x-arguments": "resources(region, stack, { next })",
+        "x-wire": "CloudFormation ListStackResources (StackName, NextToken)",
+        "x-aws-actions": [
+          "cloudformation:ListStackResources"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "region",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z]{2}(-[a-z]+)+-\\d$"
+            }
+          },
+          {
+            "name": "stack",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The stack's name or ARN (StackId)"
+          },
+          {
+            "name": "next",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of resources",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "next"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Resource"
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Opaque cursor (CloudFormation's NextToken); null at the end"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        }
+      }
+    },
+    "/{region}/stacks/{stack}/events": {
+      "get": {
+        "operationId": "events",
+        "summary": "One page of the stack's events, newest first",
+        "x-arguments": "events(region, stack, { next })",
+        "x-wire": "CloudFormation DescribeStackEvents (StackName, NextToken)",
+        "x-aws-actions": [
+          "cloudformation:DescribeStackEvents"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "region",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z]{2}(-[a-z]+)+-\\d$"
+            }
+          },
+          {
+            "name": "stack",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The stack's name or ARN (StackId)"
+          },
+          {
+            "name": "next",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of events, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "next"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Event"
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Opaque cursor (CloudFormation's NextToken); null at the end"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        },
+        "x-used-by": "the Vault deploy page's progress view (docs/team/plan-vault-deploy.md, step 5)"
+      }
+    },
+    "/{region}/exports": {
+      "get": {
+        "operationId": "exports",
+        "summary": "One page of the region's exports",
+        "x-arguments": "exports(region, { next })",
+        "x-wire": "CloudFormation ListExports (NextToken)",
+        "x-aws-actions": [
+          "cloudformation:ListExports"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "region",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z]{2}(-[a-z]+)+-\\d$"
+            }
+          },
+          {
+            "name": "next",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of exports",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "next"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Export"
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Opaque cursor (CloudFormation's NextToken); null at the end"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        }
+      }
+    },
+    "/{region}/exports/{exportName}/importers": {
+      "get": {
+        "operationId": "importers",
+        "summary": "One page of the names of stacks that import an export (none is an empty page, not an error)",
+        "x-arguments": "importers(region, exportName, { next })",
+        "x-wire": "CloudFormation ListImports (ExportName, NextToken)",
+        "x-aws-actions": [
+          "cloudformation:ListImports"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "region",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z]{2}(-[a-z]+)+-\\d$"
+            }
+          },
+          {
+            "name": "exportName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "next",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of stack names",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "next"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Opaque cursor (CloudFormation's NextToken); null at the end"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        },
+        "x-called": "lazily, per export, when a view asks (design 03, part 1)"
+      }
+    }
+  }
+}
