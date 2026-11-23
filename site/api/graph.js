@@ -333,11 +333,19 @@
     // record of that name (all types and set ids) in a zone the same stack made; failing that, in the only zone holding
     // that name; otherwise no record is chosen and it stays its own node (architect.aws.a, design 03 refinement 3). One
     // record set: api; several (an A and AAAA pair): each naming (claimed), since the stack names the name only and
-    // which is which is not guessed (ontology.aws.a). The record sets stay verified through "in" their zone.
+    // which is which is not guessed (ontology.aws.a). The record sets stay verified through "in" their zone. A zone's
+    // apex NS and SOA are never candidates: Route 53 makes them with the zone.
     function recordsMadeBy(m, stackZones) {
       var name = String(m.physicalId || "").toLowerCase().replace(/\.$/, ""), byZone = Object.create(null), zs = [];
       if (!name) return [];
-      nodes.forEach(function (n) { if (n.type === "record" && n.name === name && n.zone_id) { if (!byZone[n.zone_id]) { byZone[n.zone_id] = []; zs.push(n.zone_id); } byZone[n.zone_id].push(n.id); } });
+      nodes.forEach(function (n) {
+        if (n.type !== "record" || n.record_name !== name || !n.zone_id) return;
+        // NS and SOA at a zone's apex are made with the zone, never by a record set (cloudformation.aws.a).
+        var zn = nodes.get("arn:aws:route53:::hostedzone/" + n.zone_id);
+        if ((n.record_type === "NS" || n.record_type === "SOA") && zn && zn.label === name) return;
+        if (!byZone[n.zone_id]) { byZone[n.zone_id] = []; zs.push(n.zone_id); }
+        byZone[n.zone_id].push(n.id);
+      });
       var own = zs.filter(function (z) { return stackZones[m.stack + "\u0000" + z]; });
       if (own.length) return own.reduce(function (a, z) { return a.concat(byZone[z]); }, []);
       return zs.length === 1 ? byZone[zs[0]] : [];
@@ -421,7 +429,7 @@
         if (!r || typeof r.id !== "string" || !/^Z[A-Z0-9]{1,32}$/.test(r.zoneId || "")) return;
         var rm = /^urn:sws:route53-record:(Z[A-Z0-9]{1,32})\/([a-z0-9*_.-]{1,253})\/([A-Z]{1,10})(\/[^\s]{1,128})?$/.exec(r.id);
         if (!rm || rm[1] !== r.zoneId) return;
-        vouch(node(r.id, "record", "A2", rm[2] + " " + rm[3], { cfn_type: "AWS::Route53::RecordSet", name: rm[2], record_type: rm[3], zone_id: rm[1],
+        vouch(node(r.id, "record", "A2", rm[2] + " " + rm[3], { cfn_type: "AWS::Route53::RecordSet", record_name: rm[2], record_type: rm[3], zone_id: rm[1],
           set_identifier: r.setIdentifier || undefined }));
         edge(r.id, "in", "arn:aws:route53:::hostedzone/" + r.zoneId, "api", "Route 53 ListResourceRecordSets");
         if (r.alias && typeof r.alias.dnsName === "string") recordTargets.push({ id: r.id, host: r.alias.dnsName, how: "alias" });
