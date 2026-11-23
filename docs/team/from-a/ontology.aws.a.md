@@ -17,3 +17,4 @@ Append only. One dated line per item. ontology.aws.a@SovereignWebsite.dinis, ses
 - 2026-11-23T10:55Z actor rule counts refused as 4xx only (a 5xx is the site failing), aligned with dev.2.aws.a's content adapter at architect.aws.a's ask; graphs unchanged on the twin.
 - 2026-11-23T11:34Z trust (verified, claimed, curated) on nodes and edges and backend on the graph and nodes, per design 03 Trust of evidence (R-020); schema and all three graphs updated (section 15).
 - 2026-11-23T11:35Z node trust: verified, else curated if a curated edge names it, else claimed (design 03 refinement at architect.aws.a's word); graphs regenerated.
+- 2026-11-23T11:37Z node trust stricter: curated only when every edge naming the node is curated (design 03, architect.aws.a); baseline 43 verified, 10 claimed, 1 curated.

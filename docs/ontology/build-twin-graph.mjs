@@ -387,9 +387,10 @@ const TRUST = { api: "verified", template: "verified", content: "claimed", namin
 const BACKEND = "twin";
 for (const [i, e] of edgeList.entries()) edgeList[i] = { from: e.from, rel: e.rel, to: e.to, evidence: e.evidence, trust: TRUST[e.evidence], source: e.source };
 const verifiedIds = new Set(edgeList.filter((e) => e.trust === "verified").flatMap((e) => [e.from, e.to]));
-const curatedIds = new Set(edgeList.filter((e) => e.trust === "curated").flatMap((e) => [e.from, e.to]));
-// A person's word is not a file's claim: verified beats curated beats claimed.
-for (const n of nodeList) { n.trust = verifiedIds.has(n.id) ? "verified" : curatedIds.has(n.id) ? "curated" : "claimed"; n.backend = BACKEND; }
+// Not verified: curated only when every edge naming the node is curated (a person's word, nothing else);
+// a curated edge touching a node known from files does not vouch for its existence, so that node stays claimed.
+const claimedIds = new Set(edgeList.filter((e) => e.trust === "claimed").flatMap((e) => [e.from, e.to]));
+for (const n of nodeList) { n.trust = verifiedIds.has(n.id) ? "verified" : claimedIds.has(n.id) ? "claimed" : "curated"; n.backend = BACKEND; }
 const counts = { nodes: nodeList.length, edges: edgeList.length, by_evidence: {} };
 edgeList.forEach((e) => { counts.by_evidence[e.evidence] = (counts.by_evidence[e.evidence] || 0) + 1; });
 const graph = {

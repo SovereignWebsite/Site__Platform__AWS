@@ -112,7 +112,7 @@
    "cfn_type": "AWS::CloudFront::Distribution",
    "inferred": true,
    "note": "no CloudFront API in the twin; named by its log files",
-   "trust": "curated",
+   "trust": "claimed",
    "backend": "twin"
   },
   {
@@ -566,7 +566,7 @@
    "label": "Demo site",
    "altitude": "A3",
    "title": "Demo site",
-   "trust": "curated",
+   "trust": "claimed",
    "backend": "twin"
   },
   {
@@ -613,7 +613,7 @@
    "files": 42,
    "requests": 1696,
    "share_of_requests": 0.754,
-   "trust": "curated",
+   "trust": "claimed",
    "backend": "twin"
   },
   {
@@ -624,7 +624,7 @@
    "files": 7,
    "requests": 96,
    "share_of_requests": 0.043,
-   "trust": "curated",
+   "trust": "claimed",
    "backend": "twin"
   }
  ],
