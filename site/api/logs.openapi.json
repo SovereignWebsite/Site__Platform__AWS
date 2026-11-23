@@ -1,0 +1,415 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "LogsApi (browser)",
+    "version": "0.1.0",
+    "summary": "The browser-side contract of LogsApi (site/api/logs-api.js).",
+    "description": "This site has no server. The paths are logical names for the methods of the browser object LogsApi, not URLs anything listens on; operationId is the method name and parameters are its arguments in order. Each operation lists in x-aws-actions the IAM actions it needs on real AWS. Reads only. Lists return one page { items, next }; LogsApi.all drains them with a cap. LogsApi.invocations(events) makes no request and is not an operation."
+  },
+  "servers": [],
+  "x-browser-global": "LogsApi",
+  "x-design": "docs/lambda/2026-11-23__03-recent-invocations.md (work/lambda.aws.a)",
+  "x-not-requests": {
+    "invocations": "LogsApi.invocations(events): groups Lambda's START, END and REPORT lines by request id; no request, no IAM action."
+  },
+  "paths": {
+    "/{region}/groups": {
+      "get": {
+        "operationId": "groups",
+        "summary": "One page of the region's log groups",
+        "x-arguments": "groups(region, { prefix, next, max })",
+        "x-wire": "CloudWatch Logs DescribeLogGroups (JSON 1.1, Logs_20140328)",
+        "x-aws-actions": [
+          "logs:DescribeLogGroups"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "region",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "examples": [
+                "eu-west-2"
+              ]
+            }
+          },
+          {
+            "name": "prefix",
+            "in": "query",
+            "required": false,
+            "description": "logGroupNamePrefix, e.g. /aws/lambda/",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "next",
+            "in": "query",
+            "required": false,
+            "description": "nextToken from the last page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "max",
+            "in": "query",
+            "required": false,
+            "description": "limit, 1 to 50",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of groups",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "next"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Group"
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        }
+      }
+    },
+    "/{region}/groups/{group}/events": {
+      "get": {
+        "operationId": "events",
+        "summary": "One page of a log group's events, filtered",
+        "x-arguments": "events(region, group, { start, end, pattern, newest, next, max })",
+        "x-wire": "CloudWatch Logs FilterLogEvents (JSON 1.1, Logs_20140328)",
+        "x-aws-actions": [
+          "logs:FilterLogEvents"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "region",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "examples": [
+                "eu-west-2"
+              ]
+            }
+          },
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "description": "A log group name, or its ARN",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": false,
+            "description": "ISO time or epoch ms (startTime)",
+            "schema": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "description": "ISO time or epoch ms (endTime, inclusive)",
+            "schema": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            }
+          },
+          {
+            "name": "pattern",
+            "in": "query",
+            "required": false,
+            "description": "filterPattern for unstructured logs; quote [ERROR]",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "newest",
+            "in": "query",
+            "required": false,
+            "description": "latest events first (startFromHead false)",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "next",
+            "in": "query",
+            "required": false,
+            "description": "nextToken from the last page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "max",
+            "in": "query",
+            "required": false,
+            "description": "limit, 1 to 10000",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "next"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Event"
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Group": {
+        "type": "object",
+        "required": [
+          "name",
+          "arn",
+          "region"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "arn": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "region": {
+            "type": "string"
+          },
+          "created": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "retentionDays": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "storedBytes": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        }
+      },
+      "Event": {
+        "type": "object",
+        "required": [
+          "stream",
+          "timestamp",
+          "message"
+        ],
+        "properties": {
+          "stream": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "time": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timestamp": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string",
+            "description": "As the function wrote it: render as text, never markup"
+          },
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "Invocation": {
+        "type": "object",
+        "description": "LogsApi.invocations(events) output (no request)",
+        "required": [
+          "requestId",
+          "complete",
+          "lines"
+        ],
+        "properties": {
+          "requestId": {
+            "type": "string"
+          },
+          "start": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "end": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "durationMs": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "billedMs": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "memoryMb": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "maxMemoryMb": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "initMs": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "errors": {
+            "type": "integer"
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Event"
+            }
+          }
+        }
+      },
+      "AwsError": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "status"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "examples": [
+              "ResourceNotFoundException",
+              "AccessDeniedException"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "responses": {
+      "AwsError": {
+        "description": "The promise rejects with an Error ('Code: Message', .code, .status), or the browser's TypeError for a CORS refusal",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AwsError"
+            }
+          }
+        }
+      }
+    }
+  }
+}
