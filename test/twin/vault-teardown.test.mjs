@@ -58,6 +58,22 @@ assert.equal((await cfn(twin, { Action: "DeleteStack", StackName: V })).status, 
 assert.equal((await cfn(twin, { Action: "DeleteStack", StackName: "sws-vault-ffffffffffff" })).status, 200, "a missing stack deletes quietly, as AWS answers");
 checks += 9;
 
+// 2b. The VaultId used again after a delete: the kept log group and bucket are still there, so the create fails on the
+// name and rolls back (cloudformation.aws.a: the page must always make a fresh 12-hex id). A fresh id deploys.
+{
+  const t = fresh();
+  await create(t, V, { VaultId: ID }); t.clock.tick(10 * 60 * 1000);
+  await cfn(t, { Action: "DeleteStack", StackName: V }); t.clock.tick(15 * 60 * 1000);
+  await create(t, V, { VaultId: ID }); t.clock.tick(10 * 60 * 1000);
+  const st = (await cfn(t, { Action: "DescribeStacks", StackName: V })).text;
+  assert.equal(tag(st, "StackStatus")[0], "ROLLBACK_COMPLETE", "the reused id rolls back");
+  assert.match((await cfn(t, { Action: "DescribeStackEvents", StackName: V })).text, /AWS::Logs::LogGroup' with identifier '\/aws\/lambda\/sws-vault-0a1b2c3d4e5f-api' already exists/, "on the kept log group's name");
+  const fresh2 = "0a1b2c3d4e60";
+  await create(t, "sws-vault-" + fresh2, { VaultId: fresh2 }); t.clock.tick(10 * 60 * 1000);
+  assert.equal(tag((await cfn(t, { Action: "DescribeStacks", StackName: "sws-vault-" + fresh2 })).text, "StackStatus")[0], "CREATE_COMPLETE", "a fresh id deploys");
+  checks += 3;
+}
+
 // 3. A rolled-back stack deletes at once: nothing was left to delete.
 {
   const t = fresh();

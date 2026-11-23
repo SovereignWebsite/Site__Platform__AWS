@@ -176,6 +176,8 @@
       st.events.unshift({ id: st.stackId.split("/").pop() + "-" + e.seq, t: e.t, logical: d.logical, physical: d.physical || "", type: d.type, status: d.status, reason: d.reason || "" });
       if (d.logical === d.name) { st.status = d.status; if (d.outputs) st.outputs = d.outputs; }
       else st.resources[d.logical] = { type: d.type, physical: d.physical || (st.resources[d.logical] || {}).physical || "", status: d.status, t: e.t, reason: d.reason || "" };
+      // What a delete leaves behind stays in the account (the retained bucket, policy and log group), by name.
+      if (d.status === "DELETE_SKIPPED" && st.resources[d.logical].physical) (acc.retained || (acc.retained = map()))[d.type + " " + st.resources[d.logical].physical] = true;
     },
     // A marker a scenario or test can schedule (the clock's own op): the world keeps the labels in order.
     "clock.mark": function (w, e) { w.marks.push(e.data.label); }
@@ -801,6 +803,7 @@
     ev(at, st.name, "AWS::CloudFormation::Stack", "CREATE_COMPLETE", { physical: st.stackId, outputs: stackOutputs(st) });
     return out;
   }
+  function taken(acc, type, physical) { return !!(acc.retained && acc.retained[type + " " + physical]); }
   function cfnErr(code, msg, status) { return xml("<ErrorResponse xmlns=\"http://cloudformation.amazonaws.com/doc/2010-05-15/\"><Error><Type>Sender</Type><Code>" + code + "</Code><Message>" + esc(msg) + "</Message></Error><RequestId>twin</RequestId></ErrorResponse>", status || 400); }
   function formParams(form, prefix) {
     var out = [];
@@ -846,6 +849,10 @@
       var failure = null;
       if (collides) failure = { logical: "VaultBoundary", after: 0.9,
         reason: "Resource handler returned message: \"A policy called sws-vault-" + m[1] + "-boundary already exists. Duplicate names are not allowed.\" (HandlerErrorCode: AlreadyExists)" };
+      else if (kind === "vault" && taken(acc, "AWS::Logs::LogGroup", "/aws/lambda/sws-vault-" + m[1] + "-api")) failure = { logical: "VaultLogs", after: 0.8,
+        // A VaultId used before: its retained log group (and bucket) are still in the account (cloudformation.aws.a). The
+        // log group, the quicker resource, fails first; the page must always make a fresh id.
+        reason: "Resource handler returned message: \"Resource of type 'AWS::Logs::LogGroup' with identifier '/aws/lambda/sws-vault-" + m[1] + "-api' already exists.\" (HandlerErrorCode: AlreadyExists)" };
       else if (kind === "vault" && plain.ImageUri && plain.ImageUri !== TWIN_IMAGE) failure = { logical: "VaultFunction", after: 3,
         reason: "Resource handler returned message: \"Lambda can't access the image " + plain.ImageUri + ". Check the repository's policy lists this account and the digest is in " + region + ".\" (twin's wording)" };
       var st = { name: name, kind: kind, region: region, account: account, stackId: stackId, params: plain, ids: ids, mode: mode, failure: failure };
