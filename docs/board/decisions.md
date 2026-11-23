@@ -27,7 +27,7 @@ Nothing here stops the team: the agents are building on the twin. Decision 3 hol
 - **What:** the team's paths include pages on the hub's origin (pm: site/decisions/; architect: site/api/; s3: site/s3.js). A page there runs where the change role's session lives, so a bad change could reach it.
 - **Options:** (a) keep the code paths, and security.aws.c reviews every site/ change before it deploys; (b) move team pages off the hub's origin (their own area sites); (c) both: review now, move as the area sites arrive.
 - **Recommended:** (c).
-- **Blocks:** safe team code on the hub; the decisions page on the site waits on this.
+- **Blocks:** safe team code on the hub. Update 14:10 UTC: aws.c landed dev.2.aws.a's API layer (site/api/, 461d422) on dev; no page loads it yet, and security.aws.a reviewed it (R-019, R-020, both Medium, on work/security.aws.a). This decision settles what must happen before a page does load it, and for the decisions page under site/decisions/.
 
 ### 4. Approve template v2.1 on the site
 - **Asks:** aws.c

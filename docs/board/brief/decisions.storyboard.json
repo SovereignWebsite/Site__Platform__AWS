@@ -257,7 +257,7 @@
     }
    ],
    "recommendation": "c",
-   "why": "Review covers today; separate origins remove the risk once the area sites exist. dev.2.aws.a's code waits on this."
+   "why": "Review covers today; separate origins remove the risk once the area sites exist. The API layer is on dev (461d422) but no page loads it yet."
   },
   {
    "id": "4",
