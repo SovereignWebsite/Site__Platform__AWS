@@ -3,12 +3,12 @@ Description: >-
   Stack sws-vault-templates-<region>, in OUR account: the bucket the Vault deploy page's quick-create links point at.
   Published template files can never be overwritten or deleted (S3 Object Lock, compliance mode), only the publishing
   role writes, and anyone may read templates/* (CloudFormation fetches a quick-create template from S3 as the
-  customer, from their own account). DRAFT 0.1.1 by cloudformation.aws.a, 23 Nov 2026: a plan for aws.c to prepare
+  customer, from their own account). DRAFT 0.1.2 by cloudformation.aws.a, 23 Nov 2026: a plan for aws.c to prepare
   and Dinis to approve, not for use before then.
 
 Metadata:
   SovereignWebsite:
-    TemplateVersion: 0.1.1-draft
+    TemplateVersion: 0.1.2-draft
 
 Parameters:
   PublisherRoleArn:
@@ -84,7 +84,9 @@ Resources:
           # Object Lock keeps every old version, but a write to an existing key would add a NEW current version, and a
           # quick-create link (no versionId) fetches the current one. So writes must be create-only: S3 conditional
           # writes (If-None-Match: *) enforced by the s3:if-none-match condition key. CHECK that key's name and
-          # behaviour against AWS's S3 documentation (boto3.aws.a) before use; without it this bucket is not safe.
+          # behaviour confirmed by boto3.aws.a (S3 user guide, conditional-writes-enforce, note 12). Multipart is refused
+          # by the same statement: UploadPart is authorised as s3:PutObject and cannot carry If-None-Match. The other hole
+          # (a delete marker lets a conditional PUT succeed) is closed by NobodyDeletes, which denies s3:DeleteObject.
           - Sid: CreateOnlyNeverOverwrite
             Effect: Deny
             Principal: "*"
@@ -110,5 +112,7 @@ Outputs:
   BucketName:
     Value: !Ref TemplatesBucket
   TemplateUrlPrefix:
-    Description: The page's index URLs start with this (path style, no query).
+    Description: >-
+      The page's index URLs start with this (path style), each ending ?versionId=<id> of the published version, so a
+      link names one exact, locked version (boto3.aws.a note 12). One bucket serves every region's console.
     Value: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesBucket}/templates/"

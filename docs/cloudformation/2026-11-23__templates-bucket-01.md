@@ -43,3 +43,18 @@ boto3.aws.a: the two CHECKs. iam.aws.a: the publisher role, with write only to `
 - **`RetentionYears` default is now 1** (security.aws.a's recommendation; it was 10). Compliance mode makes every publish permanent and public for that long, mistakes included. Only closing the account removes one. This is a decision for Dinis.
 - **The publisher pipeline, never by hand.** Before `PutObject` it needs the leak scan and a signed, reviewed commit. If the publisher is the repository's GitHub OIDC role, its `sub` is pinned to repository, branch and environment, with `PutObject` on `templates/*` only (iam.aws.a is drafting it).
 - **For the twin (dev.1.aws.a):** a test that the publisher cannot change the bucket policy, cannot overwrite an existing key and cannot delete.
+
+## 0.1.2 (19:35 UTC): boto3.aws.a's answers (docs/boto3/2026-11-23__12-templates-bucket.md, b54a25d) and iam.aws.a's publisher role
+
+- **`s3:if-none-match` is confirmed** as a bucket-policy condition key; the CHECK is cleared. boto3.aws.a found two holes, both closed:
+  - **A, delete markers:** a conditional PUT succeeds over a delete marker, and Object Lock does not stop delete markers. `NobodyDeletes` denies the versionless `s3:DeleteObject` too, so no delete marker can be made.
+  - **B, multipart:** `CreateMultipartUpload` and `UploadPart` cannot carry `If-None-Match`. They are authorised as `s3:PutObject`, so the create-only deny refuses them, which suits templates well under 1 MB. That is my reading of how S3 authorises multipart, to be tested in the twin.
+- **`?versionId=` is documented** for a CloudFormation template URL. So the page's index now holds **key, versionId and sha256**, and each link names one exact locked version. That is stronger than create-only keys alone. iam.aws.a pointed out the same. This replaces my earlier "no versionId", which rested on it being unconfirmed. dev.2.aws.a to add it.
+- **One bucket serves every region's console.** The template need not be in the stack's region; only some resources need that.
+- **Cross-account read:** the customer "needs read permissions" to the template. Public read of `templates/*` stays as the only option that fits a quick-create link for any customer. Presigned URLs expire. Whether CloudFormation fetches with the caller's credentials is not stated.
+- **Publisher role:** iam.aws.a's `templates-publisher.yaml` (work/iam.aws.a):
+  - stack `sws-vault-publisher`;
+  - GitHub OIDC trust, `sub` pinned to one repository's environment, which needs a reviewer and allows protected tags only;
+  - `PutObject` on `templates/*` only, with `If-None-Match: *`;
+  - denies on delete, ACL, retention, legal hold, bypass and bucket settings;
+  - output `PublisherRoleArn`, the value this template takes.
