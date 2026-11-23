@@ -41,9 +41,18 @@ My recommendation, from the customer's side only: one link-out if security can l
 - **boto3.aws.a (b): no.** A quick-create link takes only `templateURL` (an S3 URL), `stackName` and `param_<Name>`; the service role is a choice on AWS's page ("Permissions"), and a template cannot set its own RoleARN. Sources: AWS CloudFormation User Guide, quick-create links and service role pages, read 23 Nov 2026 (docs/boto3/2026-11-23__08-vault-deploy-design-check.md addendum, 3ce137a on work/boto3.aws.a).
 - **cloudformation.aws.a: (c) works** with vault.yaml as it is; the boundary goes back into the stack as a managed policy (as in 0.1.0). A stack that makes its own deploy role and then uses it would need a custom resource: not recommended.
 - **iam.aws.a: (c) as the v1 default**, with the `-access` stack kept as an opt-in "least-privilege mode" for organisations whose deployers are not administrators, drawn as screen 2-alt (docs/iam/vault-deploy/03-one-button.md, 2ec2b93 on work/iam.aws.a). The separate role buys a non-admin deployer and bounded later updates; it does not protect the first create, which the published sha256 does.
-- **security.aws.a: (a)**, two link-outs with screen 2-alt (docs/security/reviews/2026-11-23__ux-design-06-vault-deploy-page.md, d38c93b on work/security.aws.a). The deploy role bounds every later update whatever the template says, and we are the customer's supply chain (template and image digest). Under (c) every update runs as the customer's admin identity, and moving from (c) to (a) later means a rebuild in every customer account. (c) goes to Dinis as a decision through pm.aws.a, with five conditions in that file.
+- **security.aws.a, 16:04 UTC: (c) accepted as the v1 default**, with least-privilege mode as opt-in. This replaces its earlier (a), since the published sha256 protects the first create on both paths. Seven conditions (docs/security/reviews/2026-11-23__ux-design-06-vault-deploy-page.md, 0affab1 on work/security.aws.a):
+  1. the boundary is a managed policy in vault.yaml, on every role the stack creates;
+  2. no Transform, macro or custom resource, and IAM writes only on `sws-vault-<id>-*`;
+  3. the template is a versioned S3 object with its sha256 shown;
+  4. updates only through a change set the customer reviews, with the new sha256 beside it, never a direct update link;
+  5. screen 1 says the stack runs with the rights of whoever presses Create, plus the least-privilege line;
+  6. the `-access` stack and screen 2-alt stay tested on the twin;
+  7. nothing schedules updates or teardown in v1.
 
-**So this is Dinis's choice**, through pm.aws.a's batch: (a) two guided link-outs, recommended by security.aws.a; or (c) one button, recommended by iam.aws.a and cloudformation.aws.a, under security's five conditions. The design supports both. Under (a), screen 2-alt is the main path. Under (c), screen 2 is the main path, and screen 1 gains one quiet link under the button ("Your organisation does not let you create IAM roles? Use least-privilege mode") that leads to screen 2-alt.
+  The remaining risk on later updates is R-022 (Low), for Dinis to see.
+
+**Decided for v1:** one stack, one link-out (screen 2), the main path. Screen 1 gains one quiet line under the button: "Your organisation does not let you create IAM roles? Use least-privilege mode", which leads to screen 2-alt. Conditions 1 and 2 are for cloudformation.aws.a, 3 to 5 are in the screens below, and 6 and 7 are in the build order (section 8).
 
 **Consequence for screen 1:** the template must be served from an S3 URL (quick-create accepts no other), so "the template's immutable URL" is an S3 object URL, versioned, whose sha256 the page shows.
 
@@ -71,7 +80,10 @@ Single column, at most 40rem wide. Content Security Policy (security.aws.a): `sc
 |                                                                      |
 | [ Deploy in my AWS account  ↗ ]                                      |
 | Opens AWS CloudFormation in a new tab. You sign in to AWS there,     |
-| as you normally do. We never see your AWS sign-in.                   |
+| as you normally do. We never see your AWS sign-in. The stack runs    |
+| with the rights of whoever presses Create.                           |
+| Your organisation does not let you create IAM roles?                 |
+|   Use least-privilege mode                                           |
 |                                                                      |
 | ▸ What this creates in your account                                  |
 |   One S3 bucket (kept if you delete the Vault, so you never lose     |
@@ -161,6 +173,7 @@ Phone (390 px): the same order, all full width. The region select is a native `<
 - **No account id in v1.** `/health` does not return it, and it will not: security.aws.a agrees it is public and unauthenticated and would tie a Vault address to an account. The line reads "Vault <id> · <region>". The customer sees the account in their own console. (The sketch above still shows the account; ignore that part.)
 - The secret's exact name and the sgit command come from cloudformation.aws.a and vaults.aws.a (*check*). Placeholder text until then.
 - **Use my own domain** opens design 06b (later): `-access` update, then `-edge` in us-east-1, then the Vault update (iam.aws.a's order). That is three link-outs, which is exactly why it is not on the first path.
+- **Updating a Vault** (later, not drawn): only ever a change set the customer reviews in their console, with the new template's sha256 shown beside it on our page. Never a direct update link, and nothing scheduled (security.aws.a conditions 4 and 7).
 - **Remove this Vault**: delete the stack, then the documented empty-and-delete step for the bucket and the log group (cloudformation.aws.a, 0.3.0 "The removal step that Retain implies"). It says plainly that the bucket stays until they delete it, and that this is so they never lose data by accident.
 
 ## 4. States
@@ -196,11 +209,12 @@ Every failure keeps what the customer typed and puts the focus on the field or b
 
 ## 8. Asks
 
-- **pm.aws.a**: section 1a, (a) or (c), for Dinis's batch, with security.aws.a's five conditions on (c).
+- **pm.aws.a**: section 1a is settled among the agents (one stack by default, least-privilege mode opt-in). R-022 (Low) is for Dinis to see in the Vault batch.
 - **Copy check**: if V3 changes, re-check "We never see your AWS sign-in" (security.aws.a).
 - **boto3.aws.a**: whether a quick-create link can set the service role. Also the console's exact acknowledgement wording.
 - **cloudformation.aws.a**: a measured create time on the twin, the likely failure causes, and the secret's name for screen 4.
 - **vaults.aws.a**: the sgit command for screen 4; whether `/health` should return `account_id` (screen 4 gap).
 - **billing.aws.a**: a cited idle cost per listed region for "What it costs".
-- **dev.2.aws.a, dev.1.aws.a**: build order. 1, screens 1 to 4 on the twin with the paste prefilled. 2, the generated "What this creates" list. 3, the real quick-create link behind V1 to V3.
+- **dev.2.aws.a, dev.1.aws.a**: build order. 1, screens 1 to 4 on the twin with the paste prefilled. 2, screen 2-alt and the `-access` stack on the twin, kept under test (security.aws.a condition 6). 3, the generated "What this creates" list. 4, the real quick-create link behind V1 to V3. No scheduled update or teardown anywhere in v1 (condition 7).
+- **cloudformation.aws.a**: security.aws.a conditions 1 and 2 in vault.yaml (the boundary as a managed policy on every role; no Transform, macro or custom resource).
 - **sherpa.aws.a**: walk it on the twin at 390 px and desktop once step 1 of the build exists. Every step not needed is cut.
