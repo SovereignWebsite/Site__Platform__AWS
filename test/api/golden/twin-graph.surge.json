@@ -10,12 +10,12 @@
   "curated"
  ],
  "counts": {
-  "nodes": 54,
-  "edges": 110,
+  "nodes": 56,
+  "edges": 116,
   "by_evidence": {
-   "api": 50,
+   "api": 52,
    "curated": 7,
-   "template": 2,
+   "template": 6,
    "naming": 11,
    "content": 40
   }
@@ -31,11 +31,11 @@
    "backend": "twin"
   },
   {
-   "id": "urn:sws:actor-net:203.0.113.0/24",
+   "id": "urn:sws:actor-net:192.0.2.0/24",
    "type": "actor",
-   "label": "203.0.113.0/24",
+   "label": "192.0.2.0/24",
    "altitude": "A4",
-   "src_net": "203.0.113.0/24",
+   "src_net": "192.0.2.0/24",
    "trust": "claimed",
    "backend": "twin"
   },
@@ -47,7 +47,7 @@
    "cfn_type": "AWS::S3::Bucket",
    "browser_readable": true,
    "requests": 2250,
-   "visitors": 246,
+   "visitors": 473,
    "countries": {
     "GB": 766,
     "IE": 754,
@@ -122,7 +122,7 @@
    "altitude": "A1",
    "ocsf_class": "API Activity",
    "time": "2026-11-22T10:01:02Z",
-   "src_net": "203.0.113.0/24",
+   "src_net": "192.0.2.0/24",
    "read_only": true,
    "trust": "claimed",
    "backend": "twin"
@@ -134,7 +134,7 @@
    "altitude": "A1",
    "ocsf_class": "API Activity",
    "time": "2026-11-22T10:04:40Z",
-   "src_net": "203.0.113.0/24",
+   "src_net": "192.0.2.0/24",
    "read_only": false,
    "trust": "claimed",
    "backend": "twin"
@@ -231,7 +231,7 @@
    "type": "object",
    "label": "cloudfront/2026/11/20/09/demo-distribution-1-2026-11-20-09-00-00.gz",
    "altitude": "A1",
-   "bytes": 4546,
+   "bytes": 4674,
    "modified": "2026-11-20T09:59:00.000Z",
    "requests": 250,
    "first": "2026-11-20T09:00:19Z",
@@ -245,7 +245,7 @@
    "type": "object",
    "label": "cloudfront/2026/11/20/10/demo-distribution-1-2026-11-20-10-00-00.gz",
    "altitude": "A1",
-   "bytes": 4537,
+   "bytes": 4649,
    "modified": "2026-11-20T10:59:00.000Z",
    "requests": 250,
    "first": "2026-11-20T10:00:15Z",
@@ -259,7 +259,7 @@
    "type": "object",
    "label": "cloudfront/2026/11/20/11/demo-distribution-1-2026-11-20-11-00-00.gz",
    "altitude": "A1",
-   "bytes": 4555,
+   "bytes": 4683,
    "modified": "2026-11-20T11:59:00.000Z",
    "requests": 250,
    "first": "2026-11-20T11:00:06Z",
@@ -273,7 +273,7 @@
    "type": "object",
    "label": "cloudfront/2026/11/21/09/demo-distribution-1-2026-11-21-09-00-00.gz",
    "altitude": "A1",
-   "bytes": 4489,
+   "bytes": 4654,
    "modified": "2026-11-21T09:59:00.000Z",
    "requests": 250,
    "first": "2026-11-21T09:00:06Z",
@@ -287,7 +287,7 @@
    "type": "object",
    "label": "cloudfront/2026/11/21/10/demo-distribution-1-2026-11-21-10-00-00.gz",
    "altitude": "A1",
-   "bytes": 4593,
+   "bytes": 4721,
    "modified": "2026-11-21T10:59:00.000Z",
    "requests": 250,
    "first": "2026-11-21T10:00:06Z",
@@ -301,7 +301,7 @@
    "type": "object",
    "label": "cloudfront/2026/11/21/11/demo-distribution-1-2026-11-21-11-00-00.gz",
    "altitude": "A1",
-   "bytes": 4547,
+   "bytes": 4677,
    "modified": "2026-11-21T11:59:00.000Z",
    "requests": 250,
    "first": "2026-11-21T11:00:40Z",
@@ -315,7 +315,7 @@
    "type": "object",
    "label": "cloudfront/2026/11/22/09/demo-distribution-1-2026-11-22-09-00-00.gz",
    "altitude": "A1",
-   "bytes": 4471,
+   "bytes": 4624,
    "modified": "2026-11-22T09:59:00.000Z",
    "requests": 250,
    "first": "2026-11-22T09:00:52Z",
@@ -329,7 +329,7 @@
    "type": "object",
    "label": "cloudfront/2026/11/22/10/demo-distribution-1-2026-11-22-10-00-00.gz",
    "altitude": "A1",
-   "bytes": 4519,
+   "bytes": 4648,
    "modified": "2026-11-22T10:59:00.000Z",
    "requests": 250,
    "first": "2026-11-22T10:00:06Z",
@@ -343,7 +343,7 @@
    "type": "object",
    "label": "cloudfront/2026/11/22/11/demo-distribution-1-2026-11-22-11-00-00.gz",
    "altitude": "A1",
-   "bytes": 4527,
+   "bytes": 4687,
    "modified": "2026-11-22T11:59:00.000Z",
    "requests": 250,
    "first": "2026-11-22T11:00:06Z",
@@ -562,9 +562,30 @@
    "backend": "twin"
   },
   {
-   "id": "arn:aws:cloudformation:eu-west-2:111122223333:stack/sws-aws-platform",
+   "id": "arn:aws:cloudformation:eu-west-2:111122223333:stack/demo-dns",
    "type": "stack",
-   "label": "sws-aws-platform",
+   "label": "demo-dns",
+   "altitude": "A2",
+   "cfn_type": "AWS::CloudFormation::Stack",
+   "status": "CREATE_COMPLETE",
+   "note": "a real stack ARN ends in a stack id; the twin has none",
+   "trust": "verified",
+   "backend": "twin"
+  },
+  {
+   "id": "arn:aws:cloudformation:eu-west-2:111122223333:stack/demo-lambda",
+   "type": "stack",
+   "label": "demo-lambda",
+   "altitude": "A2",
+   "cfn_type": "AWS::CloudFormation::Stack",
+   "note": "a real stack ARN ends in a stack id; the twin has none",
+   "trust": "verified",
+   "backend": "twin"
+  },
+  {
+   "id": "arn:aws:cloudformation:eu-west-2:111122223333:stack/demo-site",
+   "type": "stack",
+   "label": "demo-site",
    "altitude": "A2",
    "cfn_type": "AWS::CloudFormation::Stack",
    "status": "CREATE_COMPLETE",
@@ -622,7 +643,23 @@
  ],
  "edges": [
   {
-   "from": "arn:aws:cloudformation:eu-west-2:111122223333:stack/sws-aws-platform",
+   "from": "arn:aws:cloudformation:eu-west-2:111122223333:stack/demo-dns",
+   "rel": "in",
+   "to": "urn:sws:region:eu-west-2",
+   "evidence": "api",
+   "trust": "verified",
+   "source": "CloudFormation DescribeStacks (endpoint region)"
+  },
+  {
+   "from": "arn:aws:cloudformation:eu-west-2:111122223333:stack/demo-lambda",
+   "rel": "in",
+   "to": "urn:sws:region:eu-west-2",
+   "evidence": "api",
+   "trust": "verified",
+   "source": "CloudFormation DescribeStacks (endpoint region)"
+  },
+  {
+   "from": "arn:aws:cloudformation:eu-west-2:111122223333:stack/demo-site",
    "rel": "in",
    "to": "urn:sws:region:eu-west-2",
    "evidence": "api",
@@ -744,7 +781,23 @@
   {
    "from": "arn:aws:iam::111122223333:role/sws-aws-platform-change",
    "rel": "made_by",
-   "to": "arn:aws:cloudformation:eu-west-2:111122223333:stack/sws-aws-platform",
+   "to": "arn:aws:cloudformation:eu-west-2:111122223333:stack/demo-dns",
+   "evidence": "template",
+   "trust": "verified",
+   "source": "the stack's template (GetTemplate), PlatformChange"
+  },
+  {
+   "from": "arn:aws:iam::111122223333:role/sws-aws-platform-change",
+   "rel": "made_by",
+   "to": "arn:aws:cloudformation:eu-west-2:111122223333:stack/demo-lambda",
+   "evidence": "template",
+   "trust": "verified",
+   "source": "the stack's template (GetTemplate), PlatformChange"
+  },
+  {
+   "from": "arn:aws:iam::111122223333:role/sws-aws-platform-change",
+   "rel": "made_by",
+   "to": "arn:aws:cloudformation:eu-west-2:111122223333:stack/demo-site",
    "evidence": "template",
    "trust": "verified",
    "source": "the stack's template (GetTemplate), PlatformChange"
@@ -784,7 +837,23 @@
   {
    "from": "arn:aws:iam::111122223333:role/sws-aws-platform-read",
    "rel": "made_by",
-   "to": "arn:aws:cloudformation:eu-west-2:111122223333:stack/sws-aws-platform",
+   "to": "arn:aws:cloudformation:eu-west-2:111122223333:stack/demo-dns",
+   "evidence": "template",
+   "trust": "verified",
+   "source": "the stack's template (GetTemplate), PlatformRead"
+  },
+  {
+   "from": "arn:aws:iam::111122223333:role/sws-aws-platform-read",
+   "rel": "made_by",
+   "to": "arn:aws:cloudformation:eu-west-2:111122223333:stack/demo-lambda",
+   "evidence": "template",
+   "trust": "verified",
+   "source": "the stack's template (GetTemplate), PlatformRead"
+  },
+  {
+   "from": "arn:aws:iam::111122223333:role/sws-aws-platform-read",
+   "rel": "made_by",
+   "to": "arn:aws:cloudformation:eu-west-2:111122223333:stack/demo-site",
    "evidence": "template",
    "trust": "verified",
    "source": "the stack's template (GetTemplate), PlatformRead"
@@ -1326,20 +1395,20 @@
    "source": "Cloud Control GetResource (RegionalDomainName)"
   },
   {
-   "from": "urn:sws:actor-net:203.0.113.0/24",
+   "from": "urn:sws:actor-net:192.0.2.0/24",
    "rel": "acted_on",
    "to": "arn:aws:iam::111122223333:role/sovereignwebsite-factory-dns",
    "evidence": "content",
    "trust": "claimed",
-   "source": "CloudTrail sourceIPAddress (network 203.0.113.0/24)"
+   "source": "CloudTrail sourceIPAddress (network 192.0.2.0/24)"
   },
   {
-   "from": "urn:sws:actor-net:203.0.113.0/24",
+   "from": "urn:sws:actor-net:192.0.2.0/24",
    "rel": "acted_on",
    "to": "arn:aws:s3:::111122223333--demo-site--eu-west-2/data/vaults.json",
    "evidence": "content",
    "trust": "claimed",
-   "source": "CloudTrail sourceIPAddress (network 203.0.113.0/24)"
+   "source": "CloudTrail sourceIPAddress (network 192.0.2.0/24)"
   },
   {
    "from": "urn:sws:business-function:visitor-reads-vault-files",
