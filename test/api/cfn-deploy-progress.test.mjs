@@ -94,9 +94,9 @@ const one = await follow("0f1e2d3c4b5a", "one-stack");
   ok(failed && failed.logicalId === "VaultFunction" && failed.reason && failed.stackArn === st.arn, "failed deploy: the first failure is VaultFunction, with its reason: " + (failed && failed.reason));
   ok(ev[0].logicalId === name && ev[0].status === "ROLLBACK_COMPLETE", "failed deploy: the newest event is the stack's ROLLBACK_COMPLETE");
   const rolled = (await ctx.CfnApi.all((next) => api.resources(R, st.arn, { next }))).items;
-  // Every resource made before the failure is removed (DELETE_COMPLETE) or, if the template retains it, kept (DELETE_SKIPPED);
-  // which applies to the Retain bucket on a create rollback is asked of dev.1.aws.a and boto3.aws.a.
-  ok(rolled.length > 0 && rolled.every((r) => r.status === "DELETE_COMPLETE" || r.status === "DELETE_SKIPPED"), "failed deploy: every resource removed or kept after rollback: " + [...new Set(rolled.map((r) => r.status))].join(", "));
+  // Every resource made before the failure is deleted: the bucket, its policy and the log group are RetainExceptOnCreate
+  // in vault.yaml 0.4.7 (deleted when the creating operation rolls back: AWS's DeletionPolicy page, boto3.aws.a note 13).
+  ok(rolled.length > 0 && rolled.every((r) => r.status === "DELETE_COMPLETE"), "failed deploy: every resource deleted by the rollback, the Retain-except-on-create bucket included: " + [...new Set(rolled.map((r) => r.status))].join(", "));
 }
 
 // The page finds a customer's Vault stacks with stacks() (ListStacks, newest first in the twin).
