@@ -41,6 +41,7 @@ def log_events(text):
         if not m:
             continue
         t, who, what = m.groups()
+        who = who.rstrip(":")                                # "conductor.aws.c: wave 2 up" names the agent too
         msg = LOG_MESSAGE.match(f"{who} {what}")
         if msg:
             out.append({"t": t, "type": "message", "from": short(msg.group(1)), "to": short(msg.group(2)),
@@ -87,6 +88,45 @@ def commits(since, ref="origin/dev"):
             "signed": signed, "files": [f for f in files.split("\n") if f],
             "on_behalf_of": m.group(1) if m else None, "branch": ref.replace("origin/", ""),
         }
+
+
+def _secs(t):
+    from datetime import datetime
+    return datetime.fromisoformat(t.replace("Z", "+00:00") if len(t) > 17 else t.replace("Z", ":00+00:00")).timestamp()
+
+
+def summary(agents, events):
+    """The numbers the story tells (storyboard scene 7), computed from the events, never typed in."""
+    commits = [e for e in events if e["type"] == "commit"]
+    spawns = sorted((e for e in events if e["type"] == "spawn"), key=lambda e: e["t"])
+    moves = sorted((e for e in events if e["type"] == "move"), key=lambda e: e["t"])
+    burst = (0, None, None)                                     # most spawns inside one minute
+    for i, a in enumerate(spawns):
+        j = i
+        while j + 1 < len(spawns) and _secs(spawns[j + 1]["t"]) - _secs(a["t"]) <= 60:
+            j += 1
+        if j - i + 1 > burst[0]:
+            burst = (j - i + 1, a["t"], spawns[j]["t"])
+    by_agent = {}
+    for c in commits:
+        by_agent[c["agent"] or "unattributed"] = by_agent.get(c["agent"] or "unattributed", 0) + 1
+    accounts = {}
+    for a in agents:
+        k = account(a) or "?"
+        accounts[k] = accounts.get(k, 0) + 1
+    return {
+        "agents": len(agents), "agents_by_account": dict(sorted(accounts.items())),
+        "commits": len(commits), "signed": sum(1 for c in commits if c["signed"]),
+        "commits_on_dev": sum(1 for c in commits if c.get("branch", "dev") == "dev"),
+        "signatures_checked": {v: sum(1 for c in commits if c.get("signature") == v)
+                               for v in sorted({c["signature"] for c in commits if c.get("signature")})},
+        "landed_through_keeper": sum(1 for e in events if e["type"] == "handoff"),
+        "top_committers": sorted(by_agent.items(), key=lambda kv: (-kv[1], kv[0]))[:5],
+        "spawn_burst": {"agents": burst[0], "from": burst[1], "to": burst[2],
+                        "seconds": round(_secs(burst[2]) - _secs(burst[1])) if burst[1] else None},
+        "moves_to_account_a": len(moves), "first_move": moves[0]["t"] if moves else None, "last_move": moves[-1]["t"] if moves else None,
+        "first_event": events[0]["t"] if events else None, "last_event": events[-1]["t"] if events else None,
+    }
 
 
 def lane_of(path, lanes):
@@ -143,12 +183,19 @@ def main():
                            "source": f"docs/team/handover/{a['id'][:-2]}.md"})
         if c["on_behalf_of"]:
             events.append({"t": c["at"], "type": "handoff", "from": c["on_behalf_of"], "to": c["agent"], "sha": c["sha"]})
+    sigs_file = ROOT / "docs/swarm/data/signatures.json"           # from verify_signatures.py, when it has run
+    sigs = json.loads(sigs_file.read_text()) if sigs_file.exists() else {}
+    for e in events:
+        if e["type"] == "commit" and e["sha"] in sigs:
+            e["signature"] = sigs[e["sha"]]["verdict"]
+            e["key_of"] = sigs[e["sha"]]["key_of"]
     events += log_events((ROOT / "docs/team/log.md").read_text())
     events.sort(key=lambda e: e["t"])
     out = {"schema": "swarm-replay/0.1", "since": since, "agents": sorted(agents.values(), key=lambda a: a.get("born") or "9"),
            "events": events,
            "sources": ["git origin/dev", *[f"git {b}" for b in branches], "docs/team/handover/", "docs/team/schedule.json", "docs/team/log.md", "site/policy/abp.json", "docs/swarm/data/sessions-snapshot.json"]}
     OUT.write_text(json.dumps(out, indent=1) + "\n")
+    (OUT.parent / "summary.json").write_text(json.dumps(summary(agents, events), indent=1) + "\n")
     # The same events in the wire's line schema (maestro.c's proposal,
     # PrompTugal__News__Website board/team/maestro.c/analysis/2026-11-23-the-wire/),
     # fields as relayed by conductor.aws.c; values for kind and channel are ours until checked.
