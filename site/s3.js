@@ -79,7 +79,7 @@
     box.appendChild(P.el("p", { text: name + " does not answer this site yet. S3 lets a web page read a bucket only when the bucket's CORS rules allow it. This plan adds one rule: GET and HEAD, from " + location.origin + " only. Rules already there are kept." }));
     var now = plan.before ? JSON.stringify(plan.before, null, 2) : "", after = JSON.stringify(plan.after, null, 2);
     box.appendChild(P.el("h4", { text: "What changes (- removed, + added)" }));
-    box.appendChild(P.diffView(now, after));
+    box.appendChild(P.diffView(now, after, P.jsonLine));
     box.appendChild(P.el("details", { class: "full" }, [P.el("summary", { text: "All the CORS rules, now and after" }),
       P.el("h4", { text: "Now" }), P.el("pre", { text: now || "(none)" }), P.el("h4", { text: "After you approve" }), P.el("pre", { text: after })]));
     var go = P.el("button", { type: "button", class: "approve", text: "Approve and add the rule to " + name });
