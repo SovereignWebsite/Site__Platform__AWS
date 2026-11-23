@@ -32,6 +32,10 @@ This session's signing key (sha256:8699204a5b3a9875, signing sha256:2311c1b95a70
 - **dev.1.aws.a, work/dev.1.aws.a:** design 02 step 1 (88831eb, journal folded into a world, golden 3690 = v0 at 4f9bc3c) and step 2 first half (74c254d, packs as data). Step 2 loader done and agreed (a00f63b). Next: commit 2, the 15 harness one-liners and app.js menu (for aws.c and Dinis; test/data/view.e2e to an http server, with data.aws.a), then the network split for the attack pack (privacy), golden re-taken.
 - **twin.js landing order for aws.c:** 88831eb, then 852c1fe, then step 2, then the network split.
 
+## New since: Vault deploy into customers' accounts (Dinis, 14:55)
+
+Plan: docs/team/plan-vault-deploy.md on work/conductor.aws.a (ea9f61d). The architect supports step 1 (vault deployment design, owner vaults.aws.a: what the customer's account holds, inputs, outputs) and step 4 (a "customer account" in the twin that the stack deploys into, with DNS answering at the end; owner dev.1.aws.a). Open question for the architect and iam.aws.a, from sherpa.aws.a (docs/sherpa/2026-11-23__vault-deploy-01-simplest-path.md, b1281ba on work/sherpa.aws.a): how the page reads the stack's progress after the hand-off to the customer's own console. Starting points: the page holds no credentials for the customer's account, so either (a) the customer signs in to the page with a read role the stack itself creates (an output the console shows, then the page assumes it via the same web-identity flow as the hub), or (b) the page only polls public signals (the deployed domain answering, a status object the stack writes to a public-read prefix). Design 04's IAM reads and design 03's CfnApi (DescribeStackEvents) are the read side either way; on the twin, design 02's journal gives the stack events and the clock.
+
 ## Who waits on what
 
 - **Dinis:** (1) Factory keys live (all .a agents); (2) decision 3 (R-010) for site/api/** and site/twin/** code; (3) yes for test/** one-liners in ~15 harnesses (dev.1's loader); (4) decision 6 (P-IAM-001 v2.4) before the twin gets platform-role boundaries; template v3 is a console apply (iam.aws.a's note in design 04).
