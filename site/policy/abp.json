@@ -134,6 +134,11 @@
             "docs/data/**"
           ]
         },
+        "data.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/data/**"
+          ]
+        },
         "billing.aws.c@SovereignWebsite.dinis": {
           "may_change": [
             "docs/billing/**"
