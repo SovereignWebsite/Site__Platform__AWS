@@ -30,9 +30,10 @@
     .then(function () { return get(logs, "?list-type=2&prefix=cloudfront%2F"); }).then(function (r) { return r.text(); }).then(function (x) {
       return LogView.run(document.getElementById("box"), keysOf(x), function (key) {
         return get(logs, key).then(function (r) { return r.arrayBuffer(); }).then(function (b) { return new Uint8Array(b); });
-      }, { context: context, open: function (ref) { window.opened.push({ bucket: ref.bucket, key: ref.key, line: ref.line || null }); } });
+      }, { playMs: 40, context: context, open: function (ref) { window.opened.push({ bucket: ref.bucket, key: ref.key, line: ref.line || null }); } });
     }).then(function (res) {
       var v = res.summary.vaults.filter(function (x) { return x.key === "vault-demo-001"; })[0];
+      window.allRecords = res.records.map(function (r) { return { hour: r.hour, vault: r.vault, status: r.status }; });
       window.viewResult = { requests: res.summary.requests, vault1: v ? v.requests : 0, siteKeys: context.siteKeys.length };
     });
 })();
