@@ -36,11 +36,14 @@ eq(ids([...quiet, rec({ eventSource: "cloudtrail.amazonaws.com", eventName: "Sto
 // refused burst: 5 in ten minutes fires once; 4 does not; 5 spread over an hour does not
 const denied = (t) => rec({ eventName: "GetRole", readOnly: true, eventTime: t, errorCode: "AccessDenied", requestParameters: { roleName: "x" } });
 eq(ids([...quiet, ...["10:00", "10:02", "10:04", "10:06", "10:08"].map((m) => denied("2026-11-22T" + m + ":30Z"))]), ["refused-burst"], "five refusals in ten minutes");
+eq(alarms([...quiet, ...["10:00", "10:01", "10:02", "10:03", "10:04", "10:05", "10:06"].map((m) => denied("2026-11-22T" + m + ":30Z"))]).map((a) => a.events.length), [7], "a burst holds every refusal in its ten minutes");
 eq(ids([...quiet, ...["10:00", "10:02", "10:04", "10:06"].map((m) => denied("2026-11-22T" + m + ":30Z"))]), [], "four refusals");
 eq(ids([...quiet, ...["10:00", "10:15", "10:30", "10:45", "11:00"].map((m) => denied("2026-11-22T" + m + ":30Z"))]), [], "five refusals over an hour");
 
 // new address: a change from an address never seen before; a read from one is quiet; a service is not an address
 eq(ids([...quiet, rec({ eventName: "UpdateAssumeRolePolicy", eventTime: "2026-11-22T11:00:00Z", sourceIPAddress: "198.51.100.66", requestParameters: { roleName: "someone-elses-role" } })]), ["new-network"], "change from a new network");
+eq(ids([...quiet, rec({ eventName: "GetRole", readOnly: true, eventTime: "2026-11-22T10:59:00Z", sourceIPAddress: "198.51.100.66", errorCode: "AccessDenied", requestParameters: { roleName: "x" } }),
+  rec({ eventName: "UpdateAssumeRolePolicy", eventTime: "2026-11-22T11:00:00Z", sourceIPAddress: "198.51.100.66", requestParameters: { roleName: "someone-elses-role" } })]), ["new-network"], "a refusal does not make a network known");
 eq(ids([...quiet, rec({ eventName: "GetRole", readOnly: true, eventTime: "2026-11-22T11:00:00Z", sourceIPAddress: "198.51.100.66", requestParameters: { roleName: "x" } })]), [], "read from a new network");
 eq(ids([...quiet, rec({ eventName: "UpdateAssumeRolePolicy", eventTime: "2026-11-22T11:00:00Z", sourceIPAddress: "cloudformation.amazonaws.com", requestParameters: { roleName: "someone-elses-role" } })]), [], "service, not an address");
 
@@ -97,4 +100,4 @@ eq(got.map((a) => a.rule), ["iam-trust-or-permissions", "hub-stack-change-applie
 if (got.some((a) => !a.words || !a.events.length || !a.level)) fail("alarm without words, events or level");
 eq(got[2].events[0].action, "CreateChangeSet", "new-network names the first call from that network");
 eq(AL.rules.length, 10, "ten rules listed");
-console.log("ok ct-alarms: 10 rules, 61 cases (21 for R-021, 23 for the templates bucket), R-008 story gives 3 alarms newest first");
+console.log("ok ct-alarms: 10 rules, 63 cases (21 for R-021, 23 for the templates bucket), R-008 story gives 3 alarms newest first");

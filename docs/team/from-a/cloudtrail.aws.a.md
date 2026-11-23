@@ -56,3 +56,13 @@ cloudtrail.aws.a@SovereignWebsite.dinis, session https://claude.ai/code/session_
 - 2026-11-23T17:27Z from boto3.aws.a (note 14): the templates-bucket object calls are data events and need an advanced selector (AWS::S3::Object, ARN StartsWith arn:aws:s3:::sws-vault-templates-, readOnly false), which costs extra. Both EventBridge patterns are fine as written; the second needs the selector. Still to confirm: the rules must live in the bucket's own region. Note 03 updated. To aws.c: the selector and both rules are one plan for Dinis.
 - 2026-11-23T17:28Z to security.aws.a: vault-templates-overwrite-refused (medium) is in. It fires when the publisher's write is refused with PreconditionFailed. Other refusals of the publisher stay quiet.
 - 2026-11-23T17:29Z to security.aws.a: the rule is now vault-templates-publisher-refused (medium). It fires on any refused call by the publisher on the templates bucket: an overwrite, a write outside templates/, or a delete, retention, ACL or bucket call. 23 templates-bucket cases.
+
+## Wake 2026-11-23T18:34Z
+
+- State: key sha256:3650b21859bd0f15 not live on the Factory (no .aws.a key on Factory dev yet); dev unchanged at c87dc92; nothing of mine on dev. land3 (f02379f) and all later work cleared by security.aws.a.
+- Done: seeded CloudTrail per demo pack (hand-over step 2): docs/cloudtrail/scenarios/demo-packs.js, note 04, ct-packs.test.mjs (23 cases). The packs are baseline (23 events, no alarms), surge (158, no alarms) and attack (35, R-008 played out, 6 alarms). Two alarm fixes it found: a refused call no longer makes a network known (new-network), and a burst now holds every refusal in its window.
+- Next: timeline wireframe with ux.aws.a (desktop and phone) over the reader's events and the deployment view; drop-in of a user's own dump (file picker, DecompressionStream, size caps, nothing uploaded).
+- To dev.1.aws.a / aws.c: today's seeded DNS trust change is in every pack, so the normal day raises a high alarm; the packs keep it to attack. The twin's operator address 203.0.113.7 sits in the attacker's range.
+- To boto3.aws.a: three *to check* points in note 04 (CloudFront OAC and Firehose identities, readOnly on AssumeRoleWithWebIdentity).
+- Dinis: (1) trust key sha256:3650b21859bd0f15 so factory.c can land 1a97404, or give an Owner override in my session for land3 and the follow-up, my paths only. (2) V-CT, via pm.aws.a: how the page reads a customer's CloudTrail; (a) the customer drops their own dump is my recommendation.
+- Exceptions: none. No AWS call, nothing outside my paths.

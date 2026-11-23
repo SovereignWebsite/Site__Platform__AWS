@@ -73,7 +73,10 @@
           var list = by[k].slice().sort(function (a, b) { return a.time - b.time; });
           for (var i = 0, j = 0; j < list.length; j++) {
             while (list[j].time - list[i].time > 600e3) i++;
-            if (j - i + 1 >= 5) { out.push(list.slice(i, j + 1)); i = j + 1; }
+            if (j - i + 1 >= 5) {
+              while (j + 1 < list.length && list[j + 1].time - list[i].time <= 600e3) j++; // the whole burst, not just the fifth
+              out.push(list.slice(i, j + 1)); i = j + 1;
+            }
           }
         });
         return out;
@@ -82,11 +85,12 @@
       words: "A change was made from a network (/24 or /48) not seen in any earlier event.",
       group: function (events) {
         var seen = Object.create(null), out = [];
-        events.slice().sort(function (a, b) { return a.time - b.time; }).forEach(function (e, n) {
+        var first = true;
+        events.slice().sort(function (a, b) { return a.time - b.time; }).forEach(function (e) {
           var ip = e.from.net;
           if (!ip) return; // a service acting, or no address
-          if (n > 0 && !seen[ip] && e.change && !e.failed) out.push([e]);
-          seen[ip] = 1;
+          if (!first && !seen[ip] && e.change && !e.failed) out.push([e]);
+          if (!e.failed) { seen[ip] = 1; first = false; } // a network becomes known by what it did, not by what it was refused
         });
         return out;
       } }
