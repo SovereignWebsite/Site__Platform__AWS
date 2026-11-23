@@ -65,3 +65,17 @@ test("progress: N of M ready against the template, time left only from measured 
   assert.equal(progress(s, 100, ids, { VaultBucket: 17 }).left, null, "partial history: no estimate");
   assert.deepEqual(progress(s, 999, ids), { ready: 3, total: 3, failed: false, left: null });
 });
+
+test("plain-words labels from ontology.aws.a's type-labels.json, and the health check that ends v1", () => {
+  const labels = { // subset of docs/ontology/type-labels.json (work/ontology.aws.a), same shape
+    "AWS::S3::Bucket": { label: "Store for the site's files", short: "File store", aws: "S3 bucket" },
+    "AWS::CloudFront::Distribution": { label: "Front door that serves the site to visitors, fast, from near them", short: "Front door", aws: "CloudFront distribution" }
+  };
+  const s = deploySteps(events, { labels, dns: { name: "vault.example.org", answers: ["192.0.2.10"] }, health: { url: "https://vault.example.org/health", ok: true, status: 200 } });
+  assert.equal(s[1].title, "File store"); assert.match(s[1].text, /^File store \(S3 bucket\): creating/);
+  assert.equal(s[3].fields.aws, "CloudFront distribution");
+  assert.equal(s[5].title, "VaultDns", "a type with no label keeps its logical id");
+  assert.deepEqual([s.at(-1).from, s.at(-1).to, s.at(-1).kind], ["dns", "health", "done"]);
+  assert.match(s.at(-1).text, /is healthy \(HTTP 200\)/);
+  assert.equal(progress(s, 999, ["VaultBucket", "VaultCdn", "VaultDns"]).ready, 3);
+});

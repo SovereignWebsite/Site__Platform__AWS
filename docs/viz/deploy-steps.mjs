@@ -2,7 +2,8 @@
 // viz.aws.a@SovereignWebsite.dinis, 23 Nov 2026. Step 7 of docs/team/plan-vault-deploy.md (conductor.aws.a).
 // Input: CfnApi(region).events(name) as cloudformation.aws.a designed it
 //   (docs/cloudformation/2026-11-23__seed-and-read-api.md): [{ time, logicalId, type, status, reason }], newest first.
-// Optional: a DNS check result { name, answers: [..] } once the record answers. Pure: no network, no DOM.
+// Optional: a DNS check result { name, answers: [..] } once the record answers; a health check { url, ok, status };
+// labels: ontology.aws.a's docs/ontology/type-labels.json "types" map, so boxes read in plain words. Pure: no network, no DOM.
 // A resource is a station; the stack is the hub. A CREATE_IN_PROGRESS travels from the stack to the resource,
 // a *_COMPLETE or *_FAILED pulses at it. Status words are AWS's own (ResourceStatus).
 
@@ -21,14 +22,17 @@ export function deploySteps(events, opts = {}) {
     const station = isStack ? "stack" : e.logicalId;
     const phase = PHASE(e.status), op = e.status.split("_")[0];
     const working = phase === "working";
+    const lab = (opts.labels || {})[e.type] || null;
+    const name = isStack ? stack : lab ? lab.short + " (" + lab.aws + ")" : e.logicalId + " (" + e.type + ")";
     add({
       t: +((e.ms - t0) / 1000 / scale).toFixed(3),
       from: isStack || !working ? station : "stack",
       to: station,
       kind: phase,
-      title: isStack ? "Stack" : e.logicalId,
-      text: (isStack ? stack : e.logicalId + " (" + e.type + ")") + ": " + (working ? (VERB[op] || op.toLowerCase()) : e.status.replace(/_/g, " ").toLowerCase()) + (e.reason ? ", " + e.reason : ""),
-      fields: { time: e.time, logicalId: e.logicalId, type: e.type, status: e.status, ...(e.reason ? { reason: e.reason } : {}) }
+      title: isStack ? "Stack" : lab ? lab.short : e.logicalId,
+      text: name + ": " + (working ? (VERB[op] || op.toLowerCase()) : e.status.replace(/_/g, " ").toLowerCase()) + (e.reason ? ", " + e.reason : ""),
+      fields: { time: e.time, logicalId: e.logicalId, type: e.type, status: e.status, ...(e.reason ? { reason: e.reason } : {}),
+        ...(lab ? { label: lab.label, short: lab.short, aws: lab.aws } : {}) }
     });
   }
   if (opts.dns) {
@@ -37,6 +41,13 @@ export function deploySteps(events, opts = {}) {
     add({ t: +(last.t + 1).toFixed(3), from: "stack", to: "dns", kind: live ? "done" : "waiting", title: "DNS",
       text: opts.dns.name + (live ? " answers: " + opts.dns.answers.join(", ") : " does not answer yet"),
       fields: { name: opts.dns.name, answers: opts.dns.answers || [] } });
+  }
+  // v1 on real accounts ends with a health check (iam.aws.a's design, 68f4b8b): the Vault answers, or not yet.
+  if (opts.health) {
+    const last = out[out.length - 1];
+    add({ t: +(last.t + 1).toFixed(3), from: opts.dns ? "dns" : "stack", to: "health", kind: opts.health.ok ? "done" : "waiting", title: "Health",
+      text: opts.health.url + (opts.health.ok ? " is healthy" : " is not answering yet") + (opts.health.status ? " (HTTP " + opts.health.status + ")" : ""),
+      fields: { url: opts.health.url, ok: !!opts.health.ok, ...(opts.health.status ? { status: opts.health.status } : {}) } });
   }
   return out;
 }
@@ -52,7 +63,7 @@ export function boardAt(steps, t) {
 // vaults.aws.a / cloudformation.aws.a), and estimate time left only from durations measured on earlier runs
 // (`history`: { [logicalId]: seconds }). With no history, `left` is null and the page says "N of M ready".
 export function progress(steps, t, expected = [], history = null) {
-  const board = boardAt(steps, t).filter((r) => r.station !== "stack" && r.station !== "dns");
+  const board = boardAt(steps, t).filter((r) => !["stack", "dns", "health"].includes(r.station));
   const done = new Set(board.filter((r) => r.kind === "done").map((r) => r.station));
   const failed = board.some((r) => r.kind === "failed");
   const ids = expected.length ? expected : board.map((r) => r.station);

@@ -39,3 +39,8 @@ sherpa.aws.a's walk cuts the wizard to two choices and one button; the waiting s
 - **Time left only from measured runs.** An estimate appears only when every resource has a duration measured on earlier runs (the twin first, real deployments later); otherwise the page says "2 of 3 ready" and nothing more. No invented minutes. The estimate assumes resources still to start run alongside those running; a template with long dependency chains will need the chain from cloudformation.aws.a.
 - **Domain optional.** Without a custom domain, the scene ends on the CloudFront address (the stack output) instead of the DNS step; the DNS step appears only when a domain was given.
 - **Progress after the customer leaves for their console** depends on sherpa's open question (a read role the stack creates, or pasting the output back). Until architect.aws.a and iam.aws.a decide, the view plays events from whichever source the page has.
+
+## Revision 3 (ontology labels; iam.aws.a's design)
+
+- Boxes read in plain words from ontology.aws.a's docs/ontology/type-labels.json: "File store (S3 bucket)", "Front door (CloudFront distribution)". The short label goes in the box, the AWS name underneath, the full label on focus. A type with no label keeps its logical id. One file, so every view says the same thing.
+- iam.aws.a's design (68f4b8b): the live event stream is a twin view, opt-in later on real accounts. On a real account, v1 ends with two checks: the address answers (DNS) and the Vault's /health answers. Both are steps at the end of the scene; with no live events, the scene is those two checks and the stack's outputs.
