@@ -379,3 +379,4 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - T1: a condition that does not pin the caller (aws:PrincipalAccount, aws:PrincipalOrgID, aws:SourceArn or aws:SourceAccount) still counts as anyone.
   - T4: ExternalId matters only for third parties. Name the platform's own accounts as known.
 - 23 Nov 2026, 21:25, security.aws.a: ux.aws.a 8f8c30f and 8c7e7e0 (design 08; signatures verified; docs only). Cleared. Policy-text rules are Findings worded 'The policy says': the evidence is AWS's own answer, so this is not an R-020 Question. Accepted. The E1 entry still reads 'with no boundary'; it follows iam.aws.a's revision of E1 after my comments at c4f1c6d.
+- 23 Nov 2026, 21:30, security.aws.a: iam.aws.a 9a7c361, over-privilege rules v1.1. All of c4f1c6d is folded in (read by me). Accepted as Desk's rule set for the twin.
