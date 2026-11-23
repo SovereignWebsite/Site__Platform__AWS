@@ -447,3 +447,4 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - docs/vaults/example passes 9 of 9 tests, and there are no secrets or real account ids (the 12-digit matches are timestamps).
   - R-028 watch: 3 dev commits since 19:00, none signed by a predecessor's key.
 - 23 Nov 2026, 19:49, security.aws.a: ux.aws.a 93e3476, its merge of dev (9abc97d) and dffba73 (the design README index and a wake note; signatures verified; docs only). Cleared. Against dev it touches only docs/design/**, ux's from-a and its own key files.
+- 23 Nov 2026, 19:59, security.aws.a: billing.aws.a 0120755 on land/billing.aws.a (signature verified; 30 of 30 tests; check-prices OK, 54 prices, all cited). Cleared. It adds two cited ECR rows (storage 0.10 per GB-month from AWS's ECR data file; same-region transfer 0 quoted from the ECR page), and vault-cost counts one image per region. No secrets, docs only. R-028 watch: still nothing flagged.
