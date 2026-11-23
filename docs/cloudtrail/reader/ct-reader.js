@@ -22,6 +22,26 @@
     }
   }
 
+  // Privacy (Dinis Cruz, 23 Nov 2026 ~11:15 UTC, docs/data design 01): keep only the network, /24 for IPv4 and /48
+  // for IPv6, never the raw address. A service name in sourceIPAddress (e.g. cloudformation.amazonaws.com) is kept as
+  // from.service, since it is not a person's address.
+  function network(a) {
+    if (!a) return null;
+    var m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.\d{1,3}$/.exec(a);
+    if (m) return m[1] + "." + m[2] + "." + m[3] + ".0/24";
+    if (a.indexOf(":") >= 0) {
+      var halves = a.split("::"), head = halves[0] ? halves[0].split(":") : [], tail = halves.length > 1 && halves[1] ? halves[1].split(":") : [];
+      var groups = halves.length > 1 ? head.concat(new Array(8 - head.length - tail.length).fill("0"), tail) : head;
+      if (groups.length !== 8 || groups.some(function (g) { return !/^[0-9a-f]{1,4}$/i.test(g); })) return null;
+      return groups.slice(0, 3).map(function (g) { return parseInt(g, 16).toString(16); }).join(":") + "::/48";
+    }
+    return null;
+  }
+  function from(r) {
+    var a = r.sourceIPAddress || null, net = network(a);
+    return { net: net, service: !net && a && /^[a-z0-9.-]+\.amazonaws\.com$/.test(a) ? a : null, city: null, country: null, agent: r.userAgent || null };
+  }
+
   function roleFromArn(a) { var m = /^arn:aws:iam::(\d{12}):role\/(.+)$/.exec(a || ""); return m ? { account: m[1], name: m[2] } : null; }
 
   function targets(r) {
@@ -71,7 +91,7 @@
       region: r.awsRegion || null,
       account: r.recipientAccountId || null,
       who: who(r.userIdentity),
-      from: { ip: r.sourceIPAddress || null, agent: r.userAgent || null },
+      from: from(r), // network only; raw keeps the record for the detail panel, in the page only
       change: r.readOnly !== true, // missing readOnly counts as a change
       category: r.eventCategory || null,
       failed: r.errorCode ? { code: r.errorCode, message: r.errorMessage || null } : null,
@@ -115,5 +135,5 @@
   // The event as handed to the graph: everything but raw (kept for the detail panel only, design 03).
   function forGraph(e) { var o = {}; for (var k in e) if (k !== "raw") o[k] = e[k]; return o; }
 
-  root.CloudTrailReader = { read: read, merge: merge, normalise: normalise, forGraph: forGraph };
+  root.CloudTrailReader = { read: read, merge: merge, normalise: normalise, forGraph: forGraph, network: network };
 })(typeof window !== "undefined" ? window : globalThis);

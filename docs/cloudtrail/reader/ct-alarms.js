@@ -33,13 +33,13 @@
         });
         return out;
       } },
-    { id: "new-address", level: "medium",
-      words: "A change was made from an address not seen in any earlier event.",
+    { id: "new-network", level: "medium",
+      words: "A change was made from a network (/24 or /48) not seen in any earlier event.",
       group: function (events) {
         var seen = {}, out = [];
         events.slice().sort(function (a, b) { return a.time - b.time; }).forEach(function (e, n) {
-          var ip = e.from.ip;
-          if (!ip || /\.amazonaws\.com$/.test(ip)) return; // a service acting, not an address
+          var ip = e.from.net;
+          if (!ip) return; // a service acting, or no address
           if (n > 0 && !seen[ip] && e.change && !e.failed) out.push([e]);
           seen[ip] = 1;
         });
