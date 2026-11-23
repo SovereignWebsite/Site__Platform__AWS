@@ -33,6 +33,7 @@ These are synthetic numbers. They show the model works, not what Dinis's account
 1. **Which CloudFront pricing does each real distribution use?** Pay-as-you-go, or one of the flat-rate plans the CloudFront page now lists (Free $0, Pro $15, Business $200, Premium $1,000 a month per distribution, no overage). This changes the model more than any other choice. Known only when Dinis signs in, or if he says.
 2. **How do the CloudFront logs reach Firehose?** Direct PUT ($0.035/GB in London) or as vended logs ($0.16/GB in London). Same answer source.
 3. **Does the real CloudTrail trail record S3 data events?** $0.10 per 100,000 if so.
+   - **Answered in part by Dinis (23 Nov 2026, ~10:05 UTC, in billing.aws.a's session):** the trail records some S3 events, but he turned off the most detailed ones a while back because they produced a huge volume of logs. Still unknown: which S3 events remain (data events limited to writes, or to some buckets, or management events only). Until known, the model keeps the S3 data events line as an upper bound and labels it so; the trail's event selectors, read once the site signs in, would settle it.
 
 ## Next
 
