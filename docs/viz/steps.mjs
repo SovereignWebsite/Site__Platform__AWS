@@ -14,6 +14,11 @@ export function parseLine(text) {
   return line;
 }
 
+// The S3 browser's address for a place (site/s3.js route(), fe7170c): every panel value links to what it names.
+export function s3Href(bucket, key) {
+  return "#/s3/" + bucket + "/" + String(key || "").split("/").map(encodeURIComponent).join("/");
+}
+
 export function edgeCity(code) {
   const m = /^([A-Z]{3})/.exec(code || "");
   return (m && EDGES[m[1]]) || "unknown edge";
@@ -33,7 +38,7 @@ export function stepsFor(text, ctx) {
   add("edge", "edge", "request", "Edge", "Reaches edge " + l.x_edge_location + " (" + edgeCity(l.x_edge_location) + ")",
     { edge: l.x_edge_location, city: edgeCity(l.x_edge_location) }, { gap: "cache hit or miss" });
   add("edge", "keeper", "data", "Origin", "Asks bucket " + ctx.site + " for " + key,
-    { bucket: ctx.site, key, ...(ctx.object || {}) }, { gap: ctx.object ? "origin access setting" : "object not in the twin" });
+    { bucket: ctx.site, key, href: s3Href(ctx.site, key), ...(ctx.object || {}) }, { gap: ctx.object ? "origin access setting" : "object not in the twin" });
   add("keeper", "visitor", "data", "Answer", l.sc_status + ", " + l.sc_bytes + " bytes in " + tt + " s",
     { status: l.sc_status, bytes: l.sc_bytes, seconds: tt });
   const st = ctx.stream || null, dest = st && st.Destinations && st.Destinations[0] && st.Destinations[0].ExtendedS3DestinationDescription;
@@ -43,15 +48,20 @@ export function stepsFor(text, ctx) {
   add("edge", "scribe", "log", "Log",
     st ? "One JSON line goes to Firehose stream " + st.DeliveryStreamName + (processor ? ", enriched by " + processor.replace(/^.*:function:/, "").replace(/:\$LATEST$/, "") : "")
        : "One JSON line written for this request",
-    st ? { line: l, stream: st.DeliveryStreamName, arn: st.DeliveryStreamARN, processor: processor || null }
-       : { line: l }, st ? {} : { gap: "Firehose stream" });
+    { line: l, ...(st ? { stream: st.DeliveryStreamName, arn: st.DeliveryStreamARN, processor: processor || null } : {}),
+      ...("country" in l ? { country: l.country, vault: l.vault_id || null } : {}) },
+    st ? {} : { gap: "Firehose stream" });
   add("scribe", "archivist", "log", "Batch", "Lands in " + ctx.logs + " as " + ctx.logKey,
-    { bucket: ctx.logs, key: ctx.logKey, ...(dest ? { buffer_seconds: dest.BufferingHints.IntervalInSeconds, buffer_mb: dest.BufferingHints.SizeInMBs, compression: dest.CompressionFormat } : {}) },
+    { bucket: ctx.logs, key: ctx.logKey, href: s3Href(ctx.logs, ctx.logKey), ...(dest ? { buffer_seconds: dest.BufferingHints.IntervalInSeconds, buffer_mb: dest.BufferingHints.SizeInMBs, compression: dest.CompressionFormat } : {}) },
     dest && !dest.BucketARN.endsWith(":::" + ctx.logs) ? { gap: "stream writes to another bucket" } : {});
+
+  // Vault reach: the enricher's vault_id names the vault this request touched; shown only when the line has one.
+  if (l.vault_id) add("archivist", "vault", "vault", "Vault", "Touches vault " + l.vault_id + " (from the enricher's vault_id)", { vault: l.vault_id });
 
   // Timing: the four request steps share time_taken; the log steps follow after (Firehose batches hourly; shown, not timed).
   const share = tt / 4;
   out.forEach((s, n) => { s.t = n < 4 ? +(share * n).toFixed(4) : +(tt + (n - 3) * share).toFixed(4); });
+  // Log steps carry the enriched line as the scribe wrote it (country, vault_id); the request steps show the raw request.
   return out;
 }
 

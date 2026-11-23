@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import vm from "node:vm";
 import { gunzipSync } from "node:zlib";
-import { stepsFor, asText, parseLine, edgeCity } from "./steps.mjs";
+import { stepsFor, asText, parseLine, edgeCity, s3Href } from "./steps.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 function loadTwin() {
@@ -19,7 +19,7 @@ function loadTwin() {
 const READ = { authorization: "AWS4-HMAC-SHA256 Credential=ASIATWINREAD/20261123/eu-west-2/s3/aws4_request" };
 const CHANGE = { authorization: "AWS4-HMAC-SHA256 Credential=ASIATWINCHANGE/20261123/eu-west-2/cloudcontrolapi/aws4_request" };
 
-async function twinPacket() {
+async function twinPacket(path = "/data/vaults.json") {
   const twin = loadTwin(), B = twin.buckets;
   for (const b of [B.site, B.logs]) await twin.handle("https://cloudcontrolapi.eu-west-2.amazonaws.com/", { method: "POST", headers: { ...CHANGE, "x-amz-target": "CloudApiService.UpdateResource" },
     body: JSON.stringify({ TypeName: "AWS::S3::Bucket", Identifier: b, PatchDocument: JSON.stringify([{ op: "add", path: "/CorsConfiguration", value: { CorsRules: [] } }]) }) });
@@ -28,7 +28,7 @@ async function twinPacket() {
   let logKey, line;
   for (const [, k] of list.matchAll(/<Key>([^<]+)<\/Key>/g)) {
     const gz = new Uint8Array(await (await twin.handle(s3(B.logs, k), { headers: READ })).arrayBuffer());
-    line = gunzipSync(gz).toString("utf8").trim().split("\n").find((x) => JSON.parse(x).cs_uri_stem === "/data/vaults.json");
+    line = gunzipSync(gz).toString("utf8").trim().split("\n").find((x) => JSON.parse(x).cs_uri_stem === path);
     if (line) { logKey = k; break; }
   }
   const obj = await twin.handle(s3(B.site, "data/vaults.json"), { headers: READ });
@@ -83,6 +83,27 @@ test("the twin's Firehose stream fills the log steps: name, enricher, buffer, bu
   assert.equal(batch.gap, undefined);
   const other = { ...ctx.stream, Destinations: [{ ExtendedS3DestinationDescription: { ...ctx.stream.Destinations[0].ExtendedS3DestinationDescription, BucketARN: "arn:aws:s3:::elsewhere" } }] };
   assert.equal(stepsFor(line, { ...ctx, stream: other })[5].gap, "stream writes to another bucket");
+});
+
+test("panel values link to the S3 browser's address for what they name", async () => {
+  const { line, ctx } = await twinPacket();
+  const steps = stepsFor(line, ctx);
+  assert.equal(steps[2].fields.href, "#/s3/111122223333--demo-site--eu-west-2/data/vaults.json");
+  assert.match(steps[5].fields.href, /^#\/s3\/111122223333--demo-cloudfront-logs--eu-west-2\/cloudfront\/2026\/11\//);
+  assert.equal(s3Href("b", "a b/c#d"), "#/s3/b/a%20b/c%23d");
+});
+
+test("the enricher's fields: country on every line, and a Vault step only when the line names a vault", async () => {
+  const site = await twinPacket();
+  const plain = stepsFor(site.line, site.ctx);
+  assert.equal(plain.length, 6);
+  assert.match(plain[4].fields.country, /^(GB|IE|NL)$/);
+  assert.equal(plain[4].fields.vault, null);
+  const v = await twinPacket("/vault/vault-demo-001/files");
+  const steps = stepsFor(v.line, v.ctx);
+  assert.deepEqual(steps.map((s) => s.title), ["Ask", "Edge", "Origin", "Answer", "Log", "Batch", "Vault"]);
+  assert.equal(steps[6].fields.vault, "vault-demo-001");
+  assert.ok(steps[6].t >= steps[5].t);
 });
 
 test("lines that are not CloudFront lines are refused; unknown edges say so", () => {
