@@ -37,6 +37,12 @@ test("object operations need exactly s3:ListBucket and s3:GetObject", () => {
   assert.deepEqual(by.getObject["x-aws-actions"], ["s3:GetObject"]);
 });
 
+test("getObject documents 206 for a range and 416 InvalidRange past the end", () => {
+  const g = ops.find(o => o.operationId === "getObject");
+  assert.ok(g.responses["206"] && g.responses["416"]);
+  assert.ok(doc.components.schemas.AwsError.properties.code.examples.includes("InvalidRange"));
+});
+
 test("only applyPlan changes anything, and it needs Approve", () => {
   for (const o of ops) {
     assert.ok(["read", "change"].includes(o["x-role"]), o.operationId);

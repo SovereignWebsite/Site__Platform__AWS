@@ -72,6 +72,7 @@
         "responses": {
           "200": { "description": "The whole object", "content": { "application/octet-stream": { "schema": { "type": "string", "contentEncoding": "binary" } } } },
           "206": { "description": "The asked range", "content": { "application/octet-stream": { "schema": { "type": "string", "contentEncoding": "binary" } } } },
+          "416": { "description": "The range is past the end of the object: rejects with code InvalidRange (as the twin answers since 787735b)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AwsError" } } } },
           "default": { "$ref": "#/components/responses/AwsError" }
         }
       }
@@ -162,7 +163,7 @@
       "AwsError": {
         "type": "object", "required": ["code", "message"],
         "description": "S3 <Error><Code/><Message/></Error> or Cloud Control __type and message, made one shape; a CORS refusal shows as code NetworkError",
-        "properties": { "code": { "type": "string", "examples": ["NoSuchKey", "NoSuchBucket", "AccessDenied"] }, "message": { "type": "string" }, "status": { "type": "integer" } }
+        "properties": { "code": { "type": "string", "examples": ["NoSuchKey", "NoSuchBucket", "AccessDenied", "InvalidRange"] }, "message": { "type": "string" }, "status": { "type": "integer" } }
       }
     },
     "responses": {
