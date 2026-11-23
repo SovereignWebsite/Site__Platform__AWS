@@ -129,7 +129,7 @@ Phone (390 px): the same order, all full width. The region select is a native `<
 ```
 
 - The page cannot see progress in v1 (V8 a), so it says so instead of showing a spinner that means nothing. The progress view (plan step 7, viz.aws.a) lives on the twin until a read role exists.
-- **How long**: no figure until cloudformation.aws.a has measured a create on the twin and then on a real account. After that: "This usually takes about N minutes" with the measured N. CloudFront distributions are the slow part.
+- **How long**: no figure on the page. The twin's 272 to 308 s (dev.1.aws.a) is the twin's own timing, with 240 s set aside for CloudFront, not AWS's, so it is never shown. Until there is a source in AWS's documentation or a measured real deploy, screen 2 says: "This can take several minutes. Your AWS console shows each step." (sherpa.aws.a). CloudFront distributions are the slow part.
 - The acknowledgement wording must be copied from the real console when boto3.aws.a or cloudformation.aws.a has seen it (*check*). The text above is a placeholder.
 - The page keeps no timer and polls nothing.
 - "Changed your mind" points to the Remove steps (screen 4). Deleting the stack alone leaves the bucket and the log group, by design (Retain).
