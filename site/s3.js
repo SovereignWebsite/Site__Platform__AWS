@@ -438,6 +438,86 @@
     };
     st.appendChild(document.createTextNode(" ")); st.appendChild(b);
   }
+  // ---- S3-4: "Connected to this bucket" (docs/s3/2026-11-23__s3-4-bucket-graph-plan.md) ----
+  // Words: ontology.aws.a's READ table (docs/ontology/explain.mjs), each relation read from either end, so this panel,
+  // the Map and explain.mjs say the same thing. Links come from dev.2.aws.a's Graph.neighbours(json, id): one hop,
+  // and a second hop through the bucket's files (via). Order and marks by trust: AWS-confirmed first with no mark,
+  // then "?" claimed (from files or names: check before acting), then "~" the ontologist's word. More than three
+  // links of one kind read as one line with a count, the first and the last.
+  var READ = {
+    in: ["is in", "contains"], holds: ["holds", "is held by"], made_by: ["was made by", "made"],
+    writes_to: ["writes to", "receives from"], logs_to: ["sends its logs to", "receives logs from"],
+    serves_from: ["serves from", "is the origin of"], packages: ["is the code of", "runs code from"],
+    trusts: ["trusts", "is trusted by"], allows_subject: ["may be assumed by", "may assume"],
+    has_policy: ["has", "is attached to"], acted_as: ["was done as", "did"], acted_on: ["acted on", "was acted on by"],
+    records: ["records", "is recorded in"], refers_to: ["names", "is named in"], part_of: ["is part of", "is made of"],
+    signed_in_via: ["signed in via", "was used to sign in for"], seen_in: ["is seen in", "shows"],
+    targeted: ["targeted", "was targeted by"], runs_as: ["runs as", "is the role of"],
+    transforms_with: ["transforms records with", "transforms records for"]
+  };
+  var HOW = { api: "AWS answered", template: "the stack's template says", content: "read from inside a file",
+    naming: "guessed from a name", comment: "only a code comment says", curated: "the ontologist says" };
+  var MARK_SAYS = { "?": "claimed, check before acting", "~": "the ontologist's word" };
+  function nodeName(n) { var l = String(n && n.label != null ? n.label : n && n.id); return n && n.type === "object" ? l.split("/").pop() : l; }
+  // Graph.neighbours result -> lines: { mark, words, via, otype, nodes: [..], how }. Pure.
+  function connections(nb) {
+    if (!nb || !nb.links) return [];
+    var lines = nb.links.map(function (l) {
+      var r = READ[l.rel], rank = l.trust === "verified" ? 0 : l.trust === "curated" ? 2 : 1, type = String(l.node.type || "unknown");
+      var words = r ? r[l.direction === "out" ? 0 : 1] : String(l.rel).replace(/_/g, " ");
+      return { rank: rank, mark: rank === 0 ? "" : rank === 2 ? "~" : "?", words: words, via: !!l.via, otype: type.replace(/_/g, " "), node: l.node,
+        how: (HOW[l.evidence] || String(l.evidence)) + ": " + String(l.source || ""), g: [l.via ? 1 : 0, rank, words, type, l.evidence, l.source].join("|") };
+    });
+    lines.sort(function (a, b) {
+      var x = [a.via ? 1 : 0, a.rank, a.words, nodeName(a.node)].join("\u0000"), y = [b.via ? 1 : 0, b.rank, b.words, nodeName(b.node)].join("\u0000");
+      return x < y ? -1 : x > y ? 1 : 0;
+    });
+    var out = [], run = [];
+    function flush() {
+      if (!run.length) return;
+      var f = run[0];
+      if (run.length <= 3) run.forEach(function (l) { out.push({ mark: l.mark, words: l.words, via: l.via, otype: l.otype, nodes: [l.node], how: l.how }); });
+      else out.push({ mark: f.mark, words: f.words, via: f.via, otype: f.otype, nodes: run.map(function (l) { return l.node; }), how: f.how });
+      run = [];
+    }
+    lines.forEach(function (l) { if (run.length && run[0].g !== l.g) flush(); run.push(l); });
+    flush();
+    return out;
+  }
+  // An S3 node opens through the address (so every link check applies); other kinds are text for now.
+  function s3Target(n) {
+    var m = /^arn:aws:s3:::([^/]+)(?:\/(.*))?$/.exec(String(n && n.id || ""));
+    return m && (n.type === "bucket" || n.type === "object" || n.type === "prefix") ? { bucket: m[1], key: m[2] || "" } : null;
+  }
+  function nameEl(n) {
+    var t = s3Target(n), label = nodeName(n);
+    if (!t) return P.el("span", { class: "c-name", text: label });
+    var b = P.el("button", { type: "button", class: "linkish c-name", text: label, title: t.bucket + "/" + t.key });
+    b.onclick = function () { location.hash = route(t.bucket, t.key); };
+    return b;
+  }
+  // The panel, built from DOM nodes as text only (labels come from bucket contents and logs).
+  function connectedPanel(nb, opts) {
+    opts = opts || {};
+    var box = P.el("section", { class: "connected", "aria-label": "Connected to this bucket" });
+    if (!nb) { box.appendChild(P.el("p", { class: "small", text: "Nothing is known about this bucket's connections yet." })); return box; }
+    box.appendChild(P.el("h4", { text: "Connected to " + nodeName(nb.node) + (opts.twin ? " (synthetic)" : "") }));
+    var ul = P.el("ul", { class: "c-lines" });
+    connections(nb).forEach(function (l) {
+      var li = P.el("li", {});
+      if (l.mark) li.appendChild(P.el("span", { class: "c-mark", text: l.mark + " ", title: MARK_SAYS[l.mark], "aria-label": MARK_SAYS[l.mark] }));
+      li.appendChild(document.createTextNode((l.via ? "A file here " : "") + l.words + " "));
+      if (l.nodes.length > 3) {
+        li.appendChild(document.createTextNode(l.nodes.length + " " + l.otype + "s: "));
+        li.appendChild(nameEl(l.nodes[0])); li.appendChild(document.createTextNode(" ... ")); li.appendChild(nameEl(l.nodes[l.nodes.length - 1]));
+      } else { li.appendChild(nameEl(l.nodes[0])); li.appendChild(document.createTextNode(" (" + l.otype + ")")); }
+      li.appendChild(P.el("span", { class: "small c-how", text: "  [" + l.how + "]" }));
+      ul.appendChild(li);
+    });
+    box.appendChild(ul);
+    box.appendChild(P.el("p", { class: "small", text: "No mark: AWS confirmed. ?: claimed, from files or names; check before acting. ~: the ontologist's word." }));
+    return box;
+  }
   function human(n) { return n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(1) + " MB"; }
 
   // ---- a file ----
@@ -975,6 +1055,7 @@
     return Object.freeze(Object.assign({}, LIMITS));
   }
   window.S3Browser = { render: render, jsonView: jsonView, openAt: openAt, view: view, setLimits: setLimits,
+    connections: connections, connectedPanel: connectedPanel,
     get limits() { return Object.freeze(Object.assign({}, LIMITS)); } };
   init();
 })();
