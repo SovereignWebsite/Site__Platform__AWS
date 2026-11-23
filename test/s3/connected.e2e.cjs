@@ -57,6 +57,15 @@ const golden = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "api", "gol
   if (!res.text.includes("<img src=x")) fail("hostile label not shown as text");
   if (!res.text.includes("(synthetic)")) fail("twin not said");
   if (!/\?: claimed/.test(res.text)) fail("legend missing");
+  // 3b. a claimed or curated name carries its mark right after it, a confirmed one none (security.aws.a on 268cfc7)
+  const marks = await pg.$$eval("#s3-file .connected li", (lis) => lis.map((li) => {
+    const lead = li.querySelector(":scope > .c-mark"), names = [...li.querySelectorAll(".c-name")];
+    return { lead: lead ? lead.textContent.trim() : "", after: names.map((n) => { const m = n.nextElementSibling; return m && m.classList.contains("c-mark") ? m.textContent : ""; }) };
+  }));
+  for (const m of marks) if (m.after.some((x) => x !== m.lead)) fail("mark not next to the name: " + JSON.stringify(m));
+  if (!marks.some((m) => m.lead === "?" && m.after[0] === "?")) fail("no claimed name with ? beside it");
+  if (!marks.some((m) => m.lead === "" && m.after[0] === "")) fail("a confirmed name got a mark");
+
   // 4. an S3 name opens through the address
   const objBtn = await pg.$("#s3-file .connected button.c-name");
   if (!objBtn) fail("no S3 link in the panel");
