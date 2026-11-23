@@ -62,7 +62,8 @@ eq(base.s.requests, 225, "baseline requests");
 eq(base.s.status.map((x) => [x.key, x.requests]), [["2xx", 190], ["4xx", 35]], "baseline status classes");
 eq(base.s.paths.filter((p) => p.errors).map((p) => p.key), ["/favicon.ico"], "baseline: every 404 is /favicon.ico");
 eq(base.s.vaults.map((v) => v.key), ["vault-demo-001", "vault-demo-002"], "baseline vaults");
-eq(base.s.networks.map((n) => n.key), ["203.0.113.0/24"], "baseline: one documentation /24");
+const DOC_NETS = /^(192\.0\.2|198\.51\.100|203\.0\.113)\.0\/24$/; // RFC 5737 documentation ranges only
+if (!base.s.networks.length || base.s.networks.some((n) => !DOC_NETS.test(n.key))) fail("baseline: networks outside the documentation ranges " + base.s.networks.map((n) => n.key));
 console.log("baseline:", X.headline(base.s, base.d));
 
 const atk = await run("attack");
@@ -107,7 +108,7 @@ eq(L.resolve("src", "cloudfront/2026/11/20/09/x.gz:7", ctx)[0], { kind: "s3-obje
 const pv = L.pivots(atk.recs, "client", "203.0.113.66", 3);
 eq(pv.lines, probe.length, "pivot lines");
 if (!pv.by.path || pv.by.path.distinct < 5 || pv.by.client) fail("pivots of the attacker");
-eq(pv.by.net.top[0].value, "203.0.113.0/24", "pivot net");
+eq(pv.by.net.top[0].value, X.network("203.0.113.66"), "pivot net is the attacker's own network");
 // the twin's enricher fields (country, vault_id): country read; vault_id only a claim
 if (!base.recs.every((r) => /^[A-Z]{2}$/.test(r.country))) fail("country missing on twin lines");
 const trav = atk.recs.filter((r) => r.path === "/vault/../../etc/passwd");

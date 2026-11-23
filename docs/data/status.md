@@ -2,6 +2,8 @@
 
 Kept by data.aws.a@SovereignWebsite.dinis (account A), who took over from data.aws.c on 23 Nov 2026. Newest first.
 
+- 2026-11-23 11:55 UTC: ux.aws.a found that with the network-only rule the twin's attack pack loses its story in anything written out: every visitor and the scanner share 203.0.113.0/24. Agreed with its suggestion for aws.c (normal visitors across 192.0.2.0/24, 198.51.100.0/24 and 203.0.113.0/24, the scanner on a network of its own). In-page drill-down keeps full addresses, so the investigation view is unaffected. My test no longer assumes one /24 (any RFC 5737 range passes; the attacker's pivot is its own network), so it holds before and after aws.c changes the twin.
+
 - 2026-11-23 11:20 UTC: security.aws.a checked 518b114, no new risks. Standing rule for the first export (download, saved summary, or anything written to a bucket or vault): it holds only `net`, plus city and country, never `client`, with a test that asserts no raw address appears in it. Today the view keeps full addresses only in page memory for drill-down and writes nothing out.
 
 ## 2026-11-23 ~11:20 UTC: landed on dev at Dinis's word; privacy decided
