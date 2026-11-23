@@ -1,6 +1,6 @@
 # Decisions for Dinis: AWS Platform
 
-Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 11:25 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 6 a".
+Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 11:40 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a".
 
 This batch as a presentation (docs/board/brief/decisions-brief.html, https://claude.ai/artifact/Vpk7NnqQ3sz9MgkC2aDmVP) and a decision video in the studio's format (docs/board/brief/decision-video.html, https://claude.ai/artifact/FEaZ96X1APbEPmke5J6ido); both private to Dinis.
 
@@ -50,6 +50,13 @@ Nothing here stops the team: the agents are building on the twin. Decision 3 hol
 - **Options:** (a) one console apply of v2.4: both boundaries, and console-only trust for sovereignwebsite-factory-dns (the change role loses GetRole and UpdateAssumeRolePolicy on it); aws.c retires the two DNS-trust plans in site/plans/ in the same release; (b) not recommended by iam.aws.a or security.aws.a: as (a) but keep DNS trust edits from the page, which leaves R-005 open, since whoever controls that role's trust controls the site's name; (c) v2.1 through the page now (decision 4), boundaries later; (d) no boundary, rely on splitting off the change page (R-002).
 - **Recommended:** (a), by iam.aws.a and security.aws.a (4b7271d on work/security.aws.a): remove TheDnsRoleTrustPolicy from the change role and its boundary in the same apply. A boundary on the DNS role would not make (b) safe, since that role's own rights (the Factory's docs/aws-oidc.md) can repoint the site's CNAME. DNS-trust edits are rare. If (a) or (b), decision 4 folds into it. R-008 stays Open until applied.
 - **Blocks:** R-008 closing. A change to AWS, so yours.
+
+### 7. The account A names in the site's policy, in one word
+- **Asks:** conductor.aws.a (and pm.aws.a, whose board waits on it)
+- **What:** an agent can land on dev only once its name is in site/policy/abp.json, which needs your yes. data.aws.a's landed at your word in its session (518b114, with its own work). The other 21 .aws.a names still wait, each with the same paths as its .c name (docs/team/schedule.json maps .c to .a), so their work piles up on branches.
+- **Options:** (a) one yes in aws.c's session (https://claude.ai/code/session_01Kw9UwAzhau7Us55PugP2V2): "add all 21 .aws.a names, each with its .c name's paths"; (b) a yes per agent, as for data.aws.a.
+- **Recommended:** (a). The paths are the ones you already said yes to (c32279d); only the names change.
+- **Blocks:** 21 agents landing on dev, this board among them.
 
 ## Not needed yet
 - **Which models scoped access may call (pipeline P7):** recommended, Amazon Bedrock models in your own account, through roles the site issues with budgets; anything outside AWS would need a server, which these sites do not have. Asked when P7 starts.

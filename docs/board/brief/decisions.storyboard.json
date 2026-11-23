@@ -1,14 +1,14 @@
 {
  "format": "studio-storyboard/0",
  "slug": "aws-decisions-2026-11-23",
- "title": "Six AWS decisions for Dinis",
+ "title": "Seven AWS decisions for Dinis",
  "audience": "Dinis",
  "requested_by": "pm.aws.a@SovereignWebsite.dinis",
- "summary": "Six open decisions on the AWS Platform programme's decisions page, 23 Nov 2026 11:25 UTC: agent keys, the deploy's signer check (R-009), team code on the hub's origin (R-010), template v2.1 (R-001), the nine area sites, and a permissions boundary (R-008). None stops the team; the agents build on the twin.",
+ "summary": "Seven open decisions on the AWS Platform programme's decisions page, 23 Nov 2026 11:40 UTC: agent keys, the deploy's signer check (R-009), team code on the hub's origin (R-010), template v2.1 (R-001), the nine area sites, a permissions boundary (R-008), and the account A names in the site's policy. None stops the team; the agents build on the twin.",
  "beats": [
   {
    "id": "b1",
-   "narration": "Six decisions wait for you on the AWS programme. None stops the team: every agent keeps building on the synthetic twin. Here is each one, with a recommendation.",
+   "narration": "Seven decisions wait for you on the AWS programme. None stops the team: every agent keeps building on the synthetic twin. Here is each one, with a recommendation.",
    "visual": {
     "kind": "svg",
     "src": "intro",
@@ -119,15 +119,31 @@
    ]
   },
   {
+   "id": "b7a",
+   "narration": "Seven. Twenty-one account A agents cannot land on dev until their names are in the site's policy. Recommended: one yes in aws.c's session adds them all.",
+   "visual": {
+    "kind": "svg",
+    "src": "d7",
+    "caption": "Decision 7: the account A names in the site's policy",
+    "at": 0,
+    "play": 11,
+    "end": 10.4
+   },
+   "facts": [
+    "s-decisions",
+    "s-data"
+   ]
+  },
+  {
    "id": "b8",
-   "narration": "Recommended answers: one a, two a, three c, four a, five a, six a. Answer in pm.aws.a's session. Each decision's options and trade-offs follow.",
+   "narration": "Recommended answers: one a, two a, three c, four a, five a, six a, seven a. Answer in pm.aws.a's session. Each decision's options and trade-offs follow.",
    "visual": {
     "kind": "svg",
     "src": "outro",
     "caption": "Answer in pm.aws.a's session",
     "at": 0,
-    "play": 10.2,
-    "end": 9.6
+    "play": 11,
+    "end": 10.4
    },
    "facts": [
     "s-decisions"
@@ -365,17 +381,51 @@
    ],
    "recommendation": "a",
    "why": "Before any apply, iam.aws.a finishes two checks (read-boundary coverage; whether CloudFormation calls iam:UpdateRole). The first apply is your own act in the console."
+  },
+  {
+   "id": "7",
+   "question": "7. Do the 21 account A names go into the site's policy in one word?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. One yes in aws.c's session: add all 21 .aws.a names, each with its .c name's paths",
+     "good": [
+      "21 agents can land their work on dev at once",
+      "Paths you already approved; only the names change"
+     ],
+     "bad": [
+      "You do not see each name added one by one"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. A yes per agent, as for data.aws.a",
+     "good": [
+      "You see each one"
+     ],
+     "bad": [
+      "21 separate yeses; work piles up on branches meanwhile"
+     ],
+     "blocks": [
+      "Each agent landing until its own yes"
+     ]
+    }
+   ],
+   "recommendation": "a",
+   "why": "The paths were approved at c32279d; the move to account A only renamed the agents."
   }
  ],
  "connections": {
   "asked_by": "pm.aws.a@SovereignWebsite.dinis",
   "reviewed_by": [],
   "acts": [
-   "factory.c",
    "aws.c",
-   "security.aws.a",
+   "conductor.aws.a",
+   "dev.2.aws.a",
+   "factory.c",
    "iam.aws.a",
-   "dev.2.aws.a"
+   "security.aws.a"
   ],
   "follows": [
    "docs/board/decisions.md",
@@ -411,6 +461,12 @@
    "id": "s-keys",
    "title": "factory.c: publishing an .aws.a key on the Factory (docs/team/keys/README.md)",
    "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/dev/docs/team/keys/README.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-data",
+   "title": "data.aws.a's own abp.json entry, landed at Dinis's word (518b114)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/commit/518b114",
    "read": "2026-11-23"
   }
  ],

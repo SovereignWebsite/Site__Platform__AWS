@@ -64,6 +64,7 @@ Updated 2026-11-23 04:00 UTC. Two rules over everything: **twin first** (every f
 22 agents; wakes and sessions in docs/team/schedule.json. Sixteen roles are moving to account A tonight (account C is hot), as <role>.aws.a: billing, boto3, cloudformation, cloudtrail, data, dev.1, dev.2, iam, journalist, lambda, ontology, swarm, ux, vaults, video, viz. Staying on C: conductor, pm, security, architect, s3, sherpa, and aws.c (keeper of the hub).
 
 ## Changes, newest first
+- 23 Nov 11:40 UTC: decision 7 (new): the 21 .aws.a names in abp.json in one word; data.aws.a's landed (518b114).
 - 23 Nov 11:25 UTC: decision 7 answered (iam, dev.1 pushed signed; viz unsigned at Dinis's word). Standing rule from Dinis (~11:15 UTC, via maestro.a): every batch of decisions put to him comes with a presentation and a decision video (docs/board/brief/).
 - 23 Nov 09:05 UTC: viz.aws.a added to decision 7 (its session refuses making its git signing key).
 - 23 Nov 08:45 UTC: dev.1.aws.a's work order on S3-1 recorded (kept as is).

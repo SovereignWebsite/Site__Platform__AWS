@@ -100,8 +100,8 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
 <div class="wrap">
   <header>
     <div>
-      <h1>Six decisions for Dinis</h1>
-      <p class="sub">AWS Platform programme · from <span class="t-mono">docs/board/decisions.md</span>, 23 Nov 2026, 11:25 UTC · kept by pm.aws.a</p>
+      <h1>Seven decisions for Dinis</h1>
+      <p class="sub">AWS Platform programme · from <span class="t-mono">docs/board/decisions.md</span>, 23 Nov 2026, 11:40 UTC · kept by pm.aws.a</p>
     </div>
     <div class="tabs" role="tablist" aria-label="View">
       <button role="tab" id="tab-brief" aria-selected="true" aria-controls="view-brief">Brief</button>
@@ -139,14 +139,14 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
 
 <script type="application/json" id="storyboard">
 {
-  "title": "Six decisions for Dinis",
-  "source": "docs/board/decisions.md on work/pm.aws.a, 23 Nov 11:25 UTC, Site__Platform__AWS",
+  "title": "Seven decisions for Dinis",
+  "source": "docs/board/decisions.md on work/pm.aws.a, 23 Nov 11:40 UTC, Site__Platform__AWS",
   "made_by": "pm.aws.a@SovereignWebsite.dinis",
-  "answer": "1 a, 2 a, 3 c, 4 a, 5 a, 6 a",
+  "answer": "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a",
   "scenes": [
-    {"id":"intro","eyebrow":"The brief","title":"Six decisions, one page","dur":16,
+    {"id":"intro","eyebrow":"The brief","title":"Seven decisions, one page","dur":16,
      "beats":[
-       [0,"Six decisions are waiting for you on the AWS programme's decisions page. This brief walks through each one.","Six numbered tiles appear in a row, each with its short name."],
+       [0,"Seven decisions are waiting for you on the AWS programme's decisions page. This brief walks through each one.","Seven numbered tiles appear in a row, each with its short name."],
        [5.5,"None of them stops the team. Every agent keeps building on the synthetic twin while you decide.","A banner under the tiles: nothing here stops the team."],
        [10.5,"Each scene shows the problem, the options and the recommendation. Answer by number in pm.aws.a's session.","The recommended answer line types in at the bottom."]],
      "panel":{"what":"Every open question for you from the AWS agents, most urgent first. Answer by number in pm.aws.a's session.","answer":true}},
@@ -199,9 +199,17 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
      "panel":{"asks":"iam.aws.a (P-IAM-001), through conductor.aws.a; cleared by security.aws.a","what":"Even after v2.1, a script in the page can make the change role admin through a change set (R-008). iam.aws.a's draft v2.4 adds permissions boundaries that mirror today's scopes, with a custom read boundary, and makes the DNS role's trust console only. security.aws.a cleared v2.4 on paper (0cfa69f on work/security.aws.a). v2.4 itself is 2107fe5 on work/iam.aws.a.",
        "before":"iam.aws.a finishes two checks (read-boundary coverage; whether CloudFormation calls iam:UpdateRole on every role update). The first apply is your own act in the console. aws.c retires the two DNS-trust plans in site/plans/ in the same release.",
        "options":[["a","One console apply of v2.4: both boundaries, and console-only trust for sovereignwebsite-factory-dns."],["b","As a, but keep DNS trust edits from the page. Not recommended by iam.aws.a or security.aws.a: whoever controls that role's trust controls the site's name.","no"],["c","v2.1 through the page now (decision 4), boundaries later."],["d","No boundary; rely on splitting off the change page (R-002)."]],"rec":"a","blocks":"R-008 closing. A change to AWS, so yours."}},
-    {"id":"outro","eyebrow":"Your answer","title":"One line answers all six","dur":12,
+    {"id":"d7","eyebrow":"Decision 7 · Access","title":"The account A names in the site's policy","dur":22,
      "beats":[
-       [0,"Recommended answers: one a, two a, three c, four a, five a, six a.","The full answer line, large, in the centre."],
+       [0,"An agent lands on dev only once its name is in the site's policy file, and that needs your yes.","Twenty-two agent name chips on the left; the policy file on the right with one name in it, data.aws.a."],
+       [6,"data.aws.a's name landed at your word. Twenty-one more wait, each with the same paths as its old .c name.","The waiting chips pulse; their work piles up on branches."],
+       [12,"Option a: one yes in aws.c's session adds all twenty-one. Option b: a yes per agent.","Option a: all twenty-one chips flow into the policy file."],
+       [18,"Recommended: a. You already said yes to these paths; only the names change.","The a option chip lights as recommended."]],
+     "panel":{"asks":"conductor.aws.a (and pm.aws.a, whose board waits on it)","what":"An agent can land on dev only once its name is in site/policy/abp.json, which needs your yes. data.aws.a's landed at your word in its session (518b114). The other 21 .aws.a names still wait, each with the same paths as its .c name (docs/team/schedule.json maps .c to .a).",
+       "options":[["a","One yes in aws.c's session: add all 21 .aws.a names, each with its .c name's paths."],["b","A yes per agent, as for data.aws.a."]],"rec":"a","blocks":"21 agents landing on dev, this board among them."}},
+    {"id":"outro","eyebrow":"Your answer","title":"One line answers all seven","dur":12,
+     "beats":[
+       [0,"Recommended answers: one a, two a, three c, four a, five a, six a, seven a.","The full answer line, large, in the centre."],
        [6,"Type them, or your own, in pm.aws.a's session. I update the page and tell the agents who asked.","Under it: where to answer."]],
      "panel":{"what":"Type the line below, or your own, in pm.aws.a's session. pm.aws.a updates the decisions page and tells the agents who asked.","answer":true}}
   ]
@@ -244,13 +252,13 @@ function optionRow(opts, rec, tShow, tRec, notRec=[]) {
 /* ---------- the scenes, drawn ---------- */
 const VIS = {
 intro(){
-  const names = [['1','Keys','acc'],['2','Signer check','risk'],['3','Same origin','risk'],['4','Approve v2.1','acc'],['5','Area sites','acc'],['6','Boundary','risk']];
-  let s = txt(W/2,92,'Six decisions','t-xl') + cue(0.2, txt(W/2,128,'AWS Platform programme · open on the decisions page','t-m t-mute'));
+  const names = [['1','Keys','acc'],['2','Signer check','risk'],['3','Same origin','risk'],['4','Approve v2.1','acc'],['5','Area sites','acc'],['6','Boundary','risk'],['7','Policy names','acc']];
+  let s = txt(W/2,92,'Seven decisions','t-xl') + cue(0.2, txt(W/2,128,'AWS Platform programme · open on the decisions page','t-m t-mute'));
   names.forEach((n,i) => {
-    const x = 116 + i*124, cls = n[2]==='risk'?'bx-risk':'bx-acc';
+    const x = 56 + i*124, cls = n[2]==='risk'?'bx-risk':'bx-acc';
     s += cue(1 + i*0.45, box(x,180,108,126,cls) + txt(x+54,236,n[0],'t-xl '+(n[2]==='risk'?'t-risk':'t-acc')) + txt(x+54,282,n[1],'t-s'), 'pop');
   });
-  s += cue(4.6, txt(116,334,'red: a security risk','t-s t-risk','start') + txt(310,334,'amber: access, approval or a merge','t-s t-acc','start'));
+  s += cue(4.6, txt(56,334,'red: a security risk','t-s t-risk','start') + txt(250,334,'amber: access, approval or a merge','t-s t-acc','start'));
   s += cue(6, box(180,358,600,44,'bx-ok',22) + txt(W/2,386,'Nothing here stops the team: the agents keep building on the twin','t-s t-ok'));
   s += cue(10.5, txt(W/2,452,'Recommended','t-s t-mute') + txt(W/2,486,SB.answer,'t-l'));
   return s;
@@ -362,6 +370,20 @@ d6(){
      + txt(716,300,'1  iam.aws.a\'s two checks','t-s','start') + txt(716,324,'2  your apply, in the console','t-s','start') + txt(716,348,'3  aws.c retires two DNS plans','t-s','start'));
   s += cue(24, txt(40,400,'cleared on paper by security.aws.a (0cfa69f)','t-s t-ok','start'));
   s += optionRow(['a','b','c','d'],'a',29,30.5,['b']);
+  return s;
+},
+d7(){
+  const names = ['conductor','pm','security','architect','s3','sherpa','journalist','ontology','iam','lambda','cloudformation','cloudtrail','vaults','boto3','ux','billing','viz','video','swarm','dev.1','dev.2'];
+  let s = lbox(690,80,240,300,'','bx') + txt(810,110,'site/policy/abp.json','t-mono') + txt(810,130,'may land on dev (each <name>.aws.a)','t-s t-mute');
+  s += box(712,146,196,20,'bx-ok',10) + txt(810,160,'data.aws.a (518b114)','t-s t-ok');
+  names.forEach((n,i) => {
+    const col = i % 3, row = Math.floor(i/3), x = 40 + col*150, y = 90 + row*40;
+    const dx = 712 + (i%2)*100, dy = 176 + Math.floor(i/2)*18;
+    s += route(`r7n-${i}`, `M${x+65} ${y} C${x+200} ${y} 600 ${dy} ${dx+48} ${dy}`);
+    s += `<g class="mover" data-m="r7n-${i}" data-m0="${13+i*0.12}" data-m1="${15.5+i*0.12}" data-hold="1">${box(-47,-8,94,16,'bx-acc',8)}<text x="0" y="4" text-anchor="middle" style="font-size:11px">${n}</text></g>`;
+  });
+  s += cue(6, txt(255,385,'21 names waiting, same paths as their .c names','t-s t-acc'));
+  s += optionRow(['a','b'],'a',12,18);
   return s;
 },
 outro(){
