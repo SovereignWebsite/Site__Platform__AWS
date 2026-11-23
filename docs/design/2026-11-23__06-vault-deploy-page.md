@@ -185,6 +185,20 @@ Phone (390 px): the same order, all full width. The region select is a native `<
 | 3 | Field empty, Check disabled | "Checking…" on the status line, the button disabled, a 10 s limit | Each with its own sentence: not a URL; no answer (network or DNS: "it can take a few minutes after CREATE_COMPLETE; try again"); answered but not a Vault (no `vault_id`); a different Vault (id differs: "this is Vault X; this page made Y. Did you paste the address of another stack?"); an old template (version not in the index) | Moves to 4 |
 | 4 | n/a | n/a | n/a | Address, Copy, next steps |
 
+Screen 3's sentences, keyed by the reasons `checkHealth` and `cleanEndpoint` return (site/api/vault-deploy.js, a470729 on work/dev.2.aws.a.vault-deploy):
+
+| Reason | Sentence |
+|---|---|
+| `not-url` | "That does not look like a web address. Copy the value of Endpoint from the stack's Outputs tab." |
+| `not-cloudfront` | "In this version the address ends in .cloudfront.net. Copy Endpoint from the Outputs tab." |
+| `no-answer` | "No answer from that address yet. It can take a few minutes after CREATE_COMPLETE; try again shortly." |
+| `not-a-vault` | "That address answered, but it is not a Vault made by this page." |
+| `other-vault` | "That is Vault <id>; this page made <id>. Did you copy the address of another stack?" |
+| `old-template` | "That Vault was made from template <version>, which this page no longer offers. It works, but consider updating it." |
+| `too-large` | "That address sent back far more than a Vault's check does, so the page stopped reading. Check you copied Endpoint." |
+
+<id> and <version> are filled with `textContent`. The ids are 12 hex characters, already checked against `^[0-9a-f]{12}$`.
+
 Every failure keeps what the customer typed and puts the focus on the field or button that fixes it. Errors go in the status line and next to the field (`aria-describedby`), never only in colour.
 
 ## 5. The twin (design 02 rules)
