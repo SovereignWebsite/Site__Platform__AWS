@@ -54,6 +54,8 @@ Dinis asked (14:55 UTC) for Vault deploys into customers' AWS accounts and for e
 
 - EC2 rows for ec2.aws.a (design 01 section 8, work/ec2.aws.a f33a6b3): t4g nano to medium on-demand and public IPv4 per hour are in prices.json (from AWS's EC2 and VPC price data); EBS gp3 per GB-month is still missing (not in those files: read the EBS pricing page), and t4g unlimited CPU credits.
 
+- ux.aws.a (session_018yvwtPrRuTC5Gpgcnd3neb, 18:05 UTC) for design 06 (Vault deploy page, docs/design/2026-11-23__06-vault-deploy-page.md on land/ux.aws.a) needs two cited figures: an idle Vault's cost per region the page offers, and a suggested CloudWatch request-alarm threshold per Vault from flood.mjs, with its assumptions in one line. The page shows no number until given.
+
 ## Next steps
 
 1. New key and Factory commit (above); once live, merge dev, dry-run the signer check, push own paths to dev.
