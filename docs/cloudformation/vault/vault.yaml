@@ -1,0 +1,281 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  One SG/Send Vault (the Secure Send S3 API) in this account and region: an S3 bucket for the vault store,
+  the server as a Lambda behind a Function URL, CloudFront in front, and optionally the customer's own domain.
+  DRAFT 0.1.0 by cloudformation.aws.a, 23 Nov 2026. Not for use on a real account: see
+  docs/cloudformation/2026-11-23__vault-stack-01.md for what is still open.
+
+Metadata:
+  SovereignWebsite:
+    TemplateVersion: 0.1.0-draft
+    Pinning: served only as an immutable, versioned object whose sha256 the deploy page shows next to the button.
+    CreatesNoRoleForUs: true
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label: { default: "Your Vault" }
+        Parameters: [VaultName]
+      - Label: { default: "Your own domain (optional, add it later)" }
+        Parameters: [DomainName, HostedZoneId, CertificateArn]
+      - Label: { default: "Server image (filled in by the deploy link)" }
+        Parameters: [ImageUri, Architecture]
+
+Parameters:
+  VaultName:
+    Type: String
+    Default: vault
+    AllowedPattern: "^[a-z][a-z0-9-]{1,20}$"
+    Description: A short name for this Vault, used in its resource names. Lower case letters, digits and dashes.
+  DomainName:
+    Type: String
+    Default: ""
+    Description: Leave empty for the CloudFront address. To add your own domain later, first run vault-certificate.yaml in us-east-1, then update this stack with these three values.
+  HostedZoneId:
+    Type: String
+    Default: ""
+    Description: The Route 53 hosted zone that holds DomainName (only with DomainName).
+  CertificateArn:
+    Type: String
+    Default: ""
+    Description: The ACM certificate for DomainName, in us-east-1 (output of vault-certificate.yaml; only with DomainName).
+  ImageUri:
+    Type: String
+    Description: >-
+      The SG/Send server image in Amazon ECR (Lambda runs images from ECR only). OPEN QUESTION O1: where this
+      image lives; the deploy link fills it in so the customer never types it.
+  Architecture:
+    Type: String
+    Default: arm64
+    AllowedValues: [arm64, x86_64]
+
+Conditions:
+  HasDomain: !Not [!Equals [!Ref DomainName, ""]]
+
+Rules:
+  DomainNeedsZoneAndCertificate:
+    RuleCondition: !Not [!Equals [!Ref DomainName, ""]]
+    Assertions:
+      - Assert: !Not [!Equals [!Ref HostedZoneId, ""]]
+        AssertDescription: With DomainName, HostedZoneId is needed.
+      - Assert: !Not [!Equals [!Ref CertificateArn, ""]]
+        AssertDescription: With DomainName, CertificateArn (from vault-certificate.yaml in us-east-1) is needed.
+
+Resources:
+  # ---- storage ----
+  VaultBucket:
+    Type: AWS::S3::Bucket
+    # Delete, not Retain: teardown removes what the stack made. CloudFormation cannot delete a bucket that still
+    # holds objects, so a Vault with data fails to delete (a safe failure) until the customer chooses to empty it.
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub "${VaultName}-vault-${AWS::AccountId}-${AWS::Region}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
+      OwnershipControls:
+        Rules: [{ ObjectOwnership: BucketOwnerEnforced }]
+      VersioningConfiguration: { Status: Enabled }
+      Tags:
+        - { Key: sws:vault, Value: !Ref VaultName }
+
+  VaultBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref VaultBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: TlsOnly
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource: [!GetAtt VaultBucket.Arn, !Sub "${VaultBucket.Arn}/*"]
+            Condition: { Bool: { "aws:SecureTransport": "false" } }
+
+  # ---- the access token (SGRAPH_SEND__ACCESS_TOKEN gates every route) ----
+  AccessToken:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub "${VaultName}-vault/access-token"
+      Description: The Vault's access token. Read it in the Secrets Manager console to sign in to the Vault.
+      GenerateSecretString:
+        PasswordLength: 64
+        ExcludePunctuation: true
+      Tags:
+        - { Key: sws:vault, Value: !Ref VaultName }
+
+  # ---- the server's role: this Vault's bucket and log group only, inside a boundary ----
+  VaultBoundary:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub "${VaultName}-vault-boundary-${AWS::Region}"
+      Description: The most the Vault server's role may ever do, whatever is attached to it.
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: ThisVaultsBucket
+            Effect: Allow
+            Action: [s3:GetObject, s3:PutObject, s3:DeleteObject, s3:ListBucket]
+            Resource: [!GetAtt VaultBucket.Arn, !Sub "${VaultBucket.Arn}/*"]
+          - Sid: ThisVaultsLogs
+            Effect: Allow
+            Action: [logs:CreateLogStream, logs:PutLogEvents]
+            Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${VaultName}-vault:*"
+
+  VaultFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${VaultName}-vault-fn-${AWS::Region}"
+      PermissionsBoundary: !Ref VaultBoundary
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+            Condition: { StringEquals: { "aws:SourceAccount": !Ref AWS::AccountId } }
+      Policies:
+        - PolicyName: vault
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ThisVaultsBucket
+                Effect: Allow
+                Action: [s3:GetObject, s3:PutObject, s3:DeleteObject, s3:ListBucket]
+                Resource: [!GetAtt VaultBucket.Arn, !Sub "${VaultBucket.Arn}/*"]
+              - Sid: ThisVaultsLogs
+                Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !Sub "${VaultLogs.Arn}"
+      Tags:
+        - { Key: sws:vault, Value: !Ref VaultName }
+
+  VaultLogs:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${VaultName}-vault"
+      RetentionInDays: 30
+
+  # ---- the server ----
+  VaultFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: VaultLogs
+    Properties:
+      FunctionName: !Sub "${VaultName}-vault"
+      Description: SG/Send Vault server (Secure Send S3 API).
+      PackageType: Image
+      Code: { ImageUri: !Ref ImageUri }
+      Architectures: [!Ref Architecture]
+      Role: !GetAtt VaultFunctionRole.Arn
+      MemorySize: 1024
+      Timeout: 30
+      Environment:
+        Variables:
+          SEND__STORAGE_MODE: s3
+          SEND__S3_BUCKET: !Ref VaultBucket
+          # OPEN QUESTION O3: a dynamic reference puts the token in the function's configuration, readable by
+          # anyone in this account with lambda:GetFunctionConfiguration. Reading it from Secrets Manager at
+          # start needs support in the server.
+          SGRAPH_SEND__ACCESS_TOKEN: !Sub "{{resolve:secretsmanager:${AccessToken}:SecretString}}"
+      Tags:
+        - { Key: sws:vault, Value: !Ref VaultName }
+
+  VaultFunctionUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      TargetFunctionArn: !GetAtt VaultFunction.Arn
+      # OPEN QUESTION O4: NONE leaves the URL reachable without CloudFront; every route is still gated by the
+      # access token. AWS_IAM with CloudFront origin access control closes that, but signed POST bodies need the
+      # client to send a payload hash, which the vault clients may not do.
+      AuthType: NONE
+
+  VaultFunctionUrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref VaultFunction
+      Action: lambda:InvokeFunctionUrl
+      Principal: "*"
+      FunctionUrlAuthType: NONE
+
+  # ---- CloudFront in front ----
+  VaultDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub "SG/Send Vault ${VaultName}"
+        HttpVersion: http2and3
+        PriceClass: PriceClass_100
+        Aliases: !If [HasDomain, [!Ref DomainName], !Ref AWS::NoValue]
+        ViewerCertificate: !If
+          - HasDomain
+          - { AcmCertificateArn: !Ref CertificateArn, SslSupportMethod: sni-only, MinimumProtocolVersion: TLSv1.2_2021 }
+          - { CloudFrontDefaultCertificate: true }
+        Origins:
+          - Id: vault-fn
+            DomainName: !Select [2, !Split ["/", !GetAtt VaultFunctionUrl.FunctionUrl]]
+            CustomOriginConfig: { OriginProtocolPolicy: https-only, OriginSSLProtocols: [TLSv1.2] }
+        DefaultCacheBehavior:
+          TargetOriginId: vault-fn
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+          Compress: true
+          # AWS managed policies, by id. CHECK both ids against AWS's managed policy pages before use.
+          # CachingDisabled: the server sets its own cache headers (immutable objects, refs no-store).
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+          # AllViewerExceptHostHeader: the Function URL needs its own Host header.
+          OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+      Tags:
+        - { Key: sws:vault, Value: !Ref VaultName }
+
+  # ---- the customer's own name (optional). In the stack, never by hand: the records reference the
+  # distribution, so CloudFormation deletes them before the distribution and no name is left dangling. ----
+  VaultRecordA:
+    Type: AWS::Route53::RecordSet
+    Condition: HasDomain
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt VaultDistribution.DomainName
+        # CloudFront's fixed alias zone id. CHECK against AWS's AliasTarget documentation before use.
+        HostedZoneId: Z2FDTNDATAQYW2
+  VaultRecordAAAA:
+    Type: AWS::Route53::RecordSet
+    Condition: HasDomain
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      Type: AAAA
+      AliasTarget:
+        DNSName: !GetAtt VaultDistribution.DomainName
+        HostedZoneId: Z2FDTNDATAQYW2
+
+Outputs:
+  VaultUrl:
+    Description: The Vault's address.
+    Value: !If [HasDomain, !Sub "https://${DomainName}", !Sub "https://${VaultDistribution.DomainName}"]
+  AccessTokenSecret:
+    Description: Where the Vault's access token is (Secrets Manager). The token itself is never an output.
+    Value: !Ref AccessToken
+  AccountId:
+    Value: !Ref AWS::AccountId
+  Region:
+    Value: !Ref AWS::Region
+  BucketName:
+    Value: !Ref VaultBucket
+  DistributionId:
+    Value: !Ref VaultDistribution
+  CloudFrontDomain:
+    Description: Point your own domain here (an alias record), or use vault-certificate.yaml and a stack update.
+    Value: !GetAtt VaultDistribution.DomainName
+  TemplateVersion:
+    Value: 0.1.0-draft
