@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SovereignWebsite AWS platform v2.4 DRAFT (iam.aws.a, P-IAM-001; v2.3 cleared by security.aws.a plus R-005 option 1: no trust edits to the DNS role from the site; not for apply until the checks in P-IAM-001 pass), bootstrap (the last console log-in). Two roles that
+  SovereignWebsite AWS platform v2.5 DRAFT (iam.aws.a, P-IAM-001; v2.4 cleared by security.aws.a plus the API layer's 13 reads (security.aws.a, 14433ff); not for apply until the checks in P-IAM-001 pass), bootstrap (the last console log-in). Two roles that
   the account owner's own Google sign-in, in their browser on aws.platform.sovereignweb.site, may
   assume through STS AssumeRoleWithWebIdentity for at most one hour. No IAM user, no
   access key, nothing stored. Written by aws.c@SovereignWebsite.dinis, 22 Nov 2026; the site fills in both parameters.
@@ -89,6 +89,16 @@ Resources:
               ce:GetCostAndUsage, ce:GetCostForecast, ce:GetDimensionValues,
               "s3:Get*", "s3:List*", cloudformation:ListResources, cloudformation:GetResource]
             Resource: "*"
+          # v2.5: the reads site/api/ calls (IamApi, LambdaApi, FirehoseApi, work/dev.2.aws.a), named exactly. Not iam:*,
+          # not lambda:Get* (GetFunction returns a code URL). GetFunctionConfiguration returns environment variables
+          # to the page; the code drops them, but they arrive (security.aws.a).
+          - Sid: TodaysReads2
+            Effect: Allow
+            Action: [iam:ListRoles, iam:GetRole, iam:ListAttachedRolePolicies, iam:ListRolePolicies, iam:GetRolePolicy,
+              iam:GetPolicy, iam:GetPolicyVersion, iam:ListOpenIDConnectProviders, iam:GetOpenIDConnectProvider,
+              lambda:ListFunctions, lambda:GetFunctionConfiguration,
+              firehose:ListDeliveryStreams, firehose:DescribeDeliveryStream]
+            Resource: "*"
 
   PlatformRead:
     Type: AWS::IAM::Role
@@ -131,6 +141,18 @@ Resources:
               - Sid: CloudControlListBuckets
                 Effect: Allow
                 Action: [cloudformation:ListResources, cloudformation:GetResource]
+                Resource: "*"
+        # v2.5: the API layer's reads, granted by name rather than through ViewOnlyAccess and SecurityAudit.
+        - PolicyName: api-reads
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: TodaysReads2
+                Effect: Allow
+                Action: [iam:ListRoles, iam:GetRole, iam:ListAttachedRolePolicies, iam:ListRolePolicies, iam:GetRolePolicy,
+                  iam:GetPolicy, iam:GetPolicyVersion, iam:ListOpenIDConnectProviders, iam:GetOpenIDConnectProvider,
+                  lambda:ListFunctions, lambda:GetFunctionConfiguration,
+                  firehose:ListDeliveryStreams, firehose:DescribeDeliveryStream]
                 Resource: "*"
 
   PlatformChange:

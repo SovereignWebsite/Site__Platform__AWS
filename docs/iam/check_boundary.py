@@ -11,7 +11,7 @@ Reads files only; no AWS. Run: python3 -I docs/iam/check_boundary.py  (needs cfn
 import fnmatch, json, sys
 from cfnlint.decode.cfn_yaml import load
 
-DRAFT = "docs/iam/proposals/P-IAM-001-v2.4-draft.yaml"
+DRAFT = "docs/iam/proposals/P-IAM-001-v2.5-draft.yaml"
 
 def lst(x): return [x] if isinstance(x, (str, dict)) else list(x)
 def key(v): return json.dumps(v, sort_keys=True, default=str)

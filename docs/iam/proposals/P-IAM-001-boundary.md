@@ -61,7 +61,7 @@ No AWS call. That CloudFormation, acting with the caller's credentials, is bound
 
 ## Draft template (05:20 UTC)
 
-[P-IAM-001-v2.4-draft.yaml](P-IAM-001-v2.4-draft.yaml): bootstrap.yaml v2.1 plus the two boundaries, nothing else changed. cfn-lint 1.61.0 passes on it and on v2.1. `python3 -I docs/iam/check_boundary.py` checks that every action the change role's own policies grant is inside its boundary, or cut on purpose: today 0 problems; iam:UpdateRole cut, `s3:Get*` narrowed by a deny on `s3:GetObject*`.
+[P-IAM-001-v2.5-draft.yaml](P-IAM-001-v2.5-draft.yaml): bootstrap.yaml v2.1 plus the two boundaries, nothing else changed. cfn-lint 1.61.0 passes on it and on v2.1. `python3 -I docs/iam/check_boundary.py` checks that every action the change role's own policies grant is inside its boundary, or cut on purpose: today 0 problems; iam:UpdateRole cut, `s3:Get*` narrowed by a deny on `s3:GetObject*`.
 
 What the draft decides, each open to change:
 
@@ -90,7 +90,7 @@ security.aws.a (a1d2057 on work/security.aws.a) found v2.2 did not close R-008. 
 - **B2 (High):** change-set actions on `*` reach other stacks, which may run with their own service role (no PassRole needed to reuse one).
 - **B3 (Medium):** ReadOnlyAccess as the read cap is far wider than the read role (Lambda code and environment variables, DynamoDB items, logs) and AWS widens it over time.
 
-v2.3 ([the draft](P-IAM-001-v2.4-draft.yaml), which replaces v2.2):
+v2.3 ([the draft](P-IAM-001-v2.5-draft.yaml), which replaces v2.2):
 
 - The change boundary is today's change-role policies statement for statement, with the same Resource and Condition: IAM writes only on role/sws-aws-platform-* under `aws:CalledVia`, AttachRolePolicy with the same `iam:PolicyARN` list, GetRole and UpdateAssumeRolePolicy only on role/sovereignwebsite-factory-dns, change-set actions only on stack/sws-aws-platform/*. The denies stay: iam:UpdateRole, UpdateAssumeRolePolicy on the platform roles, `s3:GetObject*`, and every action on the cap itself or on new principals.
 - The read boundary is a customer-managed policy naming what the read role uses today (costs-read, s3-browse, Cloud Control reads). ViewOnlyAccess and SecurityAudit stay attached but act only within it, which is every view the site has today (usage.md); a new view raises the read boundary by console.
@@ -112,8 +112,16 @@ Recommendation: 1 now, in the same console apply (it closes R-005 without waitin
 
 security.aws.a agreed with option 1 (4b7271d on work/security.aws.a) and added why option 2 would not help: the DNS role's intended rights, as the Factory documents them publicly (docs/aws-oidc.md there: UPSERT A, AAAA, CNAME and TXT in the three zones, plus zone reads; not read back live), already let whoever controls its trust repoint aws.platform.sovereignweb.site (their page on the site's name, trusted by Google sign-in, then the change role) or plant ownership TXT records. A boundary cannot cap that; only who may become the role matters.
 
-So [v2.4](P-IAM-001-v2.4-draft.yaml), which replaces v2.3: the change role's policy dns-role-trust-only and the boundary statement TheDnsRoleTrustPolicy are both gone. The change role can no longer read or change the DNS role at all. cfn-lint clean; check_boundary.py 0 problems.
+So [v2.4](P-IAM-001-v2.5-draft.yaml), which replaces v2.3: the change role's policy dns-role-trust-only and the boundary statement TheDnsRoleTrustPolicy are both gone. The change role can no longer read or change the DNS role at all. cfn-lint clean; check_boundary.py 0 problems.
 
 Cost, for aws.c: the site's trust plans for that role (site/plans/2026-11-22__iac-dns-trust.json, 2026-11-23__iac-dns-trust-remove-factory.json) will fail with AccessDenied once v2.4 is applied; they should be retired or turned into console instructions in the same release.
 
 With v2.4 applied by console, R-005 closes, and R-008 closes as far as IAM can (R-002 remains). Still before apply: checks (a) and (b).
+
+## v2.5 (11:40 UTC): the API layer's reads
+
+security.aws.a (14433ff on work/security.aws.a) found check (a) failing for code on work/dev.2.aws.a: site/api/ (IamApi, LambdaApi, FirehoseApi) calls 13 reads the v2.4 read boundary does not list, so those views would be denied once v2.4 is applied. Confirmed against the code's `x-aws-actions`: every other action it names is already inside the boundary.
+
+[v2.5](P-IAM-001-v2.5-draft.yaml), which replaces v2.4: the 13 actions, named exactly (not `iam:*`, not `lambda:Get*`, since GetFunction returns a code URL), as statement TodaysReads2 both in ReadBoundary and in a new inline policy api-reads on the read role, so the role holds them by name rather than through ViewOnlyAccess and SecurityAudit. cfn-lint clean; check_boundary.py 0 problems. For the record: lambda:GetFunctionConfiguration returns environment variables to the page; the code drops them, but they arrive.
+
+Rule from here: every new read in site/api/ is added to api-reads and TodaysReads2 in the same template, and raising the boundary is a console act.
