@@ -19,9 +19,12 @@
 //       mode, screen 2-alt); o = { region, vaultId, index, version, params: { Name: value } } (the access template's
 //       index and its own parameters, passed as given; VaultId is always set from o.vaultId). The page shows the
 //       DistributionId and CertificateArn it passes beside the change set, never filled silently (iam.aws.a 0.2.0).
-//   VaultDeploy.templateEntry(index, version, name) -> { url, versionId, sha256, templateUrl }: the checked index entry for one of the three
+//   VaultDeploy.templateEntry(index, version, name) -> { url, versionId, sha256, templateUrl }: the checked index entry for one of the four
 //       published templates, name "vault" | "vault-access" | "vault-edge" (the us-east-1 certificate stack for an own
-//       domain, design 06b, whose link comes later); throws a TypeError if the entry is missing or not in the form
+//       domain, design 06b) | "vault-alarm" (the optional cost alarm, stack sws-vault-<id>-alarm in us-east-1, after
+//       the Vault exists; one-stack mode only, R-027); throws a TypeError if the entry is missing or not in the form.
+//       The edge and alarm links come later. The alarm's link never carries a RoleARN (no quick-create link can) and
+//       the page never asks for, prefills or stores its AlertEmail: the customer types it in the console.
 //   VaultDeploy.deployRoleName(vaultId)         -> "sws-vault-<id>-deploy", the role the customer picks in 2-alt
 //   VaultDeploy.cleanEndpoint(input)            -> { ok: true, endpoint } | { ok: false, reason: "empty" | "not-url" | "not-cloudfront" }
 //   VaultDeploy.checkHealth(fetch, endpoint, { vaultId, index, version, timeoutMs, maxBytes })
@@ -83,7 +86,7 @@
   }
   // An index entry for a version: own key only, a sha256, and an S3 object URL whose key names this template, this
   // version and the sha256's first 12 hex digits (cloudformation.aws.a's form).
-  var NAMES = { vault: true, "vault-access": true, "vault-edge": true };
+  var NAMES = { vault: true, "vault-access": true, "vault-edge": true, "vault-alarm": true };
   function entry(index, version, name) {
     need(Object.prototype.hasOwnProperty.call(NAMES, name), "template name", name);
     var v = String(version);

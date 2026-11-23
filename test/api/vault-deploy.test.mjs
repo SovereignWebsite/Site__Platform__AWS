@@ -74,7 +74,10 @@ const edgeIndex = { "0.2.1": { url: "https://s3.us-east-1.amazonaws.com/sws-temp
 const te = V.templateEntry(edgeIndex, "0.2.1", "vault-edge");
 ok(te.url === edgeIndex["0.2.1"].url && te.versionId === "e1" && te.sha256 === "ef".repeat(32) && te.templateUrl === edgeIndex["0.2.1"].url + "?versionId=e1", "templateEntry: vault-edge checked in the same form, with its pinned URL");
 throws(() => V.templateEntry(edgeIndex, "0.2.1", "vault"), "templateEntry: the name must match the key");
-throws(() => V.templateEntry(edgeIndex, "0.2.1", "other"), "templateEntry: only the three published names");
+throws(() => V.templateEntry(edgeIndex, "0.2.1", "other"), "templateEntry: only the four published names");
+const alarmIndex = { "0.1.0": { url: "https://s3.us-east-1.amazonaws.com/sws-templates/templates/vault-alarm/0.1.0/vault-alarm-" + "aa".repeat(6) + ".yaml", versionId: "al1", sha256: "aa".repeat(32) } };
+ok(V.templateEntry(alarmIndex, "0.1.0", "vault-alarm").templateUrl === alarmIndex["0.1.0"].url + "?versionId=al1", "templateEntry: vault-alarm checked in the same form");
+
 ok(V.deployRoleName("3f9a0c21b7d4") === "sws-vault-3f9a0c21b7d4-deploy", "the role named under B");
 throws(() => V.deployRoleName("nope"), "deployRoleName checks the id");
 
@@ -141,6 +144,7 @@ ok(r.ok && r.sha256 === index["0.4.4-draft"].sha256, "a template_sha256 that agr
 // ---- the source ----
 const src = readFileSync(new URL("../../site/api/vault-deploy.js", import.meta.url), "utf8");
 ok(!/\beval\(|new Function|innerHTML|localStorage|sessionStorage|document\.cookie|setInterval/.test(src), "no eval, HTML, storage, cookies or timers that repeat");
+ok(!/AlertEmail|RoleARN/.test(src.replace(/^\s*\/\/.*$/gm, "")), "outside comments, the logic never handles AlertEmail or RoleARN");
 ok(!/sts\.amazonaws|cloudformation\.[a-z0-9-]+\.amazonaws\.com|SigV4|accessKeyId/i.test(src), "no AWS API call and no credential handling");
 
 if (failures) { console.error(failures + " failed, " + passed + " passed"); process.exit(1); }
