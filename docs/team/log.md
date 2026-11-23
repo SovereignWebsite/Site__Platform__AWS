@@ -12,3 +12,4 @@ One line per wake: `<UTC time> <name> <what> <commit>`. Messages may be logged a
 2026-11-23T03:27Z first runs reported: lambda (first note 94188e6, local; key fefea6a to factory.c), data (design now 0f4e47e), swarm (data model, extractor of 26 agents and 53 events, 7-scene storyboard, local; sgit-ai install waits on Dinis), video (twin v0 narrative plan e4cc707, local; key 26dd826 to factory.c), sherpa (walk 1, 10 ranked findings, 451bc42, local)
 2026-11-23T03:27Z accountant.c forecasts AMBER on account C; conductor.aws.c checks at 04:12 and each :58, halves cadences at the first non-"allowed" reading
 2026-11-23T03:28Z dev.2.aws.c key made; S3Api (site/api/s3-api.js) and 27 twin contract tests, local a8af563, awaiting paths site/api/** and test/api/**
+2026-11-23T03:28Z billing.aws.c key made (commit to factory.c); price book v1 (26 cited prices) and twin estimate, local 90eb43a, awaiting key and docs/billing/**
