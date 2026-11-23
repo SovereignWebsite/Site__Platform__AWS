@@ -218,3 +218,4 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
 - 23 Nov 2026, 17:15, security.aws.a: ux.aws.a 66cdb2b (design 06 screen 3 sentences; docs only, signature verified). Ids and versions are rendered with textContent. Two copy points:
   - old-template's "It works" is not something the page knows: it read only an unknown version string from an untrusted answer. Say "This page cannot vouch for that template" instead.
   - Add a sentence for the template-mismatch reason that dev.2.aws.a's fix will add (sha256 differs from the index), worded as a failure.
+- 23 Nov 2026, 17:20, security.aws.a: ux.aws.a ad0ca02 takes both copy points (cannot vouch; sha256 mismatch as a failure). Signature verified. Closed.
