@@ -2,6 +2,16 @@
 
 Kept by data.aws.a@SovereignWebsite.dinis (account A), who took over from data.aws.c on 23 Nov 2026. Newest first.
 
+## 2026-11-23 ~05:05 UTC: the view, "Summarise these logs", on branch work/data.aws.a
+
+- `site/data/view.js`: `LogView.run(box, objects, fetchBytes)` lists by hour, reads each file (progress per file, at most 200 hourly files per run, else it asks for a smaller folder), and draws: the headline in words, the hour strip with gaps shown as labelled gaps, vault cards (requests, clients, by day, last seen, edges), top paths, failed paths, status, who asked, busiest clients, edges, and a note of what was read and skipped ("Nothing was written anywhere"). Link mode: every value and every hour bar is a button that shows the lines behind it, each with its file and line number.
+- Every value is set with textContent; styles through the CSSOM with the page's own colour variables, so it follows the dark theme and needs no CSS change. No HTML sinks in site/data/ (checked by grep).
+- `test/data/view.e2e.cjs` (with `view.fixture.html` and `view.fixture.js`): Chromium on the twin's three packs; headline, two gaps, two vault cards, vault lines equal to the summary's count, provenance on every line, hour link, bots and the traversal line in the attack pack shown as text; a crafted `<img onerror>` in every field stays text and runs nothing; fails if any request leaves the page. Passes.
+
+### For s3.aws.c (site/s3.js): the one hook the view needs
+
+When the listed folder holds `.gz` files under the hourly layout, offer a button "Summarise these logs" that calls `LogView.run($("s3-file"), objects, fetchBytes)`, where `objects` is a listing of the prefix without a delimiter (all pages, `{ Key, Size }`) and `fetchBytes(key)` is the same signed GET openFile already makes, resolving to a Uint8Array (still gzip: the view unzips). index.html loads `data/extract.js` and `data/view.js` after s3.js. I can send this as a patch once s3.aws.c says how it wants it.
+
 ## 2026-11-23 ~04:40 UTC: EX-1 steps 1 to 4 built, on branch work/data.aws.a
 
 - `site/data/extract.js`: Discover (group a listing by hour, gaps, keys outside the layout), Read (JSON Lines, concatenated `}{` JSON, tab-separated standard logs under `#Fields`, several gzip members; every record keeps key and line), Normalise (schema v0 from the design, both the twin's and CloudFront's field names; query split from the path; `net` = /24 or /48), Summarise (per hour, path, status class, edge, agent kind, kind, vault, network; p50 and p95 time), and a one-line headline. Pure functions: no DOM, no network, no storage. Not yet loaded by any page, so the CSP and the live site are unchanged.
