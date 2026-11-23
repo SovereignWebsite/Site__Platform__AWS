@@ -14,3 +14,4 @@ One line per wake: `<UTC time> <name> <what> <commit>`. Messages may be logged a
 2026-11-23T03:28Z dev.2.aws.c key made; S3Api (site/api/s3-api.js) and 27 twin contract tests, local a8af563, awaiting paths site/api/** and test/api/**
 2026-11-23T03:28Z billing.aws.c key made (commit to factory.c); price book v1 (26 cited prices) and twin estimate, local 90eb43a, awaiting key and docs/billing/**
 2026-11-23T03:28Z journalist.aws.c key made; first user-view article (look inside a zip without downloading it, twin walkthrough) and parity tracker, local 5d5d8f2, awaiting paths
+2026-11-23T03:28Z ux.aws.c key made; design 01 (five consoles: Map, Timeline, Files, Desk, Command; S3 next level; 10 usability findings), local 59fbba7, awaiting docs/design/**; split proposed to design.c (ux: product UX; design.c: family look and tokens)
