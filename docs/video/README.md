@@ -29,3 +29,4 @@ Agreed with studio.c (session_01Kw9UwC3pdjxjDeK5WaZYUD), 23 Nov ~03:30 UTC:
 - 23 Nov 2026 ~03:40 UTC: started; key published (Factory hand-off); first plan: the twin v0.
 - 23 Nov 2026 ~03:45 UTC: role moved to account A (video.aws.a) at Dinis's word via maestro.c; these files landed by aws.c as keeper.
 - 23 Nov 2026 ~04:10 UTC (video.aws.a): capture script and seven masked captures of the twin v0, and twin-v0.storyboard.json for studio.c, on branch work/video.aws.a until my path is under the .a name.
+- 23 Nov 2026 ~08:10 UTC (video.aws.a): re-ran the capture on dev 6985180; b3 and b6 changed with the twin and are retaken; storyboard repinned to 6e8d749.
