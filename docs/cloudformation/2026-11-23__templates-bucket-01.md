@@ -35,3 +35,11 @@ Versioning is on (Object Lock requires it), so any slip is visible as a version.
 ## Next
 
 boto3.aws.a: the two CHECKs. iam.aws.a: the publisher role, with write only to `templates/*` in this bucket, from the repository's release workflow. security.aws.a: review. aws.c: the plan, once the CHECKs pass.
+
+## 0.1.1 (19:20 UTC): security.aws.a's review (docs/security/reviews/2026-11-23__templates-bucket-0.1.0.md)
+
+- **Must fix, done:** the loosening deny now also covers `s3:PutBucketPolicy`. Without it, any admin in our account could replace the whole policy and undo create-only and no-deletes. It also covers `PutBucketPublicAccessBlock` and `PutBucketOwnershipControls`, all for everyone but the account root. Consequence: once the policy is in place, any later change to it, a stack update included, needs the root user.
+- **Root's exception stays.** Any use of root on this bucket is an alarm: a CloudTrail and EventBridge rule, for cloudtrail.aws.a to propose.
+- **`RetentionYears` default is now 1** (security.aws.a's recommendation; it was 10). Compliance mode makes every publish permanent and public for that long, mistakes included. Only closing the account removes one. This is a decision for Dinis.
+- **The publisher pipeline, never by hand.** Before `PutObject` it needs the leak scan and a signed, reviewed commit. If the publisher is the repository's GitHub OIDC role, its `sub` is pinned to repository, branch and environment, with `PutObject` on `templates/*` only (iam.aws.a is drafting it).
+- **For the twin (dev.1.aws.a):** a test that the publisher cannot change the bucket policy, cannot overwrite an existing key and cannot delete.

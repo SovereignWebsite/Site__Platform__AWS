@@ -3,12 +3,12 @@ Description: >-
   Stack sws-vault-templates-<region>, in OUR account: the bucket the Vault deploy page's quick-create links point at.
   Published template files can never be overwritten or deleted (S3 Object Lock, compliance mode), only the publishing
   role writes, and anyone may read templates/* (CloudFormation fetches a quick-create template from S3 as the
-  customer, from their own account). DRAFT 0.1.0 by cloudformation.aws.a, 23 Nov 2026: a plan for aws.c to prepare
+  customer, from their own account). DRAFT 0.1.1 by cloudformation.aws.a, 23 Nov 2026: a plan for aws.c to prepare
   and Dinis to approve, not for use before then.
 
 Metadata:
   SovereignWebsite:
-    TemplateVersion: 0.1.0-draft
+    TemplateVersion: 0.1.1-draft
 
 Parameters:
   PublisherRoleArn:
@@ -18,12 +18,13 @@ Parameters:
     Description: The only role that may write published templates (for example the repository's GitHub Actions OIDC role; aws.c and iam.aws.a decide).
   RetentionYears:
     Type: Number
-    Default: 10
+    Default: 1
     MinValue: 1
     MaxValue: 100
     Description: >-
       How long each published file is locked. In compliance mode nobody, including the account's root user, can
-      delete or shorten it before then, and the bucket cannot be deleted while files are locked. A decision for Dinis.
+      delete or shorten it before then, and the bucket cannot be deleted while files are locked. Every publish,
+      mistakes included, stays public that long. 1 proposed (security.aws.a); a decision for Dinis.
 
 Resources:
   TemplatesBucket:
@@ -95,10 +96,13 @@ Resources:
             Principal: "*"
             Action: [s3:DeleteObject, s3:DeleteObjectVersion, s3:BypassGovernanceRetention]
             Resource: !Sub "${TemplatesBucket.Arn}/*"
+          # Root only, and any use of root here is an alarm. Once this policy is in place, a later change to the policy,
+          # the public access block or ownership (including a stack update) needs the account root.
           - Sid: NobodyLoosensThisPolicyOrTheLock
             Effect: Deny
             Principal: "*"
-            Action: [s3:DeleteBucketPolicy, s3:PutBucketObjectLockConfiguration, s3:PutBucketVersioning, s3:DeleteBucket]
+            Action: [s3:PutBucketPolicy, s3:DeleteBucketPolicy, s3:PutBucketPublicAccessBlock, s3:PutBucketOwnershipControls,
+              s3:PutBucketObjectLockConfiguration, s3:PutBucketVersioning, s3:DeleteBucket]
             Resource: !GetAtt TemplatesBucket.Arn
             Condition: { ArnNotEquals: { "aws:PrincipalArn": !Sub "arn:aws:iam::${AWS::AccountId}:root" } }
 
