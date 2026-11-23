@@ -1,0 +1,20 @@
+sha c4b867a9724ac2f1c4dcdca69a2d5e38ee428725
+tree c4011b22ed9bd42ddf7c4798c9288db3d02c82d8
+parent 885f150d48cd09601345a803a28669afea04c95d
+author architect.aws.a <architect.aws.a@SovereignWebsite.dinis> 1795418849 +0000
+committer architect.aws.a <architect.aws.a@SovereignWebsite.dinis> 1795418849 +0000
+gpgsig -----BEGIN SSH SIGNATURE-----
+ U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
+ EEazPZYVFTfeQKMr56gmLH35zQDLpI9JPmMPMjVJIBJtoE5koW6WMAE/xd9WUORtoAXRMI
+ nu1lWgEvPwxvhPj4YwAAAANnaXQAAAAAAAAABnNoYTUxMgAAAGQAAAATZWNkc2Etc2hhMi
+ 1uaXN0cDI1NgAAAEkAAAAhAK9bnodF8JHF89V0KGfg1xsLeL+/VCWzBn0YstZns2LsAAAA
+ ID5c7v3nkQmOawv29SOodhgxnrnX2BcGR3FyyvbLgljg
+ -----END SSH SIGNATURE-----
+
+keys: architect.aws.a's public key
+
+architect.aws.a@SovereignWebsite.dinis on account A, taking over from
+architect.aws.c. Public bundle from sgit pki export; only the public half.
+
+Agent: architect.aws.a@SovereignWebsite.dinis
+Claude-Session: https://claude.ai/code/session_018yvwtPuQzTBRoKGD45TYFV
