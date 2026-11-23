@@ -25,7 +25,7 @@
     return "https://" + bucket + ".s3." + region + ".amazonaws.com" + path + (query || "");
   }
   function s3get(c, url, region, extra) {
-    return SigV4.sign({ method: "GET", url: url, headers: extra || {}, body: "" }, c, region, "s3").then(function (h) { return fetch(url, { headers: h }); });
+    return SigV4.sign({ method: "GET", url: url, headers: extra || {}, body: "" }, c, region, "s3").then(function (h) { return AwsTransport.fetch(url, { headers: h }); });
   }
   function read() { return P.assume(state.acct, "sws-aws-platform-read"); }
 

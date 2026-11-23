@@ -128,3 +128,6 @@ body.screenshot-names #s3-file h4, body.screenshot-names #s3-status, body.screen
 /* the join page */
 main.doc section.card { margin: 1rem 0; } main.doc h2 { margin-bottom: .6rem; } main.doc h3 { margin-top: .8rem; }
 main.doc ol.steps li, main.doc ul li { margin-bottom: .45rem; }
+
+/* twin mode */
+.twin-bar { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; justify-content: space-between; background: var(--accent-soft); color: var(--fg); border: 1px solid var(--accent); border-radius: var(--radius); padding: .6rem .9rem; margin-bottom: .8rem; }

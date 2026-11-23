@@ -55,6 +55,10 @@
 <main id="main" class="app">
 <div class="mark">aws.platform.sovereignweb.site</div>
 
+<div id="twin-bar" class="twin-bar" hidden>
+  <span><strong>Twin mode.</strong> A synthetic AWS that runs in this page: same calls, made-up data (account 111122223333). Nothing here touches a real account.</span>
+  <button type="button" id="twin-leave" class="quiet">Leave the twin</button>
+</div>
 <section id="step1" class="signin">
   <div id="signed-out-hero" class="hero">
     <h1>AWS Platform Sovereign Website</h1>
@@ -62,6 +66,7 @@
     <p id="no-client" class="status bad" hidden>The owner has not set this site's Google client ID yet (config.js).</p>
     <div id="google-button" class="google-button"></div>
     <p class="small">Not invited yet? <a href="join/">Join the beta</a>: how to run your own AWS account from here.</p>
+    <p class="row"><button type="button" id="twin-enter" class="quiet">Try the twin: a synthetic AWS, no sign-in</button></p>
     <ul class="features">
       <li><strong>No keys</strong><span>Google sign-in, then one-hour credentials from AWS STS.</span></li>
       <li><strong>Sealed on this device</strong><span>Your session and account IDs, encrypted with a key no script can read.</span></li>
@@ -163,6 +168,8 @@ A sovereign website, made with the <a href="https://sovereignwebsite.org/">open 
 </main>
 <script src="config.js"></script>
 <script src="sealed-store.js"></script>
+<script src="twin.js"></script>
+<script src="transport.js"></script>
 <script src="sigv4.js"></script>
 <script src="plan.js"></script>
 <script src="app.js"></script>

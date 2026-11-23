@@ -28,6 +28,13 @@
   }
   Array.prototype.forEach.call(document.querySelectorAll("[data-tab]"), function (b) { b.onclick = function () { setTab(b.getAttribute("data-tab")); }; });
 
+  // ---- Twin mode: a synthetic AWS (twin.js) behind the same calls; its own identity and accounts ----
+  var TWIN = window.AwsTransport && AwsTransport.isTwin();
+  function rec(name) { return TWIN ? "twin-" + name : name; }
+  function b64u(o) { return btoa(JSON.stringify(o)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+  function twinToken() { return b64u({ alg: "none", typ: "JWT" }) + "." + b64u({ sub: "000000000000000000001", name: "Twin visitor", email: "visitor@twin.example", exp: Math.floor(Date.now() / 1000) + 3600 }) + ".twin"; }
+  function enterTwin(on) { AwsTransport.setTwin(on); location.reload(); }
+
   // ---- Step 1: Google sign-in (Google Identity Services; the ID token stays in memory) ----
   function decodeJwt(t) {
     var p = t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
@@ -38,11 +45,11 @@
     if (!window.SealedStore || !SealedStore.available() || !mem.idToken) return Promise.resolve();
     var exp = mem.claims.exp * 1000;
     Object.keys(mem.creds).forEach(function (k) { exp = Math.max(exp, mem.creds[k].expiration); });
-    return SealedStore.seal("session", { idToken: mem.idToken, creds: mem.creds }, exp).catch(function () { /* memory only */ });
+    return SealedStore.seal(rec("session"), { idToken: mem.idToken, creds: mem.creds }, exp).catch(function () { /* memory only */ });
   }
   function restore() {
     if (!window.SealedStore || !SealedStore.available()) return Promise.resolve();
-    return SealedStore.open("session").then(function (s) {
+    return SealedStore.open(rec("session")).then(function (s) {
       if (!s) return;
       var now = Date.now();
       Object.keys(s.creds || {}).forEach(function (k) { if (s.creds[k].expiration - now > 60 * 1000) mem.creds[k] = s.creds[k]; });
@@ -70,6 +77,7 @@
   // Sign out turns it off (disableAutoSelect) until the next sign-in by hand.
   var gisReady, renewTimer = null;
   function autoSignIn() {
+    if (TWIN) { if (!mem.idToken) { showSignedIn(twinToken(), false); persist(); } return; }
     if (mem.idToken || !window.google || !google.accounts) return;
     google.accounts.id.prompt();
   }
@@ -80,6 +88,7 @@
     renewTimer = setTimeout(function () { mem.idToken = null; $("signed-out-hero").hidden = false; autoSignIn(); }, Math.max(wait, 0));
   }
   function initGoogle() {
+    if (TWIN) { gisReady = Promise.resolve(); return; }
     if (!cfg.googleClientId) { $("no-client").hidden = false; gisReady = Promise.resolve(); return; }
     var ready;
     gisReady = new Promise(function (r) { ready = r; });
@@ -98,9 +107,11 @@
   var TEN_YEARS = 10 * 365 * 24 * 3600 * 1000;
   var accounts = [];
   function saveAccounts(a) {
+    if (TWIN) return Promise.resolve();
     if (window.SealedStore && SealedStore.available()) return SealedStore.seal("accounts", a, Date.now() + TEN_YEARS).catch(function () {});
   }
   function loadAccounts() {
+    if (TWIN) { accounts = [{ id: AwsTwin.account, label: "Twin account (synthetic)" }]; return Promise.resolve(); }
     var old = null;
     try { old = JSON.parse(localStorage.getItem(STORE) || "null"); localStorage.removeItem(STORE); } catch (e) { /* none */ }
     if (!window.SealedStore || !SealedStore.available()) { accounts = old || []; return Promise.resolve(); }
@@ -134,7 +145,7 @@
       Action: "AssumeRoleWithWebIdentity", Version: "2011-06-15", RoleArn: roleArn(acct, role),
       RoleSessionName: "sws-aws-platform", WebIdentityToken: mem.idToken, DurationSeconds: "3600"
     }).toString();
-    return fetch("https://sts.amazonaws.com/", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: body })
+    return AwsTransport.fetch("https://sts.amazonaws.com/", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: body })
       .then(function (r) { return r.text().then(function (t) { return { ok: r.ok, status: r.status, doc: new DOMParser().parseFromString(t, "text/xml") }; }); })
       .then(function (x) {
         if (!x.ok) throw awsError(x.doc, x.status);
@@ -151,14 +162,14 @@
     var url = "https://" + host + "/", body = new URLSearchParams(params).toString();
     var headers = { "content-type": "application/x-www-form-urlencoded; charset=utf-8" };
     return SigV4.sign({ method: "POST", url: url, headers: headers, body: body }, creds, "us-east-1", service)
-      .then(function (h) { return fetch(url, { method: "POST", headers: h, body: body }); })
+      .then(function (h) { return AwsTransport.fetch(url, { method: "POST", headers: h, body: body }); })
       .then(function (r) { return r.text().then(function (t) { var d = new DOMParser().parseFromString(t, "text/xml"); if (!r.ok) throw awsError(d, r.status); return d; }); });
   }
   function jsonCall(creds, host, service, target, payload, region, jsonVersion) {
     var url = "https://" + host + "/", body = JSON.stringify(payload);
     var headers = { "content-type": "application/x-amz-json-" + (jsonVersion || "1.1"), "x-amz-target": target };
     return SigV4.sign({ method: "POST", url: url, headers: headers, body: body }, creds, region || "us-east-1", service)
-      .then(function (h) { return fetch(url, { method: "POST", headers: h, body: body }); })
+      .then(function (h) { return AwsTransport.fetch(url, { method: "POST", headers: h, body: body }); })
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.__type || r.status) + ": " + (j.message || j.Message || "")); return j; }); });
   }
   function getRole(creds, name) {
@@ -463,13 +474,16 @@
     if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
     $("step1-done").hidden = true; $("signed-out-hero").hidden = false; $("tabs").hidden = true; renderAccounts();
     if (renewTimer) clearTimeout(renewTimer);
-    if (window.SealedStore) SealedStore.forget("session");
+    if (window.SealedStore) SealedStore.forget(rec("session"));
   };
   $("forget-device").onclick = function () {
     $("sign-out").onclick();
     accounts = []; renderAccounts();
     if (window.SealedStore) SealedStore.forgetDevice().then(function () { say($("store-status"), "This device's key and everything sealed with it are deleted.", "ok"); });
   };
+  if ($("twin-enter")) $("twin-enter").onclick = function () { enterTwin(true); };
+  if ($("twin-leave")) $("twin-leave").onclick = function () { enterTwin(false); };
+  $("twin-bar").hidden = !TWIN;
   window.Platform = { diffView: diffView, assume: assume, jsonCall: jsonCall, xmlText: xmlText, awsError: awsError, el: el, say: say,
     accounts: function () { return accounts; }, signedIn: function () { return !!mem.idToken; } };
   initGoogle();
