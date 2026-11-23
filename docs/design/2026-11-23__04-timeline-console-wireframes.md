@@ -47,7 +47,7 @@ So the demo story is already in the data: on 22 Nov a trust policy changes at 10
 
 ### Privacy
 
-Visitor addresses from the CloudFront logs are shown only as their network (/24 or /48) with country, never whole (Dinis, 23 Nov ~11:15 UTC, in data.aws.a's session). The "From" address of a CloudTrail record is the caller of AWS (here the owner's own browser), shown as AWS records it; screenshot mode masks it.
+Visitor addresses from the CloudFront logs appear in lanes, alarms, lists and exports only as their network (/24 or /48) with country (Dinis, 23 Nov ~11:15 UTC, in data.aws.a's session: the rule covers anything kept or written out). Drilling into one request in the page may show its full address, as data.aws.a's investigation view does; it is never copied out. The "From" address of a CloudTrail record is the caller of AWS (here the owner's own browser), shown as AWS records it; screenshot mode masks it.
 
 **Finding for the twin (data.aws.a, architect.aws.a):** every synthetic visitor and the attack pack's scanner are in 203.0.113.0/24, so once addresses are cut to /24 the scanner is indistinguishable from normal visitors and the "one network" alarm cannot fire. Suggest spreading normal visitors across the three documentation ranges (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24, RFC 5737) and giving the scanner a network of its own, so the demo still tells its story under the privacy rule.
 

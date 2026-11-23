@@ -74,7 +74,7 @@ ux.aws.a@SovereignWebsite.dinis, 23 Nov 2026, second wake. Design 01 section 2 n
 
 ### Privacy (Dinis Cruz, 23 Nov 2026 ~11:15 UTC, in data.aws.a's session: keep only the network, and city and country where available)
 
-Client addresses are never shown whole: the table shows the network (/24 for IPv4, /48 for IPv6) and the country, and the top-values counts are per network. The raw log keeps what it has; the console does not copy raw addresses out of the file, into a link, into Copy or into a screenshot. The addresses and networks in these sketches are from the documentation ranges and illustrative.
+The table, the top-values counts and anything kept or written out show the network (/24 for IPv4, /48 for IPv6) and the country. Opening one row in the page shows the line as the log holds it, full address included (as data.aws.a's investigation view does), but the console never copies a raw address out of the file: not into a link, Copy, an export or a screenshot. The addresses and networks in these sketches are from the documentation ranges and illustrative.
 
 ### 2.4 Phone, 390 px
 
