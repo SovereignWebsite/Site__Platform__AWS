@@ -1,0 +1,561 @@
+<title>AWS Decision Brief</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a briefing desk. The stage (the animated decision) on the left, the written brief on the right, the transport bar under the stage. */
+:root{
+  --bg:#eef1f4; --paper:#ffffff; --ink:#15202e; --mute:#5b6878; --line:#c9d1db;
+  --accent:#c47a12;  /* the decision itself: amber */
+  --risk:#b4322a; --ok:#11786b; --hold:#6b5bb5;
+  --stage:#f8fafb; --chip:#e6ebf0;
+  --f-display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body:"IBM Plex Sans", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f151d; --paper:#18212c; --ink:#e4e9ef; --mute:#93a0b0; --line:#2f3b4a;
+  --accent:#e9a43c; --risk:#ec6b5f; --ok:#3fbfa9; --hold:#a596f0; --stage:#131b25; --chip:#223040; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f151d; --paper:#18212c; --ink:#e4e9ef; --mute:#93a0b0; --line:#2f3b4a;
+  --accent:#e9a43c; --risk:#ec6b5f; --ok:#3fbfa9; --hold:#a596f0; --stage:#131b25; --chip:#223040; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1280px;margin:0 auto;display:grid;gap:16px}
+header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px}
+h1{font:800 clamp(22px,3vw,30px)/1.1 var(--f-display);margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--mute);margin:4px 0 0;font-size:14px}
+.tabs{display:flex;gap:4px;background:var(--chip);padding:4px;border-radius:8px}
+.tabs button{border:0;background:transparent;color:var(--ink);font:500 14px var(--f-body);padding:6px 14px;border-radius:6px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--paper);box-shadow:0 1px 2px #0002}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.desk{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.desk{grid-template-columns:minmax(0,1fr)}}
+.stagebox{background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:0}
+.scenehead{display:flex;justify-content:space-between;gap:8px;align-items:baseline;padding:10px 14px;border-bottom:1px solid var(--line)}
+.eyebrow{font:500 12px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.scenetitle{font:700 17px/1.25 var(--f-display);margin:2px 0 0;text-wrap:balance}
+.clock{font:400 12px var(--f-mono);color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
+.stage{position:relative;background:var(--stage);aspect-ratio:16/9;max-width:100%}
+.stage svg{position:absolute;inset:0;width:100%;height:100%}
+.caption{min-height:3.6em;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px 18px;border-top:1px solid var(--line);background:var(--ink);color:var(--paper);font:500 clamp(14px,1.5vw,16px)/1.45 var(--f-body);text-wrap:balance}
+.transport{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;border-top:1px solid var(--line)}
+.btn{border:1px solid var(--line);background:var(--paper);color:var(--ink);font:500 13px var(--f-body);padding:6px 12px;border-radius:6px;cursor:pointer}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink);min-width:78px}
+.btn[aria-pressed="true"]{background:var(--chip)}
+.scrub{flex:1 1 200px;min-width:0;accent-color:var(--accent)}
+.chapters{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 12px}
+.chapters button{border:1px solid var(--line);background:transparent;color:var(--mute);font:500 12px var(--f-mono);padding:3px 9px;border-radius:999px;cursor:pointer}
+.chapters button.cur{background:var(--accent);border-color:var(--accent);color:#fff}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:16px 18px;display:grid;gap:12px;min-width:0}
+.panel h2{font:700 18px/1.25 var(--f-display);margin:0;text-wrap:balance}
+.panel h3{font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:0 0 4px}
+.panel p{margin:0}
+.opts{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.opts li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px}
+.opts li b{font:700 15px var(--f-display);color:var(--mute)}
+.opts li.rec{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 9%,transparent)}
+.opts li.rec b{color:var(--ok)}
+.opts li.no{opacity:.7}
+.tag{display:inline-block;font:500 11px var(--f-mono);padding:1px 7px;border-radius:999px;background:var(--chip);color:var(--mute);margin-left:6px;vertical-align:1px}
+.tag.rec{background:var(--ok);color:#fff}
+.answer{font:700 clamp(18px,2.4vw,24px) var(--f-mono);letter-spacing:.02em;padding:10px 12px;background:var(--chip);border-radius:8px;user-select:all;overflow-wrap:anywhere}
+.src{font-size:13px;color:var(--mute)}
+.src a{color:inherit}
+.note{font-size:13px;color:var(--mute);border-top:1px solid var(--line);padding-top:10px}
+/* storyboard view */
+.board{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.beat{background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:grid;min-width:0}
+.beat .thumb{aspect-ratio:16/9;background:var(--stage);position:relative;border-bottom:1px solid var(--line);max-width:100%}
+.beat .thumb svg{position:absolute;inset:0;width:100%;height:100%}
+.beat .body{padding:10px 12px;display:grid;gap:6px}
+.beat .meta{font:500 11px var(--f-mono);color:var(--mute);display:flex;justify-content:space-between;gap:8px}
+.beat .nar{font-size:14px}
+.beat .vis{font-size:12.5px;color:var(--mute)}
+/* SVG vocabulary */
+svg text{font-family:var(--f-body);fill:var(--ink)}
+.t-s{font-size:13px}.t-m{font-size:16px;font-weight:600}.t-l{font:800 24px var(--f-display)}.t-xl{font:800 44px var(--f-display)}
+.t-mono{font-family:var(--f-mono);font-size:12px}
+.t-mute{fill:var(--mute)}.t-risk{fill:var(--risk)}.t-ok{fill:var(--ok)}.t-acc{fill:var(--accent)}.t-inv{fill:var(--paper)}
+.bx{fill:var(--paper);stroke:var(--line);stroke-width:1.5}
+.bx-risk{fill:color-mix(in srgb,var(--risk) 10%,var(--paper));stroke:var(--risk);stroke-width:2}
+.bx-ok{fill:color-mix(in srgb,var(--ok) 10%,var(--paper));stroke:var(--ok);stroke-width:2}
+.bx-acc{fill:color-mix(in srgb,var(--accent) 12%,var(--paper));stroke:var(--accent);stroke-width:2}
+.bx-hold{fill:color-mix(in srgb,var(--hold) 10%,var(--paper));stroke:var(--hold);stroke-width:2}
+.bx-ghost{fill:none;stroke:var(--line);stroke-width:1.5;stroke-dasharray:6 5}
+.fill-ink{fill:var(--ink)}.fill-risk{fill:var(--risk)}.fill-ok{fill:var(--ok)}.fill-acc{fill:var(--accent)}.fill-chip{fill:var(--chip)}.fill-hold{fill:var(--hold)}
+.ln{fill:none;stroke:var(--mute);stroke-width:2}
+.ln-risk{fill:none;stroke:var(--risk);stroke-width:2.5}
+.ln-ok{fill:none;stroke:var(--ok);stroke-width:2.5}
+.dash{stroke-dasharray:7 6}
+.draw{stroke-dasharray:1 1}
+.cue{opacity:0;transform:translateY(6px);transition:opacity .45s ease,transform .45s ease;transform-box:fill-box}
+.cue.on{opacity:1;transform:none}
+.cue.pop{transform:scale(.85);transform-origin:center}.cue.pop.on{transform:none}
+.mover{transition:none}
+@media (prefers-reduced-motion: reduce){.cue{transition:none}}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Seven decisions for Dinis</h1>
+      <p class="sub">AWS Platform programme · from <span class="t-mono">docs/board/decisions.md</span>, 23 Nov 2026, 14:20 UTC · kept by pm.aws.a</p>
+    </div>
+    <div class="tabs" role="tablist" aria-label="View">
+      <button role="tab" id="tab-brief" aria-selected="true" aria-controls="view-brief">Brief</button>
+      <button role="tab" id="tab-board" aria-selected="false" aria-controls="view-board">Storyboard</button>
+    </div>
+  </header>
+
+  <section id="view-brief" class="desk" role="tabpanel" aria-labelledby="tab-brief">
+    <div class="stagebox">
+      <div class="scenehead">
+        <div><div class="eyebrow" id="eyebrow"></div><div class="scenetitle" id="scenetitle"></div></div>
+        <div class="clock" id="clock">0:00 / 0:00</div>
+      </div>
+      <div class="stage" id="stage" aria-live="off"></div>
+      <div class="caption" aria-hidden="true" id="caption"></div>
+      <p class="sr" aria-live="polite" id="srcaption"></p>
+      <div class="transport">
+        <button class="btn" id="prev" aria-label="Previous decision">◀</button>
+        <button class="btn primary" id="play">Play</button>
+        <button class="btn" id="next" aria-label="Next decision">▶</button>
+        <input class="scrub" id="scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="Position in the brief">
+        <button class="btn" id="mode" aria-pressed="false" title="Slides mode stops at the end of each decision">Slides</button>
+        <button class="btn" id="voice" aria-pressed="false" title="Speaks the captions with your browser's built-in synthetic voice">Voice</button>
+      </div>
+      <div class="chapters" id="chapters"></div>
+    </div>
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+  </section>
+
+  <section id="view-board" role="tabpanel" aria-labelledby="tab-board" hidden>
+    <p class="sub" style="margin:0 0 12px">Every beat of the brief: what is said, what is shown, where the fact comes from. The same beats are in <span class="t-mono">decisions.storyboard.json</span> beside this page, for studio.c.</p>
+    <div class="board" id="board"></div>
+  </section>
+</div>
+
+<script type="application/json" id="storyboard">
+{
+  "title": "Seven decisions for Dinis",
+  "source": "docs/board/decisions.md on work/pm.aws.a, 23 Nov 11:40 UTC, Site__Platform__AWS",
+  "made_by": "pm.aws.a@SovereignWebsite.dinis",
+  "answer": "1 a, 2 a, 3 a, 4 a, 5 a, 6 a, 8 a",
+  "scenes": [
+    {"id":"intro","eyebrow":"The brief","title":"Seven decisions, one page","dur":16,
+     "beats":[
+       [0,"Seven decisions are waiting for you on the AWS programme's decisions page. This brief walks through each one.","Seven numbered tiles appear, numbered as on the decisions page in a row, each with its short name."],
+       [5.5,"None of them stops the team. Every agent keeps building on the synthetic twin while you decide.","A banner under the tiles: nothing here stops the team."],
+       [10.5,"Each scene shows the problem, the options and the recommendation. Answer by number in pm.aws.a's session.","The recommended answer line types in at the bottom."]],
+     "panel":{"what":"Every open question for you from the AWS agents, most urgent first. Answer by number in pm.aws.a's session.","answer":true}},
+    {"id":"d1","eyebrow":"Decision 1 · Access","title":"The agents publish their keys","dur":24,
+     "beats":[
+       [0,"Every agent signs its commits with its own key. The deploy accepts a commit only once that key is live in the Factory's keys file.","Key chips, one per agent, on the left; the Factory's keys.json on the right."],
+       [7,"Twenty account A agents have signed key commits ready. None has landed: factory.c's session asks your word for every push.","The chips slide up to a closed gate marked factory.c, waiting for your word."],
+       [14,"Option a: one standing word, land every verified agent key commit. Option b: a word per landing, as now.","Option a is shown: the gate opens and the chips flow into keys.json."],
+       [20,"Recommended: a. factory.c checks each commit before it lands; your word adds a wait, not a check.","The a option chip lights as recommended."]],
+     "panel":{"asks":"factory.c (account C), for the account A agents","what":"20 account A agents have each prepared a signed commit adding their key to the Factory's team/keys.json (architect, billing, boto3, cloudformation, cloudtrail, conductor, data, dev.1, dev.2, journalist, lambda, ontology, pm, s3, security, sherpa, swarm, ux, vaults, video). None has landed: factory.c's session asks your word for every push. Not yet prepared: iam.aws.a (needs the Factory attached) and viz.aws.a (cannot make a signing key).",
+       "options":[["a","A standing word in factory.c's session: \"land every verified agent key commit\"."],["b","A word per landing, as now."]],"rec":"a","blocks":"Every account A agent's commits being checked as signed on dev."}},
+    {"id":"d2","eyebrow":"Decision 2 · Security R-009 (High)","title":"The deploy's signer check can be bypassed","dur":26,
+     "beats":[
+       [0,"Every push to dev is checked for an agent's signature, then deployed to the live site that holds the change role.","A commit flows through the signer check to the live site."],
+       [7,"Security found three ways round that check: an Owner override line, commits GitHub marks verified, and a checker that runs from the commit it checks.","Three red paths go round the check; a loop shows the checker inside the commit it checks."],
+       [16,"Option a: run the checker from main or a pinned commit, and drop the override line. Option b: leave it for now.","Option a: the checker is pinned to main, the override line is struck out."],
+       [22,"Recommended: a. It changes .github, which needs your yes.","The a option chip lights as recommended."]],
+     "panel":{"asks":"security.aws.c (03:28 review), through conductor.aws.c","what":"Anyone who can push to dev can get past the check: an \"Owner override:\" line in a commit, GitHub-verified web commits, and the checker running from the very commit it checks. Fixing it changes .github/**, which is yours.",
+       "options":[["a","Run the checker from main or a pinned commit, and drop the override line."],["b","Leave as is for now."]],"rec":"a","blocks":"Trust in what deploys from dev, with many agents now pushing."}},
+    {"id":"d3","eyebrow":"Decision 3 · Security R-010 (High, widened)","title":"Team code on the hub's own origin","dur":26,
+     "beats":[
+       [0,"Some team paths reach code the hub's page loads: the S3 browser's script and the twin's scripts, beside your signed-in session.","The hub's origin as a large frame holding the app, your sealed session and the change role."],
+       [7,"The deploy checks who signed a commit, not which files it touches, so a bad change there could reach the change role.","A team page enters the frame; a red dashed line runs from it to the session and on to the change role."],
+       [14,"Options: a, a check in the pipeline refuses files outside the signer's paths; b, rely on the keeper's review; c, take the code paths back.","A review shield wraps the page, then the page moves out to its own area site."],
+       [21,"Recommended: a, before the new keys go live. It changes .github, like decision two, so the two can land together.","The a option chip lights as recommended."]],
+     "panel":{"asks":"security.aws.a (72f4cee on work/security.aws.a, 14:08 UTC)","what":"With the .aws.a names in the policy (6ab7233), agents other than the keeper hold paths to code the hub's page loads beside your sealed session: site/s3.js (dev.1.aws.a, s3.aws.a, s3.aws.c) and site/twin*.js (dev.1.aws.a, dev.2.aws.a). The deploy checks who signed a commit, not which paths it touches.",
+       "options":[["a","A CI step in .github/ci/ refuses a commit touching files outside its signer's paths in abp.json, before the .aws.a keys go live; until then aws.c reviews every site/*.js change."],["b","Keep the paths as a promise and rely on aws.c's review."],["c","Narrow the code paths back to the keeper."]],"rec":"a","blocks":"Safe deploys by the account A agents once their keys are live. Moving team pages to area sites (decision 5) stays the longer-term fix."}},
+    {"id":"d4","eyebrow":"Decision 4 · AWS change","title":"Approve template v2.1 on the site","dur":22,
+     "beats":[
+       [0,"Template v2.1 fixes R-001, the critical finding: today the change role can make itself account admin.","The change role with a red arrow to account admin, marked R-001 Critical."],
+       [7,"v2.1 swaps that for thirteen named IAM actions, allowed only through CloudFormation. Security reviewed it.","The v2.1 box appears and the arrow to admin is cut."],
+       [13,"Option a: approve it when you next sign in. Option b: leave it. No work waits on it.","An Approve button appears under the plan."],
+       [18,"If you choose 6a, the same console apply covers this one.","A note links decision 4 to decision 6."]],
+     "panel":{"asks":"aws.c","what":"Plans, the stack plan \"Waiting for you\": the R-001 fix (the change role can no longer make itself admin) and the description change. security.aws.c reviewed it.",
+       "options":[["a","Approve when next signed in."],["b","Leave it."]],"rec":"a","blocks":"Real AWS changes only. If you choose 6 a or b, this folds into it."}},
+    {"id":"d5","eyebrow":"Decision 5 · Merge","title":"The nine area sites","dur":18,
+     "beats":[
+       [0,"You said yes to nine area sites. factory.c has the requests ready in the Factory, waiting for your merge.","The hub in the centre; nine area sites appear around it as dashed outlines."],
+       [7,"Each area gets its own site and its own Try the twin link.","The links to each area draw in."],
+       [11,"Option a: merge all nine. Option b: only s3 for now. Recommended: a.","All nine outlines turn solid; the a option chip lights as recommended."]],
+     "panel":{"asks":"factory.c (you said yes to the nine areas in aws.c's session)","what":"The requests are on work/factory.c-aws-areas in the Factory, waiting for your merge.",
+       "options":[["a","Merge all nine."],["b","Only s3 for now."]],"rec":"a","blocks":"Each area's own site and its Try the twin link."}},
+    {"id":"d6","eyebrow":"Decision 6 · Security R-008 (High) · AWS change","title":"A permissions boundary on the change role","dur":34,
+     "beats":[
+       [0,"Even after v2.1, a script in the page could make the change role admin through a change set, in about four calls.","A chain draws left to right: script in the page, change role, create change set, execute change set, admin."],
+       [8,"And the change role can rewrite the DNS role's trust. That role can repoint the site's name, so it is a second way out.","A second red chain drops from the change role to the DNS role's trust and on to the site's name."],
+       [15,"iam.aws.a's v2.5 adds permissions boundaries that keep each role to today's scopes, and makes the DNS role's trust console only.","A boundary ring closes round the change role; both red chains are cut."],
+       [23,"security.aws.a cleared v2.5 on paper. Your own apply in the console, then one harmless tag change set to confirm it.","A three-line checklist appears: two checks, your console apply, two DNS plans retired."],
+       [30,"Recommended: a, with v2.5, cleared by security. One thing to weigh: the read role can then read Lambda environment variables, so keep secrets elsewhere.","The a option chip lights as recommended; a note on Lambda environment variables."]],
+     "panel":{"asks":"iam.aws.a (P-IAM-001), through conductor.aws.a; cleared by security.aws.a","what":"Even after v2.1, a script in the page can make the change role admin through a change set (R-008). iam.aws.a's draft v2.5 adds permissions boundaries that mirror today's scopes, with a custom read boundary, and makes the DNS role's trust console only. security.aws.a cleared v2.5 on paper (ba0afa0). v2.5 itself is ee7f7b9 on work/iam.aws.a.",
+       "before":"v2.5 (ee7f7b9) adds the 13 reads dev.2.aws.a's API layer needs; security.aws.a cleared it (ba0afa0). The first apply is your own act in the console; v2.5 keeps its Deny on iam:UpdateRole, and one harmless tag change set on the read role right after confirms it, with you watching the stack events. aws.c retires the two DNS-trust plans in site/plans/ in the same release. To weigh: the read role can then read Lambda environment variables; keep secrets in Secrets Manager or SSM.",
+       "options":[["a","One console apply of v2.5: both boundaries, and console-only trust for sovereignwebsite-factory-dns."],["b","As a, but keep DNS trust edits from the page. Not recommended by iam.aws.a or security.aws.a: whoever controls that role's trust controls the site's name.","no"],["c","v2.1 through the page now (decision 4), boundaries later."],["d","No boundary; rely on splitting off the change page (R-002)."]],"rec":"a","blocks":"R-008 closing. A change to AWS, so yours."}},
+    {"id":"d8","eyebrow":"Decision 8 · Access","title":"vaults.aws.a reads the SG/Send vault library","dur":18,
+     "beats":[
+       [0,"The vault twin should answer batches exactly as SG/Send's browser vault library does.","The vault twin on the left, SG/Send's vault library on the right, a dashed line between them."],
+       [5,"vaults.aws.a's session refused attaching that repository, so it cannot read the library.","A refused mark sits on the line."],
+       [10,"Option a: attach it read-only, pinned to one commit. b: fetch the published files. c: no. Recommended: a.","Option a: the line turns solid, marked read-only at one commit; the a chip lights as recommended."]],
+     "panel":{"asks":"vaults.aws.a (designs 01 to 03, 88588c6 on work/vaults.aws.a)","what":"The vault twin should answer batches exactly as SG/Send's browser vault library does (vault UI v0.2.3, in SGraph-AI__App__Send). vaults.aws.a's session refused attaching that repository (11:38 UTC).",
+       "options":[["a","Yes in vaults.aws.a's session: attach SGraph-AI__App__Send read-only, pinned to one commit."],["b","Fetch the twelve published library files from dev.vault.sgraph.ai (unversioned)."],["c","No: design from sgit.ai's published description only."]],"rec":"a","blocks":"The per-operation result shape and batch-wide conflict rule in the vault twin (design 02 section 2); nothing else."}},
+    {"id":"outro","eyebrow":"Your answer","title":"One line answers all seven","dur":12,
+     "beats":[
+       [0,"Recommended answers: a for every decision.","The full answer line, large, in the centre."],
+       [6,"Type them, or your own, in pm.aws.a's session. I update the page and tell the agents who asked.","Under it: where to answer."]],
+     "panel":{"what":"Type the line below, or your own, in pm.aws.a's session. pm.aws.a updates the decisions page and tells the agents who asked.","answer":true}}
+  ]
+}
+</script>
+
+<script>
+(() => {
+const SB = JSON.parse(document.getElementById('storyboard').textContent);
+const W = 960, H = 540;
+
+/* ---------- tiny SVG vocabulary ---------- */
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const cue = (t, inner, extra='') => `<g class="cue ${extra}" data-t="${t}">${inner}</g>`;
+const cueOff = (t, off, inner) => `<g class="cue" data-t="${t}" data-off="${off}">${inner}</g>`;
+const box = (x,y,w,h,cls='bx',r=10) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" class="${cls}"/>`;
+const txt = (x,y,s,cls='t-s',anchor='middle') => `<text x="${x}" y="${y}" class="${cls}" text-anchor="${anchor}">${esc(s)}</text>`;
+const lbox = (x,y,w,h,label,cls='bx',tcls='t-m',sub) => box(x,y,w,h,cls) + txt(x+w/2, y+h/2+(sub?-3:5), label, tcls) + (sub?txt(x+w/2,y+h/2+16,sub,'t-s t-mute'):'');
+const path = (id,d,cls,d0,d1) => `<path id="${id}" d="${d}" class="${cls} draw" pathLength="1" data-d0="${d0}" data-d1="${d1}" marker-end="url(#ah-${cls.includes('risk')?'r':cls.includes('ok')?'o':'m'})"/>`;
+const route = (id,d) => `<path id="${id}" d="${d}" fill="none" stroke="none"/>`;
+const mover = (pid,t0,t1,inner,hideAfter=false) => `<g class="mover" data-m="${pid}" data-m0="${t0}" data-m1="${t1}" ${hideAfter?'data-mh="1"':''}>${inner}</g>`;
+const cross = (x,y,t) => cue(t, `<circle cx="${x}" cy="${y}" r="15" class="fill-risk"/><path d="M${x-6} ${y-6}L${x+6} ${y+6}M${x+6} ${y-6}L${x-6} ${y+6}" stroke="#fff" stroke-width="3"/>`, 'pop');
+const defs = `<defs>
+  <marker id="ah-m" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fill-ink" style="fill:var(--mute)"/></marker>
+  <marker id="ah-r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fill-risk"/></marker>
+  <marker id="ah-o" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fill-ok"/></marker>
+</defs>`;
+/* option chips along the bottom of a decision scene */
+function optionRow(opts, rec, tShow, tRec, notRec=[]) {
+  const n = opts.length, w = 150, gap = 14, total = n*w+(n-1)*gap, x0 = (W-total)/2, y = 452;
+  let s = '';
+  opts.forEach((o,i) => {
+    const x = x0 + i*(w+gap);
+    s += cue(tShow + i*0.35, box(x,y,w,40,'bx',20) + txt(x+22,y+26,o,'t-m t-mute') + txt(x+86,y+25,notRec.includes(o)?'not advised':'option '+o,'t-s t-mute'));
+    if (o === rec) s += cue(tRec, box(x,y,w,40,'bx-ok',20) + txt(x+22,y+26,o,'t-m t-ok') + txt(x+86,y+25,'recommended','t-s t-ok'), 'pop');
+  });
+  return s;
+}
+
+/* ---------- the scenes, drawn ---------- */
+const VIS = {
+intro(){
+  const names = [['1','Keys','acc'],['2','Signer check','risk'],['3','Code paths','risk'],['4','Approve v2.1','acc'],['5','Area sites','acc'],['6','Boundary','risk'],['8','Vault library','acc']];
+  let s = txt(W/2,92,'Seven decisions','t-xl') + cue(0.2, txt(W/2,128,'AWS Platform programme · open on the decisions page','t-m t-mute'));
+  names.forEach((n,i) => {
+    const x = 56 + i*124, cls = n[2]==='risk'?'bx-risk':'bx-acc';
+    s += cue(1 + i*0.45, box(x,180,108,126,cls) + txt(x+54,236,n[0],'t-xl '+(n[2]==='risk'?'t-risk':'t-acc')) + txt(x+54,282,n[1],'t-s'), 'pop');
+  });
+  s += cue(4.6, txt(56,334,'red: a security risk','t-s t-risk','start') + txt(250,334,'amber: access, approval or a merge','t-s t-acc','start'));
+  s += cue(6, box(180,358,600,44,'bx-ok',22) + txt(W/2,386,'Nothing here stops the team: the agents keep building on the twin','t-s t-ok'));
+  s += cue(10.5, txt(W/2,452,'Recommended','t-s t-mute') + txt(W/2,486,SB.answer,'t-l'));
+  return s;
+},
+d1(){
+  const agents = ['architect','conductor','security','s3','dev.2','data','vaults','video'];
+  let s = lbox(372,150,190,170,'factory.c','bx-acc','t-m','checks each commit');
+  s += cueOff(3, 14, txt(467,345,'held: waits for your word','t-s t-acc'));
+  s += cue(15, txt(467,345,'landed at your word','t-s t-ok'));
+  s += cueOff(3, 14, `<g transform="translate(467 262)">${box(-30,-6,60,46,'bx-risk',8)}${txt(0,24,'gate','t-s t-risk')}</g>`);
+  s += cue(14, `<g transform="translate(467 262)">${box(-30,-6,60,46,'bx-ok',8)}${txt(0,24,'open','t-s t-ok')}</g>`);
+  s += lbox(700,110,210,250,'','bx') + txt(805,140,'team/keys.json','t-mono') + txt(805,160,'the Factory, dev','t-s t-mute');
+  agents.forEach((a,i) => {
+    const y = 100 + i*38;
+    s += route(`r1-${i}`, `M60 ${y} L330 ${y} C355 ${y} 360 235 372 235 L562 235 C640 235 650 ${178+i*24} 718 ${178+i*24}`);
+    const chip = `<g>${box(-2,-11,124,22,'bx-acc',11)}${txt(60,4,a,'t-s')}</g>`;
+    s += `<g class="mover" data-m="r1-${i}" data-m0="${14.2+i*0.45}" data-m1="${17+i*0.45}" data-hold="0.42">${chip}</g>`;
+  });
+  s += cue(1, txt(117,418,'+ 12 more: 20 keys waiting','t-s t-mute'));
+  s += optionRow(['a','b'],'a',14,20);
+  return s;
+},
+d2(){
+  let s = '';
+  s += lbox(50,190,170,90,'commit','bx','t-m','pushed to dev');
+  s += lbox(395,190,170,90,'signer check','bx','t-m','.github/ci/signers.mjs');
+  s += lbox(740,190,170,90,'live site','bx-acc','t-m','holds the change role');
+  s += path('p2a','M220 235 L393 235','ln',0.6,2) + path('p2b','M565 235 L738 235','ln',2,3.4);
+  s += route('r2', 'M135 235 L825 235');
+  s += mover('r2',1,4.4, `<circle r="9" class="fill-ink"/>`, true);
+  s += path('p2c','M160 190 C240 80 640 80 760 188','ln-risk dash',7.4,9);
+  s += cue(8, txt(480,96,'1. an "Owner override:" line lets an unsigned commit through','t-s t-risk'));
+  s += path('p2d','M160 280 C240 390 640 390 760 282','ln-risk dash',9.6,11.2);
+  s += cue(10, txt(480,384,'2. commits GitHub marks verified pass without an Agent: trailer','t-s t-risk'));
+  s += cue(11.6, box(80,252,110,22,'bx-risk',6) + txt(135,268,'checker.mjs','t-mono t-risk'));
+  s += path('p2e','M190 262 C300 300 370 290 405 270','ln-risk',12,13.4);
+  s += cue(12.6, txt(300,320,'3. the checker runs from the commit it checks','t-s t-risk'));
+  s += cue(16.2, box(395,120,170,40,'bx-ok',8) + txt(480,145,'checker from main, pinned','t-s t-ok'), 'pop');
+  s += cross(480,96,17) + cross(300,320,17.4);
+  s += optionRow(['a','b'],'a',16,22);
+  return s;
+},
+d3(){
+  let s = '';
+  s += cue(0, box(250,60,470,300,'bx-acc',16) + txt(270,88,'the hub\'s origin: aws.platform.sovereignweb.site','t-mono t-acc','start'));
+  s += cue(0.8, lbox(285,112,170,70,'the app','bx','t-m'));
+  s += cue(1.6, lbox(285,210,170,70,'sealed session','bx','t-m','Google ID token'));
+  s += cue(2.4, lbox(515,210,170,70,'change role','bx-risk','t-m','can change AWS'));
+  s += route('r3', 'M60 150 L560 150');
+  s += `<g class="mover" data-m="r3" data-m0="7" data-m1="9" data-hold="1">${box(-80,-24,160,48,'bx-hold',10)}${txt(0,-2,'team page','t-m')}${txt(0,15,'site/decisions, api, s3.js','t-s t-mute')}</g>`;
+  s += path('p3a','M560 174 C520 200 470 230 457 240','ln-risk dash',9.4,10.6);
+  s += path('p3b','M455 260 L513 260','ln-risk dash',10.6,11.6);
+  s += cue(11.6, txt(485,310,'one origin: the page can open your session','t-s t-risk'));
+  s += cue(15, `<rect x="474" y="120" width="172" height="60" rx="14" fill="none" stroke="var(--ok)" stroke-width="3" stroke-dasharray="4 4"/>` + txt(560,112,'a: the pipeline checks paths','t-s t-ok'), 'pop');
+  s += cue(17.5, box(760,90,170,170,'bx-ghost',16) + txt(845,116,'area site','t-m') + txt(845,134,'its own origin','t-s t-mute'));
+  s += cue(18.5, lbox(770,170,150,50,'team page','bx-hold','t-m'));
+  s += cue(19.5, txt(845,286,'later: area sites (5)','t-s t-ok'));
+  s += optionRow(['a','b','c'],'a',14,21);
+  return s;
+},
+d4(){
+  let s = '';
+  s += lbox(70,150,200,90,'change role','bx','t-m','today');
+  s += lbox(690,150,200,90,'account admin','bx-risk','t-m','the whole account');
+  s += path('p4a','M270 195 L688 195','ln-risk',1.5,3.5);
+  s += cue(2.5, txt(480,180,'iam:* on its own roles','t-mono t-risk'));
+  s += cue(4, box(420,98,120,28,'bx-risk',14) + txt(480,117,'R-001 Critical','t-s t-risk'), 'pop');
+  s += cue(7.5, lbox(330,262,300,78,'template v2.1','bx-ok','t-m','13 named IAM actions, only via CloudFormation'));
+  s += cross(480,195,9.5);
+  s += cue(13, box(405,360,150,40,'bx-acc',20) + txt(480,385,'Approve on the site','t-s t-acc'), 'pop');
+  s += cue(18, txt(480,425,'if you choose 6 a or b, this folds into decision 6','t-s t-mute'));
+  s += optionRow(['a','b'],'a',13,15);
+  return s;
+},
+d5(){
+  let s = '';
+  const cx = 480, cy = 230, R = 170;
+  s += `<circle cx="${cx}" cy="${cy}" r="62" class="bx-acc"/>` + txt(cx,cy-2,'the hub','t-m') + txt(cx,cy+16,'aws.platform','t-s t-mute');
+  for (let i=0;i<9;i++){
+    const a = -Math.PI/2 + i*2*Math.PI/9, x = cx + R*Math.cos(a)*1.45, y = cy + R*Math.sin(a)*0.98;
+    const lx = cx + 64*Math.cos(a), ly = cy + 64*Math.sin(a);
+    s += path(`p5-${i}`, `M${lx.toFixed(1)} ${ly.toFixed(1)} L${(x-34*Math.cos(a)).toFixed(1)} ${(y-34*Math.sin(a)).toFixed(1)}`, 'ln dash', 7+i*0.2, 8+i*0.2);
+    s += cue(2+i*0.45, `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="32" class="bx-ghost"/>` + txt(x, y+5, i===0?'s3':'area '+(i+1), 't-s t-mute'), 'pop');
+    s += cue(12+i*0.15, `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="32" class="bx-ok"/>` + txt(x, y+5, i===0?'s3':'area '+(i+1), 't-s t-ok'), 'pop');
+  }
+  s += cue(1, txt(cx,30,'requests on work/factory.c-aws-areas, waiting for your merge','t-mono t-mute'));
+  s += optionRow(['a','b'],'a',11,13);
+  return s;
+},
+d6(){
+  let s = '';
+  const y = 120;
+  s += lbox(20,y-32,150,64,'script in the page','bx-hold','t-s');
+  s += lbox(215,y-32,150,64,'change role','bx','t-m');
+  s += lbox(410,y-32,150,64,'CreateChangeSet','bx','t-s');
+  s += lbox(605,y-32,150,64,'ExecuteChangeSet','bx','t-s');
+  s += lbox(800,y-32,140,64,'admin','bx-risk','t-m');
+  s += path('p6a',`M170 ${y} L213 ${y}`,'ln-risk',1,2) + path('p6b',`M365 ${y} L408 ${y}`,'ln-risk',2,3) + path('p6c',`M560 ${y} L603 ${y}`,'ln-risk',3,4) + path('p6d',`M755 ${y} L798 ${y}`,'ln-risk',4,5);
+  s += cue(5.2, txt(480,62,'R-008: about four calls, after v2.1','t-s t-risk'));
+  s += path('p6e',`M290 ${y+32} L290 258`,'ln-risk',8.5,9.6);
+  s += cue(9, lbox(215,260,150,64,'DNS role\'s trust','bx','t-s','sovereignwebsite-factory-dns'));
+  s += path('p6f','M365 292 L503 292','ln-risk',10,11);
+  s += cue(10.8, lbox(505,260,170,64,'the site\'s name','bx-risk','t-s','its CNAME'));
+  s += cue(11.6, txt(590,345,'R-005: a second way out','t-s t-risk'));
+  s += cue(15, `<rect x="198" y="${y-50}" width="184" height="100" rx="18" fill="none" stroke="var(--ok)" stroke-width="3" stroke-dasharray="8 5"/>` + txt(290,y+68,'permissions boundary (v2.5)','t-s t-ok'), 'pop');
+  s += cross(386,y,16.5) + cross(290,214,18.5);
+  s += cue(19, txt(300,236,'console only','t-s t-ok','start'));
+  s += cue(23, box(700,250,240,120,'bx',10) + txt(716,276,'Before any apply','t-s t-mute','start')
+     + txt(716,300,'1  your apply, in the console','t-s','start') + txt(716,324,'2  a tag change set confirms it','t-s','start') + txt(716,348,'3  aws.c retires two DNS plans','t-s','start'));
+  s += cue(24, txt(40,400,'cleared on paper by security.aws.a (ba0afa0)','t-s t-ok','start'));
+  s += optionRow(['a','b','c','d'],'a',29,30.5,['b']);
+  s += cue(31, box(330,404,300,30,'bx-acc',15) + txt(480,424,'v2.5: Lambda environment variables readable','t-s t-acc'), 'pop');
+  return s;
+},
+d7(){
+  const names = ['conductor','pm','security','architect','s3','sherpa','journalist','ontology','iam','lambda','cloudformation','cloudtrail','vaults','boto3','ux','billing','viz','video','swarm','dev.1','dev.2'];
+  let s = lbox(690,80,240,300,'','bx') + txt(810,110,'site/policy/abp.json','t-mono') + txt(810,130,'may land on dev (each <name>.aws.a)','t-s t-mute');
+  s += box(712,146,196,20,'bx-ok',10) + txt(810,160,'data.aws.a (518b114)','t-s t-ok');
+  names.forEach((n,i) => {
+    const col = i % 3, row = Math.floor(i/3), x = 40 + col*150, y = 90 + row*40;
+    const dx = 712 + (i%2)*100, dy = 176 + Math.floor(i/2)*18;
+    s += route(`r7n-${i}`, `M${x+65} ${y} C${x+200} ${y} 600 ${dy} ${dx+48} ${dy}`);
+    s += `<g class="mover" data-m="r7n-${i}" data-m0="${13+i*0.12}" data-m1="${15.5+i*0.12}" data-hold="1">${box(-47,-8,94,16,'bx-acc',8)}<text x="0" y="4" text-anchor="middle" style="font-size:11px">${n}</text></g>`;
+  });
+  s += cue(6, txt(255,385,'21 names waiting, same paths as their .c names','t-s t-acc'));
+  s += optionRow(['a','b'],'a',12,18);
+  return s;
+},
+d8(){
+  let s = lbox(80,150,230,110,'vault twin','bx','t-m','in this page, synthetic');
+  s += lbox(650,150,230,110,'SG/Send vault library','bx','t-m','vault UI v0.2.3');
+  s += `<path d="M310 205 L648 205" class="ln dash"/>`;
+  s += cue(1, txt(480,190,'batch results, conflict rule','t-s t-mute'));
+  s += cueOff(5, 11, `<g transform="translate(480 205)">${box(-40,-14,80,28,'bx-risk',14)}${txt(0,5,'refused','t-s t-risk')}</g>`);
+  s += path('p8a','M310 225 L648 225','ln-ok',11,12.5);
+  s += cue(12, `<g transform="translate(480 250)">${box(-90,-14,180,28,'bx-ok',14)}${txt(0,5,'read-only, one commit','t-s t-ok')}</g>`, 'pop');
+  s += optionRow(['a','b','c'],'a',10,13);
+  return s;
+},
+outro(){
+  let s = txt(W/2,150,'Recommended','t-m t-mute');
+  s += cue(0.3, txt(W/2,236,SB.answer,'t-xl'), 'pop');
+  s += cue(6, txt(W/2,320,'Answer in pm.aws.a\'s session','t-m'));
+  s += cue(6.6, txt(W/2,348,'claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B','t-mono t-mute'));
+  s += cue(7.4, txt(W/2,420,'Nothing here stops the team: the agents keep building on the twin.','t-s t-ok'));
+  return s;
+}};
+
+/* ---------- timeline ---------- */
+const scenes = SB.scenes.map(s => ({...s}));
+let acc = 0; scenes.forEach(s => { s.start = acc; acc += s.dur; });
+const TOTAL = acc;
+const stage = document.getElementById('stage'), capEl = document.getElementById('caption'), srCap = document.getElementById('srcaption');
+let cur = -1, svg = null, lists = null, time = 0, playing = false, slides = false, voice = false, lastBeat = null, last = 0;
+
+function svgFor(id){ return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(scenes.find(s=>s.id===id).title)}">${defs}${VIS[id]()}</svg>`; }
+function mount(i){
+  if (svg) svg.remove();
+  stage.insertAdjacentHTML('afterbegin', svgFor(scenes[i].id));
+  svg = stage.querySelector('svg');
+  lists = {cues:[...svg.querySelectorAll('[data-t]')], draws:[...svg.querySelectorAll('[data-d0]')], movers:[...svg.querySelectorAll('[data-m]')].map(m => ({el:m, p:svg.querySelector('#'+m.dataset.m)}))};
+  cur = i; renderPanel(i); markChapters(i);
+}
+const clamp = v => Math.max(0, Math.min(1, v));
+const ease = p => p<.5 ? 2*p*p : 1-Math.pow(-2*p+2,2)/2;
+function applyT(L, t){
+  for (const c of L.cues){ const on = t >= +c.dataset.t && (c.dataset.off===undefined || t < +c.dataset.off); c.classList.toggle('on', on); }
+  for (const d of L.draws){ d.style.strokeDashoffset = 1 - clamp((t - d.dataset.d0)/(d.dataset.d1 - d.dataset.d0)); }
+  for (const {el,p} of L.movers){
+    const m0 = +el.dataset.m0, m1 = +el.dataset.m1, len = p.getTotalLength();
+    let pr = ease(clamp((t-m0)/(m1-m0)));
+    if (el.dataset.hold !== undefined && t < m0) pr = 0;
+    const pt = p.getPointAtLength(pr*len);
+    el.setAttribute('transform', `translate(${pt.x.toFixed(1)} ${pt.y.toFixed(1)})`);
+    const hidden = (el.dataset.hold === undefined && t < m0) || (el.dataset.mh && t > m1);
+    el.style.opacity = hidden ? 0 : 1;
+  }
+}
+function render(){
+  let i = scenes.findIndex(s => time < s.start + s.dur); if (i < 0) i = scenes.length-1;
+  if (i !== cur) mount(i);
+  const s = scenes[i], t = time - s.start;
+  applyT(lists, t);
+  const beat = [...s.beats].reverse().find(b => t >= b[0]) || s.beats[0];
+  if (beat !== lastBeat){
+    capEl.textContent = beat[1]; srCap.textContent = beat[1]; lastBeat = beat;
+    if (voice && playing) speak(beat[1]);
+  }
+  document.getElementById('eyebrow').textContent = s.eyebrow;
+  document.getElementById('scenetitle').textContent = s.title;
+  document.getElementById('clock').textContent = `${fmt(time)} / ${fmt(TOTAL)}`;
+  document.getElementById('scrub').value = Math.round(time/TOTAL*1000);
+}
+const fmt = x => `${Math.floor(x/60)}:${String(Math.floor(x%60)).padStart(2,'0')}`;
+function tick(now){
+  if (!playing) return;
+  const dt = Math.min(0.1, (now - last)/1000); last = now;
+  const s = scenes[cur];
+  let nt = time + dt;
+  if (slides && nt >= s.start + s.dur - 0.01){ nt = s.start + s.dur - 0.01; setPlaying(false); }
+  if (nt >= TOTAL){ nt = TOTAL - 0.01; setPlaying(false); }
+  time = nt; render();
+  if (playing) requestAnimationFrame(tick);
+}
+function setPlaying(p){
+  playing = p; document.getElementById('play').textContent = p ? 'Pause' : (time >= TOTAL-0.05 ? 'Replay' : 'Play');
+  if (p){ if (time >= TOTAL-0.05) { time = 0; } last = performance.now(); requestAnimationFrame(tick); }
+  else if (window.speechSynthesis) speechSynthesis.cancel();
+}
+function goScene(i, playAfter){
+  i = Math.max(0, Math.min(scenes.length-1, i)); time = scenes[i].start + 0.001; lastBeat = null; render();
+  if (playAfter) setPlaying(true);
+}
+function speak(text){
+  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'en-GB'; u.rate = 1.04; speechSynthesis.speak(u); } catch(e){}
+}
+
+/* ---------- the written brief beside the stage ---------- */
+function renderPanel(i){
+  const s = scenes[i], p = s.panel, el = document.getElementById('panel');
+  let h = `<div><div class="eyebrow">${esc(s.eyebrow)}</div><h2>${esc(s.title)}</h2></div>`;
+  if (p.asks) h += `<div><h3>Asks</h3><p>${esc(p.asks)}</p></div>`;
+  h += `<div><h3>What</h3><p>${esc(p.what)}</p></div>`;
+  if (p.before) h += `<div><h3>Before any apply</h3><p>${esc(p.before)}</p></div>`;
+  if (p.options){
+    h += `<div><h3>Options</h3><ul class="opts">` + p.options.map(o => `<li class="${o[0]===p.rec?'rec':''} ${o[2]==='no'?'no':''}"><b>${o[0]}</b><span>${esc(o[1])}${o[0]===p.rec?'<span class="tag rec">recommended</span>':''}${o[2]==='no'?'<span class="tag">not advised</span>':''}</span></li>`).join('') + `</ul></div>`;
+  }
+  if (p.blocks) h += `<div><h3>Blocks</h3><p>${esc(p.blocks)}</p></div>`;
+  if (p.answer){
+    h += `<div><h3>Recommended answer</h3><div class="answer" id="answer">${esc(SB.answer)}</div></div>
+          <div><button class="btn" id="copy">Copy the answer</button> <span class="src" id="copied"></span></div>
+          <p class="src">Answer in pm.aws.a's session: <span class="t-mono" style="user-select:all">https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B</span></p>`;
+  }
+  h += `<p class="note">Source: docs/board/decisions.md and docs/security/risks.md in Site__Platform__AWS, work/pm.aws.a. Diagrams simplify; the written brief is the record. Voice, when on, is your browser's built-in synthetic voice.</p>`;
+  el.innerHTML = h;
+  const c = document.getElementById('copy');
+  if (c) c.onclick = () => {
+    const done = m => document.getElementById('copied').textContent = m;
+    navigator.clipboard?.writeText(SB.answer).then(() => done('Copied'), () => { getSelection().selectAllChildren(document.getElementById('answer')); done('Selected: press copy'); })
+      ?? (getSelection().selectAllChildren(document.getElementById('answer')), done('Selected: press copy'));
+  };
+}
+
+/* ---------- chapters, controls, keys ---------- */
+const chap = document.getElementById('chapters');
+chap.innerHTML = scenes.map((s,i) => `<button data-i="${i}" title="${esc(s.title)}">${i===0?'Intro':i===scenes.length-1?'Answer':s.id.replace('d','')}</button>`).join('');
+chap.onclick = e => { const b = e.target.closest('button'); if (b) goScene(+b.dataset.i, playing); };
+function markChapters(i){ [...chap.children].forEach((b,k) => b.classList.toggle('cur', k===i)); }
+document.getElementById('play').onclick = () => setPlaying(!playing);
+document.getElementById('prev').onclick = () => goScene(cur - 1, playing);
+document.getElementById('next').onclick = () => goScene(cur + 1, playing || slides);
+document.getElementById('scrub').oninput = e => { time = e.target.value/1000*TOTAL; if (time >= TOTAL) time = TOTAL-0.01; lastBeat = null; render(); };
+document.getElementById('mode').onclick = e => { slides = !slides; e.currentTarget.setAttribute('aria-pressed', slides); };
+document.getElementById('voice').onclick = e => { voice = !voice && 'speechSynthesis' in window; e.currentTarget.setAttribute('aria-pressed', voice); if (!voice && window.speechSynthesis) speechSynthesis.cancel(); else if (voice && lastBeat) speak(lastBeat[1]); };
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input,textarea')) return;
+  if (e.key === ' ') { e.preventDefault(); setPlaying(!playing); }
+  if (e.key === 'ArrowRight') goScene(cur + 1, playing || slides);
+  if (e.key === 'ArrowLeft') goScene(cur - 1, playing);
+});
+
+/* ---------- storyboard view ---------- */
+function thumbSvg(id, t){
+  const wrap = document.createElement('div'); wrap.innerHTML = svgFor(id);
+  const sv = wrap.firstElementChild;
+  document.body.appendChild(sv); sv.style.position='absolute'; sv.style.left='-9999px'; sv.style.width='960px';
+  const L = {cues:[...sv.querySelectorAll('[data-t]')], draws:[...sv.querySelectorAll('[data-d0]')], movers:[...sv.querySelectorAll('[data-m]')].map(m => ({el:m, p:sv.querySelector('#'+m.dataset.m)}))};
+  sv.querySelectorAll('.cue').forEach(c => c.style.transition='none');
+  applyT(L, t); sv.removeAttribute('style'); sv.remove();
+  sv.querySelectorAll('[id]').forEach(n => { if (n.tagName !== 'marker') n.removeAttribute('id'); });
+  return sv.outerHTML;
+}
+function buildBoard(){
+  const b = document.getElementById('board'); let h = '', n = 0;
+  scenes.forEach(s => s.beats.forEach((bt,k) => {
+    n++;
+    const end = k+1 < s.beats.length ? s.beats[k+1][0] : s.dur;
+    h += `<article class="beat"><div class="thumb">${thumbSvg(s.id, Math.max(bt[0], end-0.05))}</div><div class="body">
+      <div class="meta"><span>${String(n).padStart(2,'0')} · ${esc(s.eyebrow.split(' · ')[0])}</span><span>${fmt(s.start+bt[0])}</span></div>
+      <div class="nar">${esc(bt[1])}</div><div class="vis">${esc(bt[2])}</div></div></article>`;
+  }));
+  b.innerHTML = h;
+}
+let boardBuilt = false;
+const tabs = {brief:document.getElementById('tab-brief'), board:document.getElementById('tab-board')};
+function showTab(which){
+  tabs.brief.setAttribute('aria-selected', which==='brief'); tabs.board.setAttribute('aria-selected', which==='board');
+  document.getElementById('view-brief').hidden = which!=='brief'; document.getElementById('view-board').hidden = which!=='board';
+  if (which==='board'){ if (!boardBuilt){ buildBoard(); boardBuilt = true; } setPlaying(false); }
+  try { history.replaceState(null,'', which==='board' ? '#storyboard' : '#brief'); } catch(e){}
+}
+tabs.brief.onclick = () => showTab('brief'); tabs.board.onclick = () => showTab('board');
+
+window.__brief = {svgFor, scenes};  /* read by build-video.mjs */
+/* at rest: the intro fully drawn, ready to play */
+time = scenes[0].dur - 0.01; render();
+document.querySelectorAll('.cue').forEach(c => { c.style.transition='none'; requestAnimationFrame(() => c.style.transition=''); });
+if (location.hash === '#storyboard') showTab('board');
+window.addEventListener('hashchange', () => showTab(location.hash==='#storyboard'?'board':'brief'));
+})();
+</script>

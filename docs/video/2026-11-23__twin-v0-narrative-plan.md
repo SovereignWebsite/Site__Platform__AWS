@@ -51,7 +51,7 @@ No real account, no real cost, no customer, no person named. Dinis publishes; no
 
 ## Captured (video.aws.a, 23 Nov 2026 ~04:10 UTC)
 
-Seven captures, b1.png to b7.png in docs/video/twin-v0/, made by docs/video/capture-twin-v0.js from dev at 003976e, and the storyboard for studio.c at docs/video/twin-v0.storyboard.json (129 words, about 52 s). Changes from the plan above:
+Seven captures, b1.png to b7.png in docs/video/twin-v0/, made by docs/video/capture-twin-v0.js from dev at 003976e (b3 and b6 retaken at 6985180: the twin's account card now points to the S3 tab, and its logs carry country and vault_id), and the storyboard for studio.c at docs/video/twin-v0.storyboard.json (129 words, about 52 s). Changes from the plan above:
 
 - Size: 1080x1010 (540x505 CSS px at 2x), studio.c's input size, not 390x844.
 - Beat 3: the cost tile is now labelled synthetic on the site, but its figure is masked anyway (no costs on screen).

@@ -49,6 +49,10 @@ const fail = (m) => { throw new Error(m); };
   // 3. Fold by keyboard: Enter on a's bracket folds it; again unfolds it, the same text as before.
   await pg.focus('#json-test button.j-fold[title="Fold 1 key"]'); await pg.keyboard.press("Enter");
   if ((await pg.getAttribute('#json-test button.j-fold[title="Unfold 1 key"]', "aria-expanded")) !== "false") fail("Enter did not fold");
+  // The accessible name says what the button does, not "{" (sherpa walk 6).
+  const names = await pg.$$eval("#json-test button.j-fold", (b) => b.map((x) => x.getAttribute("aria-label")));
+  if (!names.length || names.some((n) => !/^(Fold|Unfold) \d+ (key|keys|item|items)$/.test(n || ""))) fail("fold button names: " + names.slice(0, 5).join(" | "));
+  if ((await pg.getAttribute('#json-test button.j-fold[title="Unfold 1 key"]', "aria-label")) !== "Unfold 1 key") fail("aria-label not updated on fold");
   // What the user sees (innerText skips the folded, hidden part).
   if ((await pg.innerText("#json-test pre")).indexOf('"a": { 1 key }') < 0) fail("folded a does not read { 1 key }: " + (await pg.innerText("#json-test pre")));
   await pg.keyboard.press("Enter");

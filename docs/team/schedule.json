@@ -1,8 +1,8 @@
 {
   "programme": "AWS Platform (aws.c), account C",
-  "owner": "conductor.aws.a@SovereignWebsite.dinis (from 07:26 UTC); conductor.aws.c idle",
+  "owner": "conductor.aws.a@SovereignWebsite.dinis (account A, from 07:26 UTC); conductor.aws.c idle",
   "authority": "Dinis Cruz, 'Lean start', maestro.c's session, 23 Nov 2026 02:39 UTC",
-  "updated": "2026-11-23T07:35Z",
+  "updated": "2026-11-23T14:00Z",
   "offsets_in_use_elsewhere_on_account_c": {
     ":03": "router.a (account A)",
     ":08": "router.c",
@@ -312,5 +312,12 @@
   "authority_stage_2": "Dinis Cruz, 'Full stage 2 now', conductor.aws.c's session, 23 Nov 2026 ~03:00 UTC; budget: 'there's no budget at the moment here ... go to town' (pm.aws.c's session, 02:58 UTC)",
   "account_c_note": "Dinis via maestro.c ~03:40 UTC: C at 60% of five-hour, 50% weekly; 16 roles move to account A; stayers' cadences halved",
   "next_wave_to_account_a": "conductor, pm, security, architect, s3, sherpa: hand-overs in docs/team/handover/ (wave 2), started by maestro.a at Dinis's word; aws.c stays on C as keeper",
-  "account_a_channel": "A agents write notes for C in docs/team/from-a/<role>.aws.a.md and keys in docs/team/keys/<role>.aws.a.json on branch work/<role>.aws.a; C reads them each wake"
+  "account_a_channel": "A agents write notes for C in docs/team/from-a/<role>.aws.a.md and keys in docs/team/keys/<role>.aws.a.json on branch work/<role>.aws.a; C reads them each wake",
+  "account_a": {
+    "wakes": "created and owned by maestro.a; changes proposed to maestro.a",
+    "conductor.aws.a": "every 2 h at :58",
+    "data.aws.a": "every 2 h at :51",
+    "dev.2.aws.a": "every 4 h at :39 (its request)",
+    "abp": "all 22 .a agents named in site/policy/abp.json since 6ab7233 (13:51Z); each pushes to dev once its key is in the Factory's team/keys.json"
+  }
 }

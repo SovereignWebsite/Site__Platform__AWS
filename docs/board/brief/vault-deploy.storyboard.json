@@ -1,0 +1,804 @@
+{
+ "format": "studio-storyboard/0",
+ "slug": "aws-vault-deploy-2026-11-23",
+ "title": "Deploy a Vault: thirteen decisions",
+ "audience": "Dinis",
+ "requested_by": "pm.aws.a@SovereignWebsite.dinis",
+ "summary": "Batch 2 on the AWS Platform programme's decisions page (23 Nov 2026 15:30 UTC): thirteen decisions on deploying a Vault into a customer's AWS account, EC2 and short-lived deployments, from conductor.aws.a's plan and the first drafts of steps 1 to 3. Nothing runs outside the twin until Dinis answers.",
+ "beats": [
+  {
+   "id": "b1",
+   "narration": "Thirteen decisions on deploying a Vault for a customer. Nothing real runs until you answer.",
+   "visual": {
+    "kind": "svg",
+    "src": "intro",
+    "caption": "Batch 2: deploy a Vault",
+    "at": 0,
+    "play": 6.6,
+    "end": 6
+   },
+   "facts": [
+    "s-plan"
+   ]
+  },
+  {
+   "id": "b2",
+   "narration": "V1. Recommended: its own site, off the hub's origin.",
+   "visual": {
+    "kind": "svg",
+    "src": "v1",
+    "caption": "V1: where the page lives",
+    "at": 0,
+    "play": 4.2,
+    "end": 3.6
+   },
+   "facts": [
+    "s-plan",
+    "s-iam",
+    "s-risks"
+   ]
+  },
+  {
+   "id": "b3",
+   "narration": "V2. Recommended: CloudFormation first, Terraform later.",
+   "visual": {
+    "kind": "svg",
+    "src": "v2",
+    "caption": "V2: CloudFormation first",
+    "at": 0,
+    "play": 3.1,
+    "end": 2.5
+   },
+   "facts": [
+    "s-cfn",
+    "s-vaults"
+   ]
+  },
+  {
+   "id": "b4",
+   "narration": "V3. Recommended: a one-click link in the customer's own console. No credential reaches us.",
+   "visual": {
+    "kind": "svg",
+    "src": "v3",
+    "caption": "V3: how the customer signs in",
+    "at": 0,
+    "play": 6.2,
+    "end": 5.6
+   },
+   "facts": [
+    "s-iam",
+    "s-sec",
+    "s-sherpa"
+   ]
+  },
+  {
+   "id": "b5",
+   "narration": "V4. Recommended: EC2 as a second path, after CloudFormation works on the twin.",
+   "visual": {
+    "kind": "svg",
+    "src": "v4",
+    "caption": "V4: EC2 as a second path",
+    "at": 0,
+    "play": 5.8,
+    "end": 5.2
+   },
+   "facts": [
+    "s-plan"
+   ]
+  },
+  {
+   "id": "b6",
+   "narration": "V5. Recommended: limits proposed from the twin, then approved by you.",
+   "visual": {
+    "kind": "svg",
+    "src": "v5",
+    "caption": "V5: guard rails",
+    "at": 0,
+    "play": 5,
+    "end": 4.4
+   },
+   "facts": [
+    "s-plan",
+    "s-sec",
+    "s-cfn"
+   ]
+  },
+  {
+   "id": "b7",
+   "narration": "V6. Recommended: start ec2.aws.a, twin only.",
+   "visual": {
+    "kind": "svg",
+    "src": "v6",
+    "caption": "V6: a new agent",
+    "at": 0,
+    "play": 3.1,
+    "end": 2.5
+   },
+   "facts": [
+    "s-plan"
+   ]
+  },
+  {
+   "id": "b8",
+   "narration": "V7. Recommended: the customer drops their trail into the page. No trust back to us.",
+   "visual": {
+    "kind": "svg",
+    "src": "v7",
+    "caption": "V7: the audit trail",
+    "at": 0,
+    "play": 6.6,
+    "end": 6
+   },
+   "facts": [
+    "s-trail",
+    "s-sec"
+   ]
+  },
+  {
+   "id": "b9",
+   "narration": "V8. Recommended: no live progress at first; the page checks DNS and health at the end.",
+   "visual": {
+    "kind": "svg",
+    "src": "v8",
+    "caption": "V8: live progress",
+    "at": 0,
+    "play": 7,
+    "end": 6.4
+   },
+   "facts": [
+    "s-iam",
+    "s-sherpa"
+   ]
+  },
+  {
+   "id": "b10",
+   "narration": "V9. Recommended: read access to sgit.ai's official templates.",
+   "visual": {
+    "kind": "svg",
+    "src": "v9",
+    "caption": "V9: the official templates",
+    "at": 0,
+    "play": 3.8,
+    "end": 3.2
+   },
+   "facts": [
+    "s-vaults",
+    "s-cfn"
+   ]
+  },
+  {
+   "id": "b11",
+   "narration": "V10. Lambda pulls only from ECR. My view: follow the official template, else our ECR.",
+   "visual": {
+    "kind": "svg",
+    "src": "v10",
+    "caption": "V10: the server image",
+    "at": 0,
+    "play": 6.6,
+    "end": 6
+   },
+   "facts": [
+    "s-cfn"
+   ]
+  },
+  {
+   "id": "b11a",
+   "narration": "V11. A link cannot carry a role. Recommended: b, one stack by default, least privilege opt-in.",
+   "visual": {
+    "kind": "svg",
+    "src": "v11",
+    "caption": "V11: one launch or two",
+    "at": 0,
+    "play": 7,
+    "end": 6.4
+   },
+   "facts": [
+    "s-sec-06",
+    "s-iam-03",
+    "s-boto3-08"
+   ]
+  },
+  {
+   "id": "b11b",
+   "narration": "V12. Recommended: no public DNS resolver learns customers' domains.",
+   "visual": {
+    "kind": "svg",
+    "src": "v12",
+    "caption": "V12: DNS privacy",
+    "at": 0,
+    "play": 4.2,
+    "end": 3.6
+   },
+   "facts": [
+    "s-arch-05"
+   ]
+  },
+  {
+   "id": "b11c",
+   "narration": "V13. No edge rule caps a flood's bill. Recommended: a request alarm by email, a kill switch, plain words.",
+   "visual": {
+    "kind": "svg",
+    "src": "v13",
+    "caption": "V13: denial of wallet",
+    "at": 0,
+    "play": 8.2,
+    "end": 7.6
+   },
+   "facts": [
+    "s-r026",
+    "s-flood",
+    "s-waf",
+    "s-cfn-c30"
+   ]
+  },
+  {
+   "id": "b12",
+   "narration": "Answers on screen. Answer in pm.aws.a's session.",
+   "visual": {
+    "kind": "svg",
+    "src": "outro",
+    "caption": "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a (if the official template settles nothing), V11 b, V12 a, V13 a",
+    "at": 0,
+    "play": 3.4,
+    "end": 2.8
+   },
+   "facts": [
+    "s-plan"
+   ]
+  }
+ ],
+ "decisions": [
+  {
+   "id": "V1",
+   "question": "V1. Where does the deploy page live?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. Its own site (for example deploy.<domain>)",
+     "good": [
+      "Off the hub's origin: does not widen R-010"
+     ],
+     "bad": [
+      "An IaC request to aws.c and factory.c"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. A tab of this hub",
+     "good": [
+      "No new site"
+     ],
+     "bad": [
+      "More code beside your signed-in session (R-010)"
+     ],
+     "blocks": []
+    }
+   ],
+   "recommendation": "a",
+   "why": "Recommended by security.aws.a, iam.aws.a and architect.aws.a: checking the Vault's /health needs a CSP open to any https host, which on this hub would weaken the guard on your session; as a tab, the page cannot check a custom domain."
+  },
+  {
+   "id": "V2",
+   "question": "V2. CloudFormation first, Terraform later?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. CloudFormation first; Terraform one-to-one later",
+     "good": [
+      "One template to settle first"
+     ],
+     "bad": [
+      "Terraform users wait"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. Both from the start",
+     "good": [
+      "Both audiences at once"
+     ],
+     "bad": [
+      "Two templates to keep in step while the design moves"
+     ],
+     "blocks": []
+    }
+   ],
+   "recommendation": "a",
+   "why": "Recommended by cloudformation.aws.a and vaults.aws.a."
+  },
+  {
+   "id": "V3",
+   "question": "V3. How does the customer sign in?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. Their own AWS console with a one-click quick-create link",
+     "good": [
+      "No credential reaches our page",
+      "No role for us in their account",
+      "Two choices and one button (sherpa)"
+     ],
+     "bad": [
+      "Progress shows in their console, not ours (V8)"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. A role our page assumes",
+     "good": [
+      "Everything on our page"
+     ],
+     "bad": [
+      "Brings back account id and sign-in; a trust ask"
+     ],
+     "blocks": []
+    }
+   ],
+   "recommendation": "a",
+   "why": "iam.aws.a, security.aws.a, vaults.aws.a and sherpa.aws.a agree. Never a role in the customer's account that trusts ours."
+  },
+  {
+   "id": "V4",
+   "question": "V4. EC2 as a second deploy path: now or later?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. Now, alongside CloudFormation",
+     "good": [
+      "Two paths sooner"
+     ],
+     "bad": [
+      "Two paths to prove at once"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. After the CloudFormation path works on the twin",
+     "good": [
+      "One path at a time, twin first"
+     ],
+     "bad": [
+      "EC2 path later"
+     ],
+     "blocks": []
+    }
+   ],
+   "recommendation": "b",
+   "why": "pm.aws.a's view: ec2.aws.a designs it meanwhile (V6)."
+  },
+  {
+   "id": "V5",
+   "question": "V5. Guard rails for short-lived deployments",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. Set the numbers now (lifetime, regions, cost cap, kill switch)",
+     "good": [
+      "Decided once"
+     ],
+     "bad": [
+      "No grounded numbers yet"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. Proposed from the twin by ec2.aws.a and billing.aws.a, approved by you",
+     "good": [
+      "Numbers grounded in the twin"
+     ],
+     "bad": [
+      "Another decision page later"
+     ],
+     "blocks": [
+      "Anything short-lived outside the twin"
+     ]
+    }
+   ],
+   "recommendation": "b",
+   "why": "security.aws.a: nothing real on a schedule before this."
+  },
+  {
+   "id": "V6",
+   "question": "V6. Start a new agent, ec2.aws.a?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. Yes",
+     "good": [
+      "Steps 10 and 11 get an owner"
+     ],
+     "bad": [
+      "One more session"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. Not yet",
+     "good": [
+      "No new session"
+     ],
+     "bad": [
+      "EC2 and short-lived designs wait"
+     ],
+     "blocks": [
+      "Plan steps 10 and 11"
+     ]
+    }
+   ],
+   "recommendation": "a",
+   "why": "Twin only until V4 and V5; start prompt in docs/team/handover/ec2.aws.md."
+  },
+  {
+   "id": "V7",
+   "question": "V7. How do we read a customer's CloudTrail?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. Their trail delivered to a bucket we can read",
+     "good": [
+      "Continuous"
+     ],
+     "bad": [
+      "A trust and privacy ask"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. A cross-account read role",
+     "good": [
+      "Continuous, live"
+     ],
+     "bad": [
+      "A role back to us"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "c",
+     "label": "c. They drop their own trail export into the page",
+     "good": [
+      "No trust back to us, no credential",
+      "Read in the browser only"
+     ],
+     "bad": [
+      "Not continuous"
+     ],
+     "blocks": []
+    }
+   ],
+   "recommendation": "c",
+   "why": "Recommended by cloudtrail.aws.a (7eda626): nothing leaves the customer's browser and we hold no access; it works today. Only the live mode waits on a or b."
+  },
+  {
+   "id": "V8",
+   "question": "V8. Live progress on our page?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. None in version one; the page checks DNS and /health at the end",
+     "good": [
+      "No sign-in, no second trust ask"
+     ],
+     "bad": [
+      "Progress is in their console"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. A read role in their account limited to this stack's events",
+     "good": [
+      "Live events on our page"
+     ],
+     "bad": [
+      "A sign-in step and a second trust ask"
+     ],
+     "blocks": []
+    }
+   ],
+   "recommendation": "a",
+   "why": "Recommended by iam.aws.a."
+  },
+  {
+   "id": "V9",
+   "question": "V9. Read access to sgit.ai's deploy templates?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. Yes: read access for vaults.aws.a and cloudformation.aws.a; build from the Lambda template",
+     "good": [
+      "Our stack follows the official one"
+     ],
+     "bad": [
+      "The vault's key or a copy shared"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. Keep our own template",
+     "good": [
+      "Nothing shared"
+     ],
+     "bad": [
+      "May differ from the official one"
+     ],
+     "blocks": []
+    }
+   ],
+   "recommendation": "a",
+   "why": "Recommended by vaults.aws.a and cloudformation.aws.a; pairs with decision 8."
+  },
+  {
+   "id": "V10",
+   "question": "V10. Where does the server image come from?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. Our ECR, granting pull to customer accounts",
+     "good": [
+      "No customer credential, no role back to us"
+     ],
+     "bad": [
+      "A dependency on our account"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. A pull-through cache in the customer's account",
+     "good": [
+      "No dependency on us"
+     ],
+     "bad": [
+      "Docker Hub credentials in their account"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "c",
+     "label": "c. Fargate, pulling from Docker Hub",
+     "good": [
+      "No ECR step"
+     ],
+     "bad": [
+      "More resources and a load balancer"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "d",
+     "label": "d. A Lambda zip, if SG/Send publishes one",
+     "good": [
+      "No image at all"
+     ],
+     "bad": [
+      "Exists only if SG/Send publishes it"
+     ],
+     "blocks": []
+    }
+   ],
+   "recommendation": "a",
+   "why": "Follow what the official Lambda template does (V9); if it settles nothing, a (pm.aws.a's view)."
+  },
+  {
+   "id": "V11",
+   "question": "V11. One CloudFormation launch or two?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. Two launches for everyone: access stack (deploy role and boundary), then the Vault stack as that role",
+     "good": [
+      "Every later update bounded by the deploy role"
+     ],
+     "bad": [
+      "A second launch for every customer (a quick-create link cannot carry a role)"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. One stack by default; the two-launch least-privilege mode as an opt-in",
+     "good": [
+      "One launch for most customers",
+      "Boundary in the template; first create protected by the published sha256",
+      "Organisations that want it can opt in"
+     ],
+     "bad": [
+      "R-022 (Low): later updates and teardown run with the presser's console rights"
+     ],
+     "blocks": []
+    }
+   ],
+   "recommendation": "b",
+   "why": "Recommended by security.aws.a (seven conditions, 0affab1), iam.aws.a, ux.aws.a and cloudformation.aws.a; vault.yaml 0.4.1 (0f72f91) holds both modes."
+  },
+  {
+   "id": "V12",
+   "question": "V12. May a public DNS-over-HTTPS resolver learn the domains customers type?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. No resolver in the first version",
+     "good": [
+      "No third party learns customers' domains",
+      "The /health fetch already resolves the name"
+     ],
+     "bad": [
+      "No separate DNS step to show"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. One named public resolver (Google or Cloudflare)",
+     "good": [
+      "A separate DNS check on screen"
+     ],
+     "bad": [
+      "The resolver learns each domain typed"
+     ],
+     "blocks": []
+    }
+   ],
+   "recommendation": "a",
+   "why": "architect.aws.a (design 05, 2b95ddc). Blocks nothing."
+  },
+  {
+   "id": "V13",
+   "question": "V13. R-026: how is a customer bounded against a request flood's bill?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. Plain wording, a kill switch, a CloudWatch request-count alarm by email (about $0.10/month); WAF offered off by default; later an opt-in auto-disable Lambda",
+     "good": [
+      "Bounds the bill by the customer's time to react",
+      "WAF stays available for availability, not sold as cost control"
+     ],
+     "bad": [
+      "The alarm needs the -edge stack in us-east-1, even without a custom domain"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. As a, but a Budgets cost email instead of the alarm",
+     "good": [
+      "Global, inside the one stack"
+     ],
+     "bad": [
+      "Hours late: each hour at 10,000 req/s costs about $46"
+     ],
+     "blocks": []
+    }
+   ],
+   "recommendation": "a",
+   "why": "security.aws.a, revised after billing.aws.a (cfe70fb: WAF adds cost) and cloudformation.aws.a (c30353d: a Budgets action cannot disable a distribution)."
+  }
+ ],
+ "connections": {
+  "asked_by": "pm.aws.a@SovereignWebsite.dinis",
+  "reviewed_by": [],
+  "acts": [
+   "conductor.aws.a",
+   "vaults.aws.a",
+   "cloudformation.aws.a",
+   "iam.aws.a",
+   "security.aws.a",
+   "sherpa.aws.a",
+   "cloudtrail.aws.a",
+   "ec2.aws.a (proposed)"
+  ],
+  "follows": [
+   "docs/team/plan-vault-deploy.md (ea9f61d)",
+   "Dinis, 23 Nov ~11:15 UTC: a presentation and a decision video for every batch"
+  ]
+ },
+ "sources": [
+  {
+   "id": "s-plan",
+   "title": "conductor.aws.a: plan for the Vault deploy page, EC2, ephemeral deployments (ea9f61d)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/ea9f61d/docs/team/plan-vault-deploy.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-vaults",
+   "title": "vaults.aws.a: design 04, one Vault in a customer's AWS account (eec9d24)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/eec9d24/docs/vaults/2026-11-23__04-vault-deploy-design.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-cfn",
+   "title": "cloudformation.aws.a: the Vault stack, draft 0.1.0 and open questions (42677c7)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/42677c7/docs/cloudformation/2026-11-23__vault-stack-01.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-iam",
+   "title": "iam.aws.a: least privilege in the customer's account (68f4b8b)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/68f4b8b/docs/iam/vault-deploy/01-least-privilege.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-sherpa",
+   "title": "sherpa.aws.a: deploy a Vault, the simplest path (b1281ba)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/b1281ba/docs/sherpa/2026-11-23__vault-deploy-01-simplest-path.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-sec",
+   "title": "security.aws.a: Vault deploy, first positions (84245b5)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/84245b5/docs/team/handover/security.aws.a.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-trail",
+   "title": "cloudtrail.aws.a: the audit trail of a Vault deployment (7eda626)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/7eda626/docs/cloudtrail/2026-11-23__03-vault-deploy-audit.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-risks",
+   "title": "security: risk register (docs/security/risks.md at c87dc92)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/c87dc92/docs/security/risks.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-sec-06",
+   "title": "security.aws.a: review of ux.aws.a's design 06, the Vault deploy page (0affab1)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/0affab1/docs/security/reviews/2026-11-23__ux-design-06-vault-deploy-page.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-iam-03",
+   "title": "iam.aws.a: one button by default, access stack opt-in (2ec2b93)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/2ec2b93/docs/iam/vault-deploy/03-one-button.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-boto3-08",
+   "title": "boto3.aws.a: quick-create links cannot carry the service role (3ce137a)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/commit/3ce137a",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-arch-05",
+   "title": "architect.aws.a: design 05, the deploy page's checks (2b95ddc)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/commit/2b95ddc",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-r026",
+   "title": "security.aws.a: R-026, denial of wallet (a0a0069)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/a0a0069/docs/security/risks.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-flood",
+   "title": "billing.aws.a: flood.mjs, edge requests not capped by concurrency (ddddb44)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/commit/ddddb44",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-waf",
+   "title": "billing.aws.a: AWS WAF and CloudWatch alarm prices in flood.mjs (cfe70fb)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/commit/cfe70fb",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-cfn-c30",
+   "title": "cloudformation.aws.a: Budgets actions cannot disable a distribution (c30353d)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/commit/c30353d",
+   "read": "2026-11-23"
+  }
+ ],
+ "drawn_by": "pm.aws.a@SovereignWebsite.dinis: narration, visuals and decisions from docs/board/decisions.md batch 2; SVGs generated from vault-deploy-brief.html by build-video.mjs; player from Site__Agent__Studio 74ed159 default-yes with two changes (paused SVG beat shows its last frame; Play restarts the beat)",
+ "voice": "Captions always; voice only if the viewer turns it on, and then the browser's built-in synthetic voice. The presenter is synthetic, not a real person."
+}
