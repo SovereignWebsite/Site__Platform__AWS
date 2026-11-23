@@ -640,8 +640,24 @@
         ["2026-11-21T16:39:30Z", "Handler", "AWS::Lambda::Function", "UPDATE_COMPLETE"],
         ["2026-11-21T16:39:00Z", "demo-lambda", "AWS::CloudFormation::Stack", "UPDATE_ROLLBACK_IN_PROGRESS", "The following resource(s) failed to update: [Handler]."],
         ["2026-11-21T16:38:10Z", "Handler", "AWS::Lambda::Function", "UPDATE_FAILED", "(twin) The dependencies zip for v1.1.0 is not in the bucket."],
-        ["2026-11-21T16:38:00Z", "demo-lambda", "AWS::CloudFormation::Stack", "UPDATE_IN_PROGRESS", "User Initiated"]] }
+        ["2026-11-21T16:38:00Z", "demo-lambda", "AWS::CloudFormation::Stack", "UPDATE_IN_PROGRESS", "User Initiated"]] },
+    // A deleted stack: ListStacks keeps a deleted stack for 90 days, DescribeStacks finds it by its stack id only
+    // (boto3.aws.a's review of patch 01, docs/boto3/2026-11-23__19-twin-cloudformation-reads.md).
+    { name: "demo-site-old", region: "eu-west-2", id: "00000000-0000-4000-8000-0000000c0005", created: "2026-11-10T09:00:00Z", deleted: "2026-11-17T12:00:00Z", status: "DELETE_COMPLETE",
+      description: "An earlier demo site, deleted on 17 November.", resources: [],
+      events: [["2026-11-17T12:00:00Z", "demo-site-old", "AWS::CloudFormation::Stack", "DELETE_COMPLETE"], ["2026-11-17T11:58:00Z", "demo-site-old", "AWS::CloudFormation::Stack", "DELETE_IN_PROGRESS", "User Initiated"],
+        ["2026-11-10T09:02:00Z", "demo-site-old", "AWS::CloudFormation::Stack", "CREATE_COMPLETE"], ["2026-11-10T09:00:00Z", "demo-site-old", "AWS::CloudFormation::Stack", "CREATE_IN_PROGRESS", "User Initiated"]] }
   ];
+  // ListStacks in both accounts: StackStatusFilter.member.N if given, paged on NextToken, in the order given. ListStacks takes
+  // no page size; the twin's pages are small so that every reader has to follow NextToken. The token is the twin's own.
+  var LIST_STACKS_PAGE = 3;
+  function listStacksPage(rows, form, statusOf) {
+    var want = []; for (var f = 1; f <= 32; f++) { var fv = form.get("StackStatusFilter.member." + f); if (fv) want.push(fv); }
+    rows = rows.filter(function (x) { return !want.length || want.indexOf(statusOf(x)) >= 0; });
+    var tok = form.get("NextToken"), at = 0;
+    if (tok) { var m = /^twin-stacks-([1-9][0-9]{0,3})$/.exec(tok); if (!m || +m[1] >= rows.length) return null; at = +m[1]; }
+    return { rows: rows.slice(at, at + LIST_STACKS_PAGE), next: at + LIST_STACKS_PAGE < rows.length ? "twin-stacks-" + (at + LIST_STACKS_PAGE) : null };
+  }
   function stackArn(st) { return "arn:aws:cloudformation:" + st.region + ":" + ACCOUNT + ":stack/" + st.name + "/" + st.id; }
   function stackStatus(s, st) { return st.name === "sws-aws-platform" ? s.stackStatus : st.status; }
   function stackUpdated(s, st) { return st.name === "sws-aws-platform" ? s.stackUpdated : st.updated; }
@@ -655,22 +671,29 @@
   // The read calls. Each answers for the stacks in the region of the endpoint called, as real CloudFormation does.
   function cfnRead(s, A, form, region) {
     var here = STACKS.filter(function (st) { return st.region === region; });
+    var gone = function (st) { return st.status === "DELETE_COMPLETE"; }, live = here.filter(function (st) { return !gone(st); });
+    // By name only a live stack; by stack id a deleted one too, as AWS answers.
     var find = function () {
-      var n = form.get("StackName"), st = here.filter(function (x) { return x.name === n || stackArn(x) === n; })[0];
+      var n = form.get("StackName"), st = here.filter(function (x) { return (x.name === n && !gone(x)) || stackArn(x) === n; })[0];
       return st || null;
     };
     var missing = function () { return xmlErr("ValidationError", "Stack with id " + form.get("StackName") + " does not exist", 400); };
     var wrap = function (name, inner) { return xml("<" + name + "Response><" + name + "Result>" + inner + "</" + name + "Result></" + name + "Response>"); };
-    if (A === "ListStacks") return wrap("ListStacks", "<StackSummaries>" + members(here, function (st) {
-      return el("StackId", stackArn(st)) + el("StackName", st.name) + el("TemplateDescription", st.description) + el("CreationTime", st.created) + el("LastUpdatedTime", stackUpdated(s, st)) + el("StackStatus", stackStatus(s, st));
-    }) + "</StackSummaries>");
+    if (A === "ListStacks") {
+      var pg = listStacksPage(here, form, function (st) { return stackStatus(s, st); }); // in the seed's order, as before
+      if (!pg) return xmlErr("ValidationError", "Invalid NextToken", 400);
+      return wrap("ListStacks", "<StackSummaries>" + members(pg.rows, function (st) {
+        return el("StackId", stackArn(st)) + el("StackName", st.name) + el("TemplateDescription", st.description) + el("CreationTime", st.created) + el("LastUpdatedTime", stackUpdated(s, st)) +
+          el("DeletionTime", st.deleted) + el("StackStatus", stackStatus(s, st));
+      }) + "</StackSummaries>" + el("NextToken", pg.next));
+    }
     if (A === "DescribeStacks") {
-      var list = form.get("StackName") ? [find()] : here;
+      var list = form.get("StackName") ? [find()] : live;
       if (!list[0] && form.get("StackName")) return missing();
       return wrap("DescribeStacks", "<Stacks>" + members(list, function (st) {
         return el("StackId", stackArn(st)) + el("StackName", st.name) + el("Description", st.description) +
           "<Parameters>" + members(st.parameters, function (p) { return el("ParameterKey", p[0]) + el("ParameterValue", p[1]); }) + "</Parameters>" +
-          el("CreationTime", st.created) + el("LastUpdatedTime", stackUpdated(s, st)) + el("StackStatus", stackStatus(s, st)) +
+          el("CreationTime", st.created) + el("LastUpdatedTime", stackUpdated(s, st)) + el("DeletionTime", st.deleted) + el("StackStatus", stackStatus(s, st)) +
           "<Outputs>" + members(st.outputs, function (o) { return el("OutputKey", o[0]) + el("OutputValue", o[1]) + el("ExportName", o[2]); }) + "</Outputs>";
       }) + "</Stacks>");
     }
@@ -690,12 +713,12 @@
       }) + "</StackEvents>");
     }
     if (A === "ListExports") {
-      var ex = []; here.forEach(function (st) { (st.outputs || []).forEach(function (o) { if (o[2]) ex.push([stackArn(st), o[2], o[1]]); }); });
+      var ex = []; live.forEach(function (st) { (st.outputs || []).forEach(function (o) { if (o[2]) ex.push([stackArn(st), o[2], o[1]]); }); });
       return wrap("ListExports", "<Exports>" + members(ex, function (e) { return el("ExportingStackId", e[0]) + el("Name", e[1]) + el("Value", e[2]); }) + "</Exports>");
     }
     if (A === "ListImports") {
       // An export can only be imported in its own region, so both lists are per region.
-      var name = form.get("ExportName"), by = here.filter(function (st) { return (st.imports || []).indexOf(name) >= 0; });
+      var name = form.get("ExportName"), by = live.filter(function (st) { return (st.imports || []).indexOf(name) >= 0; });
       if (!by.length) return xmlErr("ValidationError", "Export '" + name + "' is not imported by any stack.", 400);
       return wrap("ListImports", "<Imports>" + members(by, function (st) { return esc(st.name); }) + "</Imports>");
     }
@@ -927,14 +950,14 @@
       return ok;
     }
     if (A === "ListStacks") {
-      // Every stack in the region, newest first, filtered by StackStatusFilter.member.N if given (as AWS does).
-      var want = []; for (var f = 1; f <= 32; f++) { var fv = form.get("StackStatusFilter.member." + f); if (fv) want.push(fv); }
-      var rows = Object.keys(acc.stacks).map(function (k) { return acc.stacks[k]; }).filter(function (x) { return x.region === region && (!want.length || want.indexOf(x.status) >= 0); })
-        .sort(function (a, b) { return a.created < b.created ? 1 : a.created > b.created ? -1 : 0; });
-      return xml("<ListStacksResponse" + NS + "><ListStacksResult><StackSummaries>" + rows.map(function (x) {
+      // Every stack in the region, newest first, filtered and paged as in the platform account (listStacksPage).
+      var pg = listStacksPage(Object.keys(acc.stacks).map(function (k) { return acc.stacks[k]; }).filter(function (x) { return x.region === region; })
+        .sort(function (a, b) { return a.created < b.created ? 1 : a.created > b.created ? -1 : 0; }), form, function (x) { return x.status; });
+      if (!pg) return cfnErr("ValidationError", "Invalid NextToken");
+      return xml("<ListStacksResponse" + NS + "><ListStacksResult><StackSummaries>" + pg.rows.map(function (x) {
         return "<member><StackId>" + esc(x.stackId) + "</StackId><StackName>" + esc(x.name) + "</StackName><CreationTime>" + x.created + "</CreationTime><StackStatus>" + x.status +
           "</StackStatus><DriftInformation><StackDriftStatus>NOT_CHECKED</StackDriftStatus></DriftInformation></member>";
-      }).join("") + "</StackSummaries></ListStacksResult></ListStacksResponse>");
+      }).join("") + "</StackSummaries>" + (pg.next ? "<NextToken>" + pg.next + "</NextToken>" : "") + "</ListStacksResult></ListStacksResponse>");
     }
     if (A === "ListStackResources") {
       var st3 = find(form.get("StackName"));
