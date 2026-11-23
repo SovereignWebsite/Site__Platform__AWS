@@ -48,7 +48,7 @@ for b in [dc["DefaultCacheBehavior"]] + dc.get("CacheBehaviors", []):
 check(not any(r["Type"] == "AWS::CloudFront::CachePolicy" for r in R.values()), "custom cache policy present")
 
 # Data and audit trail are kept on delete.
-for n, dp in (("VaultBucket", "RetainExceptOnCreate"), ("VaultBucketPolicy", "Retain"), ("VaultLogs", "RetainExceptOnCreate")):
+for n, dp in (("VaultBucket", "RetainExceptOnCreate"), ("VaultBucketPolicy", "RetainExceptOnCreate"), ("VaultLogs", "RetainExceptOnCreate")):
     check(R[n].get("DeletionPolicy") == dp, f"{n} DeletionPolicy")
     check(R[n].get("UpdateReplacePolicy") == "Retain", f"{n} UpdateReplacePolicy")
 

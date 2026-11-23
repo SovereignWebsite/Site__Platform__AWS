@@ -4,12 +4,12 @@ Description: >-
   vault store, the server as a Lambda behind a Function URL, CloudFront in front (with /health for the deploy page),
   and optionally the customer's own domain. Two modes (DeployMode): access-stack, run with RoleARN = the deploy
   role of stack sws-vault-<id>-access (iam.aws.a, step 3); or one-stack, run as the customer's own console
-  identity with the boundary in this stack. Dinis decides which the page offers. DRAFT 0.4.6 by cloudformation.aws.a, 23 Nov 2026. Not for use on a real account: see
+  identity with the boundary in this stack. Dinis decides which the page offers. DRAFT 0.4.7 by cloudformation.aws.a, 23 Nov 2026. Not for use on a real account: see
   docs/cloudformation/2026-11-23__vault-stack-03.md.
 
 Metadata:
   SovereignWebsite:
-    TemplateVersion: 0.4.6-draft
+    TemplateVersion: 0.4.7-draft
     Pinning: served only as an immutable, versioned object whose sha256 the deploy page shows next to the button.
     CreatesNoRoleForUs: true
   AWS::CloudFormation::Interface:
@@ -126,9 +126,10 @@ Resources:
     Type: AWS::S3::BucketPolicy
     # Retain with the bucket: the kept bucket stays TLS-only and this-account-only, and the deploy role holds no
     # s3:DeleteBucketPolicy (iam.aws.a's vault-access.yaml), so Delete would fail the stack's deletion.
-    # Plain Retain (security.aws.a): on a failed-create rollback the bucket itself is deleted and its policy goes with
-    # it, so the deploy role never needs s3:DeleteBucketPolicy, which stays denied.
-    DeletionPolicy: Retain
+    # RetainExceptOnCreate, like its bucket, so all three kept resources share one fate on a failed-create rollback:
+    # the documented path (plain Retain here was only "likely" to roll back cleanly; boto3.aws.a note 13 addendum).
+    # In access-stack mode the deploy role holds s3:DeleteBucketPolicy on exactly this bucket (iam.aws.a).
+    DeletionPolicy: RetainExceptOnCreate
     UpdateReplacePolicy: Retain
     Properties:
       Bucket: !Ref VaultBucket
@@ -300,7 +301,7 @@ Resources:
           if (event.request.method === "OPTIONS") return { statusCode: 204, statusDescription: "No Content", headers: h };
           if (event.request.method !== "GET") return { statusCode: 405, statusDescription: "Method Not Allowed", headers: h };
           return { statusCode: 200, statusDescription: "OK", headers: h,
-            body: { encoding: "text", data: JSON.stringify({ vault_id: "${VaultId}", template_version: "0.4.6-draft" }) } };
+            body: { encoding: "text", data: JSON.stringify({ vault_id: "${VaultId}", template_version: "0.4.7-draft" }) } };
         }
 
   # ---- CloudFront in front, from phase 1 ----
@@ -396,4 +397,4 @@ Outputs:
   DeployMode:
     Value: !Ref DeployMode
   TemplateVersion:
-    Value: 0.4.6-draft
+    Value: 0.4.7-draft
