@@ -9,12 +9,14 @@
 (function () {
   "use strict";
   var P = window.Platform, $ = function (id) { return document.getElementById(id); };
-  var REGIONS = ["us-east-1", "us-east-2", "us-west-1", "us-west-2", "eu-west-1", "eu-west-2", "eu-west-3", "eu-central-1", "eu-north-1", "eu-south-2", "ap-southeast-1", "ap-southeast-2", "ap-northeast-1", "ap-south-1", "ca-central-1", "sa-east-1"];
   var MAX_SHOW = 5 * 1024 * 1024;
   var state = { acct: null, region: "us-east-1", bucket: null, prefix: "" };
 
-  function cc(c, target, payload) {
-    return P.jsonCall(c, "cloudcontrolapi." + state.region + ".amazonaws.com", "cloudcontrolapi", "CloudApiService." + target, payload, state.region, "1.0");
+  // Cloud Control: listing and reading work from us-east-1 for buckets in any region (checked 23 Nov 2026);
+  // a change must go to the bucket's own region (S3 answers 301 otherwise).
+  function cc(c, target, payload, region) {
+    region = region || state.region;
+    return P.jsonCall(c, "cloudcontrolapi." + region + ".amazonaws.com", "cloudcontrolapi", "CloudApiService." + target, payload, region, "1.0");
   }
   function bucketUrl(bucket, region, query, key) {
     var path = key ? "/" + key.split("/").map(encodeURIComponent).join("/") : "/";
@@ -30,7 +32,7 @@
   // ---- buckets ----
   function listBuckets() {
     var out = $("s3-buckets"), st = $("s3-status");
-    out.textContent = ""; $("s3-objects").textContent = ""; $("s3-file").textContent = ""; P.say(st, "Listing buckets in " + state.region + "...");
+    out.textContent = ""; $("s3-objects").textContent = ""; $("s3-file").textContent = ""; P.say(st, "Listing buckets...");
     read().then(function (c) {
       var all = [];
       function page(token) {
@@ -48,7 +50,7 @@
         b.onclick = function () { Array.prototype.forEach.call(out.querySelectorAll("button"), function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); }); openBucket(n); };
         out.appendChild(P.el("li", {}, [b]));
       });
-      P.say(st, names.length + " bucket" + (names.length === 1 ? "" : "s") + " in " + state.region + ".", "ok");
+      P.say(st, names.length + " bucket" + (names.length === 1 ? "" : "s") + ".", "ok");
     }).catch(function (e) { P.say(st, e.message + (/AccessDenied|not authorized/.test(e.message) ? " (The account needs template v2: see step 3.)" : ""), "bad"); });
   }
 
@@ -67,7 +69,8 @@
     }).catch(function (e) { P.say(st, e.message, "bad"); });
   }
   function showCorsPlan(name, plan) {
-    var box = $("s3-objects"), st = $("s3-status");
+    var box = $("s3-objects"), st = P.el("p", { class: "status" });
+    P.say($("s3-status"), "");
     box.appendChild(P.el("p", { text: name + " does not answer this site yet. S3 lets a web page read a bucket only when the bucket's CORS rules allow it. This plan adds one rule: GET and HEAD, from " + location.origin + " only. Rules already there are kept." }));
     box.appendChild(P.el("h4", { text: "CORS rules now" })); box.appendChild(P.el("pre", { text: plan.before ? JSON.stringify(plan.before, null, 2) : "(none)" }));
     box.appendChild(P.el("h4", { text: "After you approve" })); box.appendChild(P.el("pre", { text: JSON.stringify(plan.after, null, 2) }));
@@ -75,10 +78,11 @@
     go.onclick = function () {
       go.disabled = true; P.say(st, "Asking Cloud Control to add the rule...");
       P.assume(state.acct, "sws-aws-platform-change").then(function (c) {
-        return cc(c, "UpdateResource", { TypeName: "AWS::S3::Bucket", Identifier: name, PatchDocument: JSON.stringify(plan.patch) }).then(function (j) {
+        var r = state.bucketRegion;
+        return cc(c, "UpdateResource", { TypeName: "AWS::S3::Bucket", Identifier: name, PatchDocument: JSON.stringify(plan.patch) }, r).then(function (j) {
           var token = j.ProgressEvent.RequestToken;
           function poll(n) {
-            return cc(c, "GetResourceRequestStatus", { RequestToken: token }).then(function (s) {
+            return cc(c, "GetResourceRequestStatus", { RequestToken: token }, r).then(function (s) {
               var op = s.ProgressEvent.OperationStatus;
               if ((op === "PENDING" || op === "IN_PROGRESS") && n < 60) return new Promise(function (r) { setTimeout(r, 2000); }).then(function () { return poll(n + 1); });
               if (op !== "SUCCESS") throw new Error("Cloud Control " + op + ": " + (s.ProgressEvent.StatusMessage || ""));
@@ -86,10 +90,10 @@
           }
           return poll(0);
         });
-      }).then(function () { P.say(st, "Applied: " + name + " now answers this site.", "ok"); return openBucket(name); })
+      }).then(function () { P.say($("s3-status"), "Applied: " + name + " now answers this site.", "ok"); return openBucket(name); })
         .catch(function (e) { go.disabled = false; P.say(st, e.message, "bad"); });
     };
-    box.appendChild(go);
+    box.appendChild(go); box.appendChild(st);
     P.say(st, "This is the plan. Nothing has changed yet.");
   }
 
@@ -204,11 +208,9 @@
     var lb = $("s3-list-buckets"); if (lb) lb.disabled = !accts.length;
   }
   function init() {
-    var reg = $("s3-region");
-    REGIONS.forEach(function (r) { reg.appendChild(P.el("option", { value: r, text: r })); });
     $("s3-list-buckets").onclick = function () {
       state.acct = P.accounts().filter(function (a) { return a.id === $("s3-account").value; })[0];
-      state.region = reg.value;
+      state.region = "us-east-1";
       if (state.acct) listBuckets();
     };
     render();
