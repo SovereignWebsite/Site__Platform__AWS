@@ -244,7 +244,7 @@ eu-west-1 is a little lower for the instance (0.0046, 0.0184, 0.0368) and the sa
 | The move's create role | its own line: allowed regions, one new deployment per move, `sws-ec2-*` names only | security.aws.a, 6c |
 | Concurrent deployments | at most N at once (N from Dinis), refused above it | a runaway loop is the main cost risk |
 
-No number is set here: V5 (b) says ec2.aws.a and billing.aws.a propose them from the twin, and Dinis approves them on a decision page before anything real runs.
+No number is set here: V5 (b) says ec2.aws.a and billing.aws.a propose them from the twin, and Dinis approves them on a decision page before anything real runs. The decision page draft is docs/ec2/2026-11-23__02-v5-guard-rails-decision.md (rows G1 to G9, with options and figures from billing.aws.a's prices).
 
 ## 7. Security notes (for security.aws.a)
 
