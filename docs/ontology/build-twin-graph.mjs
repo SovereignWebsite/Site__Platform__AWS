@@ -7,12 +7,15 @@
 // Nothing leaves this process: the twin answers in memory. No AWS is called and no credential is used; the
 // twin only checks that a request carries a twin access key (ASIATWIN...), which is not a secret.
 //
-//   node docs/ontology/build-twin-graph.mjs            write twin-graph.json (demo pack "baseline")
-//   node docs/ontology/build-twin-graph.mjs --check    exit 1 if twin-graph.json differs from the twin
-//   node docs/ontology/build-twin-graph.mjs --stdout   print instead of writing
+//   node docs/ontology/build-twin-graph.mjs                write twin-graph.json (demo pack "baseline")
+//   node docs/ontology/build-twin-graph.mjs --pack attack  write twin-graph.attack.json (any pack in twin.js)
+//   node docs/ontology/build-twin-graph.mjs --all          every pack, one file each
+//   node docs/ontology/build-twin-graph.mjs --check --all  exit 1 if any file differs from the twin
+//   node docs/ontology/build-twin-graph.mjs --stdout       print instead of writing
 //
 // Every edge says how we know it (evidence): api, template, content, naming, comment, or curated.
 import { readFileSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gunzipSync, inflateRawSync } from "node:zlib";
@@ -20,13 +23,25 @@ import { gunzipSync, inflateRawSync } from "node:zlib";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..", "..");
 const SITE = join(ROOT, "site");
-const OUT = join(HERE, "twin-graph.json");
-const args = new Set(process.argv.slice(2));
+const argv = process.argv.slice(2);
+const args = new Set(argv);
+const PACK = argv.includes("--pack") ? argv[argv.indexOf("--pack") + 1] : "baseline";
+const OUT = join(HERE, PACK === "baseline" ? "twin-graph.json" : "twin-graph." + PACK + ".json");
+if (args.has("--all")) {
+  // The twin picks its pack when it loads, so each pack runs in its own process.
+  const packs = Object.keys(JSON.parse(execFileSync(process.execPath, [fileURLToPath(import.meta.url), "--list-packs"]).toString()));
+  let failed = false;
+  for (const p of packs) {
+    try { process.stdout.write(execFileSync(process.execPath, [fileURLToPath(import.meta.url), "--pack", p, ...argv.filter((a) => a !== "--all")]).toString()); }
+    catch (e) { process.stderr.write(String(e.stderr || e.message)); failed = true; }
+  }
+  process.exit(failed ? 1 : 0);
+}
 
 // ---- load the twin as the browser would ----
 const twinSrc = readFileSync(join(SITE, "twin.js"), "utf8");
 globalThis.window = globalThis;
-globalThis.location = new URL("https://twin.local/?pack=baseline");
+globalThis.location = new URL("https://twin.local/?pack=" + encodeURIComponent(PACK));
 globalThis.document = { baseURI: "https://twin.local/" };
 globalThis.fetch = (u) => {
   const url = new URL(u);
@@ -35,6 +50,8 @@ globalThis.fetch = (u) => {
 };
 (0, eval)(twinSrc);
 const twin = globalThis.AwsTwin;
+if (args.has("--list-packs")) { process.stdout.write(JSON.stringify(twin.packs)); process.exit(0); }
+if (twin.pack() !== PACK) { console.error("no such demo pack in site/twin.js: " + PACK + " (have: " + Object.keys(twin.packs).join(", ") + ")"); process.exit(2); }
 const ACCOUNT = twin.account;
 
 const AUTH = { authorization: "AWS4-HMAC-SHA256 Credential=ASIATWINREAD/20261123/eu-west-2/svc/aws4_request" };
@@ -137,12 +154,21 @@ const DIST = (name) => "twin:cloudfront/distribution/" + name;
 const STREAM = "twin:firehose/deliverystream/unnamed-cloudfront-logs";
 const vaultPath = /^\/vault\/([^/]+)\/files/;
 const visitors = new Set();
+const perVault = {}; // vault -> requests for its paths
+const byIp = {}; // address -> { requests, refused, agents, files, vaults, first, last, paths }
 let requests = 0;
 for (const o of objectsOf[B.logs]) {
   const m = /\/([a-z0-9-]+)-\d{4}-\d\d-\d\d-\d\d-\d\d-\d\d\.gz$/.exec(o.key);
   const lines = text(gunzipSync(await get(B.logs, o.key))).trim().split("\n").map((l) => JSON.parse(l));
   requests += lines.length;
-  lines.forEach((l) => visitors.add(l.c_ip));
+  lines.forEach((l) => {
+    visitors.add(l.c_ip);
+    const a = (byIp[l.c_ip] = byIp[l.c_ip] || { requests: 0, refused: 0, agents: new Set(), files: new Set(), vaults: new Set(), paths: new Set(), first: l.timestamp, last: l.timestamp });
+    a.requests++; if (l.sc_status >= 400) a.refused++;
+    a.agents.add(l.cs_user_agent); a.files.add(o.key); a.paths.add(l.cs_uri_stem);
+    const v = /^\/vault\/([^/?]+)/.exec(l.cs_uri_stem)?.[1]; if (v) { a.vaults.add(v); perVault[v] = (perVault[v] || 0) + 1; }
+    if (l.timestamp < a.first) a.first = l.timestamp; if (l.timestamp > a.last) a.last = l.timestamp;
+  });
   const times = lines.map((l) => l.timestamp).sort();
   Object.assign(nodes.get(ids.object(B.logs, o.key)), { requests: lines.length, first: times[0], last: times[times.length - 1], ocsf_class: "HTTP Activity" });
   if (m) {
@@ -153,6 +179,18 @@ for (const o of objectsOf[B.logs]) {
   [...seen].sort().forEach((v) => edge(ids.object(B.logs, o.key), "refers_to", ids.vault(v), "content", "log lines (cs_uri_stem /vault/" + v + "/files)"));
 }
 Object.assign(nodes.get(ids.bucket(B.logs)), { requests, visitors: visitors.size });
+for (const [v, n] of Object.entries(perVault)) if (nodes.has(ids.vault(v))) Object.assign(nodes.get(ids.vault(v)), { requests: n, share_of_requests: +(n / requests).toFixed(3) });
+// An address stands out as an actor when most of what it asks for is refused (4xx): a rule on the data, no list
+// of known bad addresses. Normal visitors stay a count on the bucket, not a node each.
+for (const [ip, a] of Object.entries(byIp).sort()) {
+  if (a.requests < 10 || a.refused / a.requests < 0.8) continue;
+  const aid = "twin:actor/ip/" + ip;
+  node(aid, "actor", "A4", ip + " (refused " + a.refused + " of " + a.requests + ")", {
+    ocsf_class: "HTTP Activity", src_ip: ip, requests: a.requests, refused: a.refused, first: a.first, last: a.last,
+    user_agents: [...a.agents].sort(), distinct_paths: a.paths.size, rule: "at least 10 requests, at least 80% refused (4xx)" });
+  [...a.files].sort().forEach((f) => edge(aid, "seen_in", ids.object(B.logs, f), "content", "log lines (c_ip " + ip + ")"));
+  [...a.vaults].sort().filter((v) => nodes.has(ids.vault(v))).forEach((v) => edge(aid, "targeted", ids.vault(v), "content", "log lines (c_ip " + ip + ", paths under /vault/" + v + ")"));
+}
 for (const d of [...nodes.values()].filter((n) => n.type === "distribution")) {
   if (/Served from S3 through CloudFront/.test(text(await get(B.site, "index.html")))) edge(d.id, "serves_from", ids.bucket(B.site), "content", "index.html ('Served from S3 through CloudFront')");
   if (/CloudFront logs delivered by Firehose/.test(twinSrc)) {
@@ -304,6 +342,6 @@ const out = JSON.stringify(graph, null, 1) + "\n";
 if (args.has("--stdout")) process.stdout.write(out);
 else if (args.has("--check")) {
   let cur = ""; try { cur = readFileSync(OUT, "utf8"); } catch { /* missing */ }
-  if (cur !== out) { console.error("twin-graph.json is out of date with the twin: run node docs/ontology/build-twin-graph.mjs"); process.exit(1); }
-  console.log("twin-graph.json matches the twin (" + counts.nodes + " nodes, " + counts.edges + " edges)");
+  if (cur !== out) { console.error(OUT.slice(HERE.length + 1) + " is out of date with the twin: run node docs/ontology/build-twin-graph.mjs --all"); process.exit(1); }
+  console.log(OUT.slice(HERE.length + 1) + " matches the twin (" + counts.nodes + " nodes, " + counts.edges + " edges)");
 } else { writeFileSync(OUT, out); console.log("wrote " + OUT.slice(ROOT.length + 1) + ": " + counts.nodes + " nodes, " + counts.edges + " edges " + JSON.stringify(counts.by_evidence)); }

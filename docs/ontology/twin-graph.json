@@ -423,14 +423,18 @@
    "type": "vault",
    "label": "vault-demo-001",
    "altitude": "A5",
-   "files": 42
+   "files": 42,
+   "requests": 32,
+   "share_of_requests": 0.142
   },
   {
    "id": "twin:vault/vault-demo-002",
    "type": "vault",
    "label": "vault-demo-002",
    "altitude": "A5",
-   "files": 7
+   "files": 7,
+   "requests": 29,
+   "share_of_requests": 0.129
   }
  ],
  "edges": [

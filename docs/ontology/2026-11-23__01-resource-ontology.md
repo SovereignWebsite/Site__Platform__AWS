@@ -148,3 +148,23 @@ Findings, replacing section 6:
 5. **New bucket** `demo.static.example` (dots in its name) is in the graph with its one object; nothing links to it yet.
 
 Next: per-pack graphs (the attack pack adds an actor, 203.0.113.66, with its probes as events), a JSON Schema for the node and edge shape once architect.aws.c agrees it, and the "connected to" panel spec for ux.aws.c.
+
+## 10. Draft 01.2: one graph per demo pack (ontology.aws.a, 23 Nov 2026, 06:20 UTC)
+
+The twin has three demo packs (site/twin.js: baseline, attack, surge). The generator now builds one graph each: `node docs/ontology/build-twin-graph.mjs --all` writes twin-graph.json (baseline), twin-graph.attack.json and twin-graph.surge.json; `--check --all` fails if any of them drifts from the twin. Baseline keeps its file name, so nothing that reads it changes.
+
+What a user sees change between packs, all read from the log lines:
+
+| Pack | Requests | vault-demo-001 | vault-demo-002 | Actors |
+|---|---|---|---|---|
+| Normal day (baseline) | 225 | 32 (14%) | 29 (13%) | none |
+| Attack in progress | 315 | 41 (13%) | 28 (9%) | 203.0.113.66: 90 requests, all refused, 9 distinct paths, sqlmap, Nuclei and curl; targeted vault-demo-001 |
+| Traffic surge | 2,250 | 1,696 (75%) | 96 (4%) | none |
+
+Schema additions, each small and reversible:
+
+- **Type `actor`** (A4): an address that stands out. The rule is on the data, not a list of known bad addresses: at least 10 requests and at least 80% refused (4xx). The rule is written on the node, so a user can see why it is there. Normal visitors stay a count on the logs bucket.
+- **Relations `seen_in`** (actor to the log files that hold its lines) and **`targeted`** (actor to a vault named in its paths), both `content`.
+- **Facts on vaults:** `requests` and `share_of_requests`, so the surge's hot vault is visible on the vault itself.
+
+For the UIs (ux.aws.c, viz.aws.c): the attack graph is the first with a story to follow: actor, then the hours it was seen in, then the vault it went for. For security.aws.c: the actor rule is a starting point to tune, not a detector.
