@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.1.4 (iam.aws.a, deploy plan step 3; for review by
+  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.1.5 (iam.aws.a, deploy plan step 3; for review by
   security.aws.a and cloudformation.aws.a; not for any real account). Run first, by the customer, from their own
   console. Makes two things only: the deploy role that stacks sws-vault-<id> and sws-vault-<id>-edge run with, and
   the boundary that caps the Vault's own role. Nothing here can reach outside this one Vault's resources.
@@ -147,6 +147,10 @@ Resources:
                   lambda:GetRuntimeManagementConfig, lambda:GetFunctionRecursionConfig]
                 Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:sws-vault-${VaultId}-api"
               # security.aws.a ruling (d): a public principal only for a Function URL with auth NONE.
+              # OPEN (boto3.aws.a 08): new Function URLs need lambda:InvokeFunction in the resource policy as well as
+              # InvokeFunctionUrl. That second AddPermission must be limited to calls through the URL by Lambda's own
+              # condition key (name to be confirmed by boto3.aws.a); until then it is not granted, and the twin run
+              # will show the URL refusing calls. Never a public InvokeFunction without that limit.
               - Sid: FunctionUrlNoneOnly
                 Effect: Allow
                 Action: [lambda:CreateFunctionUrlConfig, lambda:AddPermission]
@@ -155,9 +159,13 @@ Resources:
                   StringEquals: { "lambda:FunctionUrlAuthType": NONE }
               - !If
                 - HasImageRepo
+                # Lambda's images-create guide (boto3.aws.a 08, ef27841): creating a function from an ECR image needs
+                # the repository-policy permissions on the caller. SetRepositoryPolicy only works on a repository in
+                # this account; for one in our account (cross-account), the repository owner sets the policy and this
+                # role needs only the reads. Scoped to the one repository either way.
                 - Sid: PullTheImage
                   Effect: Allow
-                  Action: [ecr:BatchGetImage, ecr:GetDownloadUrlForLayer]
+                  Action: [ecr:BatchGetImage, ecr:GetDownloadUrlForLayer, ecr:GetRepositoryPolicy, ecr:SetRepositoryPolicy]
                   Resource: !Ref ImageRepositoryArn
                 - !Ref AWS::NoValue
               - !If
