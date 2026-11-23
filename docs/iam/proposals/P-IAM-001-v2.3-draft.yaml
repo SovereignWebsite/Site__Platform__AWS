@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SovereignWebsite AWS platform v2.2 DRAFT (iam.aws.a, P-IAM-001; not for apply until reviewed), bootstrap (the last console log-in). Two roles that
+  SovereignWebsite AWS platform v2.3 DRAFT (iam.aws.a, P-IAM-001; security.aws.a's B1 to B3 addressed; not for apply until reviewed), bootstrap (the last console log-in). Two roles that
   the account owner's own Google sign-in, in their browser on aws.platform.sovereignweb.site, may
   assume through STS AssumeRoleWithWebIdentity for at most one hour. No IAM user, no
   access key, nothing stored. Written by aws.c@SovereignWebsite.dinis, 22 Nov 2026; the site fills in both parameters.
@@ -16,8 +16,10 @@ Parameters:
     AllowedPattern: "^[0-9]{5,40}$"
 
 Resources:
-  # v2.2 DRAFT, P-IAM-001: the most each role may ever do. Raising a boundary is a console act by the owner:
-  # the change role holds no action that creates, edits, swaps or removes a policy object or a boundary.
+  # v2.3 DRAFT, P-IAM-001: the most each role may ever do, statement for statement the same scopes as today's
+  # policies (security.aws.a B1, B2: a boundary on Resource "*" would let a change set widen the role to any role or
+  # stack). Raising a boundary is a console act by the owner: the change role holds no action that creates, edits,
+  # swaps or removes a policy object or a boundary, and the boundary denies them too.
   ChangeBoundary:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -26,17 +28,40 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-          - Sid: TodaysChangeRoleActions
+          - Sid: TheDnsRoleTrustPolicy
+            Effect: Allow
+            Action: [iam:GetRole, iam:UpdateAssumeRolePolicy]
+            Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/sovereignwebsite-factory-dns
+          - Sid: BucketCorsThroughCloudControl
+            Effect: Allow
+            Action: ["s3:Get*", "s3:List*", s3:PutBucketCORS, cloudformation:GetResource, cloudformation:ListResources, cloudformation:UpdateResource, cloudformation:GetResourceRequestStatus]
+            Resource: "*"
+          - Sid: ThisStackOnly
+            Effect: Allow
+            Action: [cloudformation:DescribeStacks, cloudformation:DescribeStackEvents, cloudformation:GetTemplate, cloudformation:GetTemplateSummary, cloudformation:CreateChangeSet, cloudformation:DescribeChangeSet, cloudformation:ExecuteChangeSet, cloudformation:DeleteChangeSet]
+            Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/sws-aws-platform/*
+          - Sid: ValidateTemplates
+            Effect: Allow
+            Action: cloudformation:ValidateTemplate
+            Resource: "*"
+          - Sid: ThePlatformRolesThroughCloudFormationOnly
             Effect: Allow
             Action: [iam:GetRole, iam:GetRolePolicy, iam:ListRolePolicies, iam:ListAttachedRolePolicies, iam:ListRoleTags,
-              iam:UpdateRoleDescription, iam:PutRolePolicy, iam:DeleteRolePolicy, iam:DetachRolePolicy, iam:AttachRolePolicy,
-              iam:UpdateAssumeRolePolicy, iam:TagRole, iam:UntagRole,
-              "s3:Get*", "s3:List*", s3:PutBucketCORS,
-              cloudformation:GetResource, cloudformation:ListResources, cloudformation:UpdateResource, cloudformation:GetResourceRequestStatus,
-              cloudformation:DescribeStacks, cloudformation:DescribeStackEvents, cloudformation:GetTemplate, cloudformation:GetTemplateSummary,
-              cloudformation:CreateChangeSet, cloudformation:DescribeChangeSet, cloudformation:ExecuteChangeSet, cloudformation:DeleteChangeSet,
-              cloudformation:ValidateTemplate]
-            Resource: "*"
+              iam:UpdateRoleDescription, iam:PutRolePolicy, iam:DeleteRolePolicy, iam:DetachRolePolicy,
+              iam:TagRole, iam:UntagRole]
+            Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/sws-aws-platform-*
+            Condition:
+              ForAnyValue:StringEquals:
+                aws:CalledVia: cloudformation.amazonaws.com
+          - Sid: AttachOnlyTheseManagedPolicies
+            Effect: Allow
+            Action: iam:AttachRolePolicy
+            Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/sws-aws-platform-*
+            Condition:
+              ForAnyValue:StringEquals:
+                aws:CalledVia: cloudformation.amazonaws.com
+              ArnEquals:
+                iam:PolicyARN: [arn:aws:iam::aws:policy/job-function/ViewOnlyAccess, arn:aws:iam::aws:policy/SecurityAudit]
           - Sid: NeverTheCapItselfNorNewPrincipals
             Effect: Deny
             Action: [iam:PutRolePermissionsBoundary, iam:DeleteRolePermissionsBoundary, iam:CreatePolicy, iam:CreatePolicyVersion,
@@ -52,12 +77,28 @@ Resources:
             Action: ["s3:GetObject*"]
             Resource: "*"
 
+  # v2.3 DRAFT (security.aws.a B3): the read role's cap is what it holds today, named, not AWS's ReadOnlyAccess.
+  # ViewOnlyAccess and SecurityAudit stay attached but act only within this list: the views the site has today.
+  ReadBoundary:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: sws-aws-platform-read-boundary
+      Description: The most sws-aws-platform-read may do, whatever its own policies say (P-IAM-001)
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: TodaysReads
+            Effect: Allow
+            Action: [budgets:ViewBudget, budgets:DescribeBudgetAction, budgets:DescribeBudgetActionsForAccount,
+              ce:GetCostAndUsage, ce:GetCostForecast, ce:GetDimensionValues,
+              "s3:Get*", "s3:List*", cloudformation:ListResources, cloudformation:GetResource]
+            Resource: "*"
+
   PlatformRead:
     Type: AWS::IAM::Role
     Properties:
       RoleName: sws-aws-platform-read
-      # v2.2 DRAFT: AWS's ReadOnlyAccess as the cap. Read actions only, whatever a change set adds inline.
-      PermissionsBoundary: arn:aws:iam::aws:policy/ReadOnlyAccess
+      PermissionsBoundary: !Ref ReadBoundary
       Description: Read-only view of this account from the AWS platform site, the owner's Google sign-in only
       MaxSessionDuration: 3600
       AssumeRolePolicyDocument:
@@ -173,3 +214,4 @@ Outputs:
   ReadRoleArn: { Value: !GetAtt PlatformRead.Arn }
   ChangeRoleArn: { Value: !GetAtt PlatformChange.Arn }
   ChangeBoundaryArn: { Value: !Ref ChangeBoundary }
+  ReadBoundaryArn: { Value: !Ref ReadBoundary }

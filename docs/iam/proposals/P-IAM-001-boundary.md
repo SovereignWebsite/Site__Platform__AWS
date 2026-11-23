@@ -61,7 +61,7 @@ No AWS call. That CloudFormation, acting with the caller's credentials, is bound
 
 ## Draft template (05:20 UTC)
 
-[P-IAM-001-v2.2-draft.yaml](P-IAM-001-v2.2-draft.yaml): bootstrap.yaml v2.1 plus the two boundaries, nothing else changed. cfn-lint 1.61.0 passes on it and on v2.1. `python3 -I docs/iam/check_boundary.py` checks that every action the change role's own policies grant is inside its boundary, or cut on purpose: today 0 problems; iam:UpdateRole cut, `s3:Get*` narrowed by a deny on `s3:GetObject*`.
+[P-IAM-001-v2.3-draft.yaml](P-IAM-001-v2.3-draft.yaml): bootstrap.yaml v2.1 plus the two boundaries, nothing else changed. cfn-lint 1.61.0 passes on it and on v2.1. `python3 -I docs/iam/check_boundary.py` checks that every action the change role's own policies grant is inside its boundary, or cut on purpose: today 0 problems; iam:UpdateRole cut, `s3:Get*` narrowed by a deny on `s3:GetObject*`.
 
 What the draft decides, each open to change:
 
@@ -81,3 +81,18 @@ boto3.aws.a's docs/boto3/2026-11-23__02-cloud-control-s3-handlers.md (from the `
 - The boundary leaves out `iam:PassRole` (and denies it), which keeps R-006 bounded, as boto3.aws.a notes: no patch can make the handler pass a role.
 
 Still to verify before apply: ReadOnlyAccess coverage, and whether CloudFormation calls iam:UpdateRole on every role update.
+
+## v2.3 (08:35 UTC): security.aws.a's review of v2.2
+
+security.aws.a (a1d2057 on work/security.aws.a) found v2.2 did not close R-008. The anti-tamper part held; the gap was the boundary's Allow on `Resource: "*"` where today's policies are scoped. A change set runs with the change role's credentials and may give the role new inline policies up to the boundary, so:
+
+- **B1 (High):** a change set adds `iam:UpdateAssumeRolePolicy` (or Put/Attach/DeleteRolePolicy) on `*` to the change role; v2.2's boundary allowed it for every role but sws-aws-platform-*, so the page could set any other role's trust (an admin role) to the owner's Google subject and assume it.
+- **B2 (High):** change-set actions on `*` reach other stacks, which may run with their own service role (no PassRole needed to reuse one).
+- **B3 (Medium):** ReadOnlyAccess as the read cap is far wider than the read role (Lambda code and environment variables, DynamoDB items, logs) and AWS widens it over time.
+
+v2.3 ([the draft](P-IAM-001-v2.3-draft.yaml), which replaces v2.2):
+
+- The change boundary is today's change-role policies statement for statement, with the same Resource and Condition: IAM writes only on role/sws-aws-platform-* under `aws:CalledVia`, AttachRolePolicy with the same `iam:PolicyARN` list, GetRole and UpdateAssumeRolePolicy only on role/sovereignwebsite-factory-dns, change-set actions only on stack/sws-aws-platform/*. The denies stay: iam:UpdateRole, UpdateAssumeRolePolicy on the platform roles, `s3:GetObject*`, and every action on the cap itself or on new principals.
+- The read boundary is a customer-managed policy naming what the read role uses today (costs-read, s3-browse, Cloud Control reads). ViewOnlyAccess and SecurityAudit stay attached but act only within it, which is every view the site has today (usage.md); a new view raises the read boundary by console.
+- check_boundary.py now compares statements, not action names: each role statement must be covered by a boundary statement with the same Resource and Condition, and no boundary statement may be wider than a role statement. 0 problems on v2.3; widening the DNS or stack statement to `*` is caught (tested).
+- Still to do in the same console apply: a boundary on sovereignwebsite-factory-dns, or its trust by console only (R-005). Without it, R-008 stays open.
