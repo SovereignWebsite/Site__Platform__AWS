@@ -5,6 +5,7 @@
 //     .json or one record per line) through Decode (site/api/decode.js), with Decode's caps;
 //   - in the one-record-per-line form a bad line is skipped and counted, not thrown, so one broken line does not
 //     hide a whole file.
+//   - from.net in place of from.ip: the caller's network only (design 03, Privacy; needs site/data/extract.js).
 // No network, no DOM. Targets use ontology.aws.a's node ids (ARNs, or urn:sws:<kind>:<name>).
 (function (root) {
   "use strict";
@@ -65,6 +66,19 @@
     return s;
   }
 
+  // The caller's network, never the address (Dinis Cruz, 23 Nov 2026: "keep only the network (and if available the
+  // city and country)"; design 03, Privacy): /24 for IPv4, /48 for IPv6, by data.aws.a's one network() function
+  // (site/data/extract.js), so every view truncates alike. A record AWS made itself (sourceIPAddress a service name
+  // such as lambda.amazonaws.com) keeps that name in via. The full record stays in raw, for the detail panel only.
+  function from(r) {
+    var X = root.LogExtract;
+    if (!X || typeof X.network !== "function") throw new Error("Activity needs LogExtract.network (site/data/extract.js)");
+    var a = String(r.sourceIPAddress || ""), net = X.network(a) || null;
+    var o = { net: net, agent: r.userAgent || null };
+    if (!net && /^[a-z0-9.-]+\.amazonaws\.com$/.test(a)) o.via = a;
+    return o;
+  }
+
   function normalise(r) {
     var e = {
       id: r.eventID || null,
@@ -75,7 +89,7 @@
       region: r.awsRegion || null,
       account: r.recipientAccountId || null,
       who: who(r.userIdentity),
-      from: { ip: r.sourceIPAddress || null, agent: r.userAgent || null },
+      from: from(r),
       change: r.readOnly !== true, // missing readOnly counts as a change
       category: r.eventCategory || null,
       failed: r.errorCode ? { code: r.errorCode, message: r.errorMessage || null } : null,

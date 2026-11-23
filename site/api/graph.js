@@ -60,7 +60,7 @@
       object: function (b, k) { return "arn:aws:s3:::" + b + "/" + k; },
       prefix: function (b, p) { return "arn:aws:s3:::" + b + "/" + p + "*"; },
       trail: function (n) { return "urn:sws:cloudtrail-trail:" + n; },
-      actor: function (ip) { return "urn:sws:actor-ip:" + ip; }
+      actor: function (net) { return "urn:sws:actor-net:" + net; }
     };
 
     function node(id, type, altitude, label, extra) {
@@ -120,7 +120,7 @@
 
     // Activity: one trail file's events. Each event is a node; the file records it; the file's key path names its
     // region; the event acted as a role, signed in via an identity provider, and acted on its targets. The caller's
-    // address becomes an actor node that acted on the same targets (design 03, refinement 6).
+    // network (from.net; never the address) becomes an actor node that acted on the same targets.
     function activity(read, file) {
       var fid = file && file.bucket && file.key ? ids.object(file.bucket, file.key) : null;
       if (fid) {
@@ -129,7 +129,7 @@
       }
       (read.events || []).forEach(function (e) {
         if (!e.node) return;
-        node(e.node, "event", "A1", e.words, { ocsf_class: "API Activity", time: e.iso, src_ip: e.from && e.from.ip, read_only: !e.change });
+        node(e.node, "event", "A1", e.words, { ocsf_class: "API Activity", time: e.iso, src_net: e.from && e.from.net || undefined, read_only: !e.change });
         if (fid) edge(fid, "records", e.node, "content", "CloudTrail Records");
         if (e.who && e.who.kind === "role" && e.who.arn) {
           node(e.who.arn, "role", "A4", e.who.name || e.who.arn.split("/").pop(), { cfn_type: "AWS::IAM::Role" });
@@ -147,10 +147,10 @@
           if (!nodes.has(t.id) && TARGET_ALTITUDE[t.type]) node(t.id, t.type, TARGET_ALTITUDE[t.type], t.name || t.id);
           edge(e.node, "acted_on", t.id, "content", "CloudTrail requestParameters");
         });
-        var ip = e.from && e.from.ip;
-        if (ip && /^[0-9a-fA-F:.]+$/.test(ip)) {
-          var aid = node(ids.actor(ip), "actor", "A4", ip);
-          targets.forEach(function (t) { edge(aid, "acted_on", t.id, "content", "CloudTrail sourceIPAddress " + ip); });
+        var net = e.from && e.from.net;
+        if (NET.test(String(net))) {
+          var aid = node(ids.actor(net), "actor", "A4", net);
+          targets.forEach(function (t) { edge(aid, "acted_on", t.id, "content", "CloudTrail sourceIPAddress (network " + net + ")"); });
         }
       });
     }
@@ -160,7 +160,15 @@
     //   - a CloudFront log file (key <distribution>-YYYY-MM-DD-HH-MM-SS.gz, lines with c_ip, cs_uri_stem, sc_status)
     //     records its distribution (naming), refers_to the vaults its paths name, and an address with at least 10
     //     requests, at least 80% of them refused (4xx), becomes an actor seen_in those files and targeting those vaults.
+    //     Addresses are counted and named by their network only (/24, /48; design 03, Privacy).
     // Vault lists are read before logs, so log lines can name known vaults. Files nothing recognises are left alone.
+    // A network as data.aws.a's LogExtract.network writes it: a.b.c.0/24 or an IPv6 /48 (design 03, Privacy).
+    var NET = /^(\d{1,3}\.\d{1,3}\.\d{1,3}\.0\/24|[0-9a-f]{1,4}:[0-9a-f]{1,4}:[0-9a-f]{1,4}::\/48)$/;
+    function networkOf(ip) {
+      var X = root.LogExtract;
+      if (!X || typeof X.network !== "function") throw new Error("Graph needs LogExtract.network (site/data/extract.js)");
+      return X.network(ip) || "";
+    }
     var LOG_KEY = /\/([a-z0-9-]+)-\d{4}-\d\d-\d\d-\d\d-\d\d-\d\d\.gz$/, CONFIG = /\.(ya?ml|json|toml|ini|conf|cfg|env)$/i;
     function content(files, o) {
       o = o || {};
@@ -192,7 +200,7 @@
           if (siteId && f.bucket === o.site.bucket) edge(vid, "part_of", siteId, "content", f.key + " in the site's bucket");
         });
       });
-      var byIp = Object.create(null);
+      var byNet = Object.create(null);
       files.forEach(function (f) {
         var m = LOG_KEY.exec(f.key);
         if (!m) return;
@@ -206,22 +214,30 @@
         lines.forEach(function (l) {
           var v = /^\/vault\/([^/?]+)/.exec(String(l.cs_uri_stem));
           if (v && /^\/vault\/[^/]+\/files/.test(l.cs_uri_stem)) vaults[v[1]] = 1;
-          var ip = String(l.c_ip), a = byIp[ip] = byIp[ip] || { requests: 0, refused: 0, files: Object.create(null), vaults: Object.create(null) };
+          // Counted per network, never per address (design 03, Privacy); a line whose address has no network is skipped.
+          var net = networkOf(String(l.c_ip));
+          if (!net) return;
+          var a = byNet[net] = byNet[net] || { requests: 0, refused: 0, files: Object.create(null), vaults: Object.create(null), countries: Object.create(null), cities: Object.create(null) };
           a.requests++; if (+l.sc_status >= 400 && +l.sc_status < 500) a.refused++;
           a.files[f.key] = f.bucket; if (v) a.vaults[v[1]] = 1;
+          // City and country only as an enricher wrote them into the line (x_edge_location is CloudFront's edge, not the visitor's).
+          if (typeof l.country === "string" && /^[A-Za-z]{2}$/.test(l.country)) a.countries[l.country.toUpperCase()] = 1;
+          if (typeof l.city === "string" && l.city && l.city.length <= 80) a.cities[l.city] = 1;
         });
         Object.keys(vaults).sort().forEach(function (v) {
           if (nodes.has("urn:sws:vault:" + v)) edge(fid, "refers_to", "urn:sws:vault:" + v, "content", "log lines (cs_uri_stem /vault/" + v + "/files)");
         });
       });
-      Object.keys(byIp).sort().forEach(function (ip) {
-        var a = byIp[ip];
-        if (a.requests < 10 || a.refused / a.requests < 0.8 || !/^[0-9a-fA-F:.]+$/.test(ip)) return;
-        var aid = node(ids.actor(ip), "actor", "A4", ip + " (refused " + a.refused + " of " + a.requests + ")",
-          { ocsf_class: "HTTP Activity", src_ip: ip, requests: a.requests, refused: a.refused, rule: "at least 10 requests, at least 80% refused (4xx)" });
-        Object.keys(a.files).sort().forEach(function (k) { edge(aid, "seen_in", ids.object(a.files[k], k), "content", "log lines (c_ip " + ip + ")"); });
+      Object.keys(byNet).sort().forEach(function (net) {
+        var a = byNet[net];
+        if (a.requests < 10 || a.refused / a.requests < 0.8 || !NET.test(net)) return;
+        var countries = Object.keys(a.countries).sort(), cities = Object.keys(a.cities).sort();
+        var aid = node(ids.actor(net), "actor", "A4", net + " (refused " + a.refused + " of " + a.requests + ")",
+          { ocsf_class: "HTTP Activity", src_net: net, requests: a.requests, refused: a.refused, countries: countries.length ? countries : undefined,
+            cities: cities.length ? cities : undefined, rule: "a network with at least 10 requests, at least 80% refused (4xx)" });
+        Object.keys(a.files).sort().forEach(function (k) { edge(aid, "seen_in", ids.object(a.files[k], k), "content", "log lines (c_ip in " + net + ")"); });
         Object.keys(a.vaults).sort().forEach(function (v) {
-          if (nodes.has("urn:sws:vault:" + v)) edge(aid, "targeted", "urn:sws:vault:" + v, "content", "log lines (c_ip " + ip + ", paths under /vault/" + v + ")");
+          if (nodes.has("urn:sws:vault:" + v)) edge(aid, "targeted", "urn:sws:vault:" + v, "content", "log lines (c_ip in " + net + ", paths under /vault/" + v + ")");
         });
       });
     }

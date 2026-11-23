@@ -17,7 +17,7 @@ const ctx = {
 };
 ctx.window = ctx; ctx.globalThis = ctx;
 vm.createContext(ctx);
-for (const f of ["sigv4.js", "twin.js", "transport.js", "api/s3-api.js", "api/decode.js", "api/activity.js"])
+for (const f of ["sigv4.js", "twin.js", "transport.js", "api/s3-api.js", "data/extract.js", "api/decode.js", "api/activity.js"])
   vm.runInContext(readFileSync(new URL("../../site/" + f, import.meta.url), "utf8"), ctx, { filename: f });
 const R = ctx.Activity, A = "111122223333";
 const fail = (m) => { console.error("FAIL", m); process.exit(1); };
@@ -77,6 +77,12 @@ eqc(R.merge([R.read({ Records: [r1] }), R.read({ Records: [r1, r2] })]).events.m
 
 
 // ---- additions in the move ----
+// Privacy (design 03): the caller's network, never the address; the record as AWS wrote it stays in raw only.
+e = one({ sourceIPAddress: "203.0.113.66", eventName: "GetRole" });
+eqc([e.from.net, "ip" in e.from, e.raw.sourceIPAddress, "raw" in R.forGraph(e)], ["203.0.113.0/24", false, "203.0.113.66", false], "from.net only; raw kept for the detail panel, not for the graph");
+eqc(one({ sourceIPAddress: "2001:db8:1234:5678::1", eventName: "GetRole" }).from.net, "2001:db8:1234::/48", "IPv6 /48");
+eqc([one({ sourceIPAddress: "lambda.amazonaws.com", eventName: "GetRole" }).from.net, one({ sourceIPAddress: "lambda.amazonaws.com", eventName: "GetRole" }).from.via], [null, "lambda.amazonaws.com"], "a service caller has no network, its name in via");
+
 // A bad line in the one-record-per-line form is skipped and counted, not thrown.
 rd = R.read(JSON.stringify(r1) + "\nnot json\n" + JSON.stringify(r2) + "\n");
 eqc([rd.format, rd.events.length, rd.skipped], ["lines", 2, 1], "bad line skipped");

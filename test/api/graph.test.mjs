@@ -31,7 +31,7 @@ const ctx = {
 };
 ctx.window = ctx; ctx.globalThis = ctx;
 vm.createContext(ctx);
-for (const f of ["sigv4.js", "twin.js", "transport.js", "zip.js", "api/all.js", "api/s3-api.js", "api/lambda-api.js", "api/firehose-api.js", "api/iam-api.js", "api/decode.js", "api/activity.js", "api/graph.js"])
+for (const f of ["sigv4.js", "twin.js", "transport.js", "zip.js", "api/all.js", "api/s3-api.js", "api/lambda-api.js", "api/firehose-api.js", "api/iam-api.js", "data/extract.js", "api/decode.js", "api/activity.js", "api/graph.js"])
   vm.runInContext(readFileSync(new URL("../../site/" + f, import.meta.url), "utf8"), ctx, { filename: f });
 const here = (p) => new URL(p, import.meta.url);
 // Pinned copies (golden/README.md): ontology.aws.a's builder run against this branch's twin.
@@ -148,7 +148,11 @@ function slice(graph) {
   const ends = new Set(es.flatMap((e) => [e.from, e.to]));
   return { edges: new Set(es.map((e) => [e.from, e.rel, e.to, e.evidence, e.trust].join(" | "))), nodes: new Set(graph.nodes.filter((n) => ends.has(n.id)).map((n) => [n.id, n.type, n.altitude, n.trust].join(" | "))) };
 }
-const gs = slice(golden), ms = slice(mine);
+// Until ontology.aws.a's builder follows design 03's Privacy rule (actor-net), its graphs still name actor-ip nodes:
+// actors are set aside on both sides and the output says so.
+const privacyPending = golden.nodes.some((n) => n.id.startsWith("urn:sws:actor-ip:"));
+const noActors = (g) => privacyPending ? { nodes: g.nodes.filter((n) => n.type !== "actor"), edges: g.edges.filter((e) => !/^urn:sws:actor-(ip|net):/.test(e.from)) } : g;
+const gs = slice(noActors(golden)), ms = slice(noActors(mine));
 const missing = [...gs.edges].filter((x) => !ms.edges.has(x)), surplus = [...ms.edges].filter((x) => !gs.edges.has(x));
 ok(!missing.length, "edges in the golden graph the adapters should give:\n  " + missing.join("\n  "));
 ok(!surplus.length, "edges the adapters give that the golden graph lacks:\n  " + surplus.join("\n  "));
@@ -156,12 +160,19 @@ const nMissing = [...gs.nodes].filter((x) => !ms.nodes.has(x)), nSurplus = [...m
 ok(!nMissing.length && !nSurplus.length, "nodes (id, type, altitude) differ:\n  missing " + nMissing.join("\n  missing ") + "\n  surplus " + nSurplus.join("\n  surplus "));
 // Every node the adapters made outright (not a dangling end) is in the golden graph with the same type, altitude,
 // trust and backend.
-const offGolden = mine.nodes.filter((n) => !n.dangling && !(gNode.has(n.id) && gNode.get(n.id).type === n.type && gNode.get(n.id).altitude === n.altitude && gNode.get(n.id).trust === n.trust && gNode.get(n.id).backend === n.backend));
+const offGolden = mine.nodes.filter((n) => !n.dangling && !(privacyPending && n.type === "actor") && !(gNode.has(n.id) && gNode.get(n.id).type === n.type && gNode.get(n.id).altitude === n.altitude && gNode.get(n.id).trust === n.trust && gNode.get(n.id).backend === n.backend));
 ok(!offGolden.length, "every built node matches the golden graph: " + offGolden.map((n) => n.id + " " + n.type).join(", "));
 
 // ---- refinement 6: the caller's address acts on what the events touched ----
-const actorEdges = mine.edges.filter((e) => e.from.startsWith("urn:sws:actor-ip:") && e.rel === "acted_on");
-ok(actorEdges.length > 0 && actorEdges.every((e) => e.rel === "acted_on" && e.evidence === "content"), "actor-ip nodes with acted_on edges");
+const actorEdges = mine.edges.filter((e) => e.from.startsWith("urn:sws:actor-net:") && e.rel === "acted_on");
+ok(actorEdges.length > 0 && actorEdges.every((e) => e.rel === "acted_on" && e.evidence === "content"), "actor-net nodes with acted_on edges");
+// Privacy (design 03): no address anywhere in the graph, only networks.
+const json = JSON.stringify(mine);
+ok(!/urn:sws:actor-ip:|"src_ip"/.test(json) && !/\b(\d{1,3}\.){3}(?!0\/24)\d{1,3}\b/.test(json.replace(/arn:aws:[^"]*/g, "")), "no addresses in the graph, only networks");
+// The twin puts every client in 203.0.113.0/24 today, so at /24 the attack pack's attacker merges with the visitors
+// and the refused-requests rule no longer singles it out; aws.c's twin change (visitors in other documentation
+// ranges, design 03 Privacy) brings it back. Until then: no CloudFront actor in any pack.
+ok(!mine.edges.some((e) => e.rel === "seen_in" || e.rel === "targeted"), "pack " + PACK + ": the attacker merges with visitors at /24 until the twin separates networks");
 
 // ---- hostile names stay data ----
 const h = ctx.Graph({ account: A, backend: "twin" });
@@ -179,9 +190,9 @@ ok(!/\beval\s*\(|new Function|innerHTML|document\.|localStorage|fetch\(/.test(re
     { bucket: "site", key: "data/other.json", text: JSON.stringify({ items: [{ id: "nope" }] }) },
     { bucket: "site", key: "notes.txt", text: "see s3://not-config-file/" },
     { bucket: "site", key: "app.env", text: "A=s3://bucket-one/x\nB=s3://bucket-one/y\n" },
-    log("d1", [...Array(9)].map(() => line("198.51.100.1", 403))),                                    // 9 refused: under 10
-    log("d2", [...Array(10)].map((_, i) => line("198.51.100.2", i < 8 ? 404 : 200, "/vault/v1/files"))), // 8 of 10: exactly 80%
-    log("d3", [...Array(10)].map(() => line("198.51.100.3", 503))),                                    // 5xx is not refused
+    log("d1", [...Array(9)].map(() => line("192.0.2.1", 403))),                                        // 9 refused: under 10
+    log("d2", [...Array(10)].map((_, i) => line(i % 2 ? "198.51.100.2" : "198.51.100.77", i < 8 ? 404 : 200, "/vault/v1/files"))), // 8 of 10 in one /24: exactly 80%
+    log("d3", [...Array(10)].map(() => line("203.0.113.3", 503))),                                     // 5xx is not refused
     log("d4", ["not json", JSON.stringify({ hello: 1 })])                                              // no log lines: no distribution
   ], { site: { name: "s", bucket: "site" } });
   const j = JSON.parse(JSON.stringify(c.toJSON())), has = (id) => j.nodes.some((n) => n.id === id && !n.dangling);
@@ -190,8 +201,8 @@ ok(!/\beval\s*\(|new Function|innerHTML|document\.|localStorage|fetch\(/.test(re
   ok(e("urn:sws:vault:v1", "in", "urn:sws:region:eu-west-1") && !j.edges.some((x) => x.from === "urn:sws:vault:v2" && x.rel === "in"), "a vault's region only when it is a region");
   ok(e("urn:sws:vault:v1", "part_of", "urn:sws:site:s"), "a vault listed in the site's bucket is part of the site");
   ok(!j.edges.some((x) => x.to === "arn:aws:s3:::not-config-file") && j.edges.filter((x) => x.to === "arn:aws:s3:::bucket-one").length === 1, "s3:// only from config files, once per file");
-  ok(!has("urn:sws:actor-ip:198.51.100.1") && has("urn:sws:actor-ip:198.51.100.2") && !has("urn:sws:actor-ip:198.51.100.3"), "actor rule: at least 10 requests, at least 80% 4xx");
-  ok(e("urn:sws:actor-ip:198.51.100.2", "targeted", "urn:sws:vault:v1") && e("logs/cf/d2-2026-11-22-10-00-00.gz".replace(/^/, "arn:aws:s3:::"), "refers_to", "urn:sws:vault:v1"), "actor targets the vault; the log file refers to it");
+  ok(!has("urn:sws:actor-net:192.0.2.0/24") && has("urn:sws:actor-net:198.51.100.0/24") && !has("urn:sws:actor-net:203.0.113.0/24"), "actor rule per network: at least 10 requests, at least 80% 4xx");
+  ok(e("urn:sws:actor-net:198.51.100.0/24", "targeted", "urn:sws:vault:v1") && e("logs/cf/d2-2026-11-22-10-00-00.gz".replace(/^/, "arn:aws:s3:::"), "refers_to", "urn:sws:vault:v1"), "actor targets the vault; the log file refers to it");
   ok(has("urn:sws:cloudfront-distribution:d1") && !has("urn:sws:cloudfront-distribution:d4"), "a distribution only from files with log lines");
 }
 
@@ -238,7 +249,7 @@ ok(!/\beval\s*\(|new Function|innerHTML|document\.|localStorage|fetch\(/.test(re
     { bucket: "logs", key: "cf/__proto__-2026-11-22-10-00-00.gz", text: lines("__proto__", 5).concat(lines("constructor", 12)).join("\n") }], {});
   const j = JSON.parse(JSON.stringify(c.toJSON()));
   ok(({}).requests === undefined && ({}).polluted === undefined, "Object.prototype untouched");
-  ok(j.nodes.some((n) => n.id === "urn:sws:vault:__proto__") && !j.nodes.some((n) => n.id === "urn:sws:actor-ip:__proto__" || n.id === "urn:sws:actor-ip:constructor"), "vault ids are data; non-addresses are never actors");
+  ok(j.nodes.some((n) => n.id === "urn:sws:vault:__proto__") && !j.nodes.some((n) => /actor-(ip|net):(__proto__|constructor)/.test(n.id)), "vault ids are data; non-addresses are never actors");
 }
 
 // ---- security R-020, design 03 "Trust of evidence" ----
@@ -248,14 +259,14 @@ ok(!/\beval\s*\(|new Function|innerHTML|document\.|localStorage|fetch\(/.test(re
   const R = "arn:aws:iam::" + A + ":role/";
   // A planted CloudTrail record and a planted zip: only claimed edges and nodes.
   const p = ctx.Graph({ account: A, backend: "aws" });
-  p.add.activity({ events: [{ node: "urn:sws:cloudtrail-event:planted", words: "w", iso: "2026-11-22T12:00:00Z", from: { ip: "203.0.113.66" }, who: { kind: "role", name: "dormant", arn: R + "dormant", via: "accounts.google.com" },
+  p.add.activity({ events: [{ node: "urn:sws:cloudtrail-event:planted", words: "w", iso: "2026-11-22T12:00:00Z", from: { net: "203.0.113.0/24" }, who: { kind: "role", name: "dormant", arn: R + "dormant", via: "accounts.google.com" },
     targets: [{ type: "role", id: R + "admin", name: "admin" }] }] }, { bucket: "b1", key: "AWSLogs/" + A + "/CloudTrail/eu-west-2/x.json.gz" });
   p.add.zips([{ bucket: "b1", key: "evil.zip", sha256: "nope", packageName: "real-fn" }]);
   p.add.lambda([{ name: "real-fn", arn: "arn:aws:lambda:eu-west-2:" + A + ":function:real-fn", region: "eu-west-2", codeSha256: "S" }]);
   const pj = JSON.parse(JSON.stringify(p.toJSON())), N = (id) => pj.nodes.find((n) => n.id === id);
-  const fromFiles = pj.edges.filter((e) => e.from.includes("planted") || e.from.includes("actor-ip") || e.from.includes("evil.zip") || e.from.includes("x.json.gz"));
+  const fromFiles = pj.edges.filter((e) => e.from.includes("planted") || e.from.includes("actor-net") || e.from.includes("evil.zip") || e.from.includes("x.json.gz"));
   ok(fromFiles.length >= 5 && fromFiles.every((e) => e.trust === "claimed"), "planted record and zip: every edge claimed " + JSON.stringify(fromFiles.map((e) => e.rel + ":" + e.trust)));
-  ok(["urn:sws:cloudtrail-event:planted", "urn:sws:actor-ip:203.0.113.66", R + "dormant", R + "admin"].every((id) => N(id).trust === "claimed"), "nodes only files name are claimed");
+  ok(["urn:sws:cloudtrail-event:planted", "urn:sws:actor-net:203.0.113.0/24", R + "dormant", R + "admin"].every((id) => N(id).trust === "claimed"), "nodes only files name are claimed");
   ok(N("arn:aws:lambda:eu-west-2:" + A + ":function:real-fn").trust === "verified" && pj.backend === "aws" && pj.nodes.every((n) => n.backend === "aws"), "the real function stays verified; backend aws everywhere");
   // A merged edge with an api source is verified, whatever else said it.
   const m = ctx.Graph({ account: A, backend: "twin" });
@@ -280,7 +291,7 @@ ok(!/\beval\s*\(|new Function|innerHTML|document\.|localStorage|fetch\(/.test(re
   ok(!pj.nodes.some((n) => n.trust === "curated"), "no curated nodes without curated edges");
 }
 
-const uncovered = golden.edges.length - gs.edges.size - golden.edges.filter((e) => e.evidence === "curated" || e.evidence === "comment").length;
+const G = noActors(golden), uncovered = G.edges.length - gs.edges.size - G.edges.filter((e) => e.evidence === "curated" || e.evidence === "comment").length;
 if (failures) { console.error(failures + " failed, " + passed + " passed"); process.exit(1); }
 if (ctx.AwsTwin.pack() !== PACK) { console.error("FAIL the twin loaded pack " + ctx.AwsTwin.pack() + ", not " + PACK); process.exit(1); }
-console.log("OK (graph, pack " + PACK + ": " + passed + " checks; " + mine.nodes.length + " nodes, " + mine.edges.length + " edges; golden slice " + gs.nodes.size + " nodes and " + gs.edges.size + " edges equal; " + uncovered + " golden edges wait for the CloudFormation adapter and serves_from)");
+console.log("OK (graph, pack " + PACK + ": " + passed + " checks; " + mine.nodes.length + " nodes, " + mine.edges.length + " edges; golden slice " + gs.nodes.size + " nodes and " + gs.edges.size + " edges equal; " + uncovered + " golden edges wait for the CloudFormation adapter and serves_from" + (privacyPending ? "; actors set aside until ontology.aws.a's builder uses networks" : "") + ")");
