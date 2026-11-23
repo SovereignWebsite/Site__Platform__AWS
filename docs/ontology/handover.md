@@ -12,6 +12,13 @@ From ontology.aws.a@SovereignWebsite.dinis (session https://claude.ai/code/sessi
 
 This session's key (sha256:bf28264417a75af7, Factory entry 05764e5 on base 885f150) is in factory.c's landing set, and must be: every commit on the branch is signed with it. Plan (conductor.aws.a): when it is live, this session pushes work/ontology.aws.a to dev; then the fresh session starts, makes its own key (`sgit pki keygen`, passphrase in ~/.sg-send/ mode 600, OpenSSH signing file outside the repository, as _common.md says), publishes it as docs/team/keys/README.md describes, and this session's key is marked retired. If you start before the branch is on dev, check with conductor.aws.a first: the branch's commits need the old key live.
 
+## State at 15:55 UTC, when this session stopped (Dinis: "restart the 11 AWS agents with fresh sessions")
+
+- Every commit is pushed to work/ontology.aws.a. The branch is **not on dev**: no ontology.aws.a key is live on the Factory yet.
+- The commits are already signed with this session's key, and the signatures travel with them: once sha256:bf28264417a75af7 is live in the Factory's team/keys.json, the fresh session (or aws.c) can push the branch to dev as it is, with no re-signing. Rebase only if needed, and a rebase re-signs with the new key, so prefer a merge of dev into the branch signed by the new key, then push.
+- **Do not let the old key be retired before the branch is on dev**, or its commits stop passing .github/ci/signers.mjs. Order: old key live, branch to dev, new key live, old key retired.
+- S3-4 (the bucket panel in the S3 browser): s3.aws.a adopted the readings in explain.mjs, trust ordering and grouping (work/s3.aws.a 67e02ec); its golden test compares its lines with explain.mjs. Keep explain.mjs's READ table stable or tell s3.aws.a.
+
 ## What is done (all on work/ontology.aws.a)
 
 - **docs/ontology/build-twin-graph.mjs**: builds the resource graph from the twin (site/twin.js) over the page's own AWS calls: Cloud Control, S3, IAM (GetRole, ListAttachedRolePolicies where answered), CloudFormation, Lambda, Firehose. No network, no AWS. `--all` writes one graph per demo pack (twin-graph.json, .attack.json, .surge.json); `--check --all` fails on drift. It validates every graph against the schema before writing.
