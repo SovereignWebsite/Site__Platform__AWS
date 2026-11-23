@@ -123,6 +123,19 @@ test/api/<svc>-api.test.mjs  decode.test.mjs  activity.test.mjs  graph.test.mjs 
 6. **Activity ids** (cloudtrail.aws.a, done on work/cloudtrail.aws.a): `targets[].id` is the graph node id, checked against twin-graph.json; each event carries `node` (its own graph id, from `eventID`); the derived prefix is one constant, so `urn:sws:` is a one-line switch; `CloudTrailReader.forGraph(e)` drops `raw`. `ct-alarms.js` moves to site/api/ beside the reader. Done with `urn:sws:` ids (cloudtrail-trail, cloudtrail-event), checked against ontology.aws.a's 849f77a graph. The reader keeps the caller's address in `from.ip` and makes no node for it; `Graph.add.activity` makes the `urn:sws:actor-ip:<ip>` node and its `acted_on` edges, so an address in the attack pack links to everything it touched. ontology.aws.a's builder does the same (work/ontology.aws.a bb9cac9), so the golden test covers it. CloudFront client addresses become actor nodes only by ontology.aws.a's refused-requests rule (at least 10 requests and at least 80% 4xx), with `seen_in` and `targeted` edges, so ordinary visitors are never nodes; `Graph` uses the same rule.
 7. **The golden test, exactly** (ontology.aws.a, done on work/ontology.aws.a 849f77a): ids are now `urn:sws:<kind>:<name>` (schema pattern `^(arn:aws:|urn:sws:[a-z0-9-]+:)`), all three graphs regenerated. `graph.test.mjs` compares node `id`, `type`, `altitude` and edge `from`, `rel`, `to`, `evidence` only (node facts such as request counts are not compared), skips `curated` and `comment` edges, and first applies the page's CORS fix to the twin's demo-site bucket (Cloud Control UpdateResource, as a user's Approve would), since that bucket has no CORS rule and its objects are otherwise unreadable. cloudtrail.aws.a switches its derived prefix constant to `urn:sws:`.
 
+## Trust of evidence (R-020, security.aws.a, 11:32 UTC)
+
+Anything read from inside a bucket (CloudTrail files, CloudFront logs, vault JSON, config files, zip metadata) can be written by whoever can write that bucket: a dormant role made to look used, a fake hostile sign-in, a planted zip tied to a real function by name. So the graph keeps what AWS answered apart from what files claim:
+
+- Every node and edge carries **`trust`**, derived from its evidence: `verified` for `api` and `template` (AWS's own answer, or the stack AWS deployed); `claimed` for `content`, `naming` and `comment`; `curated` stays `curated` (a person said so). A node is `verified` if any verified edge or API answer names it, otherwise `claimed`.
+- An edge with two sources (design 04's one-edge rule) is `verified` if any source is.
+- **Claimed evidence never drives a suggestion to remove, replace or narrow anything.** "Unused" comes only from verified signals: IAM's `RoleLastUsed` (design 04), later service last-accessed, never from the absence of CloudTrail lines in a bucket. A claimed signal may raise a question ("this file says role X signed in from 203.0.113.66; AWS has not confirmed it"), never answer one.
+- The UIs show the two apart (claimed edges drawn differently, with the source file one click away), and the plan generator (`plan.js`) refuses input marked `claimed`.
+- The graph and each node carry **`backend: "twin" | "aws"`**, set by the page from the mode it is in (the banner's mode), not by the APIs, which stay blind to the back end (design 01). A graph exported from the twin can never be mistaken for, or merged with, one from AWS.
+- Later, CloudTrail log file integrity validation (the digest files AWS signs) or `LookupEvents` can upgrade CloudTrail-derived edges to `verified`; until then they are `claimed`.
+
+ontology.aws.a's schema gains `trust` on nodes and edges and `backend` on the graph and nodes; the golden test compares `trust` too.
+
 ## Open questions
 
 1. ontology.aws.a: agreed both (refinement 7).
