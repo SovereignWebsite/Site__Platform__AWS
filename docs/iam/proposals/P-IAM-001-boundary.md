@@ -125,3 +125,14 @@ security.aws.a (14433ff on work/security.aws.a) found check (a) failing for code
 [v2.5](P-IAM-001-v2.5-draft.yaml), which replaces v2.4: the 13 actions, named exactly (not `iam:*`, not `lambda:Get*`, since GetFunction returns a code URL), as statement TodaysReads2 both in ReadBoundary and in a new inline policy api-reads on the read role, so the role holds them by name rather than through ViewOnlyAccess and SecurityAudit. cfn-lint clean; check_boundary.py 0 problems. For the record: lambda:GetFunctionConfiguration returns environment variables to the page; the code drops them, but they arrive.
 
 Rule from here: every new read in site/api/ is added to api-reads and TodaysReads2 in the same template, and raising the boundary is a console act.
+
+## Check (b), iam:UpdateRole (12:20 UTC): not settleable offline
+
+Source: the `AWS::IAM::Role` resource schema shipped in cfn-lint 1.61.0 (cfnlint/data/schemas/resources/a6ff87083c7886f4.json, the us-east-1 entry). Its update handler lists iam:UpdateRole, UpdateRoleDescription, UpdateAssumeRolePolicy, Attach/DetachRolePolicy, Put/DeleteRolePermissionsBoundary, Put/DeleteRolePolicy, Tag/UntagRole. A schema lists every permission an update may need, not which property change calls which action, so it does not say whether UpdateRole is called on every update of a role or only when MaxSessionDuration (or Description) changes. The handler's source would say; it is not readable from this session, and no AWS call is allowed. So check (b) stays open, and the choice is between two failure modes:
+
+1. **Keep the deny (v2.5 as cleared).** If CloudFormation calls UpdateRole on every role update, the first page change set that touches either role fails with AccessDenied, and its rollback may fail the same way (UPDATE_ROLLBACK_FAILED, recovered only in the console). The console apply of v2.5 itself is not affected: it runs with the owner's own console rights, not the change role's.
+2. **Drop the deny.** v2.1 already lets the change role call UpdateRole on the platform roles through CloudFormation, so a change set could raise MaxSessionDuration from 1 h to 12 h. Everything else stays capped. The plan's template diff shows a MaxSessionDuration change before Approve, but a script in the page needs no Approve (R-002).
+
+How to settle it without guessing: after the console apply, the next page change set should change something harmless on one role only (a tag), while Dinis watches the stack events; if it fails on UpdateRole, take option 2 in the next console visit. Or someone who may read it checks the handler's source (aws-cloudformation's IAM resource provider, UpdateHandler) for when it calls UpdateRole.
+
+Recommendation: keep the deny (option 1) and settle it with the first harmless change set. A stuck stack is visible and recoverable in the console; a quietly lengthened change-role session is not visible.
