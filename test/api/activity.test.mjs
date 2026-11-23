@@ -81,7 +81,8 @@ eqc(R.merge([R.read({ Records: [r1] }), R.read({ Records: [r1, r2] })]).events.m
 e = one({ sourceIPAddress: "203.0.113.66", eventName: "GetRole" });
 eqc([e.from.net, "ip" in e.from, e.raw.sourceIPAddress, "raw" in R.forGraph(e)], ["203.0.113.0/24", false, "203.0.113.66", false], "from.net only; raw kept for the detail panel, not for the graph");
 eqc(one({ sourceIPAddress: "2001:db8:1234:5678::1", eventName: "GetRole" }).from.net, "2001:db8:1234::/48", "IPv6 /48");
-eqc([one({ sourceIPAddress: "lambda.amazonaws.com", eventName: "GetRole" }).from.net, one({ sourceIPAddress: "lambda.amazonaws.com", eventName: "GetRole" }).from.via], [null, "lambda.amazonaws.com"], "a service caller has no network, its name in via");
+eqc([one({ sourceIPAddress: "lambda.amazonaws.com", eventName: "GetRole" }).from.net, one({ sourceIPAddress: "lambda.amazonaws.com", eventName: "GetRole" }).from.service], [null, "lambda.amazonaws.com"], "a service caller has no network, its name in from.service");
+eqc([one({ sourceIPAddress: "2001:db8::1", eventName: "GetRole" }).from.net, one({ sourceIPAddress: "2001:0DB8:0000:0001::5", eventName: "GetRole" }).from.net, one({ sourceIPAddress: "", eventName: "GetRole" }).from.net], ["2001:db8:0::/48", "2001:db8:0::/48", null], "compressed and full IPv6 alike; no address, no network");
 
 // A bad line in the one-record-per-line form is skipped and counted, not thrown.
 rd = R.read(JSON.stringify(r1) + "\nnot json\n" + JSON.stringify(r2) + "\n");
