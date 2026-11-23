@@ -4,14 +4,14 @@
   "a": 19,
   "c": 26
  },
- "commits": 189,
- "signed": 189,
+ "commits": 209,
+ "signed": 209,
  "commits_on_dev": 80,
  "signatures_checked": {
-  "own key": 183,
+  "own key": 203,
   "unknown key": 6
  },
- "landed_through_keeper": 44,
+ "landed_through_keeper": 50,
  "top_committers": [
   [
    "aws.c",
@@ -23,15 +23,15 @@
   ],
   [
    "conductor.aws.a",
-   11
-  ],
-  [
-   "security.aws.a",
-   10
+   17
   ],
   [
    "pm.aws.a",
-   9
+   12
+  ],
+  [
+   "security.aws.a",
+   11
   ]
  ],
  "spawn_burst": {
@@ -42,7 +42,7 @@
  },
  "moves_to_account_a": 19,
  "first_move": "2026-11-23T03:36:19Z",
- "last_move": "2026-11-23T08:19:49Z",
+ "last_move": "2026-11-23T08:43:16Z",
  "first_event": "2026-11-23T02:40:15Z",
- "last_event": "2026-11-23T08:33:37Z"
+ "last_event": "2026-11-23T09:30:15Z"
 }

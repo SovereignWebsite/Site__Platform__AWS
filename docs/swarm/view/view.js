@@ -72,7 +72,7 @@
       if (e.type === "commit" || e.type === "wake") {
         const a = agents.get(e.agent); if (!a) continue;
         const [x, y] = pos(a);
-        ctx.strokeStyle = e.type === "commit" ? gold : teal; ctx.globalAlpha = 1 - k;
+        ctx.strokeStyle = e.type !== "commit" ? teal : e.signature && e.signature !== "own key" ? red : gold; ctx.globalAlpha = 1 - k;
         ctx.beginPath(); ctx.arc(x, y, 8 + 22 * k, 0, 2 * Math.PI); ctx.stroke(); ctx.globalAlpha = 1;
       } else {
         const a = agents.get(e.from), b = agents.get(e.to); if (!a || !b) continue;
@@ -103,7 +103,8 @@
     $("clock").textContent = hhmmss(now);
     const shown = [...agents.values()].filter(visible).length;
     const commits = events.filter((x) => x.type === "commit" && x.r <= R).length;
-    $("counts").textContent = `${shown} agents, ${commits} commits`;
+    const own = events.filter((x) => x.type === "commit" && x.r <= R && x.signature === "own key").length;
+    $("counts").textContent = `${shown} agents, ${commits} commits, ${own} checked against the agent's own key`;
     const who = e.agent || e.from || "";
     const what = e.subject || e.note || e.topic || (e.type === "spawn" ? `starts ${e.to}` : e.type === "move" ? `moves to account A as ${e.to}` : e.type === "message" ? `to ${e.to}` : "");
     $("caption").textContent = `${who ? who + ": " : ""}${what}`;
@@ -137,7 +138,8 @@
     for (const e of events) {
       const tr = document.createElement("tr");
       cell(tr, hhmmss(e.ms).slice(0, 8)); cell(tr, e.type); cell(tr, e.agent || e.from); cell(tr, e.to);
-      cell(tr, e.subject || e.note || e.topic || (e.type === "move" ? "moves from account C to account A" : e.sha || ""));
+      const what = e.subject || e.note || e.topic || (e.type === "move" ? "moves from account C to account A" : e.sha || "");
+      cell(tr, (e.signature && e.signature !== "own key" ? `[${e.signature}] ` : "") + what);
       body.appendChild(tr); rows.push(tr);
     }
     update();
@@ -154,7 +156,7 @@
       if (!v) continue; const dt = document.createElement("dt"), dd = document.createElement("dd"); dt.textContent = k; dd.textContent = v; dl.append(dt, dd);
     }
     const ol = $("d-commits"); ol.replaceChildren();
-    for (const e of events) if (e.type === "commit" && e.agent === best.id) { const li = document.createElement("li"); li.textContent = `${e.sha} ${e.subject}`; ol.appendChild(li); }
+    for (const e of events) if (e.type === "commit" && e.agent === best.id) { const li = document.createElement("li"); li.textContent = `${e.sha} ${e.subject}${e.signature ? ` (signature: ${e.signature})` : ""}`; ol.appendChild(li); }
     update();
   }
 

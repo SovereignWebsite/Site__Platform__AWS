@@ -74,6 +74,11 @@
   "trailer": "vaults.aws.a",
   "verdict": "own key"
  },
+ "12e834d": {
+  "key_of": "dev.2.aws.a",
+  "trailer": "dev.2.aws.a",
+  "verdict": "own key"
+ },
  "12f6669": {
   "key_of": "pm.aws.a",
   "trailer": "pm.aws.a",
@@ -124,6 +129,11 @@
   "trailer": "aws.c",
   "verdict": "own key"
  },
+ "1c534ed": {
+  "key_of": "architect.aws.a",
+  "trailer": "architect.aws.a",
+  "verdict": "own key"
+ },
  "21363f6": {
   "key_of": "ux.aws.a",
   "trailer": "",
@@ -132,6 +142,11 @@
  "21eb9a7": {
   "key_of": "conductor.aws.a",
   "trailer": "conductor.aws.a",
+  "verdict": "own key"
+ },
+ "22f7c24": {
+  "key_of": "pm.aws.a",
+  "trailer": "pm.aws.a",
   "verdict": "own key"
  },
  "25259f7": {
@@ -147,6 +162,11 @@
  "26b66dc": {
   "key_of": "journalist.aws.a",
   "trailer": "journalist.aws.a",
+  "verdict": "own key"
+ },
+ "284073d": {
+  "key_of": "swarm.aws.a",
+  "trailer": "swarm.aws.a",
   "verdict": "own key"
  },
  "28a5e2a": {
@@ -167,6 +187,11 @@
  "2bdf2e4": {
   "key_of": "conductor.aws.c",
   "trailer": "conductor.aws.c",
+  "verdict": "own key"
+ },
+ "2c9b62a": {
+  "key_of": "cloudformation.aws.a",
+  "trailer": "cloudformation.aws.a",
   "verdict": "own key"
  },
  "2d4cf0f": {
@@ -218,6 +243,11 @@
   "key_of": null,
   "trailer": "conductor.aws.c",
   "verdict": "unknown key"
+ },
+ "378acc8": {
+  "key_of": "conductor.aws.a",
+  "trailer": "conductor.aws.a",
+  "verdict": "own key"
  },
  "38fd236": {
   "key_of": "cloudformation.aws.a",
@@ -374,6 +404,11 @@
   "trailer": "conductor.aws.c",
   "verdict": "own key"
  },
+ "5740977": {
+  "key_of": "cloudformation.aws.a",
+  "trailer": "cloudformation.aws.a",
+  "verdict": "own key"
+ },
  "57aaf5b": {
   "key_of": "pm.aws.a",
   "trailer": "pm.aws.a",
@@ -412,6 +447,11 @@
  "5d086db": {
   "key_of": "conductor.aws.c",
   "trailer": "conductor.aws.c",
+  "verdict": "own key"
+ },
+ "5d8b57b": {
+  "key_of": "conductor.aws.a",
+  "trailer": "conductor.aws.a",
   "verdict": "own key"
  },
  "5f56f67": {
@@ -464,6 +504,11 @@
   "trailer": "pm.aws.c",
   "verdict": "own key"
  },
+ "6a8f97a": {
+  "key_of": "conductor.aws.a",
+  "trailer": "conductor.aws.a",
+  "verdict": "own key"
+ },
  "6ba1f14": {
   "key_of": "conductor.aws.c",
   "trailer": "conductor.aws.c",
@@ -499,6 +544,11 @@
   "trailer": "conductor.aws.a",
   "verdict": "own key"
  },
+ "7423fde": {
+  "key_of": "vaults.aws.a",
+  "trailer": "vaults.aws.a",
+  "verdict": "own key"
+ },
  "755edd5": {
   "key_of": "journalist.aws.a",
   "trailer": "journalist.aws.a",
@@ -527,6 +577,16 @@
  "78d73b0": {
   "key_of": "conductor.aws.c",
   "trailer": "conductor.aws.c",
+  "verdict": "own key"
+ },
+ "7929df9": {
+  "key_of": "boto3.aws.a",
+  "trailer": "boto3.aws.a",
+  "verdict": "own key"
+ },
+ "7993d4a": {
+  "key_of": "security.aws.a",
+  "trailer": "security.aws.a",
   "verdict": "own key"
  },
  "7abaf67": {
@@ -604,6 +664,11 @@
   "trailer": "aws.c",
   "verdict": "own key"
  },
+ "89b1ccc": {
+  "key_of": "architect.aws.a",
+  "trailer": "architect.aws.a",
+  "verdict": "own key"
+ },
  "89d8698": {
   "key_of": "aws.c",
   "trailer": "aws.c",
@@ -639,6 +704,11 @@
   "trailer": "vaults.aws.a",
   "verdict": "own key"
  },
+ "91d9b9d": {
+  "key_of": "pm.aws.a",
+  "trailer": "pm.aws.a",
+  "verdict": "own key"
+ },
  "92b80b7": {
   "key_of": "vaults.aws.a",
   "trailer": "vaults.aws.a",
@@ -648,6 +718,11 @@
   "key_of": "cloudformation.aws.a",
   "trailer": "cloudformation.aws.a",
   "verdict": "own key"
+ },
+ "9817d13": {
+  "key_of": "architect.aws.a",
+  "trailer": "",
+  "verdict": "no Agent trailer"
  },
  "9a79e83": {
   "key_of": "aws.c",
@@ -669,14 +744,19 @@
   "trailer": "",
   "verdict": "no Agent trailer"
  },
- "9d1bae9": {
-  "key_of": "boto3.aws.a",
-  "trailer": "boto3.aws.a",
-  "verdict": "own key"
- },
  "9d4dd91": {
   "key_of": "ontology.aws.a",
   "trailer": "ontology.aws.a",
+  "verdict": "own key"
+ },
+ "9d7ca5f": {
+  "key_of": "conductor.aws.a",
+  "trailer": "conductor.aws.a",
+  "verdict": "own key"
+ },
+ "9d8cce9": {
+  "key_of": "dev.2.aws.a",
+  "trailer": "dev.2.aws.a",
   "verdict": "own key"
  },
  "9df0977": {
@@ -714,6 +794,11 @@
   "trailer": "vaults.aws.a",
   "verdict": "own key"
  },
+ "a5c7405": {
+  "key_of": "conductor.aws.a",
+  "trailer": "conductor.aws.a",
+  "verdict": "own key"
+ },
  "a5d0f56": {
   "key_of": "swarm.aws.a",
   "trailer": "swarm.aws.a",
@@ -727,6 +812,11 @@
  "a907b14": {
   "key_of": "conductor.aws.a",
   "trailer": "conductor.aws.a",
+  "verdict": "own key"
+ },
+ "a9627d4": {
+  "key_of": "boto3.aws.a",
+  "trailer": "boto3.aws.a",
   "verdict": "own key"
  },
  "aa5dde2": {
@@ -809,6 +899,16 @@
   "trailer": "cloudtrail.aws.a",
   "verdict": "own key"
  },
+ "bc11688": {
+  "key_of": "data.aws.a",
+  "trailer": "data.aws.a",
+  "verdict": "own key"
+ },
+ "bd8983d": {
+  "key_of": "architect.aws.a",
+  "trailer": "architect.aws.a",
+  "verdict": "own key"
+ },
  "bf77b7b": {
   "key_of": "aws.c",
   "trailer": "aws.c",
@@ -877,6 +977,11 @@
  "d08ca3e": {
   "key_of": "ontology.aws.a",
   "trailer": "ontology.aws.a",
+  "verdict": "own key"
+ },
+ "d0b469d": {
+  "key_of": "swarm.aws.a",
+  "trailer": "swarm.aws.a",
   "verdict": "own key"
  },
  "d11ad55": {
@@ -967,6 +1072,11 @@
  "d7addc2": {
   "key_of": "dev.2.aws.a",
   "trailer": "dev.2.aws.a",
+  "verdict": "own key"
+ },
+ "d7afb48": {
+  "key_of": "conductor.aws.a",
+  "trailer": "conductor.aws.a",
   "verdict": "own key"
  },
  "d8ba2de": {
@@ -1077,6 +1187,16 @@
  "ed1ddb8": {
   "key_of": "data.aws.a",
   "trailer": "data.aws.a",
+  "verdict": "own key"
+ },
+ "ed4c076": {
+  "key_of": "pm.aws.a",
+  "trailer": "pm.aws.a",
+  "verdict": "own key"
+ },
+ "ee3c03e": {
+  "key_of": "dev.2.aws.a",
+  "trailer": "dev.2.aws.a",
   "verdict": "own key"
  },
  "ee8259c": {

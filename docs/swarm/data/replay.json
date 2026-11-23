@@ -3424,35 +3424,6 @@
    "key_of": "dev.2.aws.a"
   },
   {
-   "t": "2026-11-23T06:45:03Z",
-   "type": "commit",
-   "agent": "boto3.aws.a",
-   "sha": "9d1bae9",
-   "branch": "work/boto3.aws.a",
-   "subject": "docs/boto3: twin S3 recheck, max-keys patch for aws.c; Factory key commit files",
-   "signed": true,
-   "files": [
-    "docs/boto3/2026-11-23__03-twin-s3-recheck.md",
-    "docs/boto3/patches/2026-11-23__twin-max-keys.patch",
-    "docs/team/from-a/boto3.aws.a.md",
-    "docs/team/keys/boto3.aws.a.iac-commit.txt",
-    "docs/team/keys/boto3.aws.a.iac-entry.json"
-   ],
-   "lanes_touched": [
-    "boto3.aws.c",
-    "conductor.aws.c"
-   ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
-  },
-  {
-   "t": "2026-11-23T06:45:03Z",
-   "type": "move",
-   "from": "boto3.aws.c",
-   "to": "boto3.aws.a",
-   "source": "docs/team/handover/boto3.aws.md"
-  },
-  {
    "t": "2026-11-23T06:56:46Z",
    "type": "commit",
    "agent": "data.aws.a",
@@ -4966,6 +4937,452 @@
    ],
    "signature": "own key",
    "key_of": "security.aws.a"
+  },
+  {
+   "t": "2026-11-23T08:36:42Z",
+   "type": "commit",
+   "agent": "swarm.aws.a",
+   "sha": "284073d",
+   "branch": "work/swarm.aws.a",
+   "subject": "docs/swarm: who really signed each commit, checked against the published keys",
+   "signed": true,
+   "files": [
+    "docs/swarm/README.md",
+    "docs/swarm/data/replay.json",
+    "docs/swarm/data/signatures.json",
+    "docs/swarm/data/summary.json",
+    "docs/swarm/events.jsonl",
+    "docs/swarm/extract.py",
+    "docs/swarm/verify_signatures.py",
+    "docs/team/from-a/swarm.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "swarm.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "swarm.aws.a"
+  },
+  {
+   "t": "2026-11-23T08:40:39Z",
+   "type": "commit",
+   "agent": "architect.aws.a",
+   "sha": "bd8983d",
+   "branch": "work/architect.aws.a",
+   "subject": "docs/architecture: design 02, the twin's engine; review of work/dev.2.aws.a",
+   "signed": true,
+   "files": [
+    "docs/architecture/2026-11-23__02-the-twins-engine.md",
+    "docs/team/from-a/architect.aws.a.md"
+   ],
+   "lanes_touched": [
+    "architect.aws.c",
+    "conductor.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "architect.aws.a"
+  },
+  {
+   "t": "2026-11-23T08:41:16Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "6a8f97a",
+   "branch": "work/conductor.aws.a",
+   "subject": "docs/team: log line for architect.aws.a design 02 (from conductor.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/conductor.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "conductor.aws.a"
+  },
+  {
+   "t": "2026-11-23T08:41:16Z",
+   "type": "handoff",
+   "from": "conductor.aws.a",
+   "to": "conductor.aws.a",
+   "sha": "6a8f97a"
+  },
+  {
+   "t": "2026-11-23T08:41:20Z",
+   "type": "commit",
+   "agent": "architect.aws.a",
+   "sha": "1c534ed",
+   "branch": "work/architect.aws.a",
+   "subject": "docs/architecture: design 02 review corrected after dev.2.aws.a's CORS point",
+   "signed": true,
+   "files": [
+    "docs/architecture/2026-11-23__02-the-twins-engine.md",
+    "docs/team/from-a/architect.aws.a.md"
+   ],
+   "lanes_touched": [
+    "architect.aws.c",
+    "conductor.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "architect.aws.a"
+  },
+  {
+   "t": "2026-11-23T08:41:38Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "5d8b57b",
+   "branch": "work/conductor.aws.a",
+   "subject": "docs/team: dev.1.aws.a work order (from conductor.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/conductor.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "conductor.aws.a"
+  },
+  {
+   "t": "2026-11-23T08:41:38Z",
+   "type": "handoff",
+   "from": "conductor.aws.a",
+   "to": "conductor.aws.a",
+   "sha": "5d8b57b"
+  },
+  {
+   "t": "2026-11-23T08:41:51Z",
+   "type": "commit",
+   "agent": "pm.aws.a",
+   "sha": "ed4c076",
+   "branch": "work/pm.aws.a",
+   "subject": "docs/board: dev.1.aws.a's order on S3-1",
+   "signed": true,
+   "files": [
+    "docs/board/README.md"
+   ],
+   "lanes_touched": [
+    "pm.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "pm.aws.a"
+  },
+  {
+   "t": "2026-11-23T08:42:21Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "9d7ca5f",
+   "branch": "work/conductor.aws.a",
+   "subject": "docs/team: dev.1.aws.a settled order (from conductor.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/conductor.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "conductor.aws.a"
+  },
+  {
+   "t": "2026-11-23T08:42:21Z",
+   "type": "handoff",
+   "from": "conductor.aws.a",
+   "to": "conductor.aws.a",
+   "sha": "9d7ca5f"
+  },
+  {
+   "t": "2026-11-23T08:42:32Z",
+   "type": "commit",
+   "agent": "pm.aws.a",
+   "sha": "22f7c24",
+   "branch": "work/pm.aws.a",
+   "subject": "docs/board: dev.1.aws.a's settled order (conductor.aws.a's correction)",
+   "signed": true,
+   "files": [
+    "docs/board/README.md"
+   ],
+   "lanes_touched": [
+    "pm.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "pm.aws.a"
+  },
+  {
+   "t": "2026-11-23T08:42:40Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "a5c7405",
+   "branch": "work/conductor.aws.a",
+   "subject": "docs/team: correct dev.1.aws.a's from-a commit id (from conductor.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/conductor.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "conductor.aws.a"
+  },
+  {
+   "t": "2026-11-23T08:42:40Z",
+   "type": "handoff",
+   "from": "conductor.aws.a",
+   "to": "conductor.aws.a",
+   "sha": "a5c7405"
+  },
+  {
+   "t": "2026-11-23T08:43:16Z",
+   "type": "commit",
+   "agent": "boto3.aws.a",
+   "sha": "a9627d4",
+   "branch": "work/boto3.aws.a",
+   "subject": "docs/boto3: twin S3 recheck, max-keys patch for aws.c; Factory key commit files",
+   "signed": true,
+   "files": [
+    "docs/boto3/2026-11-23__03-twin-s3-recheck.md",
+    "docs/boto3/patches/2026-11-23__twin-max-keys.patch",
+    "docs/team/from-a/boto3.aws.a.md",
+    "docs/team/keys/boto3.aws.a.iac-commit.txt",
+    "docs/team/keys/boto3.aws.a.iac-entry.json"
+   ],
+   "lanes_touched": [
+    "boto3.aws.c",
+    "conductor.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "boto3.aws.a"
+  },
+  {
+   "t": "2026-11-23T08:43:16Z",
+   "type": "commit",
+   "agent": "boto3.aws.a",
+   "sha": "7929df9",
+   "branch": "work/boto3.aws.a",
+   "subject": "docs/boto3: CloudWatch GetMetricData check of vaults' metric-window record",
+   "signed": true,
+   "files": [
+    "docs/boto3/2026-11-23__04-cloudwatch-metric-window.md",
+    "docs/team/from-a/boto3.aws.a.md"
+   ],
+   "lanes_touched": [
+    "boto3.aws.c",
+    "conductor.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "boto3.aws.a"
+  },
+  {
+   "t": "2026-11-23T08:43:16Z",
+   "type": "move",
+   "from": "boto3.aws.c",
+   "to": "boto3.aws.a",
+   "source": "docs/team/handover/boto3.aws.md"
+  },
+  {
+   "t": "2026-11-23T08:43:52Z",
+   "type": "commit",
+   "agent": "vaults.aws.a",
+   "sha": "7423fde",
+   "branch": "work/vaults.aws.a",
+   "subject": "docs/vaults: design 03 takes boto3.aws.a's check of the metric window",
+   "signed": true,
+   "files": [
+    "docs/vaults/2026-11-23__03-lane-records.md"
+   ],
+   "lanes_touched": [
+    "vaults.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "vaults.aws.a"
+  },
+  {
+   "t": "2026-11-23T08:44:06Z",
+   "type": "commit",
+   "agent": "dev.2.aws.a",
+   "sha": "12e834d",
+   "branch": "work/dev.2.aws.a",
+   "subject": "S3Api.getBucketCors, the twin's GetBucketCors answer, contract 0.4.0",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/dev.2.aws.a.md",
+    "site/api/s3-api.js",
+    "site/api/s3.openapi.json",
+    "site/twin.js",
+    "test/api/openapi.test.mjs",
+    "test/api/s3-api.test.mjs"
+   ],
+   "lanes_touched": [
+    "architect.aws.c",
+    "conductor.aws.c",
+    "keeper"
+   ],
+   "signature": "own key",
+   "key_of": "dev.2.aws.a"
+  },
+  {
+   "t": "2026-11-23T08:44:33Z",
+   "type": "commit",
+   "agent": "architect.aws.a",
+   "sha": "89b1ccc",
+   "branch": "work/architect.aws.a",
+   "subject": "docs/team/from-a: review of dev.2.aws.a 12e834d",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/architect.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "architect.aws.a"
+  },
+  {
+   "t": "2026-11-23T08:44:54Z",
+   "type": "commit",
+   "agent": "dev.2.aws.a",
+   "sha": "ee3c03e",
+   "branch": "work/dev.2.aws.a",
+   "subject": "S3Api: say getBucketCors's null is defensive (architect.aws.a's review)",
+   "signed": true,
+   "files": [
+    "site/api/s3-api.js"
+   ],
+   "lanes_touched": [
+    "architect.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "dev.2.aws.a"
+  },
+  {
+   "t": "2026-11-23T08:53:00Z",
+   "type": "commit",
+   "agent": "data.aws.a",
+   "sha": "bc11688",
+   "branch": "work/data.aws.a",
+   "subject": "data: vault cards split served from refused, so probes do not read as access",
+   "signed": true,
+   "files": [
+    "docs/data/status.md",
+    "docs/team/from-a/data.aws.a.md",
+    "site/data/extract.js",
+    "site/data/view.js",
+    "test/data/extract.test.mjs",
+    "test/data/view.e2e.cjs"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "data.aws.c",
+    "keeper"
+   ],
+   "signature": "own key",
+   "key_of": "data.aws.a"
+  },
+  {
+   "t": "2026-11-23T08:59:17Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "378acc8",
+   "branch": "work/conductor.aws.a",
+   "subject": "docs/team: 09:05 wake (from conductor.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/conductor.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "conductor.aws.a"
+  },
+  {
+   "t": "2026-11-23T08:59:17Z",
+   "type": "handoff",
+   "from": "conductor.aws.a",
+   "to": "conductor.aws.a",
+   "sha": "378acc8"
+  },
+  {
+   "t": "2026-11-23T09:00:07Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "d7afb48",
+   "branch": "work/conductor.aws.a",
+   "subject": "docs/team: viz.aws.a blocked on signing (from conductor.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/conductor.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "conductor.aws.a"
+  },
+  {
+   "t": "2026-11-23T09:00:07Z",
+   "type": "handoff",
+   "from": "conductor.aws.a",
+   "to": "conductor.aws.a",
+   "sha": "d7afb48"
+  },
+  {
+   "t": "2026-11-23T09:00:28Z",
+   "type": "commit",
+   "agent": "pm.aws.a",
+   "sha": "91d9b9d",
+   "branch": "work/pm.aws.a",
+   "subject": "docs/board: viz.aws.a added to decision 7",
+   "signed": true,
+   "files": [
+    "docs/board/README.md",
+    "docs/board/decisions.md"
+   ],
+   "lanes_touched": [
+    "pm.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "pm.aws.a"
+  },
+  {
+   "t": "2026-11-23T09:29:02Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "7993d4a",
+   "branch": "work/security.aws.a",
+   "subject": "docs/security: 09:28 wake, no new risks",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "security.aws.a"
+  },
+  {
+   "t": "2026-11-23T09:30:15Z",
+   "type": "commit",
+   "agent": "cloudformation.aws.a",
+   "sha": "2c9b62a",
+   "branch": "work/cloudformation.aws.a",
+   "subject": "docs/cloudformation: twin patch 01, CloudFormation read calls per region, with its test",
+   "signed": true,
+   "files": [
+    "docs/cloudformation/2026-11-23__seed-and-read-api.md",
+    "docs/cloudformation/2026-11-23__twin-patch-01.md",
+    "docs/cloudformation/patches/2026-11-23__01-cloudformation-reads.patch",
+    "docs/cloudformation/patches/cloudformation-reads.test.mjs",
+    "docs/cloudformation/seed/cloudformation.json",
+    "docs/team/from-a/cloudformation.aws.a.md"
+   ],
+   "lanes_touched": [
+    "cloudformation.aws.c",
+    "conductor.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "cloudformation.aws.a"
   }
  ],
  "sources": [
