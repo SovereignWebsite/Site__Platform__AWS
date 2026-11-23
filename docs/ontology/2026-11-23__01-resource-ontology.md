@@ -226,3 +226,23 @@ On the twin (baseline): 43 nodes verified, 11 claimed; 48 edges verified, 51 cla
 Refined 11:40 UTC with architect.aws.a (design 03): a node is `verified` if any verified edge names it, else `curated` if any curated edge names it, else `claimed`; a person's word is not a file's claim. Baseline now: 43 verified, 5 curated (the business function, the site, the two vaults, demo-distribution-1), 6 claimed. Note: the vaults and the distribution read `curated` only because a curated `part_of` or `refers_to` edge touches them; their own existence still rests on files and names.
 
 Refined again 11:45 UTC (architect.aws.a took the stricter version): a node not verified is `curated` only when every edge naming it is curated; otherwise `claimed`. A curated edge touching a node known from files does not vouch for its existence.
+
+## 16. The "connected to" panel, generated (23 Nov 2026, 12:25 UTC)
+
+[explain.mjs](explain.mjs) prints the panel this doc opens with, for any node, from a graph: `node docs/ontology/explain.mjs <id or label> [--pack attack]`. It is a reference for ux.aws.a and the UIs, not a UI. What it settles for them:
+
+- Every relation reads naturally from either end (`holds` / `is held by`, `runs as` / `is the role of`, 20 in all); `--check` fails if a relation lacks either reading.
+- Links are ordered by trust: AWS-confirmed first with no mark, then `?` claimed (from files or names: check before acting), then `~` the ontologist's word. Each line says how we know it and from which call or file.
+- More than three links of the same kind collapse to one line with a count, first and last ("holds 9 objects: ... "), so a bucket with a thousand files stays readable.
+
+Today's panel for the CloudFront logs bucket (baseline):
+
+```
+111122223333--demo-cloudfront-logs--eu-west-2  (bucket, A2, verified, synthetic)
+  browser readable: true; requests: 225; visitors: 148; countries: {"GB":84,"IE":71,"NL":70}
+    holds 9 objects: demo-distribution-1-2026-11-20-09-00-00.gz ... demo-distribution-1-2026-11-22-11-00-00.gz   [AWS answered: S3 ListObjectsV2]
+    is in eu-west-2 (region)   [AWS answered: Cloud Control GetResource (RegionalDomainName)]
+    receives from demo-cloudfront-logs (stream)   [AWS answered: Firehose DescribeDeliveryStream (BucketARN)]
+  ? is named in site.yaml (object)   [read from inside a file: config/site.yaml (logs: s3://...)]
+  ~ is part of Demo site (site)   [the ontologist says: ontology rule: the demo site's serving and logging path]
+```
