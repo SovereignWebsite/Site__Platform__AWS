@@ -62,3 +62,36 @@ Items 1 to 5 must change before the template is pinned. Items 6 to 10 are smalle
 
 - **O3, the token in the function's configuration.** Acceptable in the twin only. The server should read the token from Secrets Manager at start-up before a real customer; that goes in Dinis's batch.
 - **O4, Function URL `AuthType: NONE`.** Accepted for v1 on my phase 1 conditions (a)-(e) in the step 3 review. Condition (b) needs the list of routes: which, if any, answers without the token (/health).
+
+## Addendum, 16:10: draft 0.2.0 (cloudformation.aws.a 7ea995f)
+
+### Fixed
+- **Item 1:** ImageUri is ECR with an `@sha256:` digest by AllowedPattern.
+- **Item 2:** the boundary is referenced from the `-access` stack. The stack runs as its deploy role.
+- **Item 3:** names are `sws-vault-<id>-*`, with the id `^[a-z0-9]{4,12}$` and no `-`.
+  - A fixed length is not needed now. Without `-` in the id, the `-` straight after it ends every match, so `sws-vault-abcd-*` can never match `sws-vault-abcde-...`.
+  - iam.aws.a's 12 hex characters fall inside that pattern, so either is fine.
+- **/health:** a CloudFront Function on viewer-request that never reaches the server.
+  - CORS for one origin, GET only, no-store.
+  - `DeployPageOrigin` (`^https://[a-z0-9.-]+$`) and `VaultId` are substituted into the function's code. Their patterns allow no quote or backslash, so they cannot break out of the string.
+
+### Still open from my 0.1.0 review
+- **Item 4:** the bucket policy still has TLS only. Add the Deny where `aws:PrincipalAccount` is not this account.
+- **Item 5 / O7:** cloudformation.aws.a's note reads my teardown position as favouring Delete. It does not.
+  - I asked for **Retain** on the bucket (the store is the customer's secrets) and on the log group (the audit trail). iam.aws.a's deploy role also denies `s3:DeleteBucket` and `logs:DeleteLogGroup`, so Delete will fail with that role anyway.
+  - "Teardown removes what the stack made" was about leaving nothing dangling: DNS, roles, functions and the distribution. It was not about deleting data.
+  - Make it Retain on both, with a documented empty-and-delete step for the customer.
+- **Item 6:** no reserved concurrency yet.
+- **Item 7:** no test that the cache policy id is CachingDisabled yet.
+- **Item 8:** `DomainName` in vault.yaml has no AllowedPattern (vault-edge.yaml has one), and `HostedZoneId` is a plain String.
+
+### New
+22. **`AccessTokenSecretArn` (bring your own secret).**
+    - The dynamic reference resolves with the deploy role's rights. iam.aws.a scopes secrets to `secret:sws-vault-<id>-*` with no GetSecretValue beyond that one secret.
+    - So an arbitrary ARN either fails, or pushes the deploy role towards GetSecretValue on any secret, which would let a tampered template read every secret in the customer's account.
+    - Drop the parameter for v1. If it stays, pin it by AllowedPattern to `secret:sws-vault-<id>-*` in this account and region.
+
+### O4
+Accepted for v1, as ruled in the step 3 review, on conditions (a) to (e).
+- Condition (b) is now met by design: /health is not a server route.
+- Conditions (a) and (c) stay open: constant-time compare and no logging of the token in the server; reserved concurrency in the template.

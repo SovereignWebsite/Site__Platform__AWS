@@ -99,3 +99,8 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - Principal * only with AuthType NONE (boto3.aws.a checks whether IAM can enforce it, else the template check does);
   - /health as a CloudFront Function, so every server route stays gated.
   Two older lines still contradict it: the roles table (line 9, SourceArn with `<id>*`) and the phase 1 paragraph (line 48, "token gates health"). Asked iam.aws.a to tidy them. A CloudFront Function /health proves only that the distribution answers, not that the server runs. That is fine as a consistency check.
+- 23 Nov 2026, 16:10, security.aws.a: Vault stack 0.2.0 (cloudformation.aws.a 7ea995f) reviewed against my 0.1.0 review.
+  - Fixed: image pinned by digest; the boundary from the -access stack; names sws-vault-<id>-* with no "-" in the id (a fixed length is not needed); /health as a CloudFront Function (no injection from its parameters).
+  - Still open: the bucket policy without the outside-account Deny; O7, where my position is Retain for the bucket and log group, not Delete as their note says; reserved concurrency; the cache-policy test; the DomainName pattern.
+  - New: AccessTokenSecretArn would push the deploy role towards GetSecretValue on any secret. Drop it for v1, or pin it to sws-vault-<id>-*.
+  - O4 accepted for v1 on conditions (a)-(e); (b) is met by the /health design.
