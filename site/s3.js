@@ -10,10 +10,12 @@
   "use strict";
   var P = window.Platform, $ = function (id) { return document.getElementById(id); };
   var MAX_SHOW = 5 * 1024 * 1024;
-  var state = { acct: null, region: "us-east-1", bucket: null, prefix: "", view: 0, file: 0, sizes: {}, key: "" };
+  var state = { acct: null, region: "us-east-1", bucket: null, prefix: "", view: 0, file: 0, sizes: noProto(), key: "" };
   // Quick clicks: each new view (buckets, a bucket, a folder) and each file opened takes a number; an answer that
   // comes back after a newer click is dropped, so a slow, older answer never lands under the newer one.
   function newView(alsoFile) { if (alsoFile) state.file++; return ++state.view; }
+  // Sizes by key: a key such as "constructor" must not find Object.prototype's (R-016).
+  function noProto() { return Object.create(null); }
 
   // Cloud Control: listing and reading work from us-east-1 for buckets in any region (checked 23 Nov 2026);
   // a change must go to the bucket's own region (S3 answers 301 otherwise).
@@ -79,7 +81,7 @@
       // Same bucket, already answering: only the folder or the file changes.
       if (r.prefix !== state.prefix) { state.prefix = r.prefix; return listObjects(null, r.key); }
       arrive = false;
-      if (r.key) { openFile(r.key, state.sizes[r.key]); return land($("s3-file").firstChild); }
+      if (r.key) return linked(r.key, $("s3-objects"));
       state.file++; state.key = ""; $("s3-file").textContent = ""; return land($("s3-objects").querySelector(".crumbs button:last-of-type"));
     }
     listBuckets(function (names) {
@@ -146,6 +148,8 @@
     var box = $("s3-objects"), st = P.el("p", { class: "status" });
     P.say($("s3-status"), "");
     var arrived = arrive; arrive = false;
+    // Reached from a link (security.aws.a's note to R-016): say so, as the link's sender chose this bucket, not you.
+    if (arrived) box.appendChild(P.el("p", { class: "small", text: "You came here from a link. Check that this is the bucket you meant; nothing changes unless you approve." }));
     box.appendChild(P.el("p", { text: name + " does not answer this site yet. S3 lets a web page read a bucket only when the bucket's CORS rules allow it. This plan adds one rule: GET and HEAD, from " + location.origin + " only. Rules already there are kept." }));
     var now = plan.before ? JSON.stringify(plan.before, null, 2) : "", after = JSON.stringify(plan.after, null, 2);
     box.appendChild(P.el("h4", { text: "What changes (- removed, + added)" }));
@@ -181,7 +185,7 @@
     var box = $("s3-objects"), st = $("s3-status"), b = state.bucket, region = state.bucketRegion;
     var my = token ? state.view : newView(false);
     var arriving = !token && arrive; if (!token) arrive = false;
-    if (!token) { box.textContent = ""; state.sizes = {}; state.key = openKey || ""; go(b, openKey || state.prefix); if (!openKey) { state.file++; $("s3-file").textContent = ""; } }
+    if (!token) { box.textContent = ""; state.sizes = noProto(); state.key = openKey || ""; go(b, openKey || state.prefix); if (!openKey) { state.file++; $("s3-file").textContent = ""; } }
     P.say(st, "Listing " + b + "/" + state.prefix + "...");
     read().then(function (c) {
       var q = "?list-type=2&delimiter=%2F&max-keys=500" + (state.prefix ? "&prefix=" + encodeURIComponent(state.prefix) : "") + (token ? "&continuation-token=" + encodeURIComponent(token) : "");
@@ -228,9 +232,21 @@
       var nt = d.getElementsByTagName("NextContinuationToken")[0];
       if (nt) { var more = P.el("button", { type: "button", class: "quiet", text: "Load more" }); more.onclick = function () { more.remove(); listObjects(nt.textContent); }; box.appendChild(P.el("div", { class: "row" }, [more])); }
       P.say(st, b + "/" + state.prefix, "ok");
-      if (openKey) openFile(openKey, state.sizes[openKey]);
-      if (arriving) { land(openKey ? $("s3-file").firstChild : box.querySelector(".crumbs button:last-of-type")); }
+      if (openKey) linked(openKey, box, arriving);
+      else if (arriving) land(box.querySelector(".crumbs button:last-of-type"));
     }).catch(function (e) { if (my === state.view) P.say(st, e.message + (/Failed to fetch/.test(e.message) ? " (S3 refused the browser: check the bucket's CORS rule and region " + region + ".)" : ""), "bad"); });
+  }
+  // A file named by a link opens with no click only when the listing gave its size and it is small enough to show
+  // (or a zip, read by byte ranges). Otherwise the folder is shown and the file waits for a click, so a link alone
+  // cannot make the page download a large object (R-016, security.aws.a).
+  function linked(key, box, arriving) {
+    var size = state.sizes[key], name = key.split("/").pop(), zip = window.Zip && Zip.isZip(key) && size > 22;
+    var why = !(size >= 0) ? name + " is not in the part of this folder listed so far; find it in the list (Load more) and click it to open it."
+      : !zip && size > MAX_SHOW ? name + " is " + human(size) + ", more than a link opens by itself; click it in the list to open it." : "";
+    if (!why) { openFile(key, size); if (arriving !== false) land($("s3-file").firstChild); return; }
+    state.file++; $("s3-file").textContent = "";
+    P.say($("s3-status"), why, "ok");
+    if (arriving !== false) land(box.querySelector(".crumbs button:last-of-type"));
   }
   function human(n) { return n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(1) + " MB"; }
 

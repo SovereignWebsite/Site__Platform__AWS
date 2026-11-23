@@ -24,3 +24,9 @@ Kept by s3.aws.a@SovereignWebsite.dinis. Newest asks appended; order of work is 
 - W4-1: `#/s3/<bucket>` without the trailing slash opened nothing on a fresh load. **Done** (local): parse() takes it, and go() tidies it to the slash form in place (no extra Back step). Test: test/s3/route.e2e.cjs case 7.
 - W4-2: click a bucket, then Back: the address went empty but the bucket stayed open. **Done** (local): Back to an address with no bucket closes it and shows the list of buckets. Test: route.e2e.cjs case 8.
 - W4-3: addresses land at the top of the page: covered by d5276b8 (W3-2).
+
+## From security.aws.a
+
+- R-016 (Low): a link opened a file with no click and no size cap. **Done** (local): from a link a file opens only when the listing gave its size and it is at most 5 MB (or a zip, read by byte ranges); otherwise the folder is shown and the file waits for a click. Sizes are kept in a null-prototype object. A CORS plan reached from a link says so. Tests: route.e2e.cjs cases 9 and 10.
+- R-016, left to dev.1.aws.a (its streamed gunzip, first-note item 2): a cap on gunzip output for a clicked file, and a .zip of unknown size treated as a zip.
+- R-016 notes, open: the account label beside the bucket in the heading; TWIN on the S3 status line in twin mode (may be the shell's, aws.c).

@@ -105,7 +105,38 @@ const fail = (m) => { throw new Error(m); };
   if (await pg.$("#s3-buckets button[aria-pressed=true]")) fail("bucket still pressed after Back to no bucket");
   if (!(await pg.$(`#s3-buckets button:has-text('${deps}')`))) fail("bucket list gone after Back");
 
+  // 9. A link alone never downloads a file of unknown or large size (R-016): the folder is shown and the file
+  // waits for a click. A small file of known size still opens from a link (case 4).
+  const gets = []; await pg.exposeFunction("__get", (u) => gets.push(u));
+  await pg.evaluate(() => {
+    const h = window.AwsTwin.handle;
+    window.AwsTwin.handle = (u, i) => {
+      const r = h(u, i); if (!r || !/\.s3\.|\/\/s3\./.test(u)) return r;
+      if (!/list-type/.test(u)) { window.__get(u); return r; }
+      // the listing says every .gz is 6 MB, more than a link may open by itself
+      return r.then((res) => res.text().then((t) => new Response(t.replace(/(<Key>[^<]*\.gz<\/Key>(?:(?!<\/Contents>)[\s\S])*?<Size>)\d+/g, "$16291456"), { status: res.status, headers: res.headers })));
+    };
+  });
+  const folder = `#/s3/${logs}/cloudfront/2026/11/21/10/`;
+  await pg.evaluate((b) => { location.hash = "#/s3/" + b + "/lambdas-dependencies/not-listed-here.zip"; }, deps);
+  await pg.waitForSelector("#s3-status >> text=not in the part of this folder listed so far");
+  await pg.evaluate((h) => { location.hash = h; }, folder + encodeURIComponent(gz));
+  await pg.waitForSelector("#s3-status >> text=more than a link opens by itself");
+  await pg.waitForTimeout(300);
+  if (gets.length) fail("a link fetched a file: " + gets.join(" "));
+  if ((await pg.textContent("#s3-file")).trim()) fail("a file view shown from a link to a large file");
+  await pg.click(`#s3-list button:has-text('${gz.trim()}')`);
+  await pg.waitForSelector("text=JSON Lines");
+  if (gets.length !== 1) fail("a click on the large file did not open it once: " + gets.length);
+
+  // 10. A key named like an Object property has no size from the prototype, so a link does not open it.
+  gets.length = 0;
+  await pg.evaluate((b) => { location.hash = "#/s3/" + b + "/lambdas-dependencies/constructor"; }, deps);
+  await pg.waitForSelector("#s3-status >> text=not in the part of this folder listed so far");
+  await pg.waitForTimeout(300);
+  if (gets.length) fail("a link to 'constructor' fetched it: " + gets.join(" "));
+
   if (errors.length) fail("page errors: " + errors.join(" | "));
-  console.log("OK (s3 address: clicks write it, reload and links open it, Back steps back, slashless bucket, Back to no bucket, only this account's buckets)");
+  console.log("OK (s3 address: clicks write it, reload and links open it, Back steps back, slashless bucket, Back to no bucket, no download from a link alone, only this account's buckets)");
   await br.close(); srv.close();
 })().catch((e) => { console.error("FAIL", e.message); process.exit(1); });
