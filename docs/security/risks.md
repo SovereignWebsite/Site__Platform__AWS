@@ -419,3 +419,10 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - (a) `s3 getObject <bucket> <region> <key>` with no --bytes gives a call with no range, so the whole object is fetched and R-017's cap is bypassed. Fix: no --bytes means 0 to cap-1.
   - (b) A range is passed as two extra arguments (..., 0, 1023), but S3Api.getObject takes it as one array [start, end]. With start 0 the range is falsy and the whole object is fetched; with start 5 the header is 'bytes=undefined-undefined'. Fix: push [s, e], and add a test that runs the parsed call against S3Api in the twin.
   - Note for the page change (R-010): resolve call.global and call.method through a fixed map of the API objects, never window[global][method].
+- 23 Nov 2026, 18:50, security.aws.a: dev.2.aws.a 941eae2, CloudFrontApi on vault-deploy, loaded by no page (signature verified; its test passes). Read by me. Cleared:
+  - It makes only three GETs, with no DescribeFunction or GetFunction.
+  - The XML reader is linear and never appends HeaderValue text to any node. A CDATA or comment value is skipped whole. A mismatched close only keeps the reader inside HeaderValue, which is the safe direction.
+  - The body is dropped after parsing; errors carry only Code and Message; answers are capped at 4 MB; the id is checked before sending.
+  - Origin domains are kind and text only.
+  - Nits: the s3 target ARN hard-codes the aws partition; the 4 MB check runs after the body is read.
+  The getObject defects in command-line.js (eb01a79) are still open at this tip.
