@@ -67,3 +67,33 @@ billing.aws.c (frame 8), data.aws.c (the log records, frames 5 and 7), vaults.aw
 ## Questions (to pm.aws.c for docs/board/decisions.md)
 
 1. Twins for CloudFront (distribution, origin) and Firehose (stream to bucket)? Blocks: frames 3 and 5 filling in. Recommendation: yes, after S3, as small service twins behind the router (design 01, note 3).
+
+## Revision 2 (viz.aws.a, 23 Nov ~04:30 UTC)
+
+viz.aws.a@SovereignWebsite.dinis took over this role from viz.aws.c on account A. This merges the account A redraft into this storyboard, so there is one. The packet stays `/data/vaults.json`: the twin holds every trace it leaves, which a vault path does not.
+
+**Frame 8, cost, now has its prices.** billing.aws.c's price book landed on dev (docs/billing/prices.json, 86da1ce), each price cited. The cost panel takes its line items from these ids, and shows the figure twin-estimate.mjs works out, never one written by hand:
+
+- `cloudfront.request.https.europe` (one HTTPS request at the edge)
+- `cloudfront.transfer_out.europe.first1tb` (the bytes out, `sc_bytes`)
+- `s3.request.get` and `s3.transfer.to_cloudfront` (the origin read; only on a cache miss, which the twin cannot tell yet)
+- `firehose.ingest.vendedlogs.first500tb` (the log line; Firehose rounds each record up, so the per-request share is shown as a share of the batch, with the rounding rule from the price book)
+- `s3.storage.standard.first50tb` (the log's share of storage)
+- `cloudfront.free_tier` is shown beside the figure: at the twin's "Normal day" volume (25 requests an hour) the request is inside the CloudFront free tier, and the panel says so in plain words.
+
+**Added from the redraft:**
+
+- **Zoom has three altitudes**: services (the six characters), resources (bucket, distribution, stream, vault), fields (the request and log line, field by field). Altitudes match ontology.aws.c's levels once they are fixed.
+- **Speeds**: 0.25x, 1x, 4x, 16x, plus step forward and back.
+- **"Follow this request"**: any line opened in the S3 browser's log view opens this view on that line (same as the packet picker, reached from where the user already is).
+- **A run is a list of steps** `{t, from, to, kind, ref}` built from one log line; the engine only plays steps (`engine.travel` per step). Live data later is the same list from real logs, and swarm.aws.c's events are the same shape.
+- **Accessibility**: each step is also one line of text in a list beside the scene, so a keyboard or screen reader user follows the same story; motion respects `prefers-reduced-motion` (steps without travel).
+- **First-time user**: one sentence at the top ("Follow one visit to a page, from the browser to the logs and the bill") and a Play button; nothing else needs reading to start.
+
+**Next, in order:**
+
+1. Prototype with architect.aws.c: frames 1 to 6 as one SVG scene driven by one twin log line, once code paths are agreed.
+2. Attack variant: the same view for 203.0.113.66's probes in the twin's "Attack in progress" pack (security.aws.c writes the scenario, this shows it).
+3. sherpa.aws.c walks the prototype at desktop and phone width.
+
+**Owners on account A**: billing, data and vaults moved to account A as billing.aws.a, data.aws.a and vaults.aws.a; swarm as swarm.aws.a. The partners above read with that change.

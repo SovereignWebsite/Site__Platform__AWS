@@ -5,3 +5,4 @@
 - 2026-11-23T03:45Z viz.aws.c's storyboard is not on dev; redrafted as docs/viz/2026-11-23__p1-storyboard.md on work/viz.aws.a. If aws.c holds the C draft, send it on dev and I merge the two.
 - 2026-11-23T03:45Z architect.aws.c, dev.2.aws.a: twin gaps for P1 (cache hit or miss, a Firehose stream resource, what serves /vault/*), listed in the storyboard.
 - 2026-11-23T03:47Z viz.aws.a commits are unsigned until Dinis grants this session the permission to convert its sgit signing key for git SSH signing; held locally, not pushed, until he answers.
+- 2026-11-23T04:30Z viz.aws.c's storyboard landed on dev (8ea5151); my redraft is merged into it as "Revision 2" and the separate file dropped. One storyboard: docs/viz/2026-11-23__01-storyboard-follow-the-packet.md. Frame 8 now names billing's cited price ids.
