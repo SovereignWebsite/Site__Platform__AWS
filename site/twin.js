@@ -12,8 +12,8 @@
   // some extra traffic flying around".
   var PACKS = {
     baseline: { title: "Normal day", about: "A small site behind CloudFront, its logs written by Firehose, two vaults in use.", perHour: 25, attack: false },
-    attack: { title: "Attack in progress", about: "One address scanning for secrets and admin pages, then trying path traversal on the vault API, among normal visitors.", perHour: 25, attack: true },
-    surge: { title: "Traffic surge", about: "Ten times the usual visitors, most of them on one vault's files.", perHour: 250, attack: false, hot: "/vault/vault-demo-001/files" }
+    attack: { title: "Attack in progress", about: "One address scanning for secrets and admin pages, then trying path traversal on the vault API, among normal visitors.", perHour: 25, attack: true, see: { label: "the CloudFront logs of 22 Nov, 11:00", bucket: "logs", prefix: "cloudfront/2026/11/22/11/" } },
+    surge: { title: "Traffic surge", about: "Ten times the usual visitors, most of them on one vault's files.", perHour: 250, attack: false, hot: "/vault/vault-demo-001/files", see: { label: "the CloudFront logs of 22 Nov, 11:00", bucket: "logs", prefix: "cloudfront/2026/11/22/11/" } }
   };
   var pack = "baseline";
   try { var qp = new URLSearchParams(root.location.search).get("pack"); if (qp && PACKS[qp]) pack = qp; else { var sp = localStorage.getItem("sws-aws-twin-pack"); if (sp && PACKS[sp]) pack = sp; } } catch (e) { /* none */ }
@@ -140,9 +140,13 @@
     put(B.dotted, "index.html", "text/html", "<!doctype html>\n<html lang=\"en-GB\"><head><title>Dotted bucket</title></head><body><p>A bucket whose name has dots.</p></body></html>\n");
 
     var K = "token.actions.githubusercontent.com:sub";
+    function platformTrust() {
+      return { Version: "2012-10-17", Statement: [{ Effect: "Allow", Principal: { Federated: "accounts.google.com" }, Action: "sts:AssumeRoleWithWebIdentity",
+        Condition: { StringEquals: { "accounts.google.com:aud": "twin-client-id.apps.googleusercontent.com", "accounts.google.com:sub": "000000000000000000001" } } }] };
+    }
     state = {
       objects: objects, cors: seedCors(),
-      roles: { "sovereignwebsite-factory-dns": { Version: "2012-10-17", Statement: [{ Effect: "Allow", Principal: { Federated: "arn:aws:iam::" + ACCOUNT + ":oidc-provider/token.actions.githubusercontent.com" }, Action: "sts:AssumeRoleWithWebIdentity",
+      roles: { "sws-aws-platform-read": platformTrust(), "sws-aws-platform-change": platformTrust(), "sovereignwebsite-factory-dns": { Version: "2012-10-17", Statement: [{ Effect: "Allow", Principal: { Federated: "arn:aws:iam::" + ACCOUNT + ":oidc-provider/token.actions.githubusercontent.com" }, Action: "sts:AssumeRoleWithWebIdentity",
         Condition: { StringEquals: { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com", [K]: ["repo:SovereignWebsite@358722364/SovereignWebsite__IaC@1464324035:environment:apply", "repo:SovereignWebsite@358722364/SovereignWebsite__Factory@1464324035:environment:apply"] } } }] } },
       template: null, stackStatus: "CREATE_COMPLETE", changeSets: {}, requests: {}
     };
