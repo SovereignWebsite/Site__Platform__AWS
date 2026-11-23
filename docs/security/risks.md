@@ -189,3 +189,9 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - work/ec2.aws.a 5ab6999: docs only.
   - The rest are notes only.
   No new risks. The register is unchanged: R-009 High stays open; R-022 Low awaits Dinis.
+- 23 Nov 2026, 16:45, security.aws.a: cloudtrail.aws.a ct-deploy.js (work/cloudtrail.aws.a 7eda626, Vault deploy step 9, docs-only reference code). Reviewed the rule list on request. No register risk; these are rule gaps to fill before it moves into site/:
+  (1) A call made as sws-vault-<id>-deploy without invokedBy cloudformation.amazonaws.com should raise a high alarm: deploy role used outside CloudFormation. The role trusts only CloudFormation, so any such call is a sign of compromise or a trust change. Today the role name alone counts as "by CloudFormation" and hides it.
+  (2) Out-of-band skips refused attempts. A refused direct change to a Vault's resources should be its own medium alarm (as R-021 c).
+  (3) Sensitive reads: GetSecretValue on sws-vault-<id>-token, and GetFunctionConfiguration or GetFunction on the function, while the token sits in its configuration (O3). Either, by anyone other than CloudFormation or the function's role, should be a medium alarm. These are readOnly management events, so isOutOfBand never sees them.
+  (4) In one-stack mode, "by CloudFormation" cannot tell this Vault's stack from another stack changing the Vault's resources. Say so as a limit. In access-stack mode, require the deploy role.
+  (5) Any Root identity acting on a Vault's resources should be high, whatever the call.
