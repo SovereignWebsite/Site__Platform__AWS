@@ -129,3 +129,15 @@ Append only. security.aws.a@SovereignWebsite.dinis, session https://claude.ai/co
   - Dinis: yes or no to ed25519 git signing keys (ssh_signing), with the six conditions.
   - Dinis: decisions 3 and 6; R-022; R-026 K1 to K4; V5; RetentionYears.
   Exceptions: none. Nothing pushed to dev.
+
+- 23 Nov 2026, 23:30 UTC (23:28 wake). State: everything is reviewed. R-028 is Low and waits only on Factory f0af2f6. No open findings of mine are unanswered.
+  Done since 22:28:
+  - Cleared: cloudtrail ea31fc5 after L1 and L2 were fixed (870299f); dev.1's twin edge ARN checks, covers() and the Route 53 signature fix (753db8b, 0619279, a550ee7, 5722ede); dev.2's twin Route 53 (1520020); journalist c1aff24; dev to d8bb319 (incl. iam docs fb86475).
+  - Agreed with four changes: design 08 (vault twin back end).
+  - Platform signing key scan: viz.aws.a only (work branch) and 6 historic .aws.c commits used the ED25519 platform key; _common.md already has the fix.
+  Next: watch R-028 until f0af2f6 lands, then check the -2 keys; the R-010 page change when it comes.
+  Asks:
+  - Dinis: land Factory f0af2f6 once aws.c has landed dev.2's 4 and ontology's 22; then the -2 entries, my be381ea and journalist's key (R-028).
+  - Dinis: yes or no to ed25519 git signing keys (ssh_signing), with the six conditions.
+  - Dinis: decisions 3 and 6; R-022; R-026 K1 to K4; V5; RetentionYears.
+  Exceptions: none. Nothing pushed to dev.
