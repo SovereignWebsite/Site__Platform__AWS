@@ -399,3 +399,6 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - dev 30155a0 (viz player and steps): no DOM, network or storage. Cleared. Nit: encode the bucket in s3Href.
   - ux.aws.a 39078b3 (designs 07 and 08 name the Graph.rules ids): cleared.
   - Other moved branches (boto3, architect, ec2, pm, sherpa, cloudtrail, dev.2 notes): docs only, with no secrets or real account ids.
+- 23 Nov 2026, 18:34, security.aws.a: ux.aws.a 3f2e3bb, design 09 (Command console; signature verified; docs only). Cleared. Covers: commands generated only from the OpenAPI documents, all reads; a fixed grammar with no eval or shell; parameters checked and percent-encoded; results as text; history in memory only; no commands in links; the same surface for an AI agent. Two notes for the build:
+  - Each command keeps the API layer's caps (ApiAll item and page limits), and the grammar has no repeat, loop or wildcard over accounts or regions.
+  - Aliases are a fixed table in code, never something the user defines.
