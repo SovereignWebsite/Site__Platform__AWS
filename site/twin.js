@@ -865,9 +865,11 @@
     ev(at, st.name, "AWS::CloudFormation::Stack", "CREATE_COMPLETE", { physical: st.stackId, outputs: stackOutputs(st) });
     return out;
   }
-  // What the account's -edge stacks have made (us-east-1, CREATE_COMPLETE): certificate ARN to its domain, and web ACL ARNs.
-  // A Vault stack's CertificateArn and WebAclArn must be among them, or CloudFront refuses the distribution (the reasons
-  // follow CloudFront's InvalidViewerCertificate and InvalidWebACLId errors; the wording is the twin's).
+  // What CloudFront checks (cloudformation.aws.a): the certificate exists in us-east-1 in this account, is issued, and covers
+  // the domain exactly or by a one-level wildcard; the web ACL exists, CLOUDFRONT scope, in this account. vault.yaml takes
+  // any ARN (a customer may bring their own); the twin knows only the certificates and web ACLs it holds, which today are
+  // those of the account's completed -edge stacks, so any other ARN is not found. Reasons after CloudFront's
+  // InvalidViewerCertificate and InvalidWebACLId; all wording is the twin's until a real call confirms it.
   function edgeFault(acc, account, p) {
     var certs = map(), acls = map();
     Object.keys(acc.stacks).forEach(function (k) {
@@ -878,9 +880,15 @@
     });
     var wrap = function (code, m) { return "Resource handler returned message: \"" + m + "\" (Service: CloudFront, Status Code: 400, Error Code: " + code + ") (the twin's wording)"; };
     if (p.CertificateArn && !own(certs, p.CertificateArn)) return wrap("InvalidViewerCertificate", "The specified SSL certificate doesn't exist, isn't in us-east-1 region, isn't valid, or doesn't include a valid certificate chain.");
-    if (p.CertificateArn && p.DomainName && certs[p.CertificateArn] !== p.DomainName) return wrap("InvalidViewerCertificate", "The certificate that is attached to your distribution doesn't cover the alternate domain name (CNAME) that you're trying to add.");
+    if (p.CertificateArn && p.DomainName && !covers(certs[p.CertificateArn], p.DomainName)) return wrap("InvalidViewerCertificate", "To add an alternate domain name (CNAME) to a CloudFront distribution, you must attach a trusted certificate that validates your authorization to use the domain name.");
     if (p.WebAclArn && !own(acls, p.WebAclArn)) return wrap("InvalidWebACLId", "Web ACL is not accessible by the requester.");
     return null;
+  }
+  // A certificate's name covers a host exactly, or as *.<parent> for one more label (no deeper).
+  function covers(name, host) {
+    if (name === host) return true;
+    if (!/^\*\./.test(name || "")) return false;
+    var i = host.indexOf("."); return i > 0 && host.slice(i + 1) === name.slice(2);
   }
   function taken(acc, type, physical) { return !!(acc.retained && acc.retained[type + " " + physical]); }
   function cfnErr(code, msg, status) { return xml("<ErrorResponse xmlns=\"http://cloudformation.amazonaws.com/doc/2010-05-15/\"><Error><Type>Sender</Type><Code>" + code + "</Code><Message>" + esc(msg) + "</Message></Error><RequestId>twin</RequestId></ErrorResponse>", status || 400); }

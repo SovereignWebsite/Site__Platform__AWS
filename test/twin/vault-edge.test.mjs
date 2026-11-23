@@ -102,12 +102,16 @@ let checks = 0;
   t.clock.tick(20 * 60 * 1000);
   assert.equal(await status(t), "ROLLBACK_COMPLETE", "an unknown certificate rolls the Vault back");
   assert.match(await reasons(t), /InvalidViewerCertificate/, "with CloudFront's reason");
+  { // RetainExceptOnCreate: a failed create deletes the bucket and the log group, so the rollback shows them deleted.
+    const ev = (await cfn(t, { Action: "DescribeStackEvents", StackName: V }, VR)).text, last = (l) => [...ev.matchAll(/<member>(.*?)<\/member>/gs)].map((m) => m[1]).find((x) => x.includes("<LogicalResourceId>" + l + "<"));
+    ["VaultBucket", "VaultLogs"].forEach((l) => assert.match(last(l), /<ResourceStatus>DELETE_COMPLETE</, l + " deleted in the rollback, not retained"));
+  }
   // A certificate for another domain.
   t = fresh();
   const other = await edgeCertificate(t, ID, "other.example.com");
   await vault(t, { DomainName: "vault.example.com", CertificateArn: other });
   t.clock.tick(20 * 60 * 1000);
-  assert.equal(await status(t), "ROLLBACK_COMPLETE"); assert.match(await reasons(t), /doesn't cover the alternate domain name/, "a certificate for another name");
+  assert.equal(await status(t), "ROLLBACK_COMPLETE"); assert.match(await reasons(t), /must attach a trusted certificate that validates your authorization/, "a certificate for another name");
   // A web ACL ARN of the right form that no -edge stack made.
   t = fresh();
   await vault(t, { WebAclArn: "arn:aws:wafv2:us-east-1:444455556666:global/webacl/sws-vault-" + ID + "-waf/00000000-0000-4000-8000-000000000000" });
@@ -123,7 +127,7 @@ let checks = 0;
   assert.equal(await status(t), "CREATE_COMPLETE", "with the -edge stack's outputs the Vault completes");
   const dist = await (await t.handle("https://cloudfront.amazonaws.com/2020-05-31/distribution", { headers: H("us-east-1") })).text();
   assert.deepEqual(tag(dist, "WebACLId"), [eo.WebAclArn], "and its distribution carries the web ACL");
-  checks += 11;
+  checks += 13;
 }
 
 console.log("OK (twin vault -edge stack: " + checks + " checks; us-east-1 only, certificate and web ACL by condition, their ARNs as outputs, DNS elsewhere waits with the validation record, refusals write nothing, teardown; the Vault takes its certificate and web ACL, and CloudFront refuses any other)");
