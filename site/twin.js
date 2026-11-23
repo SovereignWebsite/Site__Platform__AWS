@@ -310,7 +310,11 @@
     if (!signed(init)) return lambdaJson({ message: "Missing Authentication Token" }, 403, "MissingAuthenticationTokenException");
     if ((init.method || "GET").toUpperCase() !== "GET") return lambdaJson({ Type: "User", Message: "Not in the twin yet: read calls only" }, 400, "InvalidRequestContentException");
     var path = new URL(url).pathname, m;
-    if (/^\/2015-03-31\/functions\/?$/.test(path)) return Promise.all(Object.keys(FN).sort().map(fnConfig)).then(function (fs) { return lambdaJson({ Functions: fs, NextMarker: null }); });
+    // ListFunctions returns a subset of FunctionConfiguration: no State or LastUpdateStatus fields (AWS's
+    // ListFunctions reference); NextMarker only when more functions follow, so none here (three functions, up to 50 a page).
+    if (/^\/2015-03-31\/functions\/?$/.test(path)) return Promise.all(Object.keys(FN).sort().map(fnConfig)).then(function (fs) {
+      return lambdaJson({ Functions: fs.map(function (c) { var o = Object.assign({}, c); delete o.State; delete o.LastUpdateStatus; return o; }) });
+    });
     if ((m = /^\/2015-03-31\/functions\/([^/]+)\/configuration\/?$/.exec(path))) {
       var n = decodeURIComponent(m[1]).replace(/^arn:aws:lambda:[a-z0-9-]+:\d{12}:function:/, "");
       if (!own(FN, n)) return lambdaJson({ Type: "User", Message: "Function not found: " + fnArn(n) }, 404, "ResourceNotFoundException");
