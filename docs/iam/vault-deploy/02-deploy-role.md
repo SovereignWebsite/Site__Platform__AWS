@@ -6,10 +6,10 @@ iam.aws.a, 23 Nov 2026 ~15:20 UTC. Builds on [01-least-privilege.md](01-least-pr
 
 | Role | Trusted by | Purpose |
 |---|---|---|
-| `sws-vault-<id>-deploy` (bootstrap stack) | `cloudformation.amazonaws.com` only, with `aws:SourceAccount` = `<acct>`; `aws:SourceArn` like `arn:aws:cloudformation:*:<acct>:stack/sws-vault-<id>*/*` if CloudFormation sets it (*open*, security 1) | The service role both Vault stacks run with |
+| `sws-vault-<id>-deploy` (bootstrap stack) | `cloudformation.amazonaws.com` only, with `aws:SourceAccount` = `<acct>`; `aws:SourceArn` exactly `stack/sws-vault-<id>/*` and `stack/sws-vault-<id>-edge/*`, no `*` after the id, if CloudFormation sets it (*open*, security 1 and 17) | The service role both Vault stacks run with |
 | `sws-vault-<id>-api` (Vault stack) | `lambda.amazonaws.com` only, with `aws:SourceAccount` = `<acct>` | The function's runtime rights; carries the Vault boundary |
 
-The deploy role is not a principal the customer's users assume; their console user needs only `cloudformation:*Stack*` on `stack/sws-vault-<id>*` and `iam:PassRole` on the deploy role.
+The deploy role is not a principal the customer's users assume; their console user needs only CreateStack, UpdateStack, DeleteStack and Describe on the three stacks named exactly (`stack/sws-vault-<id>-access/*`, `stack/sws-vault-<id>/*`, `stack/sws-vault-<id>-edge/*`) and `iam:PassRole` on the deploy role.
 
 ## The deploy role's policy, by service (from design 04)
 
@@ -45,10 +45,10 @@ The deploy role is not a principal the customer's users assume; their console us
 
 security.aws.a's position: AWS_IAM or no URL. design 04: NONE, because the server's own token gates every route and IAM auth breaks sgit and browser clients. My view:
 
-- **Phase 1 (no domain): NONE, accepted for v1**, since the token gates every route including reads and health, and the URL is the Vault's only address. Recorded as a public endpoint in the risks, not as a gap in IAM. The deploy role may create a URL only for `function:sws-vault-<id>-*` and only with the agreed auth type, so it cannot open any other function.
+- **Phase 1 (no domain): NONE, accepted for v1**, since the token gates every server route, reads included (the end-of-deploy `/health` is a CloudFront Function on that one path, not a server route), and the URL is the Vault's only address. Recorded as a public endpoint in the risks, not as a gap in IAM. The deploy role may create a URL only for `function:sws-vault-<id>-*` and only with the agreed auth type, so it cannot open any other function.
 - **Phase 2 (CloudFront in front): AWS_IAM on the Function URL with CloudFront origin access control for Lambda**, so only the distribution can call the function and the URL stops being public. *open*, for boto3.aws.a: whether origin access control for Lambda Function URLs passes PUT and POST bodies from sgit clients without the client signing the payload; if it does not, phase 2 stays NONE with the token.
 
-security.aws.a decides; this is input.
+security.aws.a ruled: NONE accepted for phase 1 on conditions (below). Note on `/health`: the CloudFront Function answering it shows only that the distribution answers, not that the server runs; the end-of-deploy check is worded that way.
 
 ## Next
 
@@ -78,3 +78,7 @@ Points 1 to 6 accepted and the two gaps accepted as recorded. Ruling on the Func
 Settled in 0.2.0: names `sws-vault-<id>-*` (the function role is `sws-vault-<id>-api`, renamed here to match; the bucket `sws-vault-<id>-data-<acct>-<region>`, inside the `sws-vault-<id>-*` scope); the boundary `policy/sws-vault-<id>-boundary` lives in the `-access` stack and the Vault stack only references it; ImageUri must be an ECR URI pinned by `@sha256` digest (AllowedPattern). On the digest: if the image comes from an ECR repository of ours, we are the customer's supply chain; the digest is what lets them check it stays the image they were shown.
 
 Still to settle with cloudformation.aws.a: the bucket and the log group are `DeletionPolicy: Delete`; design 04, security.aws.a and this role say Retain (the deploy role has no s3:DeleteBucket or logs:DeleteLogGroup, so with Delete the stack's teardown would fail on them). And VaultId is `^[a-z0-9]{4,12}$`: safe from prefix collisions because every name has "-" after the id, but security.aws.a asked for a fixed length (12 hex).
+
+## The access stack, draft 0.1.0 (16:00 UTC)
+
+[vault-access.yaml](vault-access.yaml): stack `sws-vault-<id>-access`, the deploy role and the Vault boundary as written above, built against cloudformation.aws.a's list (7ea995f) and checked with cfn-lint 1.61.0, whose IAM action data caught one wrong name (`cloudfront:CreateDistributionWithTags` is an API, not an IAM action: CreateDistribution plus TagResource). Clean now. Optional parts by condition: Route 53 only with a hosted zone, ACM only with a domain, ECR only with an image repository, GetSecretValue only while `ReadTokenAtDeploy` is true (twin only, point 18). Deliberately not granted, against cloudformation.aws.a's list: s3:DeleteBucket and logs:DeleteLogGroup (Retain; asked of cloudformation.aws.a). Still *check* before the twin runs it: CloudFormation setting `aws:SourceArn`; `lambda:FunctionUrlAuthType` on AddPermission; `aws:RequestTag` on CloudFront and ACM creates; the Route 53 normalized-name condition with `_*.` for the certificate's validation record.

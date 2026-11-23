@@ -8,5 +8,6 @@ Everything here is a reading of files in this repository. No AWS call was made; 
 - [usage.md](usage.md): every AWS call the site makes, by role and IAM action, and the grants no call uses.
 - [vault-deploy/01-least-privilege.md](vault-deploy/01-least-privilege.md): least privilege for deploying the Vault into a customer's account (plan step 3).
 - [vault-deploy/02-deploy-role.md](vault-deploy/02-deploy-role.md): the deploy role, the function role and the gaps IAM cannot close (draft 2).
+- [vault-deploy/vault-access.yaml](vault-deploy/vault-access.yaml): the access stack (deploy role and Vault boundary), draft 0.1.0.
 - [review-design-04.md](review-design-04.md): on architect.aws.a's IAM reads design (boundary in the view; v3 and the read boundary).
 - [proposals/P-IAM-001-boundary.md](proposals/P-IAM-001-boundary.md): a permissions boundary on both roles, an IAM-side answer to R-008, with a draft v2.2 template and check_boundary.py.
