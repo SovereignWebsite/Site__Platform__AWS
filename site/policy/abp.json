@@ -11,7 +11,8 @@
       "may_change": [
         "site/**",
         "docs/**",
-        "README.md"
+        "README.md",
+        "test/**"
       ],
       "needs_owner_yes": [
         "site/policy/**",
@@ -33,7 +34,8 @@
         "name a private person without their consent",
         "invent a fact, a price or a customer",
         "add a server, cookies or tracking"
-      ]
+      ],
+      "test_source": "Dinis Cruz, 23 Nov 2026 ~03:10 UTC in aws.c's session: \"Yes to the agents changing tests. AWS site, that's fine.\""
     },
     "factory": {
       "who": "SovereignWebsite__Factory's Org apply pipeline, which created this repository.",
