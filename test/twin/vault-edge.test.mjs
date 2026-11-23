@@ -4,6 +4,7 @@
 // record in its events (the twin cannot see the customer's DNS). Its refusals, and its delete.
 import assert from "node:assert/strict";
 import { loadTwin } from "./golden.mjs";
+import { edgeCertificate } from "./edge.mjs";
 
 const START = "2026-11-24T09:00:00.000Z", ID = "0a1b2c3d4e5f", ACCT = "444455556666", E = "sws-vault-" + ID + "-edge";
 const H = (r) => ({ authorization: "AWS4-HMAC-SHA256 Credential=ASIATWINCUSTOMER/20261124/" + r + "/cloudformation/aws4_request, SignedHeaders=host, Signature=twin" });
@@ -87,4 +88,42 @@ let checks = 0;
   checks += 10;
 }
 
-console.log("OK (twin vault -edge stack: " + checks + " checks; us-east-1 only, certificate and web ACL by condition, their ARNs as outputs, DNS elsewhere waits with the validation record, refusals write nothing, teardown)");
+// 5. The Vault stack takes the -edge stack's outputs (vault.yaml's rule DomainNeedsCertificate, WebAclArn's pattern), and
+// CloudFront refuses a distribution whose certificate or web ACL the account's -edge stacks did not make.
+{
+  const VR = "eu-west-2", V = "sws-vault-" + ID, vault = (t, p) => create(t, V, { VaultId: ID, ...p }, VR, { "Capabilities.member.1": "CAPABILITY_NAMED_IAM" });
+  const status = async (t) => tag((await cfn(t, { Action: "DescribeStacks", StackName: V }, VR)).text, "StackStatus")[0];
+  const reasons = async (t) => tag((await cfn(t, { Action: "DescribeStackEvents", StackName: V }, VR)).text, "ResourceStatusReason").join(" | ");
+  let t = fresh();
+  assert.equal(tag((await vault(t, { DomainName: "vault.example.com" })).text, "Message")[0], "With DomainName, CertificateArn (from vault-edge.yaml in us-east-1) is needed.", "a domain needs a certificate");
+  assert.match(tag((await vault(t, { WebAclArn: "arn:aws:wafv2:eu-west-2:444455556666:regional/webacl/x/y" })).text, "Message")[0], /WebAclArn/, "a web ACL ARN outside the pattern is refused");
+  // A made-up certificate ARN: the create starts, the distribution fails, the stack rolls back.
+  await vault(t, { DomainName: "vault.example.com", CertificateArn: "arn:aws:acm:us-east-1:444455556666:certificate/00000000-0000-4000-8000-000000000000" });
+  t.clock.tick(20 * 60 * 1000);
+  assert.equal(await status(t), "ROLLBACK_COMPLETE", "an unknown certificate rolls the Vault back");
+  assert.match(await reasons(t), /InvalidViewerCertificate/, "with CloudFront's reason");
+  // A certificate for another domain.
+  t = fresh();
+  const other = await edgeCertificate(t, ID, "other.example.com");
+  await vault(t, { DomainName: "vault.example.com", CertificateArn: other });
+  t.clock.tick(20 * 60 * 1000);
+  assert.equal(await status(t), "ROLLBACK_COMPLETE"); assert.match(await reasons(t), /doesn't cover the alternate domain name/, "a certificate for another name");
+  // A web ACL ARN of the right form that no -edge stack made.
+  t = fresh();
+  await vault(t, { WebAclArn: "arn:aws:wafv2:us-east-1:444455556666:global/webacl/sws-vault-" + ID + "-waf/00000000-0000-4000-8000-000000000000" });
+  t.clock.tick(20 * 60 * 1000);
+  assert.equal(await status(t), "ROLLBACK_COMPLETE"); assert.match(await reasons(t), /InvalidWebACLId/, "an unknown web ACL");
+  // The -edge stack's own outputs: the Vault completes, and its distribution carries the web ACL.
+  t = fresh();
+  await create(t, E, { VaultId: ID, DomainName: "vault.example.com", HostedZoneId: "Z0000000000EXAMPLE", EnableRateLimit: "true" });
+  t.clock.tick(5 * 60 * 1000);
+  const eo = outputs((await cfn(t, { Action: "DescribeStacks", StackName: E })).text);
+  await vault(t, { DomainName: "vault.example.com", HostedZoneId: "Z0000000000EXAMPLE", CertificateArn: eo.CertificateArn, WebAclArn: eo.WebAclArn });
+  t.clock.tick(20 * 60 * 1000);
+  assert.equal(await status(t), "CREATE_COMPLETE", "with the -edge stack's outputs the Vault completes");
+  const dist = await (await t.handle("https://cloudfront.amazonaws.com/2020-05-31/distribution", { headers: H("us-east-1") })).text();
+  assert.deepEqual(tag(dist, "WebACLId"), [eo.WebAclArn], "and its distribution carries the web ACL");
+  checks += 11;
+}
+
+console.log("OK (twin vault -edge stack: " + checks + " checks; us-east-1 only, certificate and web ACL by condition, their ARNs as outputs, DNS elsewhere waits with the validation record, refusals write nothing, teardown; the Vault takes its certificate and web ACL, and CloudFront refuses any other)");

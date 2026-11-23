@@ -865,6 +865,23 @@
     ev(at, st.name, "AWS::CloudFormation::Stack", "CREATE_COMPLETE", { physical: st.stackId, outputs: stackOutputs(st) });
     return out;
   }
+  // What the account's -edge stacks have made (us-east-1, CREATE_COMPLETE): certificate ARN to its domain, and web ACL ARNs.
+  // A Vault stack's CertificateArn and WebAclArn must be among them, or CloudFront refuses the distribution (the reasons
+  // follow CloudFront's InvalidViewerCertificate and InvalidWebACLId errors; the wording is the twin's).
+  function edgeFault(acc, account, p) {
+    var certs = map(), acls = map();
+    Object.keys(acc.stacks).forEach(function (k) {
+      var e = acc.stacks[k];
+      if (e.kind !== "edge" || e.region !== "us-east-1" || e.status !== "CREATE_COMPLETE" || e.account !== account) return;
+      if (e.params.DomainName) certs[physicalOf(e, "VaultCertificate")] = e.params.DomainName;
+      if (e.params.EnableRateLimit === "true") acls[physicalOf(e, "VaultWebAcl")] = true;
+    });
+    var wrap = function (code, m) { return "Resource handler returned message: \"" + m + "\" (Service: CloudFront, Status Code: 400, Error Code: " + code + ") (the twin's wording)"; };
+    if (p.CertificateArn && !own(certs, p.CertificateArn)) return wrap("InvalidViewerCertificate", "The specified SSL certificate doesn't exist, isn't in us-east-1 region, isn't valid, or doesn't include a valid certificate chain.");
+    if (p.CertificateArn && p.DomainName && certs[p.CertificateArn] !== p.DomainName) return wrap("InvalidViewerCertificate", "The certificate that is attached to your distribution doesn't cover the alternate domain name (CNAME) that you're trying to add.");
+    if (p.WebAclArn && !own(acls, p.WebAclArn)) return wrap("InvalidWebACLId", "Web ACL is not accessible by the requester.");
+    return null;
+  }
   function taken(acc, type, physical) { return !!(acc.retained && acc.retained[type + " " + physical]); }
   function cfnErr(code, msg, status) { return xml("<ErrorResponse xmlns=\"http://cloudformation.amazonaws.com/doc/2010-05-15/\"><Error><Type>Sender</Type><Code>" + code + "</Code><Message>" + esc(msg) + "</Message></Error><RequestId>twin</RequestId></ErrorResponse>", status || 400); }
   function formParams(form, prefix) {
@@ -909,6 +926,10 @@
         // One-stack mode makes its own boundary; an -access stack's boundary of the same name makes the create fail.
         collides = mode === "one-stack" && !!access && access.status === "CREATE_COMPLETE";
         params.DeployMode = mode;
+        // vault.yaml's rule DomainNeedsCertificate, and WebAclArn's AllowedPattern, checked before anything is made.
+        if (params.DomainName && !params.CertificateArn) return cfnErr("ValidationError", "With DomainName, CertificateArn (from vault-edge.yaml in us-east-1) is needed.");
+        if (params.WebAclArn && (params.WebAclArn.length > 512 || !/^arn:aws:wafv2:us-east-1:[0-9]{12}:global\/webacl\/sws-vault-[0-9a-f]{12}-waf\/[0-9a-f-]{36}$/.test(params.WebAclArn)))
+          return cfnErr("ValidationError", "Parameter 'WebAclArn' must match pattern ^$|^arn:aws:wafv2:us-east-1:[0-9]{12}:global/webacl/sws-vault-[0-9a-f]{12}-waf/[0-9a-f-]{36}$");
       }
       if (kind === "edge") {
         // vault-edge.yaml's parameter rules, then its rule SomethingToMake (0.6.1): no domain and no rate limit is refused
@@ -930,6 +951,7 @@
         // A VaultId used before: its retained log group (and bucket) are still in the account (cloudformation.aws.a). The
         // log group, the quicker resource, fails first; the page must always make a fresh id.
         reason: "Resource handler returned message: \"Resource of type 'AWS::Logs::LogGroup' with identifier '/aws/lambda/sws-vault-" + m[1] + "-api' already exists.\" (HandlerErrorCode: AlreadyExists)" };
+      else if (kind === "vault" && edgeFault(acc, account, plain)) failure = { logical: "VaultDistribution", after: 20, reason: edgeFault(acc, account, plain) };
       else if (kind === "vault" && plain.ImageUri && plain.ImageUri !== TWIN_IMAGE) failure = { logical: "VaultFunction", after: 3,
         reason: "Resource handler returned message: \"Lambda can't access the image " + plain.ImageUri + ". Check the repository's policy lists this account and the digest is in " + region + ".\" (twin's wording)" };
       var st = { name: name, kind: kind, region: region, account: account, stackId: stackId, params: plain, ids: ids, mode: mode, failure: failure };

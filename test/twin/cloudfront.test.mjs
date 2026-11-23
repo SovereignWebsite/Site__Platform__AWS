@@ -4,6 +4,7 @@
 // on viewer-request for /health. Reads write nothing to the journal, and one account never sees another's.
 import assert from "node:assert/strict";
 import { loadTwin } from "./golden.mjs";
+import { edgeCertificate } from "./edge.mjs";
 
 const START = "2026-11-24T09:00:00.000Z", R = "eu-west-2", ACCT = "444455556666", PLATFORM = "111122223333";
 const CUST = { authorization: "AWS4-HMAC-SHA256 Credential=ASIATWINCUSTOMER/20261124/us-east-1/cloudfront/aws4_request, SignedHeaders=host, Signature=twin" };
@@ -46,7 +47,7 @@ checks += 17;
 // 2. The customer account: nothing before a Vault; its function once wave 1 settles; its distribution once its create does.
 assert.equal(tag((await cf(twin, "distribution", CUST)).text, "Quantity")[0], "0", "no distributions before a Vault");
 const A = "0a1b2c3d4e5f";
-await create(twin, A, { DomainName: "vault.example.com", HostedZoneId: "Z0000000000EXAMPLE" });
+await create(twin, A, { DomainName: "vault.example.com", HostedZoneId: "Z0000000000EXAMPLE", CertificateArn: await edgeCertificate(twin, A, "vault.example.com") });
 twin.clock.tick(60 * 1000);
 r = await cf(twin, "function", CUST);
 assert.deepEqual(tag(r.text, "Name"), ["sws-vault-" + A + "-health", "sws-vault-" + A + "-health"], "the -health function, at both stages (published)");

@@ -5,6 +5,7 @@
 // outputs. CreateStack refuses what CloudFormation refuses; the journal is the same whichever reads happen.
 import assert from "node:assert/strict";
 import { loadTwin } from "./golden.mjs";
+import { edgeCertificate } from "./edge.mjs";
 
 const START = "2026-11-24T09:00:00.000Z", ID = "0a1b2c3d4e5f", R = "eu-west-2", ACCT = "444455556666";
 const CUST = { authorization: "AWS4-HMAC-SHA256 Credential=ASIATWINCUSTOMER/20261124/" + R + "/cloudformation/aws4_request, SignedHeaders=host, Signature=twin" };
@@ -53,7 +54,7 @@ const acc = await outputs(twin, "sws-vault-" + ID + "-access");
 assert.equal(acc.status, "CREATE_COMPLETE"); assert.equal(acc.out.DeployRoleArn, ROLE); assert.match(acc.out.BoundaryArn, /:policy\/sws-vault-0a1b2c3d4e5f-boundary$/);
 checks += 7;
 
-r = await create(twin, "sws-vault-" + ID, { VaultId: ID, DeployMode: "access-stack", DomainName: "vault.example.com", HostedZoneId: "Z0000000000EXAMPLE" }, { RoleARN: ROLE });
+r = await create(twin, "sws-vault-" + ID, { VaultId: ID, DeployMode: "access-stack", DomainName: "vault.example.com", HostedZoneId: "Z0000000000EXAMPLE", CertificateArn: await edgeCertificate(twin, ID, "vault.example.com") }, { RoleARN: ROLE });
 assert.equal(r.status, 200, "created with the deploy role");
 assert.match((await create(twin, "sws-vault-" + ID, { VaultId: ID, DeployMode: "access-stack" }, { RoleARN: ROLE })).text, /AlreadyExistsException/, "a second create is refused");
 twin.clock.tick(60 * 1000);
@@ -84,7 +85,7 @@ checks += 24;
 {
   const t2 = fresh();
   await create(t2, "sws-vault-" + ID + "-access", { VaultId: ID }); t2.clock.tick(30 * 1000);
-  await create(t2, "sws-vault-" + ID, { VaultId: ID, DeployMode: "access-stack", DomainName: "vault.example.org" }, { RoleARN: ROLE }); t2.clock.tick(10 * 60 * 1000);
+  await create(t2, "sws-vault-" + ID, { VaultId: ID, DeployMode: "access-stack", DomainName: "vault.example.org", CertificateArn: await edgeCertificate(t2, ID, "vault.example.org") }, { RoleARN: ROLE }); t2.clock.tick(10 * 60 * 1000);
   const o = await outputs(t2, "sws-vault-" + ID), e2 = await events(t2, "sws-vault-" + ID);
   assert.match(o.out.DnsRecords, /^vault\.example\.org CNAME d[a-z0-9]{13}\.cloudfront\.net$/, "DnsRecords gives the CNAME to make");
   assert.ok(!e2.some((e) => /^VaultRecord/.test(e.logical)), "no record sets without a zone");
