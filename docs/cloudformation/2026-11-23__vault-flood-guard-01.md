@@ -49,3 +49,23 @@ For v1: (d) always. (a) as an option, since it is cheap to offer and already dra
 (b) only if Dinis wants spend protection without the customer watching. Then build the alarm-and-Lambda form, not a budget action, which as I understand it cannot do the job.
 
 The checks pass on both templates: cfn-lint, and `test_vault_template.py`, which now also checks that the rate limit is off by default, the web ACL's scope and name, and that `WebAclArn` is optional.
+
+## Update (20:20 UTC): the cost alarm drafted; WAF stays off
+
+billing.aws.a's pricing (cfe70fb) finds that WAF **adds** cost rather than capping it: about +$21.6/h at 10,000 req/s. billing.aws.a recommends a request alarm as the guard. So `vault-edge.yaml` 0.5.0 adds an optional cost alarm, and WAF stays in the template but off by default.
+
+**The new parameters:**
+- `DistributionId`: from the Vault stack's output, added by a stack update once the Vault exists.
+- `RequestAlarmThreshold`: requests per 5 minutes; 0 means no alarm. The customer chooses it, and the page can suggest one from billing.aws.a's model.
+- `AlertEmail`: optional. AWS sends a confirmation first.
+
+**The new resources:**
+- `sws-vault-<id>-requests`: an `AWS::CloudWatch::Alarm` on `AWS/CloudFront` `Requests`, Sum over 300 s, with dimensions `DistributionId` and `Region=Global`. The namespace, metric and dimensions are marked CHECK, for boto3.aws.a.
+- `sws-vault-<id>-cost`: an SNS topic with the email subscription, only when an email is given.
+- Both names fall under iam.aws.a's grant `alarm:sws-vault-<id>-*` (vault-access 0.2.7). iam.aws.a also needs the `sns` topic `sws-vault-<id>-cost`.
+
+**Limits:**
+- The alarm **notifies**; it does not stop anything. The kill switch is still the deploy page's link, or the alarm-driven Lambda sketched above, which is not built until Dinis picks it.
+- CloudFront's request metrics come in near real time, unlike Budgets.
+
+The checks pass: cfn-lint on all templates, plus `test_vault_template.py`, which now also checks that the alarm is optional and that its name and the topic's name are in scope. The email pattern was tested: good addresses and empty are accepted; spaces, a missing dot after `@` and a trailing newline are refused.

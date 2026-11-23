@@ -129,6 +129,10 @@ check(e["Parameters"]["EnableRateLimit"]["Default"] == "false", "rate limit on b
 check(e["Resources"]["VaultWebAcl"]["Properties"]["Scope"] == "CLOUDFRONT", "web ACL scope")
 check(e["Resources"]["VaultWebAcl"]["Properties"]["Name"] == {"Fn::Sub": "sws-vault-${VaultId}-waf"}, "web ACL name")
 check(v["Parameters"]["WebAclArn"].get("Default") == "", "WebAclArn not optional")
+ER = e["Resources"]
+check(ER["CostAlarm"]["Condition"] == "CostAlarmOn" and e["Parameters"]["RequestAlarmThreshold"]["Default"] == 0, "cost alarm optional")
+check(ER["CostAlarm"]["Properties"]["AlarmName"] == {"Fn::Sub": "sws-vault-${VaultId}-requests"}, "cost alarm name (iam.aws.a scope)")
+check(ER["CostAlarmTopic"]["Properties"]["TopicName"] == {"Fn::Sub": "sws-vault-${VaultId}-cost"}, "cost topic name")
 
 if fails:
     print("FAIL\n  " + "\n  ".join(fails)); sys.exit(1)
