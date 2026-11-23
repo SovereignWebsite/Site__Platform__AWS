@@ -14,7 +14,9 @@ On a function's page (design 01), below the charts: "what did this function do j
 
 Permissions the read role would need: `logs:DescribeLogGroups` and `logs:FilterLogEvents` on `arn:aws:logs:<region>:<account>:log-group:/aws/lambda/*`. A plan for aws.c and iam.aws.a when wanted; an AWS change, so Dinis approves.
 
-Not yet checked: that CloudWatch Logs answers browser (CORS) calls. Note 02 covered Lambda, Firehose and CloudWatch, not Logs. boto3.aws.a, please check it against the same AWS source.
+CORS: the same SDK v2 table note 02 used marks CloudWatch Logs (AWS.CloudWatchLogs, 2014-03-28) as allowing it (boto3.aws.a, note 11). Documentation in the SDK repository, not a service guide and not a test.
+
+The list asks with `startFromHead: false`, newest first (AWS supports it for startTime on or after 1 Jan 2024, note 11).
 
 ## The twin (patch for dev.1 or dev.2)
 
@@ -27,7 +29,13 @@ Filter patterns for unstructured logs, as CloudWatch Logs reads them: plain term
 
 Errors named as AWS names them: ResourceNotFoundException for an unknown group, InvalidParameterException for name and ARN together, a limit outside 1 to 10000, or a bad nextToken; UnknownOperationException for any other action (writes included); 403 when unsigned. Group lookups go through a list of names, so `constructor` and `__proto__` are unknown groups (test included).
 
-Test: test/twin/logs.test.mjs (in the patch), Node only. Gaps, not done: `interleaved` and `unmask` are ignored; `nextToken` is the twin's own form; AWS event ids are longer opaque digit strings.
+Test: test/twin/logs.test.mjs (in the patch), Node only. dev.1.aws.a applied it on work/dev.1.aws.a (4d86107), adding one line: a put to the logs bucket drops the cached log events with the hours.
+
+### Revision 02, after boto3.aws.a's note 11 (docs/boto3/2026-11-23__11-twin-cloudwatch-logs.md, work/boto3.aws.a ba7ce61)
+
+Patch docs/lambda/patches/2026-11-23__twin-cloudwatch-logs-02.on-dev1-4d86107.patch, against dev.1's 4d86107. Fixed: UnknownOperationException is HTTP 404; ?terms combined with other terms are ignored; startFromHead false gives newest first; DescribeLogGroups takes logGroupNamePattern (three fields back), refuses prefix with pattern and an empty prefix, pages with limit 1 to 50 and nextToken; FilterLogEvents returns searchedLogStreams as an empty list, refuses a request naming no group with InvalidParameterException, and gives 56-digit event ids. Tests added for each; all twin and API tests and the twin e2e pass on 4d86107.
+
+Gaps, not done: no 1 MB page cap and never an empty page with a nextToken; ties broken by timestamp only; no Init Duration or Status lines and no JSON log format; `interleaved` and `unmask` ignored; nextToken is the twin's own form. To confirm, as AWS does not document them: the exact error messages, whether terms match whole words (the twin matches substrings), a pattern of only -terms, and whether `__type` comes bare or #-prefixed (the page should split on ':' then '#', as botocore does).
 
 ## Security
 
