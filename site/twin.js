@@ -51,6 +51,19 @@
   var pack = "baseline";
   try { var qp = new URLSearchParams(root.location.search).get("pack"); if (qp && own(PACKS, qp)) pack = qp; else { var sp = localStorage.getItem("sws-aws-twin-pack"); if (sp && own(PACKS, sp)) pack = sp; } } catch (e) { /* none */ }
   var enc = new TextEncoder();
+  // Who is where (design 03's split, architect.aws.a 23 Nov): every address is in the RFC 5737 documentation ranges,
+  // and the three kinds of client never share a /24, so a filter on one network finds one kind of client.
+  //   visitors: 198.51.100.0/24 and 192.0.2.0/24, less 198.51.100.240/28 (kept for EC2 public addresses) and
+  //             192.0.2.7 (the operator); one rnd() per visitor picks from VISITOR_IPS
+  //   attacker: 203.0.113.0/24 (the probe's address is in the attack pack)
+  //   operator: 192.0.2.7 (the platform's own calls in CloudTrail)
+  var OPERATOR_IP = "192.0.2.7", EC2_PUBLIC = "198.51.100.240/28";
+  var VISITOR_IPS = (function () {
+    var out = [], i;
+    for (i = 1; i < 240; i++) out.push("198.51.100." + i);
+    for (i = 1; i < 255; i++) if ("192.0.2." + i !== OPERATOR_IP) out.push("192.0.2." + i);
+    return out;
+  })();
 
   // ---- deterministic synthetic data: named random streams (design 02) ----
   // Each consumer draws from its own stream, so adding one never shifts the numbers another one gets. v0's data is
@@ -303,7 +316,7 @@
       for (var i = 0; i < P.perHour; i++) {
         var p = P.hot && rnd() < P.hotShare ? P.hot : pick(paths);
         lines.push(JSON.stringify(enrich({ timestamp: "2026-11-" + day + "T" + pad(hour) + ":" + pad(Math.floor(rnd() * 60)) + ":" + pad(Math.floor(rnd() * 60)) + "Z",
-          c_ip: "203.0.113." + Math.floor(rnd() * 250 + 1), cs_method: "GET", cs_uri_stem: p, sc_status: p === "/favicon.ico" ? 404 : 200,
+          c_ip: VISITOR_IPS[Math.floor(rnd() * VISITOR_IPS.length)], cs_method: "GET", cs_uri_stem: p, sc_status: p === "/favicon.ico" ? 404 : 200,
           sc_bytes: Math.floor(rnd() * 9000 + 300), time_taken: +(rnd() * 0.2).toFixed(3), x_edge_location: pick(["LHR50-C1", "DUB2-C1", "AMS1-C1"]), cs_user_agent: pick(["Mozilla/5.0", "curl/8.5", "python-requests/2.32"]) })));
       }
       if (P.probe && day === P.probe.day) {
@@ -337,7 +350,7 @@
           arn: "arn:aws:sts::" + ACCOUNT + ":assumed-role/" + role + "/sws-aws-platform", accountId: ACCOUNT, accessKeyId: "ASIATWIN" + (e.write ? "CHANGE" : "READ"),
           sessionContext: { sessionIssuer: { type: "Role", principalId: "AROATWIN" + (e.write ? "CHANGE" : "READ"), arn: "arn:aws:iam::" + ACCOUNT + ":role/" + role, accountId: ACCOUNT, userName: role },
             webIdFederationData: { federatedProvider: "accounts.google.com" }, attributes: { creationDate: "2026-11-22T10:00:00Z", mfaAuthenticated: "false" } } },
-        eventTime: e.time, eventSource: e.source, eventName: e.name, awsRegion: e.region, sourceIPAddress: "203.0.113.7", userAgent: "Mozilla/5.0",
+        eventTime: e.time, eventSource: e.source, eventName: e.name, awsRegion: e.region, sourceIPAddress: OPERATOR_IP, userAgent: "Mozilla/5.0",
         requestParameters: e.params, responseElements: null, requestID: "TWIN-REQ-" + pad(n, 4), eventID: "00000000-0000-4000-8000-" + pad(n, 12),
         readOnly: !e.write, eventType: "AwsApiCall", managementEvent: !e.data, recipientAccountId: ACCOUNT, eventCategory: e.data ? "Data" : "Management" };
     }
@@ -881,5 +894,6 @@
     ready: function () { return ready; }, loadError: function () { return loadError ? loadError.message : null; },
     fold: function (entries) { return fold(entries); },
     packs: PACKS, pack: function () { return pack; },
+    networks: { visitors: ["198.51.100.0/24", "192.0.2.0/24"], attacker: "203.0.113.0/24", operator: OPERATOR_IP, reserved: [EC2_PUBLIC, OPERATOR_IP + "/32"] },
     usePack: function (name) { if (!own(PACKS, name)) return; try { localStorage.setItem("sws-aws-twin-pack", name); } catch (e) { /* none */ } } };
 })(window);
