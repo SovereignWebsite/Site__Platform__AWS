@@ -2,7 +2,8 @@
 // The pragmatic engine (moving, jumping, follow the packet) is viz.aws.c's; this view
 // owns only the data mapping and plugs into that engine once it exists.
 // Every string from the data reaches the page as text (textContent), never as HTML.
-"use strict";
+import { warp as warpGap, stepsFrom } from "../steps.mjs";
+import { createPlayer } from "../../viz/player.mjs";     // viz.aws.a's player: motion and clock; this file only draws
 (() => {
   const DATA = "../data/replay.json";
   const LIFE = 1.4;                        // replay seconds a flow or flash stays visible
@@ -13,14 +14,14 @@
   const hhmmss = (m) => new Date(m).toISOString().slice(11, 19) + " UTC";
 
   let maxDepth = 1;
-  let agents = new Map(), events = [], R = 0, playing = false, speed = 2, last = 0, picked = null;
+  let agents = new Map(), events = [], R = 0, picked = null, player = null;
 
   // Time warp: long waits shrink, bursts (sixteen spawns in 21 s) spread out so each is seen.
   function warp(evs) {
     let r = 0, prev = null;
     for (const e of evs) {
       const gap = prev === null ? 0 : (e.ms - prev) / 1000;
-      r += prev === null ? 0 : Math.min(2.0, Math.max(0.15, gap / 40));
+      r += prev === null ? 0 : warpGap(gap);                  // one formula with steps.mjs and viz.aws.a's player
       e.r = r; prev = e.ms;
     }
     return r + LIFE;
@@ -72,7 +73,7 @@
       if (e.type === "commit" || e.type === "wake") {
         const a = agents.get(e.agent); if (!a) continue;
         const [x, y] = pos(a);
-        ctx.strokeStyle = e.type === "commit" ? gold : teal; ctx.globalAlpha = 1 - k;
+        ctx.strokeStyle = e.type !== "commit" ? teal : e.signature && e.signature !== "own key" ? red : gold; ctx.globalAlpha = 1 - k;
         ctx.beginPath(); ctx.arc(x, y, 8 + 22 * k, 0, 2 * Math.PI); ctx.stroke(); ctx.globalAlpha = 1;
       } else {
         const a = agents.get(e.from), b = agents.get(e.to); if (!a || !b) continue;
@@ -103,7 +104,8 @@
     $("clock").textContent = hhmmss(now);
     const shown = [...agents.values()].filter(visible).length;
     const commits = events.filter((x) => x.type === "commit" && x.r <= R).length;
-    $("counts").textContent = `${shown} agents, ${commits} commits`;
+    const own = events.filter((x) => x.type === "commit" && x.r <= R && x.signature === "own key").length;
+    $("counts").textContent = `${shown} agents, ${commits} commits, ${own} checked against the agent's own key`;
     const who = e.agent || e.from || "";
     const what = e.subject || e.note || e.topic || (e.type === "spawn" ? `starts ${e.to}` : e.type === "move" ? `moves to account A as ${e.to}` : e.type === "message" ? `to ${e.to}` : "");
     $("caption").textContent = `${who ? who + ": " : ""}${what}`;
@@ -113,11 +115,12 @@
   }
 
   let total = 1, rows = [];
-  function frame(t) {
-    if (playing) { R = Math.min(total, R + ((t - last) / 1000) * speed); if (R >= total) { playing = false; $("play").textContent = "Replay"; } }
-    last = t; update();
-    if (playing) requestAnimationFrame(frame);
+  function frame() {
+    R = player.frame().t; update();
+    if (player.playing) requestAnimationFrame(frame);
+    else $("play").textContent = R >= total ? "Replay" : "Play";
   }
+  function jump(fn) { fn(); R = player.frame().t; update(); }
 
   function cell(tr, text) { const td = document.createElement("td"); td.textContent = text || ""; tr.appendChild(td); }
 
@@ -127,6 +130,10 @@
     events = data.events.map((e) => ({ ...e, ms: ms(e.t) })).filter((e) => e.ms >= since).sort((x, y) => x.ms - y.ms);
     for (const e of events) for (const id of [e.agent, e.from, e.to]) if (id && !agents.has(id)) agents.set(id, { id, parent: null, appear: null, commitsAt: [], account: (id.match(/\.([a-z])$/) || [])[1] });
     total = warp(events);
+    player = createPlayer(stepsFrom(data), { now: () => performance.now() / 1000, tail: LIFE });
+    if (player.steps.length !== events.length || Math.abs(player.duration - total) > 1e-6)   // the same warp on both sides
+      console.warn("swarm view: steps and events disagree", player.steps.length, events.length, player.duration, total);
+    total = player.duration;
     for (const e of events) {
       if ((e.type === "spawn" || e.type === "move") && agents.get(e.to).appear === null) agents.get(e.to).appear = e.r;
       if (e.type === "move") agents.get(e.to).parent = e.from;        // account A body hangs off the C role it replaces
@@ -137,7 +144,8 @@
     for (const e of events) {
       const tr = document.createElement("tr");
       cell(tr, hhmmss(e.ms).slice(0, 8)); cell(tr, e.type); cell(tr, e.agent || e.from); cell(tr, e.to);
-      cell(tr, e.subject || e.note || e.topic || (e.type === "move" ? "moves from account C to account A" : e.sha || ""));
+      const what = e.subject || e.note || e.topic || (e.type === "move" ? "moves from account C to account A" : e.sha || "");
+      cell(tr, (e.signature && e.signature !== "own key" ? `[${e.signature}] ` : "") + what);
       body.appendChild(tr); rows.push(tr);
     }
     update();
@@ -154,13 +162,18 @@
       if (!v) continue; const dt = document.createElement("dt"), dd = document.createElement("dd"); dt.textContent = k; dd.textContent = v; dl.append(dt, dd);
     }
     const ol = $("d-commits"); ol.replaceChildren();
-    for (const e of events) if (e.type === "commit" && e.agent === best.id) { const li = document.createElement("li"); li.textContent = `${e.sha} ${e.subject}`; ol.appendChild(li); }
+    for (const e of events) if (e.type === "commit" && e.agent === best.id) { const li = document.createElement("li"); li.textContent = `${e.sha} ${e.subject}${e.signature ? ` (signature: ${e.signature})` : ""}`; ol.appendChild(li); }
     update();
   }
 
-  $("play").addEventListener("click", () => { if (R >= total) R = 0; playing = !playing; $("play").textContent = playing ? "Pause" : "Play"; if (playing) { last = performance.now(); requestAnimationFrame(frame); } });
-  $("scrub").addEventListener("input", (e) => { R = (Number(e.target.value) / 1000) * total; update(); });
-  $("speed").addEventListener("change", (e) => { speed = Number(e.target.value); });
+  $("play").addEventListener("click", () => {
+    if (player.playing) { player.pause(); $("play").textContent = "Play"; return; }
+    player.play(); $("play").textContent = "Pause"; requestAnimationFrame(frame);
+  });
+  $("scrub").addEventListener("input", (e) => jump(() => player.seek((Number(e.target.value) / 1000) * total)));
+  $("speed").addEventListener("change", (e) => player.setSpeed(Number(e.target.value)));
+  $("prev").addEventListener("click", () => jump(() => player.prev()));
+  $("next").addEventListener("click", () => jump(() => player.next()));
   sky.addEventListener("click", pick);
 
   fetch(DATA).then((r) => r.json()).then(load).catch(() => { $("caption").textContent = "Could not load ../data/replay.json. Serve the repository over HTTP (python3 -m http.server) and open docs/swarm/view/."; });

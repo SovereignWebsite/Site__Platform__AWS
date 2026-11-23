@@ -1,0 +1,885 @@
+<title>Guard Rails Brief</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a briefing desk. The stage (the animated decision) on the left, the written brief on the right, the transport bar under the stage. */
+:root{
+  --bg:#eef1f4; --paper:#ffffff; --ink:#15202e; --mute:#5b6878; --line:#c9d1db;
+  --accent:#c47a12;  /* the decision itself: amber */
+  --risk:#b4322a; --ok:#11786b; --hold:#6b5bb5;
+  --stage:#f8fafb; --chip:#e6ebf0;
+  --f-display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body:"IBM Plex Sans", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f151d; --paper:#18212c; --ink:#e4e9ef; --mute:#93a0b0; --line:#2f3b4a;
+  --accent:#e9a43c; --risk:#ec6b5f; --ok:#3fbfa9; --hold:#a596f0; --stage:#131b25; --chip:#223040; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f151d; --paper:#18212c; --ink:#e4e9ef; --mute:#93a0b0; --line:#2f3b4a;
+  --accent:#e9a43c; --risk:#ec6b5f; --ok:#3fbfa9; --hold:#a596f0; --stage:#131b25; --chip:#223040; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1280px;margin:0 auto;display:grid;gap:16px}
+header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px}
+h1{font:800 clamp(22px,3vw,30px)/1.1 var(--f-display);margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--mute);margin:4px 0 0;font-size:14px}
+.tabs{display:flex;gap:4px;background:var(--chip);padding:4px;border-radius:8px}
+.tabs button{border:0;background:transparent;color:var(--ink);font:500 14px var(--f-body);padding:6px 14px;border-radius:6px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--paper);box-shadow:0 1px 2px #0002}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.desk{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.desk{grid-template-columns:minmax(0,1fr)}}
+.stagebox{background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:0}
+.scenehead{display:flex;justify-content:space-between;gap:8px;align-items:baseline;padding:10px 14px;border-bottom:1px solid var(--line)}
+.eyebrow{font:500 12px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.scenetitle{font:700 17px/1.25 var(--f-display);margin:2px 0 0;text-wrap:balance}
+.clock{font:400 12px var(--f-mono);color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
+.stage{position:relative;background:var(--stage);aspect-ratio:16/9;max-width:100%}
+.stage svg{position:absolute;inset:0;width:100%;height:100%}
+.caption{min-height:3.6em;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px 18px;border-top:1px solid var(--line);background:var(--ink);color:var(--paper);font:500 clamp(14px,1.5vw,16px)/1.45 var(--f-body);text-wrap:balance}
+.transport{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;border-top:1px solid var(--line)}
+.btn{border:1px solid var(--line);background:var(--paper);color:var(--ink);font:500 13px var(--f-body);padding:6px 12px;border-radius:6px;cursor:pointer}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink);min-width:78px}
+.btn[aria-pressed="true"]{background:var(--chip)}
+.scrub{flex:1 1 200px;min-width:0;accent-color:var(--accent)}
+.chapters{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 12px}
+.chapters button{border:1px solid var(--line);background:transparent;color:var(--mute);font:500 12px var(--f-mono);padding:3px 9px;border-radius:999px;cursor:pointer}
+.chapters button.cur{background:var(--accent);border-color:var(--accent);color:#fff}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:16px 18px;display:grid;gap:12px;min-width:0}
+.panel h2{font:700 18px/1.25 var(--f-display);margin:0;text-wrap:balance}
+.panel h3{font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:0 0 4px}
+.panel p{margin:0}
+.opts{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.opts li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px}
+.opts li b{font:700 15px var(--f-display);color:var(--mute)}
+.opts li.rec{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 9%,transparent)}
+.opts li.rec b{color:var(--ok)}
+.opts li.no{opacity:.7}
+.tag{display:inline-block;font:500 11px var(--f-mono);padding:1px 7px;border-radius:999px;background:var(--chip);color:var(--mute);margin-left:6px;vertical-align:1px}
+.tag.rec{background:var(--ok);color:#fff}
+.answer{font:700 clamp(18px,2.4vw,24px) var(--f-mono);letter-spacing:.02em;padding:10px 12px;background:var(--chip);border-radius:8px;user-select:all;overflow-wrap:anywhere}
+.src{font-size:13px;color:var(--mute)}
+.src a{color:inherit}
+.note{font-size:13px;color:var(--mute);border-top:1px solid var(--line);padding-top:10px}
+/* storyboard view */
+.board{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.beat{background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:grid;min-width:0}
+.beat .thumb{aspect-ratio:16/9;background:var(--stage);position:relative;border-bottom:1px solid var(--line);max-width:100%}
+.beat .thumb svg{position:absolute;inset:0;width:100%;height:100%}
+.beat .body{padding:10px 12px;display:grid;gap:6px}
+.beat .meta{font:500 11px var(--f-mono);color:var(--mute);display:flex;justify-content:space-between;gap:8px}
+.beat .nar{font-size:14px}
+.beat .vis{font-size:12.5px;color:var(--mute)}
+/* SVG vocabulary */
+svg text{font-family:var(--f-body);fill:var(--ink)}
+.t-s{font-size:13px}.t-m{font-size:16px;font-weight:600}.t-l{font:800 24px var(--f-display)}.t-xl{font:800 44px var(--f-display)}
+.t-mono{font-family:var(--f-mono);font-size:12px}
+.t-mute{fill:var(--mute)}.t-risk{fill:var(--risk)}.t-ok{fill:var(--ok)}.t-acc{fill:var(--accent)}.t-inv{fill:var(--paper)}
+.bx{fill:var(--paper);stroke:var(--line);stroke-width:1.5}
+.bx-risk{fill:color-mix(in srgb,var(--risk) 10%,var(--paper));stroke:var(--risk);stroke-width:2}
+.bx-ok{fill:color-mix(in srgb,var(--ok) 10%,var(--paper));stroke:var(--ok);stroke-width:2}
+.bx-acc{fill:color-mix(in srgb,var(--accent) 12%,var(--paper));stroke:var(--accent);stroke-width:2}
+.bx-hold{fill:color-mix(in srgb,var(--hold) 10%,var(--paper));stroke:var(--hold);stroke-width:2}
+.bx-ghost{fill:none;stroke:var(--line);stroke-width:1.5;stroke-dasharray:6 5}
+.fill-ink{fill:var(--ink)}.fill-risk{fill:var(--risk)}.fill-ok{fill:var(--ok)}.fill-acc{fill:var(--accent)}.fill-chip{fill:var(--chip)}.fill-hold{fill:var(--hold)}
+.ln{fill:none;stroke:var(--mute);stroke-width:2}
+.ln-risk{fill:none;stroke:var(--risk);stroke-width:2.5}
+.ln-ok{fill:none;stroke:var(--ok);stroke-width:2.5}
+.dash{stroke-dasharray:7 6}
+.draw{stroke-dasharray:1 1}
+.cue{opacity:0;transform:translateY(6px);transition:opacity .45s ease,transform .45s ease;transform-box:fill-box}
+.cue.on{opacity:1;transform:none}
+.cue.pop{transform:scale(.85);transform-origin:center}.cue.pop.on{transform:none}
+.mover{transition:none}
+@media (prefers-reduced-motion: reduce){.cue{transition:none}}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Guard rails and the kill switch</h1>
+      <p class="sub">AWS Platform programme · from <span class="t-mono">docs/board/decisions.md</span>, 23 Nov 2026, 17:55 UTC (batch 3) · kept by pm.aws.a</p>
+    </div>
+    <div class="tabs" role="tablist" aria-label="View">
+      <button role="tab" id="tab-brief" aria-selected="true" aria-controls="view-brief">Brief</button>
+      <button role="tab" id="tab-board" aria-selected="false" aria-controls="view-board">Storyboard</button>
+    </div>
+  </header>
+
+  <section id="view-brief" class="desk" role="tabpanel" aria-labelledby="tab-brief">
+    <div class="stagebox">
+      <div class="scenehead">
+        <div><div class="eyebrow" id="eyebrow"></div><div class="scenetitle" id="scenetitle"></div></div>
+        <div class="clock" id="clock">0:00 / 0:00</div>
+      </div>
+      <div class="stage" id="stage" aria-live="off"></div>
+      <div class="caption" aria-hidden="true" id="caption"></div>
+      <p class="sr" aria-live="polite" id="srcaption"></p>
+      <div class="transport">
+        <button class="btn" id="prev" aria-label="Previous decision">◀</button>
+        <button class="btn primary" id="play">Play</button>
+        <button class="btn" id="next" aria-label="Next decision">▶</button>
+        <input class="scrub" id="scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="Position in the brief">
+        <button class="btn" id="mode" aria-pressed="false" title="Slides mode stops at the end of each decision">Slides</button>
+        <button class="btn" id="voice" aria-pressed="false" title="Speaks the captions with your browser's built-in synthetic voice">Voice</button>
+      </div>
+      <div class="chapters" id="chapters"></div>
+    </div>
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+  </section>
+
+  <section id="view-board" role="tabpanel" aria-labelledby="tab-board" hidden>
+    <p class="sub" style="margin:0 0 12px">Every beat of the brief: what is said, what is shown, where the fact comes from. The same beats are in <span class="t-mono">guard-rails.storyboard.json</span> beside this page, for studio.c.</p>
+    <div class="board" id="board"></div>
+  </section>
+</div>
+
+<script type="application/json" id="storyboard">
+{
+ "title": "Guard rails and the kill switch",
+ "source": "docs/board/decisions.md, batch 3, on work/pm.aws.a",
+ "made_by": "pm.aws.a@SovereignWebsite.dinis",
+ "answer": "G1 a+b, G2 a, G3 a, G4 a, G5 a, G6 a with (i) or (ii), G7 a, G8 a, G9 b then a, K1 b, K2 b, K3 both, K4 a",
+ "scenes": [
+  {
+   "id": "intro",
+   "eyebrow": "Batch 3",
+   "title": "Guard rails for short-lived deployments",
+   "dur": 14,
+   "beats": [
+    [
+     0,
+     "Nine guard rails for short-lived deployments and the daily move, and four choices for the Vault cost kill switch.",
+     "Nine tiles, G1 to G9."
+    ],
+    [
+     7,
+     "Drafted by ec2, reviewed by security, priced from billing's list prices. Every cost is a lower bound.",
+     "A banner: nothing real until you approve each plan."
+    ]
+   ],
+   "panel": {
+    "what": "Nine guard rails drafted by ec2.aws.a (21ed4a1) and reviewed by security.aws.a (d397c1f), who agrees with every recommended option. Prices are list prices and lower bounds. Each real change comes back as its own plan.",
+    "answer": true
+   }
+  },
+  {
+   "id": "g1",
+   "eyebrow": "G1 · Lifetime",
+   "title": "How long a short-lived deployment may live",
+   "dur": 12,
+   "beats": [
+    [
+     0,
+     "A short-lived deployment defaults to two hours and is refused above four. Its lifetime is set at launch and cannot be changed.",
+     "The options as cards with their figures."
+    ],
+    [
+     7,
+     "Recommended: a+b.",
+     "The recommended card lights; a note below."
+    ]
+   ],
+   "panel": {
+    "asks": "ec2.aws.a (21ed4a1); reviewed by security.aws.a (d397c1f)",
+    "what": "Default (a) 2 hours, hard cap (b) 4 hours. Costs at most 0.0476 and 0.0952 USD (t4g.small plus a public IPv4). Security: the lifetime tag is set only at launch; no role can change it.",
+    "options": [
+     [
+      "a",
+      "2 h (0.0476 USD)"
+     ],
+     [
+      "b",
+      "4 h (0.0952 USD)"
+     ],
+     [
+      "c",
+      "8 h"
+     ]
+    ],
+    "rec": "a",
+    "blocks": "Nothing outside the twin; each real change is its own plan."
+   }
+  },
+  {
+   "id": "g2",
+   "eyebrow": "G2 · Daily move",
+   "title": "How long each daily-move copy may live",
+   "dur": 12,
+   "beats": [
+    [
+     0,
+     "Each daily-move copy is capped at 26 hours, a backstop if a move fails. The sweeper never leaves zero copies.",
+     "The options as cards with their figures."
+    ],
+    [
+     7,
+     "Recommended: a.",
+     "The recommended card lights; a note below."
+    ]
+   ],
+   "panel": {
+    "asks": "ec2.aws.a (21ed4a1); reviewed by security.aws.a (d397c1f)",
+    "what": "(a) 26 h: 0.6188 USD a copy at the cap; 17.37 USD always on for a month. Past 26 h the sweeper alerts first and deletes a copy only once its replacement answers.",
+    "options": [
+     [
+      "a",
+      "26 h (0.6188 USD)"
+     ],
+     [
+      "b",
+      "30 h"
+     ],
+     [
+      "c",
+      "no cap"
+     ]
+    ],
+    "rec": "a",
+    "blocks": "Nothing outside the twin; each real change is its own plan."
+   }
+  },
+  {
+   "id": "g3",
+   "eyebrow": "G3 · Regions",
+   "title": "Which regions are allowed",
+   "dur": 12,
+   "beats": [
+    [
+     0,
+     "Only London and Ireland, the two regions priced today. More come later by a new decision.",
+     "The options as cards with their figures."
+    ],
+    [
+     7,
+     "Recommended: a.",
+     "The recommended card lights; a note below."
+    ]
+   ],
+   "panel": {
+    "asks": "ec2.aws.a (21ed4a1); reviewed by security.aws.a (d397c1f)",
+    "what": "(a) now; (b) by a later decision once billing prices them and the twin tests them. Security: the region condition applies to regional actions only.",
+    "options": [
+     [
+      "a",
+      "London + Ireland"
+     ],
+     [
+      "b",
+      "more, later"
+     ]
+    ],
+    "rec": "a",
+    "blocks": "Nothing outside the twin; each real change is its own plan."
+   }
+  },
+  {
+   "id": "g4",
+   "eyebrow": "G4 · Instance types",
+   "title": "Which instance types are allowed",
+   "dur": 12,
+   "beats": [
+    [
+     0,
+     "The three smallest Graviton types, with standard CPU credits so a stuck instance slows instead of billing more.",
+     "The options as cards with their figures."
+    ],
+    [
+     7,
+     "Recommended: a.",
+     "The recommended card lights; a note below."
+    ]
+   ],
+   "panel": {
+    "asks": "ec2.aws.a (21ed4a1); reviewed by security.aws.a (d397c1f)",
+    "what": "(a); medium only if the twin load test says so. Standard credits checked by the test suite and in the plan read-back.",
+    "options": [
+     [
+      "a",
+      "nano, micro, small (0.0047 to 0.0188/h USD)"
+     ],
+     [
+      "b",
+      "+ medium (0.0376/h USD)"
+     ]
+    ],
+    "rec": "a",
+    "blocks": "Nothing outside the twin; each real change is its own plan."
+   }
+  },
+  {
+   "id": "g5",
+   "eyebrow": "G5 · Count",
+   "title": "How many at once",
+   "dur": 12,
+   "beats": [
+    [
+     0,
+     "At most three at once: one short-lived, one daily-move, and one during a move's overlap. A low vCPU quota backs it up.",
+     "The options as cards with their figures."
+    ],
+    [
+     7,
+     "Recommended: a.",
+     "The recommended card lights; a note below."
+    ]
+   ],
+   "panel": {
+    "asks": "ec2.aws.a (21ed4a1); reviewed by security.aws.a (d397c1f)",
+    "what": "(a). A runaway loop is the main cost risk. The vCPU quota is an AWS change of its own, and account-wide.",
+    "options": [
+     [
+      "a",
+      "3 at most"
+     ],
+     [
+      "b",
+      "you name"
+     ]
+    ],
+    "rec": "a",
+    "blocks": "Nothing outside the twin; each real change is its own plan."
+   }
+  },
+  {
+   "id": "g6",
+   "eyebrow": "G6 · Cost alert",
+   "title": "The monthly cost alert",
+   "dur": 12,
+   "beats": [
+    [
+     0,
+     "A monthly alert at 25 dollars, against a known month of about 21. Security offers an automatic stop-new at 100 percent as an option.",
+     "The options as cards with their figures."
+    ],
+    [
+     7,
+     "Recommended: a. At the cap, alert only (security) or also stop new automatically (ec2): your pick.",
+     "The recommended card lights; a note below."
+    ]
+   ],
+   "panel": {
+    "asks": "ec2.aws.a (21ed4a1); reviewed by security.aws.a (d397c1f)",
+    "what": "(a) 25 USD. At the cap the agents differ: (i) alert only, recommended by security.aws.a; (ii) alert plus an automatic stop new (a Budgets action denies new sws-ec2-* stacks, deletes nothing, undone by detaching the policy), recommended by ec2.aws.a (4c55c1f). New (billing.aws.a, ddddb44): a request flood through CloudFront is billed per request at the edge, about $46 an hour at 10,000 requests a second in London, so a $25 alert would be reached within an hour; billing is pricing an edge rate limit (AWS WAF) and a billing alarm.",
+    "options": [
+     [
+      "a",
+      "25 USD"
+     ],
+     [
+      "b",
+      "50 USD"
+     ],
+     [
+      "c",
+      "100 USD"
+     ]
+    ],
+    "rec": "a",
+    "blocks": "Nothing outside the twin; each real change is its own plan."
+   }
+  },
+  {
+   "id": "g7",
+   "eyebrow": "G7 · Kill switch",
+   "title": "The kill switch",
+   "dur": 12,
+   "beats": [
+    [
+     0,
+     "Stop new is one click. End all deletes everything, so it needs your approval; it removes DNS before stacks.",
+     "The options as cards with their figures."
+    ],
+    [
+     7,
+     "Recommended: a.",
+     "The recommended card lights; a note below."
+    ]
+   ],
+   "panel": {
+    "asks": "ec2.aws.a (21ed4a1); reviewed by security.aws.a (d397c1f)",
+    "what": "(a): deleting stacks is not undone by pressing again. Clearing stop new is also a plan you approve.",
+    "options": [
+     [
+      "a",
+      "stop new: 1 click"
+     ],
+     [
+      "b",
+      "end all: 1 click"
+     ]
+    ],
+    "rec": "a",
+    "blocks": "Nothing outside the twin; each real change is its own plan."
+   }
+  },
+  {
+   "id": "g8",
+   "eyebrow": "G8 · Sweeper",
+   "title": "Where the sweeper runs",
+   "dur": 12,
+   "beats": [
+    [
+     0,
+     "The sweeper runs as a small scheduled function in our account: no credential outside AWS, no new trust from GitHub.",
+     "The options as cards with their figures."
+    ],
+    [
+     7,
+     "Recommended: a.",
+     "The recommended card lights; a note below."
+    ]
+   ],
+   "panel": {
+    "asks": "ec2.aws.a (21ed4a1); reviewed by security.aws.a (d397c1f)",
+    "what": "(a). Each deployment also gets its own one-time delete schedule. The sweeper may only describe, alert and delete managed sws-ec2-* stacks.",
+    "options": [
+     [
+      "a",
+      "AWS schedule + Lambda"
+     ],
+     [
+      "b",
+      "GitHub Actions"
+     ],
+     [
+      "c",
+      "only in the site"
+     ]
+    ],
+    "rec": "a",
+    "blocks": "Nothing outside the twin; each real change is its own plan."
+   }
+  },
+  {
+   "id": "g9",
+   "eyebrow": "G9 · The move",
+   "title": "When the daily move starts",
+   "dur": 12,
+   "beats": [
+    [
+     0,
+     "The daily move has the most moving parts, so it runs a week in the twin before it runs for real.",
+     "The options as cards with their figures."
+    ],
+    [
+     7,
+     "Recommended: b then a.",
+     "The recommended card lights; a note below."
+    ]
+   ],
+   "panel": {
+    "asks": "ec2.aws.a (21ed4a1); reviewed by security.aws.a (d397c1f)",
+    "what": "(b) first, then (a). Order fixed: the new copy answers, DNS moves, then the old copy is deleted. The move's role holds no key.",
+    "options": [
+     [
+      "a",
+      "move role now"
+     ],
+     [
+      "b",
+      "twin week first"
+     ]
+    ],
+    "rec": "b",
+    "blocks": "Nothing outside the twin; each real change is its own plan."
+   }
+  },
+  {
+   "id": "k1",
+   "eyebrow": "K1 · Automatic pause",
+   "title": "Offer the automatic pause?",
+   "dur": 12,
+   "beats": [
+    [
+     0,
+     "The request alarm can pause a Vault by itself. Recommended: offer it opt-in per Vault, off by default, and say the trade-off plainly.",
+     "The options as cards."
+    ],
+    [
+     7,
+     "Recommended: b.",
+     "The recommended card lights; a note below."
+    ]
+   ],
+   "panel": {
+    "asks": "ec2.aws.a (747f1fd); reviewed by security.aws.a, iam.aws.a and boto3.aws.a",
+    "what": "(b): a flood then costs about one evaluation period plus propagation; one pause per flood, no automatic restore. Trade-off: anyone who can send enough requests can switch a Vault off.",
+    "options": [
+     [
+      "a",
+      "email only"
+     ],
+     [
+      "b",
+      "opt-in, default off"
+     ],
+     [
+      "c",
+      "on by default"
+     ]
+    ],
+    "rec": "b",
+    "blocks": "Nothing outside the twin; each real change is its own plan."
+   }
+  },
+  {
+   "id": "k2",
+   "eyebrow": "K2 · Levers",
+   "title": "Which levers the pause pulls",
+   "dur": 12,
+   "beats": [
+    [
+     0,
+     "Throttling alone leaves CloudFront billing every request. Recommended: throttle and disable the distribution.",
+     "The options as cards."
+    ],
+    [
+     7,
+     "Recommended: b.",
+     "The recommended card lights; a note below."
+    ]
+   ],
+   "panel": {
+    "asks": "ec2.aws.a (747f1fd); reviewed by security.aws.a, iam.aws.a and boto3.aws.a",
+    "what": "(b): CloudFront is 43.20 of 45.89 USD an hour in a flood at 10,000 req/s.",
+    "options": [
+     [
+      "a",
+      "throttle only"
+     ],
+     [
+      "b",
+      "throttle + disable distribution"
+     ]
+    ],
+    "rec": "b",
+    "blocks": "Nothing outside the twin; each real change is its own plan."
+   }
+  },
+  {
+   "id": "k3",
+   "eyebrow": "K3 · Threshold",
+   "title": "The suggested thresholds, fast and slow",
+   "dur": 12,
+   "beats": [
+    [
+     0,
+     "Two alarms: a fast one at 45,000 requests in five minutes, and a slow one over six hours from a 10-dollar monthly budget.",
+     "The two thresholds as cards."
+    ],
+    [
+     7,
+     "Recommended: both alarms, billing's figures suggested; the customer decides.",
+     "Both cards light; a note below."
+    ]
+   ],
+   "panel": {
+    "asks": "ec2.aws.a (747f1fd); reviewed by security.aws.a, iam.aws.a and boto3.aws.a",
+    "what": "Two alarms: fast 45,000 requests in 5 minutes (about $1 an hour); slow 44,121 in 6 hours, from a $10-a-month budget (billing.aws.a, 7621a65). Held under both: at most about $10 a month; just over the slow one: up to about $12.41 before the switch acts. With the fast alarm alone, a flood held just under it cost $729 in 30 days (27911d0).",
+    "options": [
+     [
+      "a",
+      "Fast alarm: 45,000 requests in 5 minutes."
+     ],
+     [
+      "b",
+      "Slow alarm: 44,121 requests in 6 hours (from $10 a month)."
+     ]
+    ],
+    "rec": "a",
+    "blocks": "Recommended: both. Still unknown until AWS answers or a bill shows it: whether throttled calls and requests to a disabled distribution are billed."
+   }
+  },
+  {
+   "id": "k4",
+   "eyebrow": "K4 · Our own",
+   "title": "The same switch on our own deployments",
+   "dur": 12,
+   "beats": [
+    [
+     0,
+     "Recommended: the same switch on for our own Vaults and deployments, with restore as a plan you approve.",
+     "The options as cards."
+    ],
+    [
+     7,
+     "Recommended: a.",
+     "The recommended card lights; a note below."
+    ]
+   ],
+   "panel": {
+    "asks": "ec2.aws.a (747f1fd); reviewed by security.aws.a, iam.aws.a and boto3.aws.a",
+    "what": "Part of the guard rails; restore is a plan you approve.",
+    "options": [
+     [
+      "a",
+      "yes, on"
+     ],
+     [
+      "b",
+      "no"
+     ]
+    ],
+    "rec": "a",
+    "blocks": "Nothing outside the twin; each real change is its own plan."
+   }
+  },
+  {
+   "id": "outro",
+   "eyebrow": "Your answer",
+   "title": "One line answers all thirteen",
+   "dur": 10,
+   "beats": [
+    [
+     0,
+     "Recommended: G1 a plus b, G2 to G8 a, G9 b then a, and K1 b, K2 b, K3 both alarms, K4 yes. For G6, pick alert only or automatic stop.",
+     "The full answer line."
+    ],
+    [
+     5,
+     "Answer in pm.aws.a's session.",
+     "Where to answer."
+    ]
+   ],
+   "panel": {
+    "what": "Type the line, or your own, in pm.aws.a's session.",
+    "answer": true
+   }
+  }
+ ]
+}
+</script>
+
+<script>
+(() => {
+const SB = JSON.parse(document.getElementById('storyboard').textContent);
+const W = 960, H = 540;
+
+/* ---------- tiny SVG vocabulary ---------- */
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const cue = (t, inner, extra='') => `<g class="cue ${extra}" data-t="${t}">${inner}</g>`;
+const cueOff = (t, off, inner) => `<g class="cue" data-t="${t}" data-off="${off}">${inner}</g>`;
+const box = (x,y,w,h,cls='bx',r=10) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" class="${cls}"/>`;
+const txt = (x,y,s,cls='t-s',anchor='middle') => `<text x="${x}" y="${y}" class="${cls}" text-anchor="${anchor}">${esc(s)}</text>`;
+const lbox = (x,y,w,h,label,cls='bx',tcls='t-m',sub) => box(x,y,w,h,cls) + txt(x+w/2, y+h/2+(sub?-3:5), label, tcls) + (sub?txt(x+w/2,y+h/2+16,sub,'t-s t-mute'):'');
+const path = (id,d,cls,d0,d1) => `<path id="${id}" d="${d}" class="${cls} draw" pathLength="1" data-d0="${d0}" data-d1="${d1}" marker-end="url(#ah-${cls.includes('risk')?'r':cls.includes('ok')?'o':'m'})"/>`;
+const route = (id,d) => `<path id="${id}" d="${d}" fill="none" stroke="none"/>`;
+const mover = (pid,t0,t1,inner,hideAfter=false) => `<g class="mover" data-m="${pid}" data-m0="${t0}" data-m1="${t1}" ${hideAfter?'data-mh="1"':''}>${inner}</g>`;
+const cross = (x,y,t) => cue(t, `<circle cx="${x}" cy="${y}" r="15" class="fill-risk"/><path d="M${x-6} ${y-6}L${x+6} ${y+6}M${x+6} ${y-6}L${x-6} ${y+6}" stroke="#fff" stroke-width="3"/>`, 'pop');
+const defs = `<defs>
+  <marker id="ah-m" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fill-ink" style="fill:var(--mute)"/></marker>
+  <marker id="ah-r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fill-risk"/></marker>
+  <marker id="ah-o" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fill-ok"/></marker>
+</defs>`;
+/* option chips along the bottom of a decision scene */
+function optionRow(opts, rec, tShow, tRec, notRec=[]) {
+  const n = opts.length, w = 150, gap = 14, total = n*w+(n-1)*gap, x0 = (W-total)/2, y = 452;
+  let s = '';
+  opts.forEach((o,i) => {
+    const x = x0 + i*(w+gap);
+    s += cue(tShow + i*0.35, box(x,y,w,40,'bx',20) + txt(x+22,y+26,o,'t-m t-mute') + txt(x+86,y+25,notRec.includes(o)?'not advised':'option '+o,'t-s t-mute'));
+    if (o === rec) s += cue(tRec, box(x,y,w,40,'bx-ok',20) + txt(x+22,y+26,o,'t-m t-ok') + txt(x+86,y+25,'recommended','t-s t-ok'), 'pop');
+  });
+  return s;
+}
+
+/* ---------- the scenes, drawn ---------- */
+const GV = {"g1": {"opts": [["a", "2 h", "0.0476"], ["b", "4 h", "0.0952"], ["c", "8 h", ""]], "rec": ["a", "b"], "note": "2 h default, 4 h hard cap"}, "g2": {"opts": [["a", "26 h", "0.6188"], ["b", "30 h", ""], ["c", "no cap", ""]], "rec": ["a"], "note": "26 h backstop"}, "g3": {"opts": [["a", "London + Ireland", ""], ["b", "more, later", ""]], "rec": ["a"], "note": "the only two priced"}, "g4": {"opts": [["a", "nano, micro, small", "0.0047 to 0.0188/h"], ["b", "+ medium", "0.0376/h"]], "rec": ["a"], "note": "medium only if the twin needs it"}, "g5": {"opts": [["a", "3 at most", ""], ["b", "you name", ""]], "rec": ["a"], "note": "one each, plus an overlap"}, "g6": {"opts": [["a", "25 USD", ""], ["b", "50 USD", ""], ["c", "100 USD", ""]], "rec": ["a"], "note": "at the cap: alert only, or also stop new? your pick"}, "g7": {"opts": [["a", "stop new: 1 click", ""], ["b", "end all: 1 click", ""]], "rec": ["a"], "note": "end all needs your approval"}, "g8": {"opts": [["a", "AWS schedule + Lambda", ""], ["b", "GitHub Actions", ""], ["c", "only in the site", ""]], "rec": ["a"], "note": "no credential outside AWS"}, "g9": {"opts": [["a", "move role now", ""], ["b", "twin week first", ""]], "rec": ["b"], "note": "a week in the twin first"}, "k1": {"opts": [["a", "email only", ""], ["b", "opt-in, default off", ""], ["c", "on by default", ""]], "rec": ["b"], "note": "anyone who can flood can switch a Vault off"}, "k2": {"opts": [["a", "throttle only", ""], ["b", "throttle + disable distribution", ""]], "rec": ["b"], "note": "CloudFront is about 94% of a flood's cost"}, "k3": {"opts": [["a", "fast: 45,000 / 5 min", "about 1/h"], ["b", "slow: 44,121 / 6 h", "from 10/month"]], "rec": ["a", "b"], "note": "both: held under both, at most about $10 a month"}, "k4": {"opts": [["a", "yes, on", ""], ["b", "no", ""]], "rec": ["a"], "note": "restore is a plan you approve"}};
+function gScene(id){
+  const v = GV[id]; const n = v.opts.length, w = 240, gap = 30, x0 = (W-(n*w+(n-1)*gap))/2;
+  let s = '';
+  v.opts.forEach((o,i)=>{ const x = x0+i*(w+gap);
+    s += cue(0.4+i*0.5, box(x,140,w,150,'bx',14) + txt(x+30,178,o[0],'t-l t-mute','start') + txt(x+w/2,228,o[1],'t-m') + (o[2]?txt(x+w/2,260,o[2]+' USD','t-mono t-mute'):''));
+    if (v.rec.includes(o[0])) s += cue(7+i*0.2, box(x,140,w,150,'bx-ok',14) + txt(x+30,178,o[0],'t-l t-ok','start') + txt(x+w/2,228,o[1],'t-m') + (o[2]?txt(x+w/2,260,o[2]+' USD','t-mono t-mute'):'') + txt(x+w/2,318,'recommended','t-s t-ok'), 'pop');
+  });
+  s += cue(8, txt(W/2,380,v.note,'t-m t-acc'));
+  s += cue(1, txt(W/2,440,'lower-bound list prices · nothing real until each plan is approved','t-s t-mute'));
+  return s;
+}
+const VIS = {
+intro(){
+  let s = txt(W/2,74,'Guard rails','t-xl') + cue(0.2, txt(W/2,108,'short-lived deployments · the daily region move','t-m t-mute'));
+  const n=['Lifetime','Daily move','Regions','Types','Count','Cost alert','Kill switch','Sweeper','The move'];
+  n.forEach((d,i)=>{ const x=58+(i%5)*172, y=140+Math.floor(i/5)*112; s += cue(0.8+i*0.25, box(x,y,150,92,'bx-acc') + txt(x+75,y+44,'G'+(i+1),'t-l t-acc') + txt(x+75,y+72,d,'t-s'), 'pop'); });
+  s += cue(7, box(180,384,600,40,'bx-ok',20) + txt(W/2,409,'Approving creates nothing in AWS','t-s t-ok'));
+  s += cue(8, txt(W/2,470,SB.answer,'t-m'));
+  return s;
+},
+g1(){ return gScene('g1'); },
+g2(){ return gScene('g2'); },
+g3(){ return gScene('g3'); },
+g4(){ return gScene('g4'); },
+g5(){ return gScene('g5'); },
+g6(){ return gScene('g6'); },
+g7(){ return gScene('g7'); },
+g8(){ return gScene('g8'); },
+g9(){ return gScene('g9'); },
+k1(){ return gScene('k1'); },
+k2(){ return gScene('k2'); },
+k3(){ return gScene('k3'); },
+k4(){ return gScene('k4'); },
+outro(){
+  let s = txt(W/2,150,'Recommended','t-m t-mute');
+  s += cue(0.3, txt(W/2,236,'G1 a+b · G2 to G8 a · G9 b then a','t-l') + txt(W/2,274,'K1 b · K2 b · K3 both alarms · K4 yes','t-l') + txt(W/2,300,'G6 at the cap: (i) alert only or (ii) stop new automatically','t-s t-acc'), 'pop');
+  s += cue(5, txt(W/2,340,'Answer in pm.aws.a\'s session','t-m'));
+  s += cue(5.6, txt(W/2,368,'claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B','t-mono t-mute'));
+  return s;
+}};
+
+/* ---------- timeline ---------- */
+const scenes = SB.scenes.map(s => ({...s}));
+let acc = 0; scenes.forEach(s => { s.start = acc; acc += s.dur; });
+const TOTAL = acc;
+const stage = document.getElementById('stage'), capEl = document.getElementById('caption'), srCap = document.getElementById('srcaption');
+let cur = -1, svg = null, lists = null, time = 0, playing = false, slides = false, voice = false, lastBeat = null, last = 0;
+
+function svgFor(id){ return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(scenes.find(s=>s.id===id).title)}">${defs}${VIS[id]()}</svg>`; }
+function mount(i){
+  if (svg) svg.remove();
+  stage.insertAdjacentHTML('afterbegin', svgFor(scenes[i].id));
+  svg = stage.querySelector('svg');
+  lists = {cues:[...svg.querySelectorAll('[data-t]')], draws:[...svg.querySelectorAll('[data-d0]')], movers:[...svg.querySelectorAll('[data-m]')].map(m => ({el:m, p:svg.querySelector('#'+m.dataset.m)}))};
+  cur = i; renderPanel(i); markChapters(i);
+}
+const clamp = v => Math.max(0, Math.min(1, v));
+const ease = p => p<.5 ? 2*p*p : 1-Math.pow(-2*p+2,2)/2;
+function applyT(L, t){
+  for (const c of L.cues){ const on = t >= +c.dataset.t && (c.dataset.off===undefined || t < +c.dataset.off); c.classList.toggle('on', on); }
+  for (const d of L.draws){ d.style.strokeDashoffset = 1 - clamp((t - d.dataset.d0)/(d.dataset.d1 - d.dataset.d0)); }
+  for (const {el,p} of L.movers){
+    const m0 = +el.dataset.m0, m1 = +el.dataset.m1, len = p.getTotalLength();
+    let pr = ease(clamp((t-m0)/(m1-m0)));
+    if (el.dataset.hold !== undefined && t < m0) pr = 0;
+    const pt = p.getPointAtLength(pr*len);
+    el.setAttribute('transform', `translate(${pt.x.toFixed(1)} ${pt.y.toFixed(1)})`);
+    const hidden = (el.dataset.hold === undefined && t < m0) || (el.dataset.mh && t > m1);
+    el.style.opacity = hidden ? 0 : 1;
+  }
+}
+function render(){
+  let i = scenes.findIndex(s => time < s.start + s.dur); if (i < 0) i = scenes.length-1;
+  if (i !== cur) mount(i);
+  const s = scenes[i], t = time - s.start;
+  applyT(lists, t);
+  const beat = [...s.beats].reverse().find(b => t >= b[0]) || s.beats[0];
+  if (beat !== lastBeat){
+    capEl.textContent = beat[1]; srCap.textContent = beat[1]; lastBeat = beat;
+    if (voice && playing) speak(beat[1]);
+  }
+  document.getElementById('eyebrow').textContent = s.eyebrow;
+  document.getElementById('scenetitle').textContent = s.title;
+  document.getElementById('clock').textContent = `${fmt(time)} / ${fmt(TOTAL)}`;
+  document.getElementById('scrub').value = Math.round(time/TOTAL*1000);
+}
+const fmt = x => `${Math.floor(x/60)}:${String(Math.floor(x%60)).padStart(2,'0')}`;
+function tick(now){
+  if (!playing) return;
+  const dt = Math.min(0.1, (now - last)/1000); last = now;
+  const s = scenes[cur];
+  let nt = time + dt;
+  if (slides && nt >= s.start + s.dur - 0.01){ nt = s.start + s.dur - 0.01; setPlaying(false); }
+  if (nt >= TOTAL){ nt = TOTAL - 0.01; setPlaying(false); }
+  time = nt; render();
+  if (playing) requestAnimationFrame(tick);
+}
+function setPlaying(p){
+  playing = p; document.getElementById('play').textContent = p ? 'Pause' : (time >= TOTAL-0.05 ? 'Replay' : 'Play');
+  if (p){ if (time >= TOTAL-0.05) { time = 0; } last = performance.now(); requestAnimationFrame(tick); }
+  else if (window.speechSynthesis) speechSynthesis.cancel();
+}
+function goScene(i, playAfter){
+  i = Math.max(0, Math.min(scenes.length-1, i)); time = scenes[i].start + 0.001; lastBeat = null; render();
+  if (playAfter) setPlaying(true);
+}
+function speak(text){
+  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'en-GB'; u.rate = 1.04; speechSynthesis.speak(u); } catch(e){}
+}
+
+/* ---------- the written brief beside the stage ---------- */
+function renderPanel(i){
+  const s = scenes[i], p = s.panel, el = document.getElementById('panel');
+  let h = `<div><div class="eyebrow">${esc(s.eyebrow)}</div><h2>${esc(s.title)}</h2></div>`;
+  if (p.asks) h += `<div><h3>Asks</h3><p>${esc(p.asks)}</p></div>`;
+  h += `<div><h3>What</h3><p>${esc(p.what)}</p></div>`;
+  if (p.before) h += `<div><h3>Before any apply</h3><p>${esc(p.before)}</p></div>`;
+  if (p.options){
+    h += `<div><h3>Options</h3><ul class="opts">` + p.options.map(o => `<li class="${o[0]===p.rec?'rec':''} ${o[2]==='no'?'no':''}"><b>${o[0]}</b><span>${esc(o[1])}${o[0]===p.rec?'<span class="tag rec">recommended</span>':''}${o[2]==='no'?'<span class="tag">not advised</span>':''}</span></li>`).join('') + `</ul></div>`;
+  }
+  if (p.blocks) h += `<div><h3>Blocks</h3><p>${esc(p.blocks)}</p></div>`;
+  if (p.answer){
+    h += `<div><h3>Recommended answer</h3><div class="answer" id="answer">${esc(SB.answer)}</div></div>
+          <div><button class="btn" id="copy">Copy the answer</button> <span class="src" id="copied"></span></div>
+          <p class="src">Answer in pm.aws.a's session: <span class="t-mono" style="user-select:all">https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B</span></p>`;
+  }
+  h += `<p class="note">Source: docs/board/decisions.md (batch 3) on work/pm.aws.a, ec2.aws.a's draft (21ed4a1) and security.aws.a's review (d397c1f). Diagrams simplify; the written brief is the record. Voice, when on, is your browser's built-in synthetic voice.</p>`;
+  el.innerHTML = h;
+  const c = document.getElementById('copy');
+  if (c) c.onclick = () => {
+    const done = m => document.getElementById('copied').textContent = m;
+    navigator.clipboard?.writeText(SB.answer).then(() => done('Copied'), () => { getSelection().selectAllChildren(document.getElementById('answer')); done('Selected: press copy'); })
+      ?? (getSelection().selectAllChildren(document.getElementById('answer')), done('Selected: press copy'));
+  };
+}
+
+/* ---------- chapters, controls, keys ---------- */
+const chap = document.getElementById('chapters');
+chap.innerHTML = scenes.map((s,i) => `<button data-i="${i}" title="${esc(s.title)}">${i===0?'Intro':i===scenes.length-1?'Answer':s.id.toUpperCase()}</button>`).join('');
+chap.onclick = e => { const b = e.target.closest('button'); if (b) goScene(+b.dataset.i, playing); };
+function markChapters(i){ [...chap.children].forEach((b,k) => b.classList.toggle('cur', k===i)); }
+document.getElementById('play').onclick = () => setPlaying(!playing);
+document.getElementById('prev').onclick = () => goScene(cur - 1, playing);
+document.getElementById('next').onclick = () => goScene(cur + 1, playing || slides);
+document.getElementById('scrub').oninput = e => { time = e.target.value/1000*TOTAL; if (time >= TOTAL) time = TOTAL-0.01; lastBeat = null; render(); };
+document.getElementById('mode').onclick = e => { slides = !slides; e.currentTarget.setAttribute('aria-pressed', slides); };
+document.getElementById('voice').onclick = e => { voice = !voice && 'speechSynthesis' in window; e.currentTarget.setAttribute('aria-pressed', voice); if (!voice && window.speechSynthesis) speechSynthesis.cancel(); else if (voice && lastBeat) speak(lastBeat[1]); };
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input,textarea')) return;
+  if (e.key === ' ') { e.preventDefault(); setPlaying(!playing); }
+  if (e.key === 'ArrowRight') goScene(cur + 1, playing || slides);
+  if (e.key === 'ArrowLeft') goScene(cur - 1, playing);
+});
+
+/* ---------- storyboard view ---------- */
+function thumbSvg(id, t){
+  const wrap = document.createElement('div'); wrap.innerHTML = svgFor(id);
+  const sv = wrap.firstElementChild;
+  document.body.appendChild(sv); sv.style.position='absolute'; sv.style.left='-9999px'; sv.style.width='960px';
+  const L = {cues:[...sv.querySelectorAll('[data-t]')], draws:[...sv.querySelectorAll('[data-d0]')], movers:[...sv.querySelectorAll('[data-m]')].map(m => ({el:m, p:sv.querySelector('#'+m.dataset.m)}))};
+  sv.querySelectorAll('.cue').forEach(c => c.style.transition='none');
+  applyT(L, t); sv.removeAttribute('style'); sv.remove();
+  sv.querySelectorAll('[id]').forEach(n => { if (n.tagName !== 'marker') n.removeAttribute('id'); });
+  return sv.outerHTML;
+}
+function buildBoard(){
+  const b = document.getElementById('board'); let h = '', n = 0;
+  scenes.forEach(s => s.beats.forEach((bt,k) => {
+    n++;
+    const end = k+1 < s.beats.length ? s.beats[k+1][0] : s.dur;
+    h += `<article class="beat"><div class="thumb">${thumbSvg(s.id, Math.max(bt[0], end-0.05))}</div><div class="body">
+      <div class="meta"><span>${String(n).padStart(2,'0')} · ${esc(s.eyebrow.split(' · ')[0])}</span><span>${fmt(s.start+bt[0])}</span></div>
+      <div class="nar">${esc(bt[1])}</div><div class="vis">${esc(bt[2])}</div></div></article>`;
+  }));
+  b.innerHTML = h;
+}
+let boardBuilt = false;
+const tabs = {brief:document.getElementById('tab-brief'), board:document.getElementById('tab-board')};
+function showTab(which){
+  tabs.brief.setAttribute('aria-selected', which==='brief'); tabs.board.setAttribute('aria-selected', which==='board');
+  document.getElementById('view-brief').hidden = which!=='brief'; document.getElementById('view-board').hidden = which!=='board';
+  if (which==='board'){ if (!boardBuilt){ buildBoard(); boardBuilt = true; } setPlaying(false); }
+  try { history.replaceState(null,'', which==='board' ? '#storyboard' : '#brief'); } catch(e){}
+}
+tabs.brief.onclick = () => showTab('brief'); tabs.board.onclick = () => showTab('board');
+
+window.__brief = {svgFor, scenes};  /* read by build-video.mjs */
+/* at rest: the intro fully drawn, ready to play */
+time = scenes[0].dur - 0.01; render();
+document.querySelectorAll('.cue').forEach(c => { c.style.transition='none'; requestAnimationFrame(() => c.style.transition=''); });
+if (location.hash === '#storyboard') showTab('board');
+window.addEventListener('hashchange', () => showTab(location.hash==='#storyboard'?'board':'brief'));
+})();
+</script>

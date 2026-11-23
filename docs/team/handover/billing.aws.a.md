@@ -13,11 +13,7 @@ The old session's private key lived only in its container (~/.sg-send, ~/.ssh-si
 - The old entry (Factory commit a997bd7, key sha256:cd5b29f632b02d3a) was kept in the landing set (conductor.aws.a, 14:28 UTC) so the old session could push before restart. Once your key is live, ask factory.c to mark the old entry retired (status "retired", retired, retired_note).
 - When signing on the Factory clone, set gpg.ssh.program=ssh-keygen locally: the container's global git config points at another signer, and the first attempt was signed by the wrong key because of it.
 
-## Final status of the old session (2026-11-23T15:52Z)
-
-Stopped at Dinis's word (relayed by maestro.a, ~15:45 UTC: fresh sessions for the AWS agents). The old key (a997bd7) was not yet live on the Factory, so nothing was pushed to dev from this session: everything in "only on work/billing.aws.a" below is still to land. Branch tip includes flood.mjs (denial of wallet) and the EC2 and public IPv4 rows (39 prices). Since the old key never went live, factory.c may drop a997bd7 from the landing set or land it as retired; your new key replaces it either way.
-
-## State (23 Nov ~14:30 UTC, plus later items below)
+## State (23 Nov ~14:30 UTC)
 
 On dev already: price book v1 (billing.aws.c, 86da1ce), twin-estimate.mjs, check-prices.mjs, and from this role forecast.mjs + forecast.test.mjs + the internet data transfer tiers (landed by the keeper as 6402d82).
 
@@ -53,8 +49,6 @@ Dinis asked (14:55 UTC) for Vault deploys into customers' AWS accounts and for e
 - Denial-of-wallet flood (pm.aws.a for iam.aws.a, 14:58 UTC): docs/billing/flood.mjs gives one hour at the reserved-concurrency cap. Next: price CloudWatch Logs ingestion (at millions of short requests it can be the largest line) and data transfer out, confirm on the Lambda page that throttled requests are not billed, then rerun with the stack's real memory, duration and concurrency default.
 
 - EC2 rows for ec2.aws.a (design 01 section 8, work/ec2.aws.a f33a6b3): t4g nano to medium on-demand and public IPv4 per hour are in prices.json (from AWS's EC2 and VPC price data); EBS gp3 per GB-month is still missing (not in those files: read the EBS pricing page), and t4g unlimited CPU credits.
-
-- ux.aws.a (session_018yvwtPrRuTC5Gpgcnd3neb, 18:05 UTC) for design 06 (Vault deploy page, docs/design/2026-11-23__06-vault-deploy-page.md on land/ux.aws.a) needs two cited figures: an idle Vault's cost per region the page offers, and a suggested CloudWatch request-alarm threshold per Vault from flood.mjs, with its assumptions in one line. The page shows no number until given.
 
 ## Next steps
 

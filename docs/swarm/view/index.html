@@ -23,7 +23,9 @@
 <nav id="controls">
   <button id="play" type="button">Play</button>
   <input id="scrub" type="range" min="0" max="1000" value="0" aria-label="Replay position">
-  <label>Speed <select id="speed"><option>1</option><option selected>2</option><option>4</option><option>8</option></select>x</label>
+  <button id="prev" type="button" aria-label="Previous event">Back</button>
+  <button id="next" type="button" aria-label="Next event">Next</button>
+  <label>Speed <select id="speed"><option>0.25</option><option selected>1</option><option>4</option><option>16</option></select>x</label>
   <span id="clock">--:--:-- UTC</span>
   <span id="counts"></span>
 </nav>
@@ -32,6 +34,6 @@
   <p>The same data as a table, so the replay is readable without the picture. Public sources only: git history, docs/team/log.md, docs/team/schedule.json, site/policy/abp.json and session status fields.</p>
   <table><thead><tr><th>UTC</th><th>Kind</th><th>Who</th><th>To</th><th>What</th></tr></thead><tbody id="rows"></tbody></table>
 </section>
-<script src="view.js"></script>
+<script type="module" src="view.js"></script>
 </body>
 </html>
