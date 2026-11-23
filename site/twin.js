@@ -142,7 +142,7 @@
   }
   // One small function per operation on the world: (world, entry) -> world changed in place.
   var OPS = {
-    "s3.putObject": function (w, e) { var d = e.data; (w.objects[d.bucket] = w.objects[d.bucket] || map())[d.key] = lazyObject(d); if (d.bucket === B.logs) delete w._hours; },
+    "s3.putObject": function (w, e) { var d = e.data; (w.objects[d.bucket] = w.objects[d.bucket] || map())[d.key] = lazyObject(d); if (d.bucket === B.logs) { delete w._hours; delete w._lambdaLogs; } },
     "s3.putBucketCors": function (w, e) { w.cors[e.data.bucket] = JSON.parse(JSON.stringify(e.data.cors)); },
     "s3.addCorsRule": function (w, e) { w.cors[e.data.bucket].CorsRules.push(JSON.parse(JSON.stringify(e.data.rule))); },
     "iam.createRole": function (w, e) { w.roles[e.data.name] = JSON.parse(JSON.stringify(e.data.trust)); if (e.data.details) w.iam[e.data.name] = JSON.parse(JSON.stringify(e.data.details)); },
@@ -894,6 +894,99 @@
       "</MetricDataResults><Messages/></GetMetricDataResult><ResponseMetadata><RequestId>twin-metrics</RequestId></ResponseMetadata></GetMetricDataResponse>");
   }
 
+  // CloudWatch Logs (JSON 1.1, target prefix Logs_20140328), read only: DescribeLogGroups and FilterLogEvents for the
+  // Lambda log groups. lambda.aws.a, 23 Nov 2026. Built from the same hourly log files as the metrics above, so a
+  // function's log lines, its GetMetricData numbers and the delivered CloudFront logs agree: one START, END and REPORT
+  // per invocation (Duration in REPORT is the request's time_taken for demo-handler, the metric's hourly mean for
+  // demo-log-enricher), an [ERROR] line for each vault request answered 4xx or 5xx (the metric's Errors), one log
+  // stream per function and hour. demo-nightly-report's group exists with no events in these hours. Synthetic.
+  var LOG_RETENTION = 30;
+  function logGroupOf(fn) { return "/aws/lambda/" + fn; }
+  function logsJson(o, status) { return new Response(JSON.stringify(o), { status: status || 200, headers: { "content-type": "application/x-amz-json-1.1" } }); }
+  function logsErr(type, msg, status) { return logsJson({ __type: type, message: msg }, status || 400); }
+  function uuidOf(s) { var h = etag(enc.encode(s)); return h.slice(0, 8) + "-" + h.slice(8, 12) + "-4" + h.slice(13, 16) + "-8" + h.slice(17, 20) + "-" + h.slice(20, 32); }
+  function lambdaLogEvents(fn) {
+    var s = build(); // the cache is kept on the world, not enumerable, as hoursOf does, so a refold makes it afresh
+    if (!s._lambdaLogs) Object.defineProperty(s, "_lambdaLogs", { value: Object.create(null), enumerable: false, configurable: true });
+    if (s._lambdaLogs[fn]) return s._lambdaLogs[fn];
+    var ev = [], mem = FN[fn].MemorySize;
+    var iso = function (t) { return new Date(t).toISOString(); };
+    hoursOf(s).forEach(function (h, hi) {
+      var stream = h.at.slice(0, 10).replace(/-/g, "/") + "/[$LATEST]" + etag(enc.encode(fn + "@" + h.at)), runs = [];
+      if (fn === "demo-handler") h.lines.forEach(function (l, li) {
+        if (!/^\/vault\/[^/]+\/files/.test(l.cs_uri_stem)) return;
+        runs.push({ t: Date.parse(l.timestamp), ms: l.time_taken * 1000, id: uuidOf(fn + h.at + li),
+          err: l.sc_status >= 400 ? "Request refused with " + l.sc_status + ": " + l.cs_method + " " + l.cs_uri_stem : "" });
+      });
+      if (fn === "demo-log-enricher") for (var q = 0; q < 4; q++) {
+        var at = Date.parse(h.at) + q * 900000 + 30000, n = h.lines.filter(function (l) { return Math.floor(+l.timestamp.slice(14, 16) / 15) === q; }).length;
+        runs.push({ t: at, ms: 40 + h.lines.length * 0.8 / 4, id: uuidOf(fn + h.at + q), info: "Enriched " + n + " records" });
+      }
+      runs.sort(function (a, b) { return a.t - b.t; }).forEach(function (r, k) {
+        var end = r.t + Math.max(1, Math.round(r.ms)), used = Math.min(mem, 48 + ((hi * 7 + k * 3) % 23));
+        var add = function (t, m) { ev.push({ logStreamName: stream, timestamp: t, message: m, ingestionTime: t + 1800 + ((k * 37) % 900) }); };
+        add(r.t, "START RequestId: " + r.id + " Version: $LATEST\n");
+        if (r.info) add(r.t + 1, "[INFO]\t" + iso(r.t + 1) + "\t" + r.id + "\t" + r.info + "\n");
+        if (r.err) add(r.t + 1, "[ERROR]\t" + iso(r.t + 1) + "\t" + r.id + "\t" + r.err + "\n");
+        add(end, "END RequestId: " + r.id + "\n");
+        add(end, "REPORT RequestId: " + r.id + "\tDuration: " + r.ms.toFixed(2) + " ms\tBilled Duration: " + Math.ceil(r.ms) + " ms\tMemory Size: " + mem + " MB\tMax Memory Used: " + used + " MB\t\n");
+      });
+    });
+    ev.sort(function (a, b) { return a.timestamp - b.timestamp; });
+    ev.forEach(function (e, i) { e.eventId = String(e.timestamp) + pad(i, 10); }); // unique and ordered; AWS's ids are longer, opaque digit strings
+    return (s._lambdaLogs[fn] = ev);
+  }
+  // A filter pattern for unstructured events, as CloudWatch Logs reads one: every plain term must appear, no -term may,
+  // and if there are ?terms at least one must; "quoted phrases" match whole; matching is case-sensitive. JSON ({...}),
+  // space-delimited ([...]) and regex (%...%) patterns are not in the twin yet.
+  function logFilter(p) {
+    p = String(p || "").trim();
+    if (!p) return function () { return true; };
+    if (/^[{[%]/.test(p)) return null;
+    var all = [], none = [], any = [];
+    (p.match(/[?-]?"[^"]*"|\S+/g) || []).forEach(function (t) {
+      var list = t[0] === "?" ? any : t[0] === "-" ? none : all, w = list === all ? t : t.slice(1);
+      list.push(w.replace(/^"([^"]*)"$/, "$1"));
+    });
+    return function (m) {
+      return all.every(function (w) { return m.indexOf(w) >= 0; }) && !none.some(function (w) { return m.indexOf(w) >= 0; }) &&
+        (!any.length || any.some(function (w) { return m.indexOf(w) >= 0; }));
+    };
+  }
+  function logs(target, body, init) {
+    if (!signed(init)) return logsErr("MissingAuthenticationTokenException", "Missing Authentication Token", 403);
+    var q; try { q = JSON.parse(body || "{}"); } catch (e) { return logsErr("SerializationException", "Body is not JSON"); }
+    if (!q || typeof q !== "object") return logsErr("SerializationException", "Body is not a JSON object");
+    var groups = Object.keys(FN).sort().map(logGroupOf), arnOf = function (g) { return "arn:aws:logs:" + REGION + ":" + ACCOUNT + ":log-group:" + g; };
+    if (target === "DescribeLogGroups") {
+      var pre = typeof q.logGroupNamePrefix === "string" ? q.logGroupNamePrefix : "";
+      return logsJson({ logGroups: groups.filter(function (g) { return g.indexOf(pre) === 0; }).map(function (g) {
+        var fn = g.slice(12), bytes = lambdaLogEvents(fn).reduce(function (a, e) { return a + e.message.length; }, 0);
+        return { logGroupName: g, creationTime: Date.parse(FN[fn].LastModified.replace("+0000", "Z")), retentionInDays: LOG_RETENTION, metricFilterCount: 0,
+          arn: arnOf(g) + ":*", storedBytes: bytes, logGroupClass: "STANDARD", logGroupArn: arnOf(g) };
+      }) });
+    }
+    if (target !== "FilterLogEvents") return logsErr("UnknownOperationException", "Not in the twin yet: logs " + target);
+    if (q.logGroupName && q.logGroupIdentifier) return logsErr("InvalidParameterException", "LogGroup name and LogGroup ARN are mutually exclusive parameters.");
+    var g = String(q.logGroupIdentifier || q.logGroupName || "").replace(/^arn:aws:logs:[a-z0-9-]+:\d{12}:log-group:/, "").replace(/:\*$/, "");
+    if (groups.indexOf(g) < 0) return logsErr("ResourceNotFoundException", "The specified log group does not exist.");
+    if (q.logStreamNames && q.logStreamNamePrefix) return logsErr("InvalidParameterException", "logStreamNames and logStreamNamePrefix are mutually exclusive parameters.");
+    var limit = q.limit === undefined ? 10000 : q.limit;
+    if (!(limit >= 1 && limit <= 10000 && limit === Math.floor(limit))) return logsErr("InvalidParameterException", "1 validation error detected: Value at 'limit' failed to satisfy constraint: Member must have value between 1 and 10000");
+    var match = logFilter(q.filterPattern);
+    if (!match) return logsErr("InvalidParameterException", "Not in the twin yet: JSON, space-delimited and regex filter patterns");
+    var from = 0;
+    if (q.nextToken !== undefined) { var tk = /^twin-(\d+)$/.exec(String(q.nextToken)); if (!tk) return logsErr("InvalidParameterException", "The specified nextToken is invalid."); from = +tk[1]; }
+    var names = Array.isArray(q.logStreamNames) ? q.logStreamNames : null, prefix = typeof q.logStreamNamePrefix === "string" ? q.logStreamNamePrefix : null;
+    var hit = lambdaLogEvents(g.slice(12)).filter(function (e) {
+      return (q.startTime === undefined || e.timestamp >= q.startTime) && (q.endTime === undefined || e.timestamp <= q.endTime) &&
+        (!names || names.indexOf(e.logStreamName) >= 0) && (prefix === null || e.logStreamName.indexOf(prefix) === 0) && match(e.message);
+    });
+    var page = hit.slice(from, from + limit), out = { events: page.map(function (e) { return Object.assign({}, e); }) };
+    if (from + limit < hit.length) out.nextToken = "twin-" + (from + limit);
+    return logsJson(out);
+  }
+
   // Answer a request as AWS would. Returns a Promise of a Response, or null if the host is not AWS.
   var AWS_HOST = /(^|\.)amazonaws\.com$/;
   function handle(url, init) {
@@ -918,6 +1011,7 @@
       else if (/^cloudcontrolapi\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudcontrol((hdr(init, "x-amz-target") || "").split(".")[1], body, init, host);
       else if (/^lambda\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = lambda(url, init);
       else if (/^monitoring\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudwatch(new URLSearchParams(body), init);
+      else if (/^logs\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = logs((hdr(init, "x-amz-target") || "").split(".")[1], body, init);
       else if (/^firehose\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = firehose((hdr(init, "x-amz-target") || "").split(".")[1], body, init);
       else if (/\.?s3\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = s3(url, init);
       else p = xmlErr("NotImplemented", "The twin does not answer " + host + " yet. Twin mode never calls real AWS.", 501);
