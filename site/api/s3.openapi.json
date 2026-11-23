@@ -1,0 +1,172 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "S3Api (browser)",
+    "version": "0.1.0",
+    "summary": "The browser-side contract of S3Api (site/api/s3-api.js), as architect.aws.c's design 01 asks.",
+    "description": "This site has no server. The paths below are logical names for the methods of the browser object S3Api, not URLs anything listens on; operationId is the method name. Each operation lists in x-aws-actions the IAM actions it needs on real AWS; the union over the operations a UI uses is the least-privilege list aws.c turns into the template's next plan. Cloud Control handler permissions for AWS::S3::Bucket are not listed yet: aws.c confirms them against AWS's published resource schema first (x-aws-actions-pending says so where it applies). On the twin (synthetic account 111122223333) no credentials are used."
+  },
+  "servers": [],
+  "x-browser-global": "S3Api",
+  "x-design": "docs/architecture/2026-11-23__01-one-transport-two-back-ends.md",
+  "paths": {
+    "/buckets": {
+      "get": {
+        "operationId": "listBuckets",
+        "summary": "List the account's buckets",
+        "x-wire": "Cloud Control ListResources, TypeName AWS::S3::Bucket, paged by NextToken (S3Api follows every page)",
+        "x-aws-actions": ["cloudformation:ListResources"],
+        "x-aws-actions-pending": "handler permissions of AWS::S3::Bucket for list, to be confirmed by aws.c",
+        "x-role": "read",
+        "responses": {
+          "200": { "description": "Every bucket", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/BucketSummary" } } } } },
+          "default": { "$ref": "#/components/responses/AwsError" }
+        }
+      }
+    },
+    "/buckets/{bucket}": {
+      "get": {
+        "operationId": "getBucket",
+        "summary": "Read one bucket's properties, including its region",
+        "x-wire": "Cloud Control GetResource, TypeName AWS::S3::Bucket; region from RegionalDomainName",
+        "x-aws-actions": ["cloudformation:GetResource"],
+        "x-aws-actions-pending": "handler permissions of AWS::S3::Bucket for read, to be confirmed by aws.c",
+        "x-role": "read",
+        "parameters": [ { "$ref": "#/components/parameters/bucket" } ],
+        "responses": {
+          "200": { "description": "The bucket", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Bucket" } } } },
+          "default": { "$ref": "#/components/responses/AwsError" }
+        }
+      }
+    },
+    "/buckets/{bucket}/objects": {
+      "get": {
+        "operationId": "listObjects",
+        "summary": "One page of folders and files under a prefix",
+        "x-wire": "S3 ListObjectsV2: GET ?list-type=2&prefix=&delimiter=/&continuation-token=",
+        "x-aws-actions": ["s3:ListBucket"],
+        "x-role": "read",
+        "parameters": [
+          { "$ref": "#/components/parameters/bucket" },
+          { "name": "prefix", "in": "query", "required": false, "schema": { "type": "string", "default": "" } },
+          { "name": "token", "in": "query", "required": false, "description": "The nextToken of the previous page", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "One page", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ObjectPage" } } } },
+          "default": { "$ref": "#/components/responses/AwsError" }
+        }
+      }
+    },
+    "/buckets/{bucket}/objects/{key}": {
+      "get": {
+        "operationId": "getObject",
+        "summary": "Read an object, whole or a byte range (the zip reader reads by ranges)",
+        "x-wire": "S3 GetObject, GET on the key, optional Range header; 206 with Content-Range for a range",
+        "x-aws-actions": ["s3:GetObject"],
+        "x-role": "read",
+        "parameters": [
+          { "$ref": "#/components/parameters/bucket" },
+          { "name": "key", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "range", "in": "query", "required": false, "description": "Inclusive byte range, as in an HTTP Range header", "schema": { "$ref": "#/components/schemas/ByteRange" } }
+        ],
+        "responses": {
+          "200": { "description": "The whole object", "content": { "application/octet-stream": { "schema": { "type": "string", "contentEncoding": "binary" } } } },
+          "206": { "description": "The asked range", "content": { "application/octet-stream": { "schema": { "type": "string", "contentEncoding": "binary" } } } },
+          "default": { "$ref": "#/components/responses/AwsError" }
+        }
+      }
+    },
+    "/buckets/{bucket}/cors-plan": {
+      "post": {
+        "operationId": "planCors",
+        "summary": "Make a plan that adds the site's CORS rule to a bucket. It never applies anything.",
+        "x-wire": "none beyond getBucket: the plan is built in the page",
+        "x-aws-actions": [],
+        "x-role": "read",
+        "parameters": [ { "$ref": "#/components/parameters/bucket" } ],
+        "responses": {
+          "200": { "description": "The plan, for the owner to Approve or not", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Plan" } } } },
+          "default": { "$ref": "#/components/responses/AwsError" }
+        }
+      }
+    },
+    "/plans/apply": {
+      "post": {
+        "operationId": "applyPlan",
+        "summary": "Apply a plan, only after the owner's Approve, with the change role",
+        "x-wire": "Cloud Control UpdateResource, then GetResourceRequestStatus until done",
+        "x-aws-actions": ["cloudformation:UpdateResource", "cloudformation:GetResourceRequestStatus"],
+        "x-aws-actions-pending": "handler permissions of AWS::S3::Bucket for update, to be confirmed by aws.c",
+        "x-role": "change",
+        "x-needs-approve": true,
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Plan" } } } },
+        "responses": {
+          "200": { "description": "The request's final status", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RequestStatus" } } } },
+          "default": { "$ref": "#/components/responses/AwsError" }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "bucket": { "name": "bucket", "in": "path", "required": true, "schema": { "type": "string", "minLength": 3, "maxLength": 63 } }
+    },
+    "schemas": {
+      "BucketSummary": {
+        "type": "object", "required": ["name"],
+        "properties": { "name": { "type": "string" } }
+      },
+      "Bucket": {
+        "type": "object", "required": ["name", "region"],
+        "properties": {
+          "name": { "type": "string" },
+          "region": { "type": "string", "examples": ["eu-west-1"] },
+          "cors": { "type": ["object", "null"], "description": "CorsConfiguration as Cloud Control returns it, or null when the bucket has none" }
+        }
+      },
+      "ObjectPage": {
+        "type": "object", "required": ["folders", "files"],
+        "properties": {
+          "folders": { "type": "array", "items": { "type": "string" }, "description": "CommonPrefixes" },
+          "files": { "type": "array", "items": { "$ref": "#/components/schemas/ObjectSummary" } },
+          "nextToken": { "type": ["string", "null"], "description": "NextContinuationToken; null on the last page" }
+        }
+      },
+      "ObjectSummary": {
+        "type": "object", "required": ["key", "size"],
+        "properties": {
+          "key": { "type": "string" },
+          "size": { "type": "integer", "minimum": 0 },
+          "lastModified": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ByteRange": {
+        "type": "object", "required": ["start", "end"],
+        "properties": { "start": { "type": "integer", "minimum": 0 }, "end": { "type": "integer", "minimum": 0 } }
+      },
+      "Plan": {
+        "type": "object", "required": ["typeName", "identifier", "patch"],
+        "properties": {
+          "typeName": { "const": "AWS::S3::Bucket" },
+          "identifier": { "type": "string" },
+          "patch": { "type": "array", "description": "RFC 6902 JSON Patch, as Cloud Control UpdateResource takes", "items": { "type": "object" } }
+        }
+      },
+      "RequestStatus": {
+        "type": "object", "required": ["operationStatus"],
+        "properties": {
+          "operationStatus": { "type": "string", "enum": ["PENDING", "IN_PROGRESS", "SUCCESS", "FAILED", "CANCEL_IN_PROGRESS", "CANCEL_COMPLETE"] },
+          "statusMessage": { "type": "string" }
+        }
+      },
+      "AwsError": {
+        "type": "object", "required": ["code", "message"],
+        "description": "S3 <Error><Code/><Message/></Error> or Cloud Control __type and message, made one shape; a CORS refusal shows as code NetworkError",
+        "properties": { "code": { "type": "string", "examples": ["NoSuchKey", "NoSuchBucket", "AccessDenied"] }, "message": { "type": "string" }, "status": { "type": "integer" } }
+      }
+    },
+    "responses": {
+      "AwsError": { "description": "The promise rejects with this", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AwsError" } } } }
+    }
+  }
+}
