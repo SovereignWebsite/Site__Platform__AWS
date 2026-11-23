@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' https://accounts.google.com/gsi/ https://sts.amazonaws.com https://iam.amazonaws.com https://ce.us-east-1.amazonaws.com; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' https://accounts.google.com/gsi/ https://*.amazonaws.com; img-src 'self' data: blob:; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <title>AWS Platform Sovereign Website</title>
 <meta name="description" content="Run your AWS accounts from your own browser: sign in with Google, one-hour credentials, read-only by default, and every change a plan you approve. An unofficial site, not made or endorsed by Amazon Web Services.">
@@ -90,13 +90,27 @@
 <ul class="cards" id="plans"></ul>
 </section>
 
+<section class="step" id="step4" hidden>
+<h2>4. S3 browser</h2>
+<p class="small">Lists an account's buckets, walks their folders and opens files with the read role; JSON is shown formatted. A bucket answers this page only once its CORS rules allow this site: the first time, the page shows a plan that adds that one rule, for your Approve.</p>
+<div class="row">
+  <select id="s3-account" aria-label="Account"></select>
+  <select id="s3-region" aria-label="Region"></select>
+  <button type="button" id="s3-list-buckets">List buckets</button>
+</div>
+<p id="s3-status" class="status"></p>
+<ul class="cards s3-buckets" id="s3-buckets"></ul>
+<div id="s3-objects"></div>
+<div id="s3-file"></div>
+</section>
+
 <h2>How this works</h2>
 <ul>
 <li>Google gives this page an ID token for you. AWS STS (AssumeRoleWithWebIdentity) swaps it for credentials that end within the hour.</li>
 <li>So a refresh does not sign you out, the page seals both with this device's own key before keeping them: a key pair made by your browser for this site, whose private half cannot be read by anyone, this page included; the browser only lets this site use it. Sealed records end when the credentials do. Sign out deletes them; Forget this device also deletes the key.</li>
 <li>Once you have signed in here by hand, Google signs you in again without a click (on a refresh after the hour, or a minute before it ends), as long as this browser knows you. Sign out turns that off until you next sign in by hand.</li>
 <li>Your roles are the mandate: they are written as infrastructure as code, and a role can do only what its template lists.</li>
-<li>Calls go from your browser straight to AWS (STS, IAM, Cost Explorer), signed in the page with your one-hour credentials. No server of ours sits in between, and there is no tracking.</li>
+<li>Calls go from your browser straight to AWS (STS, IAM, Cost Explorer, CloudFormation, Cloud Control, S3), signed in the page with your one-hour credentials. No server of ours sits in between, and there is no tracking.</li>
 </ul>
 
 <footer>
@@ -113,5 +127,6 @@ A sovereign website, made with the <a href="https://sovereignwebsite.org/">open 
 <script src="sigv4.js"></script>
 <script src="plan.js"></script>
 <script src="app.js"></script>
+<script src="s3.js"></script>
 </body>
 </html>

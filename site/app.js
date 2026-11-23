@@ -132,10 +132,10 @@
       .then(function (h) { return fetch(url, { method: "POST", headers: h, body: body }); })
       .then(function (r) { return r.text().then(function (t) { var d = new DOMParser().parseFromString(t, "text/xml"); if (!r.ok) throw awsError(d, r.status); return d; }); });
   }
-  function jsonCall(creds, host, service, target, payload) {
+  function jsonCall(creds, host, service, target, payload, region, jsonVersion) {
     var url = "https://" + host + "/", body = JSON.stringify(payload);
-    var headers = { "content-type": "application/x-amz-json-1.1", "x-amz-target": target };
-    return SigV4.sign({ method: "POST", url: url, headers: headers, body: body }, creds, "us-east-1", service)
+    var headers = { "content-type": "application/x-amz-json-" + (jsonVersion || "1.1"), "x-amz-target": target };
+    return SigV4.sign({ method: "POST", url: url, headers: headers, body: body }, creds, region || "us-east-1", service)
       .then(function (h) { return fetch(url, { method: "POST", headers: h, body: body }); })
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.__type || r.status) + ": " + (j.message || j.Message || "")); return j; }); });
   }
@@ -208,6 +208,7 @@
         el("div", { class: "row" }, [read, rm]), out, setup]));
     });
     renderPlans();
+    if (window.S3Browser) S3Browser.render();
   }
   $("add-account").onsubmit = function (ev) {
     ev.preventDefault();
@@ -230,11 +231,12 @@
       var out = el("div", {}), st = el("p", { class: "status" });
       show.onclick = function () { showPlan(plan, accounts.filter(function (a) { return a.id === sel.value; })[0], out, st); };
       box.appendChild(el("li", {}, [el("strong", { text: plan.title }), el("p", { class: "small", text: plan.why }),
-        el("p", { class: "small", text: "Adds: " + plan.add.join(", ") + ". Keeps " + plan.keep + ". Never touches " + plan.never + "." }),
+        el("p", { class: "small", text: plan.summary || ("Adds: " + plan.add.join(", ") + ". Keeps " + plan.keep + ". Never touches " + plan.never + ".") }),
         el("div", { class: "row" }, [sel, show]), out, st]));
     });
   }
   function showPlan(plan, acct, out, st) {
+    if (plan.action === "cloudformation.update_stack") return showStackPlan(plan, acct, out, st);
     out.textContent = ""; say(st, "Reading the role as it is now, with the change role...");
     assume(acct, plan.role).then(function (c) {
       return getRole(c, plan.target_role).then(function (before) {
@@ -260,6 +262,71 @@
       });
     }).catch(function (e) { say(st, e.message, "bad"); });
   }
+  // A plan that updates this platform's own CloudFormation stack: the template AWS holds now beside the site's,
+  // then AWS's own change set (what it will add, modify or replace), then Execute. Two approvals.
+  var CFN = "cloudformation.us-east-1.amazonaws.com";
+  function cfn(c, params) { params.Version = "2010-05-15"; return queryCall(c, CFN, "cloudformation", params); }
+  function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function pollChangeSet(c, plan, name, n) {
+    return cfn(c, { Action: "DescribeChangeSet", StackName: plan.stack, ChangeSetName: name }).then(function (d) {
+      var status = xmlText(d, "Status");
+      if (/PENDING|IN_PROGRESS/.test(status) && n < 60) return wait(2000).then(function () { return pollChangeSet(c, plan, name, n + 1); });
+      return d;
+    });
+  }
+  function pollStack(c, plan, st, n) {
+    return cfn(c, { Action: "DescribeStacks", StackName: plan.stack }).then(function (d) {
+      var status = xmlText(d, "StackStatus");
+      say(st, "Stack " + plan.stack + ": " + status);
+      if (/IN_PROGRESS/.test(status) && n < 150) return wait(4000).then(function () { return pollStack(c, plan, st, n + 1); });
+      return status;
+    });
+  }
+  function showStackPlan(plan, acct, out, st) {
+    out.textContent = ""; say(st, "Reading the stack's template as it is now, with the change role...");
+    assume(acct, plan.role).then(function (c) {
+      return Promise.all([
+        cfn(c, { Action: "GetTemplate", StackName: plan.stack, TemplateStage: "Original" }).then(function (d) { return xmlText(d, "TemplateBody"); }),
+        fetch(plan.template).then(function (r) { return r.text(); })
+      ]).then(function (t) {
+        var before = t[0], after = t[1];
+        if (before.trim() === after.trim()) return say(st, "Nothing to do: " + plan.stack + " already runs this site's template.", "ok");
+        var diff = Plans.lineDiff(before, after), pre = el("pre", { class: "diff" });
+        diff.forEach(function (x) { pre.appendChild(el("span", { class: x.op === "+" ? "add" : x.op === "-" ? "del" : "same", text: x.op + " " + x.line + "\n" })); });
+        out.appendChild(el("h4", { text: "The template: what changes (- now, + after)" })); out.appendChild(pre);
+        var go = el("button", { type: "button", class: "approve", text: "1. Approve: ask AWS what this will change" });
+        go.onclick = function () {
+          go.disabled = true; say(st, "Asking CloudFormation for a change set (nothing changes yet)...");
+          var name = "sws-aws-platform-" + Date.now();
+          var params = { Action: "CreateChangeSet", StackName: plan.stack, ChangeSetName: name, ChangeSetType: "UPDATE", TemplateBody: after,
+            "Capabilities.member.1": "CAPABILITY_NAMED_IAM" };
+          (plan.parameters || []).forEach(function (k, i) { params["Parameters.member." + (i + 1) + ".ParameterKey"] = k; params["Parameters.member." + (i + 1) + ".UsePreviousValue"] = "true"; });
+          cfn(c, params).then(function () { return pollChangeSet(c, plan, name, 0); }).then(function (d) {
+            if (xmlText(d, "Status") !== "CREATE_COMPLETE") throw new Error("Change set " + xmlText(d, "Status") + ": " + xmlText(d, "StatusReason"));
+            var list = el("ul", {});
+            Array.prototype.forEach.call(d.getElementsByTagName("ResourceChange"), function (rc) {
+              var t = function (tag) { var n = rc.getElementsByTagName(tag)[0]; return n ? n.textContent : ""; };
+              list.appendChild(el("li", { text: t("Action") + " " + t("LogicalResourceId") + " (" + t("ResourceType") + ")" + (t("Replacement") ? ", replacement: " + t("Replacement") : "") }));
+            });
+            out.appendChild(el("h4", { text: "AWS says this will change" })); out.appendChild(list);
+            var run = el("button", { type: "button", class: "approve", text: "2. Approve: execute the change set" });
+            run.onclick = function () {
+              run.disabled = true; say(st, "Executing...");
+              cfn(c, { Action: "ExecuteChangeSet", StackName: plan.stack, ChangeSetName: name })
+                .then(function () { return pollStack(c, plan, st, 0); })
+                .then(function (status) { say(st, /_COMPLETE$/.test(status) && !/ROLLBACK/.test(status) ? "Applied and checked: " + plan.stack + " is " + status + "." : "Stack ended " + status + ": see its events in CloudFormation.", /ROLLBACK|FAILED/.test(status) ? "bad" : "ok"); })
+                .catch(function (e) { run.disabled = false; say(st, e.message, "bad"); });
+            };
+            out.appendChild(run);
+            say(st, "AWS's change set is ready. Nothing has changed yet.", "");
+          }).catch(function (e) { go.disabled = false; say(st, e.message, "bad"); });
+        };
+        out.appendChild(go);
+        say(st, "This is the plan. Nothing has changed yet.", "");
+      });
+    }).catch(function (e) { say(st, e.message + (/AccessDenied|not authorized/.test(e.message) ? " (The stack must run template v2 or later before it can update itself; the first update to v2 is made in the console.)" : ""), "bad"); });
+  }
+
   fetch("plans/index.json").then(function (r) { return r.json(); }).then(function (ix) {
     return Promise.all(ix.plans.map(function (id) { return fetch("plans/" + id + ".json").then(function (r) { return r.json(); }); }));
   }).then(function (p) { plans = p; renderPlans(); });
@@ -276,6 +343,8 @@
     accounts = []; renderAccounts();
     if (window.SealedStore) SealedStore.forgetDevice().then(function () { say($("store-status"), "This device's key and everything sealed with it are deleted.", "ok"); });
   };
+  window.Platform = { assume: assume, jsonCall: jsonCall, xmlText: xmlText, awsError: awsError, el: el, say: say,
+    accounts: function () { return accounts; }, signedIn: function () { return !!mem.idToken; } };
   initGoogle();
   loadAccounts().then(restore).then(renderAccounts).then(function () { return gisReady; }).then(autoSignIn);
 })();

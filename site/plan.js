@@ -40,5 +40,40 @@
   }
   function same(a, b) { return canonical(a) === canonical(b); }
 
-  root.Plans = { apply: apply, same: same };
+  // Line diff (longest common subsequence): [{ op: " " | "-" | "+", line }].
+  function lineDiff(a, b) {
+    var x = a.replace(/\r/g, "").split("\n"), y = b.replace(/\r/g, "").split("\n"), n = x.length, m = y.length, i, j;
+    var L = []; for (i = 0; i <= n; i++) { L.push(new Array(m + 1).fill(0)); }
+    for (i = n - 1; i >= 0; i--) for (j = m - 1; j >= 0; j--) L[i][j] = x[i] === y[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+    var out = []; i = 0; j = 0;
+    while (i < n && j < m) {
+      if (x[i] === y[j]) { out.push({ op: " ", line: x[i] }); i++; j++; }
+      else if (L[i + 1][j] >= L[i][j + 1]) { out.push({ op: "-", line: x[i] }); i++; }
+      else { out.push({ op: "+", line: y[j] }); j++; }
+    }
+    for (; i < n; i++) out.push({ op: "-", line: x[i] });
+    for (; j < m; j++) out.push({ op: "+", line: y[j] });
+    return out;
+  }
+
+  // The CORS rule that lets this site list and open a bucket's objects, as a Cloud Control JSON patch.
+  // Adds one rule (Id sws-aws-platform) and keeps every rule already there; nothing if it is already present.
+  var CORS_ID = "sws-aws-platform";
+  function corsRule(origin) {
+    return { Id: CORS_ID, AllowedOrigins: [origin], AllowedMethods: ["GET", "HEAD"], AllowedHeaders: ["*"],
+      ExposedHeaders: ["ETag", "Content-Type", "Content-Length", "Last-Modified"], MaxAge: 3000 };
+  }
+  function corsPlan(props, origin) {
+    var before = (props && props.CorsConfiguration) || null;
+    var rules = (before && before.CorsRules) || [];
+    if (rules.some(function (r) { return r.Id === CORS_ID && (r.AllowedOrigins || []).indexOf(origin) >= 0; }))
+      return { unchanged: true, before: before, after: before, patch: [] };
+    var rule = corsRule(origin);
+    var after = { CorsRules: rules.concat([rule]) };
+    var patch = before && before.CorsRules ? [{ op: "add", path: "/CorsConfiguration/CorsRules/-", value: rule }]
+      : [{ op: "add", path: "/CorsConfiguration", value: { CorsRules: [rule] } }];
+    return { unchanged: false, before: before, after: after, patch: patch };
+  }
+
+  root.Plans = { apply: apply, same: same, lineDiff: lineDiff, corsPlan: corsPlan };
 })(typeof window !== "undefined" ? window : globalThis);

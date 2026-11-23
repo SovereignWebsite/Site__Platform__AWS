@@ -22,3 +22,11 @@ footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--lin
 /* Google's button draws in its own frame; if its inline styles are refused, keep its fallback icon small. */
 #google-button { min-height: 44px; } #google-button svg { width: 18px; height: 18px; }
 details summary { cursor: pointer; margin: .4rem 0; }
+
+/* S3 browser, plan diffs, formatted JSON */
+button.linkish { background: none; border: 0; color: var(--accent); padding: .1rem 0; margin: 0; text-align: left; text-decoration: underline; overflow-wrap: anywhere; }
+ul.s3-buckets, ul.s3-list { list-style: none; padding: 0; columns: 1; }
+ul.s3-list li.folder button::before { content: "\1F4C1  "; }
+.s3-img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
+pre.diff .add { color: var(--ok); } pre.diff .del { color: var(--bad); } pre.diff .same { color: var(--muted); }
+pre.json .j-key { color: var(--accent); } pre.json .j-str { color: var(--ok); } pre.json .j-num, pre.json .j-lit { color: var(--bad); }

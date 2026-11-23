@@ -1,0 +1,14 @@
+{
+  "id": "2026-11-23__platform-template-v2",
+  "title": "This platform's own stack: run the site's latest template",
+  "why": "Template v2 (23 Nov 2026) adds the S3 browser (read role: list and open files; change role: add a bucket's CORS rule through Cloud Control) and lets the change role update this stack, so later changes need no console visit (Dinis: \"for now [allow] a lot of updates on [the] CloudFormation stack. We'll tighten that a bit later\"). The first move to v2 is made in the console, because v1 cannot update itself; every later version is applied here.",
+  "summary": "Shows the template AWS holds beside the site's; then AWS's own change set; then executes it. Parameters keep their values.",
+  "role": "sws-aws-platform-change",
+  "action": "cloudformation.update_stack",
+  "stack": "sws-aws-platform",
+  "template": "cloudformation/bootstrap.yaml",
+  "parameters": [
+    "GoogleClientId",
+    "GoogleSub"
+  ]
+}

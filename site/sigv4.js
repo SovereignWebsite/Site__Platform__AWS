@@ -45,11 +45,13 @@
     headers.host = u.host;
     headers["x-amz-date"] = date;
     if (creds.sessionToken) headers["x-amz-security-token"] = creds.sessionToken;
-    var names = Object.keys(headers).sort();
-    var canonHeaders = names.map(function (n) { return n + ":" + headers[n].replace(/\s+/g, " ") + "\n"; }).join("");
-    var signed = names.join(";");
     var scope = day + "/" + region + "/" + service + "/aws4_request";
+    var names, signed;
     return sha256(req.body || "").then(function (bodyHash) {
+      if (service === "s3") headers["x-amz-content-sha256"] = bodyHash; // S3 requires the payload hash as a header
+      names = Object.keys(headers).sort();
+      var canonHeaders = names.map(function (n) { return n + ":" + headers[n].replace(/\s+/g, " ") + "\n"; }).join("");
+      signed = names.join(";");
       var path = u.pathname.split("/").map(function (s) { return uriEncode(decodeURIComponent(s)); }).join("/") || "/";
       var canon = [req.method, path, canonicalQuery(u.search), canonHeaders, signed, bodyHash].join("\n");
       return sha256(canon);

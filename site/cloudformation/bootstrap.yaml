@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SovereignWebsite AWS platform, bootstrap (the last console log-in). Two roles that
+  SovereignWebsite AWS platform v2, bootstrap (the last console log-in). Two roles that
   Dinis's own Google sign-in, in his browser on aws.platform.sovereignweb.site, may
   assume through STS AssumeRoleWithWebIdentity for at most one hour. No IAM user, no
   access key, nothing stored. Written by aws.c@SovereignWebsite.dinis, 22 Nov 2026; the site fills in both parameters.
@@ -44,6 +44,19 @@ Resources:
                 Effect: Allow
                 Action: [budgets:ViewBudget, budgets:DescribeBudgetAction, budgets:DescribeBudgetActionsForAccount, ce:GetCostAndUsage, ce:GetCostForecast, ce:GetDimensionValues]
                 Resource: "*"
+        # v2, 23 Nov 2026: the S3 browser. Dinis: the read role should "also open file[s]".
+        - PolicyName: s3-browse
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: S3ListAndOpen
+                Effect: Allow
+                Action: ["s3:Get*", "s3:List*"]
+                Resource: "*"
+              - Sid: CloudControlListBuckets
+                Effect: Allow
+                Action: [cloudformation:ListResources, cloudformation:GetResource]
+                Resource: "*"
 
   PlatformChange:
     Type: AWS::IAM::Role
@@ -70,6 +83,34 @@ Resources:
                 Effect: Allow
                 Action: [iam:GetRole, iam:UpdateAssumeRolePolicy]
                 Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/sovereignwebsite-factory-dns
+        # v2, 23 Nov 2026: let a bucket answer this site (a CORS rule, added through Cloud Control).
+        - PolicyName: s3-cors
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: BucketCorsThroughCloudControl
+                Effect: Allow
+                Action: ["s3:Get*", "s3:List*", s3:PutBucketCORS, cloudformation:GetResource, cloudformation:ListResources, cloudformation:UpdateResource, cloudformation:GetResourceRequestStatus]
+                Resource: "*"
+        # v2, 23 Nov 2026: this stack updates itself from the site, as a plan the owner approves, so no more
+        # console visits. Dinis: "for now [allow] a lot of updates on [the] CloudFormation stack. We'll tighten
+        # that a bit later." Broad on purpose: any IAM action on roles named sws-aws-platform-*.
+        - PolicyName: self-update
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ThisStackOnly
+                Effect: Allow
+                Action: [cloudformation:DescribeStacks, cloudformation:DescribeStackEvents, cloudformation:GetTemplate, cloudformation:GetTemplateSummary, cloudformation:CreateChangeSet, cloudformation:DescribeChangeSet, cloudformation:ExecuteChangeSet, cloudformation:DeleteChangeSet]
+                Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/sws-aws-platform/*
+              - Sid: ValidateTemplates
+                Effect: Allow
+                Action: cloudformation:ValidateTemplate
+                Resource: "*"
+              - Sid: ThePlatformRoles
+                Effect: Allow
+                Action: "iam:*"
+                Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/sws-aws-platform-*
 
 Outputs:
   ReadRoleArn: { Value: !GetAtt PlatformRead.Arn }
