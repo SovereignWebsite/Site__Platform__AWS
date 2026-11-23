@@ -5,33 +5,30 @@
 //
 // Accepts per file: a trail's delivery file (.json.gz or .json, { Records }), a LookupEvents output, a bare array,
 // or one record per line; gzip is found by its magic bytes, not by the name. CSV is reported, not read.
-// Limits, so a big or hostile file cannot hang or exhaust the tab (all can be lowered by opts):
-// at most 2,000 files; 50 MB per file as given; 200 MB per file once unzipped; 1 GB unzipped in all;
-// 2,000,000 events in all. A file over a limit is reported and skipped; the others are still read.
+// Limits, so a big or hostile file cannot hang or exhaust the tab (all can be lowered by opts; security.aws.a sized
+// them): at most 2,000 files; 50 MB per file as given; 64 MB per file once unzipped; 256 MB unzipped in all;
+// 500,000 events in all. A file over a limit is reported and skipped; the others are still read.
 (function (root) {
   "use strict";
   var MB = 1024 * 1024;
-  var LIMITS = { files: 2000, fileBytes: 50 * MB, unzippedBytes: 200 * MB, totalBytes: 1024 * MB, events: 2000000 };
+  var LIMITS = { files: 2000, fileBytes: 50 * MB, unzippedBytes: 64 * MB, totalBytes: 256 * MB, events: 500000 };
 
   function Limit(message) { this.message = message; }
   function fmtSize(n) { return n >= MB ? Math.round(n / MB) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB"; }
-  // Reads a stream to text, stopping once it passes max bytes (counted after unzipping).
+  // Reads a stream to text, decoding as chunks arrive (no second copy of the bytes), and stops once it passes
+  // max bytes (counted after unzipping). Peak memory is about the decoded text plus the parsed records.
   function readCapped(stream, max) {
-    var reader = stream.getReader(), chunks = [], size = 0;
+    var reader = stream.getReader(), dec = new TextDecoder("utf-8", { fatal: false }), parts = [], size = 0;
     function next() {
       return reader.read().then(function (r) {
-        if (r.done) return;
+        if (r.done) { parts.push(dec.decode()); return; }
         size += r.value.length;
         if (size > max) { try { reader.cancel(); } catch (e) { /* none */ } throw new Limit("larger than " + fmtSize(max) + " once unzipped"); }
-        chunks.push(r.value);
+        parts.push(dec.decode(r.value, { stream: true }));
         return next();
       });
     }
-    return next().then(function () {
-      var all = new Uint8Array(size), off = 0;
-      chunks.forEach(function (c) { all.set(c, off); off += c.length; });
-      return { text: new TextDecoder("utf-8", { fatal: false }).decode(all), size: size };
-    });
+    return next().then(function () { return { text: parts.join(""), size: size }; });
   }
   function head(file, n) { return file.slice(0, n).arrayBuffer().then(function (b) { return new Uint8Array(b); }); }
 
