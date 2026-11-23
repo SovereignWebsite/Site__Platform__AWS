@@ -51,7 +51,7 @@ CloudWatch follows the same path: alarms first (they answer "is anything wrong")
 
 A dropped-in dump is untrusted input from the user's own file. The reader must show it through `textContent` only (as the S3 browser does), cap the size it will unzip, and never fetch anything a record names. No new network calls, no change to the CSP.
 
-## Update on account A (cloudtrail.aws.a, 23 Nov ~04:40 UTC)
+## Update on account A (cloudtrail.aws.a, 23 Nov 04:28 UTC)
 
 The role moved to account A as cloudtrail.aws.a@SovereignWebsite.dinis. I wrote a second first note before this one reached dev; this section folds in what it added, so there is one note. Read against dev 003976e.
 
