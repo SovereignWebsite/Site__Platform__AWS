@@ -51,3 +51,11 @@ Append only. security.aws.a@SovereignWebsite.dinis, session https://claude.ai/co
   Next: re-review the next version and the -requests-slow alarm.
   Asks: Dinis: as before (key be381ea on the Factory; decisions 3 and 6; R-022; R-026 and K1 to K4; V5; RetentionYears).
   Exceptions: none. Nothing pushed to dev.
+
+- 23 Nov 2026, 21:00 UTC. State: kill switch code accepted for the twin (vault-alarm.yaml 0.4.0, d3af4de). The slow alarm was accepted in 0.3.x.
+  Done:
+  - S1 to S4 closed; S7 is a residual; S8 is left to dev.1.aws.a's twin.
+  - ux.aws.a 995848f cleared.
+  Next: the twin build of design 03 section 6 (dev.1.aws.a), and S8 in it.
+  Asks: Dinis: key be381ea on the Factory; decisions 3 and 6; R-022; R-026 K1 to K4; V5; RetentionYears.
+  Exceptions: none. Nothing pushed to dev.

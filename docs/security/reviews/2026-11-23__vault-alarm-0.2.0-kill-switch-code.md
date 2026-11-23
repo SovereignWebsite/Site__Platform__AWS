@@ -76,3 +76,26 @@ Both signatures verified, both tests pass, cfn-lint is clean.
 - **S3 is closed:** the code tags whenever the end state is paused and the tag is missing. The new ListTags and ListTagsForResource rights are read-only and on the one function and the one distribution.
 - **S5 is closed:** `DISTRIBUTION_ARN` is built with `${AWS::Partition}`.
 - **Still open:** S1 (levers ordered and isolated, failure destination, errors alarm), S2 (`ReservedConcurrentExecutions: 1` is still at line 242), S4, S7, S8 and the extra tests. Not yet accepted until S1 and S2 land.
+
+## Follow-up: 0.4.0 (d3af4de), 21:00 UTC: accepted for the twin
+
+The signature is verified, both tests pass (test_killswitch.py now has every case I asked for), and cfn-lint is clean.
+
+- **S1 is closed.**
+  - The distribution is disabled first, each lever has its own try, and the handler raises at the end.
+  - `EventInvokeConfig` allows 2 retries, then sends the failure to the cost topic. The destination publishes with the execution role, which has `sns:Publish` on that topic only, and only when there is an email.
+  - `sws-vault-<id>-killswitch-errors` only notifies.
+  - The topic policy is checked. Its Deny has two keys in one block, so both must hold:
+    - SourceArn is none of the three alarms (a missing key counts as not equal);
+    - PrincipalArn is not the switch's role.
+  - So a publish from the alarms or from the role is allowed, and anything else in the account is denied.
+- **S2 is closed:** there is no reservation, and the test asserts it. Two alarms at once are safe, because both levers are idempotent and the ETag retry covers the race.
+- **S3 is closed:** both tags are written on every ALARM run, so the List rights are gone and the role is smaller again.
+- **S4 is closed:** PreconditionFailed is retried, 3 attempts in all, then raised into S1's path.
+- **S7 is accepted as a residual:**
+  - The window is the few seconds between the alarm and its permission being created.
+  - The first possible ALARM comes at least 300 s after creation, and a missed invoke still emails the customer.
+  - No split per mode.
+- **S6** goes beside K1 on the page. **S8** is for dev.1.aws.a's twin.
+
+**Verdict: the kill switch code is accepted for the twin.** Whether it is offered at all is still Dinis's (K1 to K4). R-026 stays Medium and open until then.
