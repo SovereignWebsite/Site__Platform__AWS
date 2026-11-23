@@ -154,18 +154,61 @@
   }
 
   // openKey: a file to open once its folder is listed (from an address).
+  // ---- listing cache (item 11): going back up a folder, or between folders, answers from memory for a minute ----
+  // Keyed by account, bucket, folder and page token; only successful answers are kept; Refresh asks S3 again.
+  var LIST_CACHE = Object.create(null), LIST_CACHE_MS = 60000;
+  function fetchList(b, region, prefix, token, fresh) {
+    var k = [state.acct && state.acct.id, b, prefix, token || ""].join("\n"), hit = LIST_CACHE[k];
+    // Answers only while signed in (the cache is in memory only, never stored, and gone on reload).
+    if (!fresh && hit && P.signedIn() && Date.now() - hit.at < LIST_CACHE_MS) return Promise.resolve({ d: new DOMParser().parseFromString(hit.text, "text/xml"), age: Date.now() - hit.at });
+    return read().then(function (c) {
+      var q = "?list-type=2&delimiter=%2F&max-keys=500" + (prefix ? "&prefix=" + encodeURIComponent(prefix) : "") + (token ? "&continuation-token=" + encodeURIComponent(token) : "");
+      return s3get(c, bucketUrl(b, region, q), region).then(function (r) {
+        return r.text().then(function (t) {
+          var d = new DOMParser().parseFromString(t, "text/xml"); if (!r.ok) throw P.awsError(d, r.status);
+          LIST_CACHE[k] = { text: t, at: Date.now() };
+          return { d: d, age: 0 };
+        });
+      });
+    });
+  }
+  // ---- sort (item 10): by name, size or date, either way; folders stay first; the choice stays across folders ----
+  state.sort = { by: "name", dir: 1 };
+  function sortRows() {
+    var list = $("s3-list"); if (!list) return;
+    var by = state.sort.by, dir = state.sort.dir, rows = Array.prototype.slice.call(list.rows);
+    rows.sort(function (a, b) {
+      var fa = a.classList.contains("folder"), fb = b.classList.contains("folder");
+      if (fa !== fb) return fa ? -1 : 1;
+      var x = by === "size" ? +a.dataset.size - +b.dataset.size : by === "when" ? (a.dataset.when < b.dataset.when ? -1 : a.dataset.when > b.dataset.when ? 1 : 0) : 0;
+      if (!x || fa) x = a.dataset.name < b.dataset.name ? -1 : a.dataset.name > b.dataset.name ? 1 : 0;
+      return (fa ? 1 : dir) * x;
+    });
+    rows.forEach(function (r) { list.appendChild(r); });
+    Array.prototype.forEach.call(document.querySelectorAll("#s3-objects th[data-sort]"), function (th) {
+      th.setAttribute("aria-sort", th.dataset.sort === by ? (dir > 0 ? "ascending" : "descending") : "none");
+    });
+  }
+  function sortHead(label, by) {
+    var b = P.el("button", { type: "button", class: "linkish", text: label, title: "Sort by " + label.toLowerCase() });
+    b.onclick = function () { state.sort = { by: by, dir: state.sort.by === by ? -state.sort.dir : (by === "name" ? 1 : -1) }; sortRows(); };
+    return P.el("th", { "data-sort": by, "aria-sort": "none" }, [b]);
+  }
+  function countRows() {
+    var list = $("s3-list"); if (!list) return "";
+    var f = list.querySelectorAll("tr.folder").length, n = list.querySelectorAll("tr.file").length;
+    return (f ? f + " folder" + (f === 1 ? "" : "s") + ", " : "") + n + " file" + (n === 1 ? "" : "s");
+  }
+
   function listObjects(token, openKey) {
     var box = $("s3-objects"), st = $("s3-status"), b = state.bucket, region = state.bucketRegion;
     var my = token ? state.view : newView(false);
     if (!token) { box.textContent = ""; state.sizes = {}; state.key = openKey || ""; go(b, openKey || state.prefix); if (!openKey) { state.file++; $("s3-file").textContent = ""; } }
     P.say(st, "Listing " + b + "/" + state.prefix + "...");
-    read().then(function (c) {
-      var q = "?list-type=2&delimiter=%2F&max-keys=500" + (state.prefix ? "&prefix=" + encodeURIComponent(state.prefix) : "") + (token ? "&continuation-token=" + encodeURIComponent(token) : "");
-      return s3get(c, bucketUrl(b, region, q), region).then(function (r) {
-        return r.text().then(function (t) { var d = new DOMParser().parseFromString(t, "text/xml"); if (!r.ok) throw P.awsError(d, r.status); return d; });
-      });
-    }).then(function (d) {
+    var fresh = state.fresh; state.fresh = false;
+    fetchList(b, region, state.prefix, token, fresh).then(function (got) {
       if (my !== state.view) return;
+      var d = got.d;
       if (!token) {
         var crumbs = P.el("p", { class: "crumbs" }), parts = state.prefix.split("/").filter(Boolean), acc = "";
         var root = P.el("button", { type: "button", class: "linkish", text: b }); root.onclick = function () { state.prefix = ""; listObjects(); };
@@ -181,9 +224,11 @@
           var q = filter.value.toLowerCase();
           Array.prototype.forEach.call($("s3-list").rows, function (tr) { tr.hidden = q && tr.textContent.toLowerCase().indexOf(q) < 0; });
         };
-        box.appendChild(P.el("div", { class: "toolbar" }, [filter]));
+        var refresh = P.el("button", { type: "button", class: "quiet", text: "Refresh", title: "List this folder from S3 again" });
+        refresh.onclick = function () { state.fresh = true; listObjects(); };
+        box.appendChild(P.el("div", { class: "toolbar" }, [filter, refresh]));
         var table = P.el("table", { class: "s3-table" });
-        var head = P.el("thead", {}, [P.el("tr", {}, [P.el("th", { text: "Name" }), P.el("th", { text: "Size" }), P.el("th", { text: "Modified (UTC)" })])]);
+        var head = P.el("thead", {}, [P.el("tr", {}, [sortHead("Name", "name"), sortHead("Size", "size"), sortHead("Modified (UTC)", "when")])]);
         table.appendChild(head); table.appendChild(P.el("tbody", { id: "s3-list" }));
         box.appendChild(P.el("div", { class: "s3-wrap" }, [table]));
       }
@@ -191,7 +236,7 @@
       Array.prototype.forEach.call(d.getElementsByTagName("CommonPrefixes"), function (cp) {
         var pfx = cp.getElementsByTagName("Prefix")[0].textContent;
         var x = P.el("button", { type: "button", class: "linkish", text: pfx.slice(state.prefix.length) }); x.onclick = function () { state.prefix = pfx; listObjects(); };
-        list.appendChild(P.el("tr", { class: "folder" }, [P.el("td", {}, [x]), P.el("td", { class: "n", text: "" }), P.el("td", { class: "n", text: "" })]));
+        list.appendChild(P.el("tr", { class: "folder", "data-name": pfx }, [P.el("td", {}, [x]), P.el("td", { class: "n", text: "" }), P.el("td", { class: "n", text: "" })]));
       });
       Array.prototype.forEach.call(d.getElementsByTagName("Contents"), function (o) {
         var key = o.getElementsByTagName("Key")[0].textContent, size = +o.getElementsByTagName("Size")[0].textContent;
@@ -199,11 +244,12 @@
         var when = (o.getElementsByTagName("LastModified")[0] || {}).textContent || "";
         if (key === state.prefix) return;
         var x = P.el("button", { type: "button", class: "linkish", text: key.slice(state.prefix.length) }); x.onclick = function () { openFile(key, size); };
-        list.appendChild(P.el("tr", { class: "file" }, [P.el("td", {}, [x]), P.el("td", { class: "n", text: human(size) }), P.el("td", { class: "n", text: when.slice(0, 16).replace("T", " ") })]));
+        list.appendChild(P.el("tr", { class: "file", "data-name": key, "data-size": String(size), "data-when": when }, [P.el("td", {}, [x]), P.el("td", { class: "n", text: human(size) }), P.el("td", { class: "n", text: when.slice(0, 16).replace("T", " ") })]));
       });
       var nt = d.getElementsByTagName("NextContinuationToken")[0];
       if (nt) { var more = P.el("button", { type: "button", class: "quiet", text: "Load more" }); more.onclick = function () { more.remove(); listObjects(nt.textContent); }; box.appendChild(P.el("div", { class: "row" }, [more])); }
-      P.say(st, b + "/" + state.prefix, "ok");
+      sortRows();
+      P.say(st, b + "/" + state.prefix + ": " + countRows() + (nt ? " so far, more in S3" : "") + (got.age ? " (listed " + Math.round(got.age / 1000) + " s ago; Refresh to list again)" : ""), "ok");
       if (openKey) openFile(openKey, state.sizes[openKey]);
     }).catch(function (e) { if (my === state.view) P.say(st, e.message + (/Failed to fetch/.test(e.message) ? " (S3 refused the browser: check the bucket's CORS rule and region " + region + ".)" : ""), "bad"); });
   }

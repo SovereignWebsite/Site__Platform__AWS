@@ -53,6 +53,9 @@ const fail = (m) => { throw new Error(m); };
     await pg.evaluate(async ([name, limits]) => { window.__body = await window.__case(name); Object.assign(window.S3Browser.limits, limits || { show: 5 * 1024 * 1024, preview: 256 * 1024 }); }, [name, limits]);
     await pg.click("#s3-buckets button:has-text('demo-cloudfront-logs')");
     for (const f of ["cloudfront/", "2026/", "11/", "21/", "10/"]) await pg.click(`#s3-list >> text=${f}`);
+    // Each case changes the file under the same key, so list the folder from S3 again (the listing is cached).
+    await pg.click("#s3-objects button:has-text('Refresh')");
+    await pg.waitForFunction(() => /: \d+ file/.test(document.querySelector("#s3-status").textContent) && !/listed \d+ s ago/.test(document.querySelector("#s3-status").textContent));
     await pg.click("#s3-list button:has-text('.gz')");
     await pg.waitForFunction(() => /JSON Lines|not text|JSON, formatted/.test(document.querySelector("#s3-status").textContent), null, { timeout: 10000 })
       .catch(async () => fail(name + ": status " + (await pg.textContent("#s3-status"))));
