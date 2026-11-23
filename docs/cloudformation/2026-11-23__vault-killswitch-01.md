@@ -63,3 +63,14 @@ By hand, never automatic: delete the function's concurrency override or set it b
 - **Same actions as the fast alarm:** the same topic and the same kill switch. The test checks they are identical, and that neither alarm has OK or insufficient-data actions.
 - **The kill switch accepts exactly these two alarm names.** A second invoke permission, `KillSwitchPermissionSlow`, has the slow alarm's `SourceArn`. The topic policy now allows exactly the two alarms' ARNs, and denies everything else.
 - **`test_killswitch.py`** checks that the slow alarm pauses too, and that look-alike names (`...-requests-slower`, `sws-vault-<id>`) are ignored. The code is 1.6 KB.
+
+## 0.3.1 (21:35 UTC): ec2.aws.a's review of 0.2.0 (design 03, bbd49e8)
+
+ec2.aws.a reviewed 0.2.0 and raised one gap and three small points:
+
+1. **The slow alarm:** already in 0.3.0.
+2. **Tag when paused, not only when the switch changed something.** The code now reads the tags (`lambda:ListTags`, `cloudfront:ListTagsForResource`, both read-only on the one function and distribution). It writes `sws-vault-paused` whenever the end state is paused and the tag is missing. So a pause a person made by hand is still marked, and the update path can see it. The test covers it: a hand-made pause leads to no lever write but both tags written.
+3. **The distribution ARN** is now `DISTRIBUTION_ARN`, built with `${AWS::Partition}`, not hardcoded `aws`. The test checks the code uses it.
+4. **Email on each pause:** the alarm's own topic action sends one mail per alarm state change. That meets "email on each pause", and the topic policy is unchanged.
+
+**For iam.aws.a:** the two read actions were added to `KillSwitchRole` (`DisableTheOneDistribution` and `ThrottleTheOneFunction`). The code is now 1.9 KB.
