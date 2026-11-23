@@ -238,3 +238,15 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   No new register risk.
 - 23 Nov 2026, 18:00, security.aws.a: templates publishing bucket draft 0.1.0 (cloudformation.aws.a 7eb0f1d). Review in docs/security/reviews/2026-11-23__templates-bucket-0.1.0.md. Must fix: s3:PutBucketPolicy is not denied, so any admin can replace the policy and undo create-only writes and no-deletes. For Dinis: compliance retention makes every publish permanent, mistakes included, so the pipeline needs a leak scan and a signed, reviewed commit, and I recommend 1 year, not 10. Not ready for a plan until the fix is in. Not a register risk: this is a draft, not deployed.
 - 23 Nov 2026, 18:05, security.aws.a: ec2.aws.a V5 page at 4c55c1f folds in every addition from d397c1f (checked). ec2.aws.a recommends G6 (ii), the Budgets action; it is acceptable to security either way, since it only adds a Deny and deletes nothing. Ready for pm.aws.a's batch 3.
+- 23 Nov 2026, 18:15, security.aws.a: templates publishing.
+  - cloudformation.aws.a bucket 0.1.1 (316ce63): my must-fix is in. PutBucketPolicy, the public access block and ownership are denied to everyone but root; retention defaults to 1 year; the pipeline rules are noted.
+    - boto3.aws.a's delete-marker bypass (note 12) is already closed, because NobodyDeletes denies s3:DeleteObject to every principal.
+    - One more path stays open: a lifecycle rule that expires current versions adds delete markers despite Object Lock, and a conditional PUT then succeeds on that key. Add s3:PutLifecycleConfiguration to the root-only loosening deny. The publisher role already denies it to itself, but other admins would not be stopped.
+    - Refusing multipart outright is optional, since the Null check on s3:if-none-match fails closed.
+  - iam.aws.a publisher role (templates-publisher.yaml, work/iam.aws.a).
+    - Trust: one GitHub environment of one repository, with aud and sub exact; the environment needs a required reviewer and protected tags.
+    - Writes: PutObject under templates/ only, with If-None-Match *, plus explicit denies.
+    - No boundary needed: it creates nothing, has a fixed policy and sits in its own stack. Agreed.
+    - Optional hardening: also pin job_workflow_ref to the release workflow file.
+  - boto3.aws.a land/boto3.aws.a: 7 new commits (notes 09 to 12 and addenda). Docs only, own paths, signatures verified.
+  No register risks.
