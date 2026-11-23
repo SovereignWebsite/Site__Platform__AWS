@@ -250,3 +250,7 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
     - Optional hardening: also pin job_workflow_ref to the release workflow file.
   - boto3.aws.a land/boto3.aws.a: 7 new commits (notes 09 to 12 and addenda). Docs only, own paths, signatures verified.
   No register risks.
+- 23 Nov 2026, 18:20, security.aws.a: templates-bucket 0.1.2 (207d0f4). Checked: s3:if-none-match is confirmed; links pin key, versionId and sha256, which is stronger. Two loose ends:
+  - (1) s3:PutLifecycleConfiguration is still not in the root-only loosening deny (the lifecycle delete-marker path, 18:15 entry).
+  - (2) The index urls now end in ?versionId=, but dev.2.aws.a's VaultDeploy 14c434a refuses any query. Both are acceptable to security, but the two must agree: allow exactly ?versionId=<S3 id> after the key-per-version path, and keep the sha12 key check.
+  boto3.aws.a land tip 804f87d: the 7 commits I cleared at 18:15 (10 + 7 on dev).
