@@ -8,9 +8,9 @@ From ontology.aws.a@SovereignWebsite.dinis (session https://claude.ai/code/sessi
 2. Check out `work/ontology.aws.a` (latest 82b3664 or later); it has dev merged in.
 3. Run `node docs/ontology/build-twin-graph.mjs --check --all` and `node docs/ontology/explain.mjs --check`. Both should pass.
 
-## Your key: make a new one
+## Keys: this session's first, then yours
 
-The key of this session (sha256:bf28264417a75af7) lives only in this container and dies with it. A fresh session makes its own key (`sgit pki keygen`, passphrase in ~/.sg-send/ mode 600, OpenSSH signing file outside the repository, as _common.md says) and publishes it as docs/team/keys/README.md describes (one signed entry on the Factory's team/keys.json at the base factory.c names, then `<role>.aws.a.iac-commit.txt` and `.iac-entry.json` on the branch). The pending Factory entry for this session's key (`docs/team/keys/ontology.aws.a.iac-*`, commit 05764e5 on base 885f150) should be withdrawn or superseded: tell factory.c, so a key nobody holds is not published.
+This session's key (sha256:bf28264417a75af7, Factory entry 05764e5 on base 885f150) is in factory.c's landing set, and must be: every commit on the branch is signed with it. Plan (conductor.aws.a): when it is live, this session pushes work/ontology.aws.a to dev; then the fresh session starts, makes its own key (`sgit pki keygen`, passphrase in ~/.sg-send/ mode 600, OpenSSH signing file outside the repository, as _common.md says), publishes it as docs/team/keys/README.md describes, and this session's key is marked retired. If you start before the branch is on dev, check with conductor.aws.a first: the branch's commits need the old key live.
 
 ## What is done (all on work/ontology.aws.a)
 
@@ -30,12 +30,13 @@ The key of this session (sha256:bf28264417a75af7) lives only in this container a
 | Four execution roles missing from the twin's IAM (demo-handler-role, demo-log-enricher-role, demo-nightly-report-role, demo-cloudfront-logs-firehose) | aws.c and lambda.aws.a | Regenerate: the roles stop being dangling |
 | has_policy from IAM | dev.2.aws.a's IAM read patch on dev | Regenerate: has_policy becomes api |
 | dev.2.aws.a's golden | dev.2.aws.a re-pins after the privacy change (18f89b8) | Nothing for you |
+| Vault deploy into customers' accounts (Dinis's new work; plan docs/team/plan-vault-deploy.md on work/conductor.aws.a ea9f61d, row 7) | viz.aws.a builds the deploy view on the graph | Done for its first ask: docs/ontology/type-labels.json, plain-words labels per resource type (S3, CloudFront, Route 53 zone and record, ACM, Lambda, API Gateway, IAM, stack, Firehose, CloudTrail, alarm). Next: graph nodes for the Vault's types not yet in the schema (zone, certificate, api) when the twin or the deploy stack has them |
 | Unowned resources (no stack claims buckets, stream, functions, distribution) | cloudformation.aws.a's twin seed | Regenerate: made_by edges appear |
 
 ## Next steps (in order)
 
-1. Make and publish the new key; withdraw this session's pending entry with factory.c.
-2. When the key is live: land work/ontology.aws.a on dev (all changed files are inside docs/ontology/**, docs/team/from-a/ontology.aws.a.md, docs/team/keys/ontology.aws.a.*).
+1. Check whether work/ontology.aws.a is already on dev (the old session lands it once its key is live). If not, ask conductor.aws.a.
+2. Make and publish your new key; ask factory.c to mark sha256:bf28264417a75af7 retired once yours is live. Land later work on dev (all changed files are inside docs/ontology/**, docs/team/from-a/ontology.aws.a.md, docs/team/keys/ontology.aws.a.*).
 3. On every wake: `git pull` dev, rerun `--check --all`; when the twin changes, regenerate and say what changed in the doc and in docs/team/from-a/ontology.aws.a.md.
 4. Open ontology work: per-altitude views (A3 systems and A5 business functions are thin: one site, one curated function); a curated mapping file for real accounts' A5 (design 03 says real accounts get A5 from curated mappings).
 
