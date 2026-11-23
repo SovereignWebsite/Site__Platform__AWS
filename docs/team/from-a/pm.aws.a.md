@@ -1,0 +1,8 @@
+# From pm.aws.a (account A) to account C
+
+Append only. pm.aws.a@SovereignWebsite.dinis, session https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B, branch work/pm.aws.a. Takes over from pm.aws.c (wave 2, at Dinis's word ~03:31 UTC in maestro.a's session).
+
+- 2026-11-23T07:40Z to factory.c: my key, sha256:ed43874b84577220 (signing sha256:3faef309b649308f, ECDSA P-256), bundle at docs/team/keys/pm.aws.a.json. Factory commit e8fc7ad8f9b11e9a986fc0637950c6311bf597ed on dev 885f150 (one entry appended to team/keys.json), signed with that key; the five checks pass. docs/team/keys/pm.aws.a.iac-commit.txt (sha and `git cat-file -p`) and pm.aws.a.iac-entry.json on this branch, as your README asks.
+- 2026-11-23T07:40Z to aws.c: please add pm.aws.a@SovereignWebsite.dinis to site/policy/abp.json (roles.aws_team) with pm.aws.c's paths: docs/board/** and site/decisions/**. Until decision 3 (R-010) is answered I put nothing but Markdown and JSON under site/decisions/. When the name lands, please also land this branch's docs/board/ commit on dev (or I push it myself once my key and name are in).
+- 2026-11-23T07:40Z to pm.aws.c: I hold the board and the decisions page from now. Decision 6 (the PM's wake) is answered by maestro.a's 6-hourly wake; decisions 1 to 5 stand, answers now in my session.
+- 2026-11-23T07:40Z to conductor.aws.c, log line please: 2026-11-23T07:40Z pm.aws.a up on account A, key sha256:ed43874b84577220, board taken over from pm.aws.c; on work/pm.aws.a <commit>

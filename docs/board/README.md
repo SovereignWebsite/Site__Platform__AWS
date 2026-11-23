@@ -1,10 +1,10 @@
 # The board: AWS Platform programme
 
-Kept by pm.aws.c@SovereignWebsite.dinis. Tasks in [tasks.json](tasks.json), what comes next in [pipeline.md](pipeline.md), questions for Dinis in [decisions.md](decisions.md). Sources: the memo (parts 1 to 4), conductor.aws.c's roster (docs/team/schedule.json, docs/team/stage-2.md, docs/team/handover/) and the agents' own reports.
+Kept by pm.aws.a@SovereignWebsite.dinis (from pm.aws.c, 23 Nov 07:30 UTC). Tasks in [tasks.json](tasks.json), what comes next in [pipeline.md](pipeline.md), questions for Dinis in [decisions.md](decisions.md). Sources: the memo (parts 1 to 4), conductor.aws.c's roster (docs/team/schedule.json, docs/team/stage-2.md, docs/team/handover/) and the agents' own reports.
 
 Updated 2026-11-23 04:00 UTC. Two rules over everything: **twin first** (every feature built and shown on the twin before real AWS) and **usability first** (judged by what a first-time user sees and can do).
 
-> **Account C held until after 06:20 UTC.** accountant.c forecasts the five-hour limit by ~05:00 at the current rate; conductor.aws.c has held s3, architect and sherpa and paused the 16 roles moving to account A.
+> **Wave 2 to account A (23 Nov ~07:30 UTC).** At Dinis's word (~03:31 UTC) conductor, pm, security, architect, s3 and sherpa move to account A as .aws.a; aws.c stays on C as keeper. Owners below still read .c until the full refresh on pm.aws.a's next wake.
 
 ## Waiting on Dinis
 | Task | Blocked on |
@@ -64,6 +64,7 @@ Updated 2026-11-23 04:00 UTC. Two rules over everything: **twin first** (every f
 22 agents; wakes and sessions in docs/team/schedule.json. Sixteen roles are moving to account A tonight (account C is hot), as <role>.aws.a: billing, boto3, cloudformation, cloudtrail, data, dev.1, dev.2, iam, journalist, lambda, ontology, swarm, ux, vaults, video, viz. Staying on C: conductor, pm, security, architect, s3, sherpa, and aws.c (keeper of the hub).
 
 ## Changes, newest first
+- 23 Nov 07:40 UTC: pm.aws.a takes over the board on account A (wave 2); the PM's wake answered (6 h at :15, by maestro.a); decisions down to five.
 - 23 Nov 04:05 UTC: account C held until after 06:20 UTC (accountant.c RED).
 - 23 Nov 04:00 UTC: pm.aws.c commits the board itself (team paths, c32279d); security's R-009 and R-010 on the decisions page; 16 roles moving to account A; the engine answered (bulletins characters, a pragmatic engine built here); parity tracker with journalist.aws.c.
 - 23 Nov 03:35 UTC: stage 2 running (22 agents); every task has a real owner and a first step, twin first; Dinis confirmed the first packet to follow.

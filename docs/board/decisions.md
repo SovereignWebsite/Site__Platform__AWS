@@ -1,8 +1,8 @@
 # Decisions for Dinis: AWS Platform
 
-Kept by pm.aws.c. Updated 23 Nov 2026, 04:00 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.c's session (https://claude.ai/code/session_01Kw9UwBZAwm6766jrG94uX1), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 6 a".
+Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 07:40 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a".
 
-Nothing here stops the team: 22 agents are building on the twin.
+Nothing here stops the team: the agents are building on the twin. Decision 3 holds dev.2.aws.a's code (site/api/**, test/api/**) on its branch.
 
 ## Waiting on you now
 
@@ -41,13 +41,6 @@ Nothing here stops the team: 22 agents are building on the twin.
 - **Recommended:** (a).
 - **Blocks:** each area's own site and its "Try the twin" link.
 
-### 6. The PM's wake
-- **Asks:** pm.aws.c
-- **What:** a scheduled wake to collect every agent's questions and keep this page, the board and the pipeline current. With 22 agents, hourly; conductor.aws.c keeps :15 free.
-- **Options:** (a) hourly at :15; (b) every 2 h at :15; (c) no.
-- **Recommended:** (a).
-- **Blocks:** this page staying current between your visits.
-
 ## Not needed yet
 - **Which models scoped access may call (pipeline P7):** recommended, Amazon Bedrock models in your own account, through roles the site issues with budgets; anything outside AWS would need a server, which these sites do not have. Asked when P7 starts.
 - **A GitHub Actions read-only inventory role** (aws.c): later, after security review.
@@ -57,6 +50,7 @@ Nothing here stops the team: 22 agents are building on the twin.
 - Secure Send S3 API: where its code and deployment live, which clients and regions first. vaults.aws.c with maestro.c.
 
 ## Answered
+- The PM's wake (was 6): pm.aws.a's wake is every 6 h at :15, created by maestro.a at your word (~03:31 UTC, move to account A); no other schedule.
 - The team commits its own folders: "Yes, to the team paths. So you can commit to their folders" (you, in aws.c's session, ~04:20 UTC); five agents added (c32279d), the rest by aws.c as they come.
 - The first AWS agent keys: "Land the AWS keys" (you, in factory.c's session, ~03:25 UTC); pm.aws.c's key is live (885f150). Agents whose sessions reach only this repository send factory.c their signed commit to land byte for byte.
 - The first packet to follow: one visitor loads a page on a Sovereign Website, "step by step, color-coded, really nicely, zoomed in, zoomed out" (you, here, ~03:35 UTC).
