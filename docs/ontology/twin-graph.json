@@ -1,0 +1,777 @@
+{
+ "about": "The twin's synthetic account 111122223333 as a graph. Draft 01 by ontology.aws.c@SovereignWebsite.dinis, 23 Nov 2026, from site/twin.js and site/cloudformation/bootstrap.yaml at dev 4433914. All data synthetic. Schema and terms: 2026-11-23__01-resource-ontology.md.",
+ "evidence_levels": [
+  "api",
+  "template",
+  "content",
+  "naming",
+  "comment"
+ ],
+ "counts": {
+  "nodes": 44,
+  "edges": 66
+ },
+ "nodes": [
+  {
+   "id": "arn:aws:::111122223333",
+   "type": "account",
+   "label": "111122223333",
+   "altitude": "A2",
+   "note": "AWS's own documentation example account; synthetic"
+  },
+  {
+   "id": "twin:region/eu-west-2",
+   "type": "region",
+   "label": "eu-west-2",
+   "altitude": "A2"
+  },
+  {
+   "id": "twin:region/eu-west-1",
+   "type": "region",
+   "label": "eu-west-1",
+   "altitude": "A2"
+  },
+  {
+   "id": "twin:region/us-east-1",
+   "type": "region",
+   "label": "us-east-1",
+   "altitude": "A2"
+  },
+  {
+   "id": "arn:aws:s3:::111122223333--demo-site--eu-west-2",
+   "type": "bucket",
+   "label": "111122223333--demo-site--eu-west-2",
+   "altitude": "A2",
+   "cfn_type": "AWS::S3::Bucket"
+  },
+  {
+   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
+   "type": "bucket",
+   "label": "111122223333--demo-cloudfront-logs--eu-west-2",
+   "altitude": "A2",
+   "cfn_type": "AWS::S3::Bucket"
+  },
+  {
+   "id": "arn:aws:s3:::111122223333--demo-lambda-deps--eu-west-2",
+   "type": "bucket",
+   "label": "111122223333--demo-lambda-deps--eu-west-2",
+   "altitude": "A2",
+   "cfn_type": "AWS::S3::Bucket"
+  },
+  {
+   "id": "arn:aws:s3:::aws-cloudtrail-logs-111122223333-demo",
+   "type": "bucket",
+   "label": "aws-cloudtrail-logs-111122223333-demo",
+   "altitude": "A2",
+   "cfn_type": "AWS::S3::Bucket"
+  },
+  {
+   "id": "arn:aws:s3:::111122223333--demo-site--eu-west-2/index.html",
+   "type": "object",
+   "label": "index.html",
+   "altitude": "A1"
+  },
+  {
+   "id": "arn:aws:s3:::111122223333--demo-site--eu-west-2/assets/site.css",
+   "type": "object",
+   "label": "assets/site.css",
+   "altitude": "A1"
+  },
+  {
+   "id": "arn:aws:s3:::111122223333--demo-site--eu-west-2/data/vaults.json",
+   "type": "object",
+   "label": "data/vaults.json",
+   "altitude": "A1"
+  },
+  {
+   "id": "arn:aws:s3:::111122223333--demo-site--eu-west-2/config/site.yaml",
+   "type": "object",
+   "label": "config/site.yaml",
+   "altitude": "A1"
+  },
+  {
+   "id": "arn:aws:s3:::111122223333--demo-lambda-deps--eu-west-2/lambdas-dependencies/demo-handler==v1.0.0.zip",
+   "type": "object",
+   "label": "lambdas-dependencies/demo-handler==v1.0.0.zip",
+   "altitude": "A1"
+  },
+  {
+   "id": "arn:aws:s3:::aws-cloudtrail-logs-111122223333-demo/AWSLogs/111122223333/CloudTrail/eu-west-2/2026/11/22/111122223333_CloudTrail_eu-west-2_20261122T1000Z_demo.json.gz",
+   "type": "object",
+   "label": "AWSLogs/111122223333/CloudTrail/eu-west-2/2026/11/22/111122223333_CloudTrail_eu-west-2_20261122T1000Z_demo.json.gz",
+   "altitude": "A1"
+  },
+  {
+   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/09/demo-distribution-1-2026-11-20-09-00-00.gz",
+   "type": "object",
+   "label": "cloudfront/2026/11/20/09/demo-distribution-1-2026-11-20-09-00-00.gz",
+   "altitude": "A1"
+  },
+  {
+   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/10/demo-distribution-1-2026-11-20-10-00-00.gz",
+   "type": "object",
+   "label": "cloudfront/2026/11/20/10/demo-distribution-1-2026-11-20-10-00-00.gz",
+   "altitude": "A1"
+  },
+  {
+   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/11/demo-distribution-1-2026-11-20-11-00-00.gz",
+   "type": "object",
+   "label": "cloudfront/2026/11/20/11/demo-distribution-1-2026-11-20-11-00-00.gz",
+   "altitude": "A1"
+  },
+  {
+   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/09/demo-distribution-1-2026-11-21-09-00-00.gz",
+   "type": "object",
+   "label": "cloudfront/2026/11/21/09/demo-distribution-1-2026-11-21-09-00-00.gz",
+   "altitude": "A1"
+  },
+  {
+   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/10/demo-distribution-1-2026-11-21-10-00-00.gz",
+   "type": "object",
+   "label": "cloudfront/2026/11/21/10/demo-distribution-1-2026-11-21-10-00-00.gz",
+   "altitude": "A1"
+  },
+  {
+   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/11/demo-distribution-1-2026-11-21-11-00-00.gz",
+   "type": "object",
+   "label": "cloudfront/2026/11/21/11/demo-distribution-1-2026-11-21-11-00-00.gz",
+   "altitude": "A1"
+  },
+  {
+   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/09/demo-distribution-1-2026-11-22-09-00-00.gz",
+   "type": "object",
+   "label": "cloudfront/2026/11/22/09/demo-distribution-1-2026-11-22-09-00-00.gz",
+   "altitude": "A1"
+  },
+  {
+   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/10/demo-distribution-1-2026-11-22-10-00-00.gz",
+   "type": "object",
+   "label": "cloudfront/2026/11/22/10/demo-distribution-1-2026-11-22-10-00-00.gz",
+   "altitude": "A1"
+  },
+  {
+   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/11/demo-distribution-1-2026-11-22-11-00-00.gz",
+   "type": "object",
+   "label": "cloudfront/2026/11/22/11/demo-distribution-1-2026-11-22-11-00-00.gz",
+   "altitude": "A1"
+  },
+  {
+   "id": "twin:site/demo",
+   "type": "site",
+   "label": "Demo site",
+   "altitude": "A3"
+  },
+  {
+   "id": "twin:vault/vault-demo-001",
+   "type": "vault",
+   "label": "vault-demo-001",
+   "altitude": "A5",
+   "region": "eu-west-2"
+  },
+  {
+   "id": "twin:vault/vault-demo-002",
+   "type": "vault",
+   "label": "vault-demo-002",
+   "altitude": "A5",
+   "region": "eu-west-1"
+  },
+  {
+   "id": "twin:cloudfront/distribution/demo-distribution-1",
+   "type": "distribution",
+   "label": "demo-distribution-1",
+   "altitude": "A2",
+   "cfn_type": "AWS::CloudFront::Distribution",
+   "inferred": true
+  },
+  {
+   "id": "twin:firehose/deliverystream/unnamed-cloudfront-logs",
+   "type": "stream",
+   "label": "(unnamed) CloudFront logs stream",
+   "altitude": "A2",
+   "cfn_type": "AWS::KinesisFirehose::DeliveryStream",
+   "inferred": true
+  },
+  {
+   "id": "arn:aws:lambda:eu-west-2:111122223333:function:demo-handler",
+   "type": "function",
+   "label": "demo-handler",
+   "altitude": "A2",
+   "cfn_type": "AWS::Lambda::Function",
+   "inferred": true,
+   "note": "no Lambda API in the twin; inferred from the dependency zip"
+  },
+  {
+   "id": "twin:idp/accounts.google.com",
+   "type": "identity_provider",
+   "label": "accounts.google.com",
+   "altitude": "A4",
+   "note": "web identity federation, no IAM resource"
+  },
+  {
+   "id": "arn:aws:iam::111122223333:oidc-provider/token.actions.githubusercontent.com",
+   "type": "identity_provider",
+   "label": "token.actions.githubusercontent.com",
+   "altitude": "A4",
+   "cfn_type": "AWS::IAM::OIDCProvider"
+  },
+  {
+   "id": "arn:aws:cloudformation:eu-west-2:111122223333:stack/sws-aws-platform",
+   "type": "stack",
+   "label": "sws-aws-platform",
+   "altitude": "A2",
+   "cfn_type": "AWS::CloudFormation::Stack"
+  },
+  {
+   "id": "arn:aws:iam::111122223333:role/sws-aws-platform-read",
+   "type": "role",
+   "label": "sws-aws-platform-read",
+   "altitude": "A4",
+   "cfn_type": "AWS::IAM::Role"
+  },
+  {
+   "id": "arn:aws:iam::111122223333:role/sws-aws-platform-change",
+   "type": "role",
+   "label": "sws-aws-platform-change",
+   "altitude": "A4",
+   "cfn_type": "AWS::IAM::Role"
+  },
+  {
+   "id": "arn:aws:iam::aws:policy/job-function/ViewOnlyAccess",
+   "type": "policy",
+   "label": "ViewOnlyAccess",
+   "altitude": "A2",
+   "cfn_type": "AWS::IAM::ManagedPolicy",
+   "aws_managed": true
+  },
+  {
+   "id": "arn:aws:iam::aws:policy/SecurityAudit",
+   "type": "policy",
+   "label": "SecurityAudit",
+   "altitude": "A2",
+   "cfn_type": "AWS::IAM::ManagedPolicy",
+   "aws_managed": true
+  },
+  {
+   "id": "arn:aws:iam::111122223333:role/sovereignwebsite-factory-dns",
+   "type": "role",
+   "label": "sovereignwebsite-factory-dns",
+   "altitude": "A4",
+   "cfn_type": "AWS::IAM::Role"
+  },
+  {
+   "id": "twin:github/SovereignWebsite/SovereignWebsite__IaC:environment:apply",
+   "type": "external_principal",
+   "label": "SovereignWebsite__IaC (environment apply)",
+   "altitude": "A4"
+  },
+  {
+   "id": "twin:github/SovereignWebsite/SovereignWebsite__Factory:environment:apply",
+   "type": "external_principal",
+   "label": "SovereignWebsite__Factory (environment apply)",
+   "altitude": "A4"
+  },
+  {
+   "id": "arn:aws:iam::111122223333:role/demo-dns-role",
+   "type": "role",
+   "label": "demo-dns-role",
+   "altitude": "A4",
+   "dangling": true,
+   "note": "named in a CloudTrail record; no such role in the twin's IAM"
+  },
+  {
+   "id": "arn:aws:cloudtrail:eu-west-2:111122223333:trail/demo",
+   "type": "trail",
+   "label": "demo",
+   "altitude": "A2",
+   "cfn_type": "AWS::CloudTrail::Trail",
+   "inferred": true
+  },
+  {
+   "id": "twin:event/cloudtrail/2026-11-22T10:01:02Z/GetObject",
+   "type": "event",
+   "label": "s3 GetObject data/vaults.json",
+   "altitude": "A1",
+   "ocsf_class": "API Activity",
+   "time": "2026-11-22T10:01:02Z",
+   "src_ip": "203.0.113.7"
+  },
+  {
+   "id": "twin:event/cloudtrail/2026-11-22T10:04:40Z/UpdateAssumeRolePolicy",
+   "type": "event",
+   "label": "iam UpdateAssumeRolePolicy demo-dns-role",
+   "altitude": "A1",
+   "ocsf_class": "API Activity",
+   "time": "2026-11-22T10:04:40Z"
+  },
+  {
+   "id": "twin:function/visitor-reads-vault-files",
+   "type": "business_function",
+   "label": "A visitor reads a vault's files",
+   "altitude": "A5"
+  }
+ ],
+ "edges": [
+  {
+   "from": "twin:region/eu-west-2",
+   "rel": "in",
+   "to": "arn:aws:::111122223333",
+   "evidence": "api",
+   "source": "site/twin.js"
+  },
+  {
+   "from": "twin:region/eu-west-1",
+   "rel": "in",
+   "to": "arn:aws:::111122223333",
+   "evidence": "content",
+   "source": "site/twin.js"
+  },
+  {
+   "from": "twin:region/us-east-1",
+   "rel": "in",
+   "to": "arn:aws:::111122223333",
+   "evidence": "api",
+   "source": "site/twin.js"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-site--eu-west-2",
+   "rel": "in",
+   "to": "twin:region/eu-west-2",
+   "evidence": "api",
+   "source": "site/twin.js (Cloud Control GetResource)"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
+   "rel": "in",
+   "to": "twin:region/eu-west-2",
+   "evidence": "api",
+   "source": "site/twin.js (Cloud Control GetResource)"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-lambda-deps--eu-west-2",
+   "rel": "in",
+   "to": "twin:region/eu-west-2",
+   "evidence": "api",
+   "source": "site/twin.js (Cloud Control GetResource)"
+  },
+  {
+   "from": "arn:aws:s3:::aws-cloudtrail-logs-111122223333-demo",
+   "rel": "in",
+   "to": "twin:region/eu-west-2",
+   "evidence": "api",
+   "source": "site/twin.js (Cloud Control GetResource)"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-site--eu-west-2",
+   "rel": "holds",
+   "to": "arn:aws:s3:::111122223333--demo-site--eu-west-2/index.html",
+   "evidence": "api",
+   "source": "site/twin.js (ListObjectsV2)"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-site--eu-west-2",
+   "rel": "holds",
+   "to": "arn:aws:s3:::111122223333--demo-site--eu-west-2/assets/site.css",
+   "evidence": "api",
+   "source": "site/twin.js (ListObjectsV2)"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-site--eu-west-2",
+   "rel": "holds",
+   "to": "arn:aws:s3:::111122223333--demo-site--eu-west-2/data/vaults.json",
+   "evidence": "api",
+   "source": "site/twin.js (ListObjectsV2)"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-site--eu-west-2",
+   "rel": "holds",
+   "to": "arn:aws:s3:::111122223333--demo-site--eu-west-2/config/site.yaml",
+   "evidence": "api",
+   "source": "site/twin.js (ListObjectsV2)"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-lambda-deps--eu-west-2",
+   "rel": "holds",
+   "to": "arn:aws:s3:::111122223333--demo-lambda-deps--eu-west-2/lambdas-dependencies/demo-handler==v1.0.0.zip",
+   "evidence": "api",
+   "source": "site/twin.js (ListObjectsV2)"
+  },
+  {
+   "from": "arn:aws:s3:::aws-cloudtrail-logs-111122223333-demo",
+   "rel": "holds",
+   "to": "arn:aws:s3:::aws-cloudtrail-logs-111122223333-demo/AWSLogs/111122223333/CloudTrail/eu-west-2/2026/11/22/111122223333_CloudTrail_eu-west-2_20261122T1000Z_demo.json.gz",
+   "evidence": "api",
+   "source": "site/twin.js (ListObjectsV2)"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
+   "rel": "holds",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/09/demo-distribution-1-2026-11-20-09-00-00.gz",
+   "evidence": "api",
+   "source": "site/twin.js (ListObjectsV2)"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
+   "rel": "holds",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/10/demo-distribution-1-2026-11-20-10-00-00.gz",
+   "evidence": "api",
+   "source": "site/twin.js (ListObjectsV2)"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
+   "rel": "holds",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/11/demo-distribution-1-2026-11-20-11-00-00.gz",
+   "evidence": "api",
+   "source": "site/twin.js (ListObjectsV2)"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
+   "rel": "holds",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/09/demo-distribution-1-2026-11-21-09-00-00.gz",
+   "evidence": "api",
+   "source": "site/twin.js (ListObjectsV2)"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
+   "rel": "holds",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/10/demo-distribution-1-2026-11-21-10-00-00.gz",
+   "evidence": "api",
+   "source": "site/twin.js (ListObjectsV2)"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
+   "rel": "holds",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/11/demo-distribution-1-2026-11-21-11-00-00.gz",
+   "evidence": "api",
+   "source": "site/twin.js (ListObjectsV2)"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
+   "rel": "holds",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/09/demo-distribution-1-2026-11-22-09-00-00.gz",
+   "evidence": "api",
+   "source": "site/twin.js (ListObjectsV2)"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
+   "rel": "holds",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/10/demo-distribution-1-2026-11-22-10-00-00.gz",
+   "evidence": "api",
+   "source": "site/twin.js (ListObjectsV2)"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
+   "rel": "holds",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/11/demo-distribution-1-2026-11-22-11-00-00.gz",
+   "evidence": "api",
+   "source": "site/twin.js (ListObjectsV2)"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-site--eu-west-2/data/vaults.json",
+   "rel": "refers_to",
+   "to": "twin:vault/vault-demo-001",
+   "evidence": "content",
+   "source": "site/twin.js (data/vaults.json)"
+  },
+  {
+   "from": "twin:vault/vault-demo-001",
+   "rel": "part_of",
+   "to": "twin:site/demo",
+   "evidence": "content",
+   "source": "site/twin.js (log paths /vault/<id>/files)"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-site--eu-west-2/data/vaults.json",
+   "rel": "refers_to",
+   "to": "twin:vault/vault-demo-002",
+   "evidence": "content",
+   "source": "site/twin.js (data/vaults.json)"
+  },
+  {
+   "from": "twin:vault/vault-demo-002",
+   "rel": "part_of",
+   "to": "twin:site/demo",
+   "evidence": "content",
+   "source": "site/twin.js (log paths /vault/<id>/files)"
+  },
+  {
+   "from": "twin:cloudfront/distribution/demo-distribution-1",
+   "rel": "serves_from",
+   "to": "arn:aws:s3:::111122223333--demo-site--eu-west-2",
+   "evidence": "content",
+   "source": "site/twin.js (index.html: 'Served from S3 through CloudFront')"
+  },
+  {
+   "from": "twin:cloudfront/distribution/demo-distribution-1",
+   "rel": "logs_to",
+   "to": "twin:firehose/deliverystream/unnamed-cloudfront-logs",
+   "evidence": "comment",
+   "source": "site/twin.js ('CloudFront logs delivered by Firehose')"
+  },
+  {
+   "from": "twin:firehose/deliverystream/unnamed-cloudfront-logs",
+   "rel": "writes_to",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
+   "evidence": "comment",
+   "source": "site/twin.js ('CloudFront logs delivered by Firehose')"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/09/demo-distribution-1-2026-11-20-09-00-00.gz",
+   "rel": "records",
+   "to": "twin:cloudfront/distribution/demo-distribution-1",
+   "evidence": "naming",
+   "source": "log object key names demo-distribution-1"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/10/demo-distribution-1-2026-11-20-10-00-00.gz",
+   "rel": "records",
+   "to": "twin:cloudfront/distribution/demo-distribution-1",
+   "evidence": "naming",
+   "source": "log object key names demo-distribution-1"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/11/demo-distribution-1-2026-11-20-11-00-00.gz",
+   "rel": "records",
+   "to": "twin:cloudfront/distribution/demo-distribution-1",
+   "evidence": "naming",
+   "source": "log object key names demo-distribution-1"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/09/demo-distribution-1-2026-11-21-09-00-00.gz",
+   "rel": "records",
+   "to": "twin:cloudfront/distribution/demo-distribution-1",
+   "evidence": "naming",
+   "source": "log object key names demo-distribution-1"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/10/demo-distribution-1-2026-11-21-10-00-00.gz",
+   "rel": "records",
+   "to": "twin:cloudfront/distribution/demo-distribution-1",
+   "evidence": "naming",
+   "source": "log object key names demo-distribution-1"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/11/demo-distribution-1-2026-11-21-11-00-00.gz",
+   "rel": "records",
+   "to": "twin:cloudfront/distribution/demo-distribution-1",
+   "evidence": "naming",
+   "source": "log object key names demo-distribution-1"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/09/demo-distribution-1-2026-11-22-09-00-00.gz",
+   "rel": "records",
+   "to": "twin:cloudfront/distribution/demo-distribution-1",
+   "evidence": "naming",
+   "source": "log object key names demo-distribution-1"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/10/demo-distribution-1-2026-11-22-10-00-00.gz",
+   "rel": "records",
+   "to": "twin:cloudfront/distribution/demo-distribution-1",
+   "evidence": "naming",
+   "source": "log object key names demo-distribution-1"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/11/demo-distribution-1-2026-11-22-11-00-00.gz",
+   "rel": "records",
+   "to": "twin:cloudfront/distribution/demo-distribution-1",
+   "evidence": "naming",
+   "source": "log object key names demo-distribution-1"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-site--eu-west-2/config/site.yaml",
+   "rel": "refers_to",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
+   "evidence": "content",
+   "source": "site/twin.js (config/site.yaml 'logs: s3://...')"
+  },
+  {
+   "from": "twin:cloudfront/distribution/demo-distribution-1",
+   "rel": "part_of",
+   "to": "twin:site/demo",
+   "evidence": "content",
+   "source": "this draft: the demo site's serving and logging path"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-site--eu-west-2",
+   "rel": "part_of",
+   "to": "twin:site/demo",
+   "evidence": "content",
+   "source": "this draft: the demo site's serving and logging path"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
+   "rel": "part_of",
+   "to": "twin:site/demo",
+   "evidence": "content",
+   "source": "this draft: the demo site's serving and logging path"
+  },
+  {
+   "from": "twin:firehose/deliverystream/unnamed-cloudfront-logs",
+   "rel": "part_of",
+   "to": "twin:site/demo",
+   "evidence": "content",
+   "source": "this draft: the demo site's serving and logging path"
+  },
+  {
+   "from": "arn:aws:s3:::111122223333--demo-lambda-deps--eu-west-2/lambdas-dependencies/demo-handler==v1.0.0.zip",
+   "rel": "packages",
+   "to": "arn:aws:lambda:eu-west-2:111122223333:function:demo-handler",
+   "evidence": "naming",
+   "source": "site/twin.js (zip name and dist-info METADATA)"
+  },
+  {
+   "from": "arn:aws:cloudformation:eu-west-2:111122223333:stack/sws-aws-platform",
+   "rel": "in",
+   "to": "twin:region/eu-west-2",
+   "evidence": "api",
+   "source": "site/twin.js (DescribeStacks)"
+  },
+  {
+   "from": "arn:aws:iam::111122223333:role/sws-aws-platform-read",
+   "rel": "made_by",
+   "to": "arn:aws:cloudformation:eu-west-2:111122223333:stack/sws-aws-platform",
+   "evidence": "template",
+   "source": "site/cloudformation/bootstrap.yaml"
+  },
+  {
+   "from": "arn:aws:iam::111122223333:role/sws-aws-platform-read",
+   "rel": "trusts",
+   "to": "twin:idp/accounts.google.com",
+   "evidence": "template",
+   "source": "site/cloudformation/bootstrap.yaml"
+  },
+  {
+   "from": "arn:aws:iam::111122223333:role/sws-aws-platform-read",
+   "rel": "in",
+   "to": "arn:aws:::111122223333",
+   "evidence": "api",
+   "source": "site/twin.js (STS AssumeRoleWithWebIdentity)"
+  },
+  {
+   "from": "arn:aws:iam::111122223333:role/sws-aws-platform-change",
+   "rel": "made_by",
+   "to": "arn:aws:cloudformation:eu-west-2:111122223333:stack/sws-aws-platform",
+   "evidence": "template",
+   "source": "site/cloudformation/bootstrap.yaml"
+  },
+  {
+   "from": "arn:aws:iam::111122223333:role/sws-aws-platform-change",
+   "rel": "trusts",
+   "to": "twin:idp/accounts.google.com",
+   "evidence": "template",
+   "source": "site/cloudformation/bootstrap.yaml"
+  },
+  {
+   "from": "arn:aws:iam::111122223333:role/sws-aws-platform-change",
+   "rel": "in",
+   "to": "arn:aws:::111122223333",
+   "evidence": "api",
+   "source": "site/twin.js (STS AssumeRoleWithWebIdentity)"
+  },
+  {
+   "from": "arn:aws:iam::111122223333:role/sws-aws-platform-read",
+   "rel": "has_policy",
+   "to": "arn:aws:iam::aws:policy/job-function/ViewOnlyAccess",
+   "evidence": "template",
+   "source": "site/cloudformation/bootstrap.yaml"
+  },
+  {
+   "from": "arn:aws:iam::111122223333:role/sws-aws-platform-read",
+   "rel": "has_policy",
+   "to": "arn:aws:iam::aws:policy/SecurityAudit",
+   "evidence": "template",
+   "source": "site/cloudformation/bootstrap.yaml"
+  },
+  {
+   "from": "arn:aws:iam::111122223333:role/sovereignwebsite-factory-dns",
+   "rel": "trusts",
+   "to": "arn:aws:iam::111122223333:oidc-provider/token.actions.githubusercontent.com",
+   "evidence": "api",
+   "source": "site/twin.js (GetRole)"
+  },
+  {
+   "from": "arn:aws:iam::111122223333:role/sovereignwebsite-factory-dns",
+   "rel": "in",
+   "to": "arn:aws:::111122223333",
+   "evidence": "api",
+   "source": "site/twin.js (GetRole)"
+  },
+  {
+   "from": "arn:aws:iam::111122223333:role/sovereignwebsite-factory-dns",
+   "rel": "allows_subject",
+   "to": "twin:github/SovereignWebsite/SovereignWebsite__IaC:environment:apply",
+   "evidence": "api",
+   "source": "site/twin.js (GetRole trust condition)"
+  },
+  {
+   "from": "arn:aws:iam::111122223333:role/sovereignwebsite-factory-dns",
+   "rel": "allows_subject",
+   "to": "twin:github/SovereignWebsite/SovereignWebsite__Factory:environment:apply",
+   "evidence": "api",
+   "source": "site/twin.js (GetRole trust condition)"
+  },
+  {
+   "from": "arn:aws:cloudtrail:eu-west-2:111122223333:trail/demo",
+   "rel": "logs_to",
+   "to": "arn:aws:s3:::aws-cloudtrail-logs-111122223333-demo",
+   "evidence": "naming",
+   "source": "bucket name aws-cloudtrail-logs-<account>-demo"
+  },
+  {
+   "from": "arn:aws:s3:::aws-cloudtrail-logs-111122223333-demo/AWSLogs/111122223333/CloudTrail/eu-west-2/2026/11/22/111122223333_CloudTrail_eu-west-2_20261122T1000Z_demo.json.gz",
+   "rel": "records",
+   "to": "twin:event/cloudtrail/2026-11-22T10:01:02Z/GetObject",
+   "evidence": "content",
+   "source": "site/twin.js (CloudTrail Records)"
+  },
+  {
+   "from": "arn:aws:s3:::aws-cloudtrail-logs-111122223333-demo/AWSLogs/111122223333/CloudTrail/eu-west-2/2026/11/22/111122223333_CloudTrail_eu-west-2_20261122T1000Z_demo.json.gz",
+   "rel": "records",
+   "to": "twin:event/cloudtrail/2026-11-22T10:04:40Z/UpdateAssumeRolePolicy",
+   "evidence": "content",
+   "source": "site/twin.js (CloudTrail Records)"
+  },
+  {
+   "from": "twin:event/cloudtrail/2026-11-22T10:01:02Z/GetObject",
+   "rel": "acted_as",
+   "to": "arn:aws:iam::111122223333:role/sws-aws-platform-read",
+   "evidence": "content",
+   "source": "site/twin.js"
+  },
+  {
+   "from": "twin:event/cloudtrail/2026-11-22T10:01:02Z/GetObject",
+   "rel": "acted_on",
+   "to": "arn:aws:s3:::111122223333--demo-site--eu-west-2/data/vaults.json",
+   "evidence": "content",
+   "source": "site/twin.js"
+  },
+  {
+   "from": "twin:event/cloudtrail/2026-11-22T10:04:40Z/UpdateAssumeRolePolicy",
+   "rel": "acted_as",
+   "to": "arn:aws:iam::111122223333:role/sws-aws-platform-change",
+   "evidence": "content",
+   "source": "site/twin.js"
+  },
+  {
+   "from": "twin:event/cloudtrail/2026-11-22T10:04:40Z/UpdateAssumeRolePolicy",
+   "rel": "acted_on",
+   "to": "arn:aws:iam::111122223333:role/demo-dns-role",
+   "evidence": "content",
+   "source": "site/twin.js"
+  },
+  {
+   "from": "twin:function/visitor-reads-vault-files",
+   "rel": "part_of",
+   "to": "twin:site/demo",
+   "evidence": "content",
+   "source": "this draft"
+  },
+  {
+   "from": "twin:function/visitor-reads-vault-files",
+   "rel": "refers_to",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
+   "evidence": "content",
+   "source": "log lines with cs_uri_stem /vault/<id>/files"
+  }
+ ]
+}

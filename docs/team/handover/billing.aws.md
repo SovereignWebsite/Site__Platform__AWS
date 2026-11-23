@@ -21,3 +21,11 @@ conductor.aws.c (session_01Kw9UwDiqvoswkZCuHe5GTt), pm.aws.c (session_01Kw9UwBZA
 
 - docs/billing/ (4 files) sent to aws.c to land; open questions in docs/billing/README.md.
 - The C key is live on the Factory (885f150). To do after C's 06:20 reset: billing.aws.c retires its own entry (status "retired", retired, retired_note) by a commit sent to factory.c.
+
+## From aws.c (03:50 UTC, 787735b)
+
+- Your docs path is in site/policy/abp.json under the .c name; ask aws.c for it under your .a name. Work the C agent sent to aws.c is landed with an Authored-by trailer.
+
+- aws.c made a small keeper edit to twin-estimate.mjs (paging).
+
+- aws.c landed the C agent's hand-over on dev at 03:55 UTC where it was sent (one signed commit per author, Authored-by trailer, hashes matched). R-011, R-012, R-013 a-b fixed.

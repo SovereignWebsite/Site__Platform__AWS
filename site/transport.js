@@ -1,7 +1,7 @@
 // One way out to AWS. Every AWS call in the page goes through AwsTransport.fetch: in twin mode the twin
 // (twin.js) answers it with synthetic data, otherwise it goes to AWS from the browser. The rest of the code
-// cannot tell the difference. Twin mode is a per-browser setting (a convenience, not a secret); ?twin or ?aws
-// in the address overrides it.
+// cannot tell the difference. Twin mode is a per-browser setting (a convenience, not a secret), set by the Try the twin button;
+// ?twin in the address opens the twin for that page only, ?aws leaves it.
 // Fails closed (architect.aws.c, 23 Nov 2026): in twin mode nothing ever reaches the network. A host the twin
 // does not answer, or a twin that did not load, gets an AWS-shaped 501 NotImplemented, never a real request.
 (function (root) {
@@ -10,7 +10,9 @@
   try { twin = localStorage.getItem(KEY) === "twin"; } catch (e) { /* none */ }
   try {
     var q = new URLSearchParams(root.location.search);
-    if (q.has("twin")) { twin = true; localStorage.setItem(KEY, "twin"); }
+    // A link with ?twin opens the twin for that page only; it is kept only when chosen by the button (setTwin),
+    // so a link cannot quietly leave the owner's browser on synthetic AWS (security R-011).
+    if (q.has("twin")) twin = true;
     if (q.has("aws")) { twin = false; localStorage.removeItem(KEY); }
   } catch (e) { /* none */ }
   function notInTwin(url) {

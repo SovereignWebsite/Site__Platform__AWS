@@ -140,6 +140,7 @@
 
 <section class="panel" id="step3" data-panel="plans" role="tabpanel" aria-labelledby="tab-plans" hidden>
   <div class="panel-head"><h2>Plans</h2><p class="small">Each plan reads what AWS holds now, shows it beside what it will hold after, and changes nothing until you press Approve.</p></div>
+  <p class="small note" id="plans-twin-note" hidden>In the twin: these are the site owner's real plans, checked here against the synthetic account. Approving one changes only the twin, and a reload puts it back.</p>
   <ul class="grid one" id="plans"></ul>
   <details class="card history" id="plans-history" hidden>
     <summary>History: plans already done (<span id="plans-done-count">0</span>)</summary>
