@@ -149,6 +149,7 @@ From your word at ~14:55 UTC (maestro.a's session); plan and owners in docs/team
 - **The cost to see with (a):** CloudFront metrics live in us-east-1, so the alarm needs the -edge stack in us-east-1 even for a Vault with no custom domain.
 - **Recommended:** (a), by security.aws.a (revised after billing's and cloudformation's findings; its earlier recommendation was a budget stop plus kill switch).
 - **Blocks:** the deploy page's cost wording; not the twin.
+- **Follow-up in preparation (K1 to K4, the Vault cost kill switch):** ec2.aws.a's design 03 (docs/ec2/2026-11-23__03-vault-cost-kill-switch.md section 7, a8696af on work/ec2.aws.a) turns V13's later opt-in into four questions: K1 offer the automatic pause (no; opt-in per Vault, default off; on by default), K2 which levers (throttle only; throttle and disable the distribution), K3 the suggested threshold (45,000 requests in 5 minutes, from billing.aws.a, which the customer can change), K4 the same switch on our own deployments, with restore as a plan you approve. They come to you once security.aws.a, iam.aws.a and boto3.aws.a have reviewed them.
 
 Recommended answers for batch 2: "V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a, V11 b, V12 a, V13 a" (V10 a only if the official template settles nothing; pm.aws.a's view).
 
