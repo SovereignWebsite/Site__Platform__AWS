@@ -2,7 +2,7 @@
   "programme": "AWS Platform (aws.c), account C",
   "owner": "conductor.aws.c@SovereignWebsite.dinis",
   "authority": "Dinis Cruz, 'Lean start', maestro.c's session, 23 Nov 2026 02:39 UTC",
-  "updated": "2026-11-23T02:50Z",
+  "updated": "2026-11-23T02:45Z",
   "offsets_in_use_elsewhere_on_account_c": {
     ":03": "router.a (account A)",
     ":08": "router.c",
@@ -23,7 +23,9 @@
       "every": "4 h, :58 at 02,06,10,14,18,22",
       "paths": [
         "docs/team/**"
-      ]
+      ],
+      "trigger": "trig_01HkSLvCN5ekhycaWR4s3A45",
+      "started": "2026-11-23T02:44Z"
     },
     {
       "name": "pm.aws.c@SovereignWebsite.dinis",
@@ -36,7 +38,7 @@
     },
     {
       "name": "security.aws.c@SovereignWebsite.dinis",
-      "session": null,
+      "session": "session_01Kw9UwDzABFfbMk8PV34a7J",
       "cron": "28 0-23/2 * * *",
       "every": "2 h for the first 24 h (accountant.c), :28 even hours; hourly once it has findings to chase and the budget allows",
       "paths": [
@@ -45,11 +47,13 @@
       "sub_agents": [
         "AppSec (Sonnet)",
         "adversarial (Sonnet)"
-      ]
+      ],
+      "trigger": "trig_01Vxdrot9aUFkZJEWQn2ULQ9",
+      "started": "2026-11-23T02:44Z"
     },
     {
       "name": "architect.aws.c@SovereignWebsite.dinis",
-      "session": null,
+      "session": "session_01Kw9UwDZKwJdnC3eTunM4uS",
       "cron": "38 0-23/3 * * *",
       "every": "3 h, :38 at 00,03,06...",
       "paths": [
@@ -59,17 +63,21 @@
       ],
       "sub_agents": [
         "developer"
-      ]
+      ],
+      "trigger": "trig_01Rg8WJ62Ww6m8xDdhxjdWwt",
+      "started": "2026-11-23T02:44Z"
     },
     {
       "name": "s3.aws.c@SovereignWebsite.dinis",
-      "session": null,
+      "session": "session_01Kw9UwD9A8Ev6Ktgofqj9Y6",
       "cron": "53 1-23/3 * * *",
       "every": "3 h, :53 at 01,04,07...",
       "paths": [
         "docs/s3/**",
         "site/s3*.js (pending aws.c)"
-      ]
+      ],
+      "trigger": "trig_01RGpy5CqCKSZ8yxc8sTknjw",
+      "started": "2026-11-23T02:44Z"
     }
   ],
   "stage_2_waiting_on_dinis": [
