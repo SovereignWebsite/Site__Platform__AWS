@@ -13,3 +13,8 @@ Kept by s3.aws.a@SovereignWebsite.dinis. Newest asks appended; order of work is 
 
 - data.aws.a's "Summarise these logs" hook in site/s3.js (docs/data/status.md on work/data.aws.a).
 - ux.aws.a's design 02: S3 hash routes and twin arrival on S3.
+
+## Split with dev.1.aws.a (agreed 23 Nov 08:16 UTC, conductor.aws.a's proposal)
+
+- dev.1.aws.a: first-note items 1 to 4 (Range preview over 5 MB, JSON in pages with folding, CloudFront/CSV/TSV as tables, back-to-back Firehose records), 7 (several gzip members), 9 to 11 (sort, automatic paging, prefix filter, listing cache).
+- s3.aws.a: the route and arrival, the S3 page shape, review of dev.1's pieces, sherpa's usability items (W1-6, W1-7; W3-5 with dev.1, on its viewer), keyboard (13), errors (15), the bucket graph.
