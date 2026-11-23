@@ -540,8 +540,14 @@
     var m = /^arn:aws:s3:::([^/]+)(?:\/(.*))?$/.exec(String(n && n.id || ""));
     return m && (n.type === "bucket" || n.type === "object" || n.type === "prefix") ? { bucket: m[1], key: m[2] || "" } : null;
   }
-  function nameEl(n) {
-    var t = s3Target(n), label = nodeName(n);
+  // mark: "?" or "~" for a claimed or curated line, put right after the name as well as at the line's start, so a
+  // clickable claimed name is never read as fact (security.aws.a on 268cfc7).
+  function nameEl(n, mark) {
+    var t = s3Target(n), label = nodeName(n), el = nameOnly(n, t, label);
+    if (!mark) return el;
+    return P.el("span", { class: "c-named" }, [el, P.el("span", { class: "c-mark", text: mark, title: MARK_SAYS[mark], "aria-label": MARK_SAYS[mark] })]);
+  }
+  function nameOnly(n, t, label) {
     if (!t) return P.el("span", { class: "c-name", text: label });
     var b = P.el("button", { type: "button", class: "linkish c-name", text: label, title: t.bucket + "/" + t.key });
     b.onclick = function () { location.hash = route(t.bucket, t.key); };
@@ -560,8 +566,8 @@
       li.appendChild(document.createTextNode((l.via ? "A file here " : "") + l.words + " "));
       if (l.nodes.length > 3) {
         li.appendChild(document.createTextNode(l.nodes.length + " " + l.otype + "s: "));
-        li.appendChild(nameEl(l.nodes[0])); li.appendChild(document.createTextNode(" ... ")); li.appendChild(nameEl(l.nodes[l.nodes.length - 1]));
-      } else { li.appendChild(nameEl(l.nodes[0])); li.appendChild(document.createTextNode(" (" + l.otype + ")")); }
+        li.appendChild(nameEl(l.nodes[0], l.mark)); li.appendChild(document.createTextNode(" ... ")); li.appendChild(nameEl(l.nodes[l.nodes.length - 1], l.mark));
+      } else { li.appendChild(nameEl(l.nodes[0], l.mark)); li.appendChild(document.createTextNode(" (" + l.otype + ")")); }
       li.appendChild(P.el("span", { class: "small c-how", text: "  [" + l.how + "]" }));
       ul.appendChild(li);
     });
