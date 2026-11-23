@@ -366,3 +366,4 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - Its finding goes into R-026: a flood held just under the 5-minute threshold (149 requests a second) never trips the alarm, at about USD 24 a day and USD 729 over 30 days.
   - Fix for the guard: a second, slow alarm on the same metric over a long period (for example the sum over 1 day, or over 6 hours), with its threshold derived from the customer's monthly figure, notifying and, if the switch is on, pausing.
   - R-026's row now names both alarms.
+- 23 Nov 2026, 20:15, security.aws.a: iam.aws.a killswitch-role 0.1.1. The two TagResource rights are on exactly the one distribution and the one function, each only with ForAllValues:StringEquals aws:TagKeys = [sws-vault-paused]. There is no Untag, so clearing the mark is a person's act. Checked and accepted; the gap is closed.
