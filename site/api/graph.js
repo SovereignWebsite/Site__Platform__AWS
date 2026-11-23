@@ -20,6 +20,10 @@
 //   g.add.zips([{ bucket, key, sha256, packageName, entries }])   deployment packages; the facts come from
 //                                            Graph.zipFacts(bytes) -> Promise<{ sha256, packageName, entries }>
 //   g.toJSON()                               -> { about, evidence_levels, counts, nodes, edges } (schema shape)
+//   Graph.rules(json)                        -> [rule item] over a toJSON() result (ux.aws.a design 08, Desk; design 07
+//                                            "Worth a look"): { id, kind: "finding" | "question", evidence: "confirmed" |
+//                                            "claimed", title, count, nodes: [id], edges?: [{ from, rel, to }] }. Read only:
+//                                            an item never names a change, never pre-fills a plan (R-020).
 //
 // Ids: the ARN where AWS defines one, otherwise urn:sws:<kind>:<name>. An edge seen twice keeps the stronger
 // evidence (api, template, content, naming, comment, curated). Edges may name nodes no adapter has added yet
@@ -473,6 +477,44 @@
         zips: as("claimed", "zip files in a bucket", addZips)
       }, toJSON: toJSON, ids: ids };
   }
+
+  // Rules for Desk and the Map's "Worth a look" (ux.aws.a designs 07 and 08), as data over a toJSON() result. A rule
+  // whose evidence AWS answered is a finding; one resting only on a file or a name is a question (R-020: a question may
+  // only ask, never suggest removing, replacing or narrowing). Items with nothing to cover are left out.
+  //   unowned             A2 resources AWS answered for (buckets, functions, distributions, streams) that no stack made
+  //                       (no made_by edge). Only when the graph holds CloudFormation stacks: without them nothing is
+  //                       known about who made what, and no item is given. Objects and records are left out (design 07).
+  //   by-name-only        links whose strongest evidence is a name (naming): a question.
+  //   dangling-confirmed  names an API answer gives (a function's role, a stream's bucket) that no adapter described.
+  //   dangling-claimed    names only files or names give that no adapter described: a question.
+  var OWNABLE = { bucket: true, function: true, distribution: true, stream: true };
+  Graph.rules = function (json) {
+    var nodes = (json && Array.isArray(json.nodes)) ? json.nodes : [], edges = (json && Array.isArray(json.edges)) ? json.edges : [];
+    var made = Object.create(null), hasStack = false;
+    nodes.forEach(function (n) { if (n && n.type === "stack") hasStack = true; });
+    edges.forEach(function (e) { if (e && e.rel === "made_by") made[e.from] = true; });
+    var sortIds = function (a) { return a.slice().sort(); };
+    var out = [];
+    function item(id, kind, title, ids, extra) {
+      if (!ids.length) return;
+      var it = { id: id, kind: kind, evidence: kind === "finding" ? "confirmed" : "claimed", title: title, count: ids.length, nodes: sortIds(ids) };
+      Object.keys(extra || {}).forEach(function (k) { it[k] = extra[k]; });
+      out.push(it);
+    }
+    if (hasStack) item("unowned", "finding", "Resources no stack made", nodes.filter(function (n) {
+      return n && OWNABLE[n.type] === true && n.altitude === "A2" && !n.dangling && n.trust === "verified" && !made[n.id];
+    }).map(function (n) { return n.id; }));
+    var named = edges.filter(function (e) { return e && e.evidence === "naming"; });
+    var ends = Object.create(null);
+    named.forEach(function (e) { ends[e.from] = true; ends[e.to] = true; });
+    item("by-name-only", "question", "Links by name only", Object.keys(ends), { count: named.length, edges: named.map(function (e) { return { from: e.from, rel: e.rel, to: e.to }; })
+      .sort(function (a, b) { var x = a.from + a.rel + a.to, y = b.from + b.rel + b.to; return x < y ? -1 : x > y ? 1 : 0; }) });
+    var dangling = nodes.filter(function (n) { return n && n.dangling; });
+    item("dangling-confirmed", "finding", "Named by AWS, not found", dangling.filter(function (n) { return n.trust === "verified"; }).map(function (n) { return n.id; }));
+    item("dangling-claimed", "question", "Named by a file or a name, not found", dangling.filter(function (n) { return n.trust !== "verified"; }).map(function (n) { return n.id; }));
+    var order = { finding: 0, question: 1 };
+    return out.sort(function (a, b) { return order[a.kind] - order[b.kind] || (a.id < b.id ? -1 : 1); });
+  };
 
   // A zip's facts for add.zips: its SHA-256 (base64, as Lambda's CodeSha256), the package name its
   // *.dist-info/METADATA gives, and how many entries it has. Reads the bytes in memory with zip.js (site/zip.js).
