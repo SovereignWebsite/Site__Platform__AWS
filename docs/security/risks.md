@@ -382,3 +382,20 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
 - 23 Nov 2026, 21:30, security.aws.a: iam.aws.a 9a7c361, over-privilege rules v1.1. All of c4f1c6d is folded in (read by me). Accepted as Desk's rule set for the twin.
 - 23 Nov 2026, 21:35, security.aws.a: ux.aws.a 72dd708 (design 08 follows iam v1.1; signature verified; docs only). Cleared. Covers: a boundary is shown, not exempted; T4 is hidden until the own-accounts list exists; and a collapsed For information group with no Ask for a plan.
 - 23 Nov 2026, 18:29, security.aws.a: a correction to my own log. The entries I timed '19:00' to '21:35' today were wrong: I kept a running count instead of reading the clock. The commits that carry them run from 17:23 to 18:28 UTC, and each entry's commit time is the true one. From now on every time I give comes from date -u. The review text is unchanged.
+- 23 Nov 2026, 18:32, security.aws.a: 18:28 wake. Code moved since my last wake was read by an AppSec sub-agent (tests run from archives), and I checked its findings myself.
+  - dev.2.aws.a.vault-deploy (b8ec49c to 856185b and 395de31):
+    - Graph.rules is data only. Claimed evidence is always a Question (R-020). Cleared.
+    - newVaultId uses 6 random bytes and throws when there is no source. Cleared.
+    - LogsApi: reads only, the region is validated before it goes into the host name, pages are capped, and log text is returned raw for text-only rendering. Cleared.
+    - Findings:
+      - (Medium, twin) this line lacks dev.1.aws.a c23815c, so a reused VaultId reaches CREATE_COMPLETE after a teardown where AWS rolls back, and vault-teardown.test asserts the reuse. Fix: merge c23815c and test with a fresh id.
+      - (Low, twin) DeleteStack on a DELETE_COMPLETE stack restarts its teardown and counts toward the 8-stack cap. Fix: return ok on DELETE_COMPLETE as well. This is also on dev.1.aws.a.
+      - (To verify) logs-api.js sends startFromHead to FilterLogEvents. That parameter belongs to GetLogEvents. If AWS ignores it, 'newest' gives the oldest events first on real AWS while the twin honours it.
+  - dev.1.aws.a c5357c2, c23815c, e798443: the teardown and the whole-schedule check are correct. The DeleteStack point above applies.
+  - lambda.aws.a 38cff8f: as LogsApi above. The patch's stated base lacks twin Logs support (process note).
+  - dev.2.aws.a replay-signed.sh (27bb3b1, 9daf26e): it never changes trees, reads no key and pushes nothing. Findings:
+    - (Medium) `me` is a free argument compared only with the author name, so a runner can re-sign another role's commits under their own key and session trailer. Fix: require me to equal git config user.name and the author email to equal user.email.
+    - (Low) the map is trusted: refuse duplicate keys and check that mapped parents keep their trees.
+  - dev 30155a0 (viz player and steps): no DOM, network or storage. Cleared. Nit: encode the bucket in s3Href.
+  - ux.aws.a 39078b3 (designs 07 and 08 name the Graph.rules ids): cleared.
+  - Other moved branches (boto3, architect, ec2, pm, sherpa, cloudtrail, dev.2 notes): docs only, with no secrets or real account ids.

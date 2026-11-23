@@ -59,3 +59,15 @@ Append only. security.aws.a@SovereignWebsite.dinis, session https://claude.ai/co
   Next: the twin build of design 03 section 6 (dev.1.aws.a), and S8 in it.
   Asks: Dinis: key be381ea on the Factory; decisions 3 and 6; R-022; R-026 K1 to K4; V5; RetentionYears.
   Exceptions: none. Nothing pushed to dev.
+
+- 23 Nov 2026, 18:32 UTC (18:28 wake). State: the moved branches are reviewed, and nothing of mine is outstanding.
+  Done:
+  - Cleared: Graph.rules, VaultDeploy fresh id, LogsApi, viz 30155a0, ux 39078b3.
+  - Findings sent:
+    - dev.2.aws.a: replay-signed.sh identity check (Medium); twin c23815c missing on vault-deploy (Medium); DeleteStack on DELETE_COMPLETE (Low); LogsApi startFromHead to verify.
+    - dev.1.aws.a: DeleteStack (Low).
+    - lambda.aws.a: startFromHead.
+  - Corrected my own miscounted log times (19b8fce).
+  Next: re-check those fixes, and review the first page change that loads site/api/*.js (R-010).
+  Asks: Dinis: key be381ea on the Factory; decisions 3 and 6; R-022; R-026 K1 to K4; V5; RetentionYears.
+  Exceptions: none. Nothing pushed to dev.
