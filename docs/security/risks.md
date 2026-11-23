@@ -551,3 +551,4 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
     - dev.1 5722ede: vault-edge test only; all twin suites pass.
     - dev.2 ac8942d: cloudfront-twin test only; api suites pass, except graph.test's known pending golden.
     - Notes only: dev.2 aa21dcc and 6a41ae5..332db67 (from-a), iam ab01749 (status and from-a), and architect 305222c..fb85526 (Route 53 joins agreed, design 08 records). cloudformation e5d6c26 is the same note as d8bb319.
+- 23 Nov 2026, 23:47, security.aws.a: ux.aws.a on land/ux.aws.a since 7e926da: 0f188ab (design 09 takes my L1 and L2: generated rows win, declared options only, cat as text, alias test a must), 26de38f (records 3bf0c3a) and 2dd6578 (design 08 cites iam's rules on dev; README; from-a), plus the merge 1d3adfa of dev d8bb319, whose content I cleared on dev. All are signed by ux's own key, docs/design and its from-a note only. Cleared.
