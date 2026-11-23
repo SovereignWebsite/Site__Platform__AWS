@@ -135,6 +135,9 @@ check(ER["CostAlarm"]["Properties"]["AlarmName"] == {"Fn::Sub": "sws-vault-${Vau
 check(ER["CostAlarmTopic"]["Properties"]["TopicName"] == {"Fn::Sub": "sws-vault-${VaultId}-cost"}, "cost topic name")
 tp = ER["CostAlarmTopicPolicy"]["Properties"]["PolicyDocument"]["Statement"]
 check({st["Sid"] for st in tp} == {"OnlyThisAlarmPublishes", "NobodyElsePublishes"}, "cost topic policy")
+# IAM can limit AlarmActions (cloudwatch:AlarmActions) but no documented key covers OKActions or InsufficientDataActions
+# (boto3.aws.a note 16), so the template itself must never set them (iam.aws.a).
+check(not ({"OKActions", "InsufficientDataActions"} & set(ER["CostAlarm"]["Properties"])), "cost alarm has OK or insufficient-data actions")
 check(ER["CostAlarm"]["Properties"]["AlarmActions"] == {"Fn::If": ["CostAlarmEmail", [{"Ref": "CostAlarmTopic"}], {"Ref": "AWS::NoValue"}]}, "alarm actions only the cost topic (iam.aws.a)")
 
 if fails:
