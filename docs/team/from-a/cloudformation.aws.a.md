@@ -20,3 +20,4 @@ Append only, one dated line each. Account A cannot send_message account C; maest
 - 2026-11-23 17:40 UTC: Vault stack 0.4.1: DeployMode default one-stack (security.aws.a accepts on 7 conditions, R-022; iam.aws.a agrees); access-stack stays opt-in.
 - 2026-11-23 17:55 UTC: Vault stack 0.4.2: HostedZoneId Z+{1,31} (boto3.aws.a note 09); handler permissions confirmed; O1 (b) means our ECR policy lists every customer account.
 - 2026-11-23 18:05 UTC: Vault stack 0.4.3: DeployPageOrigin tightened and tested by fullmatch (security.aws.a); note 04 wording fixed; mode switch on a live stack fails closed, not supported.
+- 2026-11-23 19:05 UTC: publishing-bucket plan draft (docs/cloudformation/vault/templates-bucket.yaml, note 2026-11-23__templates-bucket-01.md): Object Lock compliance, create-only writes (s3:if-none-match, CHECK), publisher-only writes, public read of templates/*. For aws.c to prepare; Dinis approves.

@@ -1,0 +1,110 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Stack sws-vault-templates-<region>, in OUR account: the bucket the Vault deploy page's quick-create links point at.
+  Published template files can never be overwritten or deleted (S3 Object Lock, compliance mode), only the publishing
+  role writes, and anyone may read templates/* (CloudFormation fetches a quick-create template from S3 as the
+  customer, from their own account). DRAFT 0.1.0 by cloudformation.aws.a, 23 Nov 2026: a plan for aws.c to prepare
+  and Dinis to approve, not for use before then.
+
+Metadata:
+  SovereignWebsite:
+    TemplateVersion: 0.1.0-draft
+
+Parameters:
+  PublisherRoleArn:
+    Type: String
+    AllowedPattern: "^arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+$"
+    MaxLength: 512
+    Description: The only role that may write published templates (for example the repository's GitHub Actions OIDC role; aws.c and iam.aws.a decide).
+  RetentionYears:
+    Type: Number
+    Default: 10
+    MinValue: 1
+    MaxValue: 100
+    Description: >-
+      How long each published file is locked. In compliance mode nobody, including the account's root user, can
+      delete or shorten it before then, and the bucket cannot be deleted while files are locked. A decision for Dinis.
+
+Resources:
+  TemplatesBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub "sws-vault-templates-${AWS::AccountId}-${AWS::Region}"
+      ObjectLockEnabled: true
+      ObjectLockConfiguration:
+        ObjectLockEnabled: Enabled
+        Rule:
+          DefaultRetention:
+            Mode: COMPLIANCE
+            Years: !Ref RetentionYears
+      VersioningConfiguration: { Status: Enabled }
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
+      OwnershipControls:
+        Rules: [{ ObjectOwnership: BucketOwnerEnforced }]
+      # Public read of templates/* needs a public bucket policy; ACLs stay blocked.
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: false
+        RestrictPublicBuckets: false
+      Tags:
+        - { Key: sws-vault, Value: templates }
+
+  TemplatesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Bucket: !Ref TemplatesBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AnyoneReadsPublishedTemplates
+            Effect: Allow
+            Principal: "*"
+            Action: s3:GetObject
+            Resource: !Sub "${TemplatesBucket.Arn}/templates/*"
+          - Sid: TlsOnly
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource: [!GetAtt TemplatesBucket.Arn, !Sub "${TemplatesBucket.Arn}/*"]
+            Condition: { Bool: { "aws:SecureTransport": "false" } }
+          - Sid: OnlyThePublisherWrites
+            Effect: Deny
+            Principal: "*"
+            Action: [s3:PutObject, s3:PutObjectRetention, s3:PutObjectLegalHold]
+            Resource: !Sub "${TemplatesBucket.Arn}/*"
+            Condition: { ArnNotEquals: { "aws:PrincipalArn": !Ref PublisherRoleArn } }
+          # Object Lock keeps every old version, but a write to an existing key would add a NEW current version, and a
+          # quick-create link (no versionId) fetches the current one. So writes must be create-only: S3 conditional
+          # writes (If-None-Match: *) enforced by the s3:if-none-match condition key. CHECK that key's name and
+          # behaviour against AWS's S3 documentation (boto3.aws.a) before use; without it this bucket is not safe.
+          - Sid: CreateOnlyNeverOverwrite
+            Effect: Deny
+            Principal: "*"
+            Action: s3:PutObject
+            Resource: !Sub "${TemplatesBucket.Arn}/*"
+            Condition: { "Null": { "s3:if-none-match": "true" } }
+          - Sid: NobodyDeletes
+            Effect: Deny
+            Principal: "*"
+            Action: [s3:DeleteObject, s3:DeleteObjectVersion, s3:BypassGovernanceRetention]
+            Resource: !Sub "${TemplatesBucket.Arn}/*"
+          - Sid: NobodyLoosensThisPolicyOrTheLock
+            Effect: Deny
+            Principal: "*"
+            Action: [s3:DeleteBucketPolicy, s3:PutBucketObjectLockConfiguration, s3:PutBucketVersioning, s3:DeleteBucket]
+            Resource: !GetAtt TemplatesBucket.Arn
+            Condition: { ArnNotEquals: { "aws:PrincipalArn": !Sub "arn:aws:iam::${AWS::AccountId}:root" } }
+
+Outputs:
+  BucketName:
+    Value: !Ref TemplatesBucket
+  TemplateUrlPrefix:
+    Description: The page's index URLs start with this (path style, no query).
+    Value: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesBucket}/templates/"
