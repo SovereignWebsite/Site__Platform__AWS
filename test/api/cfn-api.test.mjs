@@ -66,7 +66,7 @@ const lr = (await api.resources("eu-west-2", "demo-lambda")).items;
 ok(lr.find((r) => r.logicalId === "Handler").arn === "arn:aws:lambda:eu-west-2:" + A + ":function:demo-handler" && lr.find((r) => r.logicalId === "Handler").status === "UPDATE_COMPLETE"
   && lr.find((r) => r.logicalId === "HandlerRole").arn === "arn:aws:iam::" + A + ":role/demo-handler-role", "resources(demo-lambda): function and role ARNs");
 const dr = (await api.resources("eu-west-2", "demo-dns")).items;
-ok(dr[0].arn === "arn:aws:route53:::hostedzone/Z0DEMOTWIN0001" && dr[0].arnDerived && dr[1].type === "AWS::Route53::RecordSet" && dr[1].arn === "urn:sws:cfn-resource:demo-dns/WwwAlias" && dr[1].arnDerived === false, "resources(demo-dns): zone derived, a record set gets a urn, never a guess");
+ok(dr[0].arn === "arn:aws:route53:::hostedzone/Z0DEMOTWIN0001" && dr[0].arnDerived && dr[1].type === "AWS::Route53::RecordSet" && dr[1].arn === "urn:sws:record:www.example.com" && dr[1].arnDerived === true, "resources(demo-dns): zone derived, a record set derived from its name (Route53Api's record id), marked derived");
 ok((await api.resources("us-east-1", "sws-aws-platform")).items.map((r) => r.arn).join() === ["read", "change"].map((x) => "arn:aws:iam::" + A + ":role/sws-aws-platform-" + x).join(), "resources(sws-aws-platform): the platform roles");
 
 const ev = await api.events("eu-west-2", "demo-lambda");

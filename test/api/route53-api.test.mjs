@@ -92,9 +92,11 @@ ok(reads === 1 && sent.at(-1).url.endsWith("/hostedzone/ZNOSUCH1"), "and the req
 const rec = plain(await api.records("Z0DEMOTWIN0001"));
 ok(rec.items.length === 6 && rec.next === null && sent.at(-1).url === "https://route53.amazonaws.com/2013-04-01/hostedzone/Z0DEMOTWIN0001/rrset", "records: one page, the rrset path");
 const by = (n, t) => rec.items.find((r) => r.name === n && r.type === t);
-ok(JSON.stringify(by("example.com.", "NS")) === JSON.stringify({ zoneId: "Z0DEMOTWIN0001", name: "example.com.", type: "NS", setIdentifier: null, ttl: 172800, values: ["ns-0000.awsdns-00.org.", "ns-0001.awsdns-01.co.uk."], alias: null }), "a plain record: TTL and values");
-ok(JSON.stringify(by("www.example.com.", "A")) === JSON.stringify({ zoneId: "Z0DEMOTWIN0001", name: "www.example.com.", type: "A", setIdentifier: null, ttl: null, values: [], alias: { dnsName: "d111111abcdef8.cloudfront.net.", hostedZoneId: "ZALIASZONE", evaluateTargetHealth: false } }), "an alias record: no TTL, no values, the alias target");
+ok(JSON.stringify(by("example.com.", "NS")) === JSON.stringify({ id: "urn:sws:record:example.com", zoneId: "Z0DEMOTWIN0001", name: "example.com.", type: "NS", setIdentifier: null, ttl: 172800, values: ["ns-0000.awsdns-00.org.", "ns-0001.awsdns-01.co.uk."], alias: null }), "a plain record: TTL and values");
+ok(JSON.stringify(by("www.example.com.", "A")) === JSON.stringify({ id: "urn:sws:record:www.example.com", zoneId: "Z0DEMOTWIN0001", name: "www.example.com.", type: "A", setIdentifier: null, ttl: null, values: [], alias: { dnsName: "d111111abcdef8.cloudfront.net.", hostedZoneId: "ZALIASZONE", evaluateTargetHealth: false } }), "an alias record: no TTL, no values, the alias target");
 ok(by("*.example.com.", "CNAME") && by("www.example.com.", "AAAA").setIdentifier === "eu", "\\052 decoded to *; SetIdentifier kept");
+ok(by("*.example.com.", "CNAME").id === "urn:sws:record:*.example.com" && by("www.example.com.", "AAAA").id === "urn:sws:record:www.example.com/eu" && by("example.com.", "SOA").id === by("example.com.", "NS").id, "record ids: the normalised name, plus /<setIdentifier>; a name's types share one id");
+ok(Route53Api.recordId("WWW.Example.COM.", null) === "urn:sws:record:www.example.com" && Route53Api.recordId("", null) === null, "recordId lower-cases and drops the trailing dot");
 ok(by("old.example.com.", "CNAME").values[0] === "old.example.com.s3-website.eu-west-2.amazonaws.com", "a value is text as given (the dangling name is the graph's finding, not the API's)");
 let rp = plain(await api.records("Z0DEMOTWIN0001", { max: 4 }));
 ok(rp.items.length === 4 && rp.next === JSON.stringify(["www.example.com.", "A", null]), "a truncated page: next is the record triple");

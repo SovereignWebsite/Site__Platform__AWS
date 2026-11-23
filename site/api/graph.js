@@ -19,6 +19,7 @@
 //                                            exports() items (optional, to check an export is the stack's own)
 //   g.add.cloudfront({ distributions, functions })  CloudFrontApi distribution() results (or distributions() items) and
 //                                            functions() items (optional): architect.aws.a design 06, section 3
+//   g.add.route53({ zones, records })        Route53Api zone() or zones() items, and records() items (each with its id)
 //   g.add.zips([{ bucket, key, sha256, packageName, entries }])   deployment packages; the facts come from
 //                                            Graph.zipFacts(bytes) -> Promise<{ sha256, packageName, entries }>
 //   g.toJSON()                               -> { about, evidence_levels, counts, nodes, edges } (schema shape)
@@ -380,6 +381,39 @@
         if (lb && lb.target) edge(d.arn, "logs_to", lb.target, "api", "CloudFront GetDistribution (Logging)");
       });
     }
+    // Route 53 (design 03 part 1; architect.aws.a's note): a node per zone (its ARN, type zone, in the account) and per
+    // record (urn:sws:record:<name>[/<setIdentifier>], type record, in its zone). A record's alias or CNAME target joins
+    // at toJSON: a distribution's domain or alias is that distribution's ARN node (api, both are API answers); an S3
+    // endpoint names its bucket (naming: the bucket is read from the host), which stays dangling when no adapter
+    // describes it; anything else makes no edge and stays an attribute, never a guess.
+    var recordTargets = [];
+    function route53(o) {
+      o = o || {};
+      (Array.isArray(o.zones) ? o.zones : []).forEach(function (z) {
+        if (!z || typeof z.arn !== "string" || !/^arn:aws[a-z-]*:route53:::hostedzone\/Z[A-Z0-9]{1,32}$/.test(z.arn)) return;
+        vouch(node(z.arn, "zone", "A2", String(z.name || z.id || z.arn).replace(/\.$/, ""), { cfn_type: "AWS::Route53::HostedZone", private: typeof z.private === "boolean" ? z.private : undefined,
+          record_count: typeof z.recordCount === "number" ? z.recordCount : undefined }));
+        var a = accountNode();
+        if (a) edge(z.arn, "in", a, "api", "Route 53 ListHostedZones");
+      });
+      (Array.isArray(o.records) ? o.records : []).forEach(function (r) {
+        if (!r || typeof r.id !== "string" || !/^urn:sws:record:[a-z0-9*_.-]+(\/[^\s]{1,128})?$/.test(r.id) || !/^Z[A-Z0-9]{1,32}$/.test(r.zoneId || "")) return;
+        vouch(node(r.id, "record", "A2", r.id.slice("urn:sws:record:".length).split("/")[0], { cfn_type: "AWS::Route53::RecordSet", set_identifier: r.setIdentifier || undefined }));
+        var types = nodes.get(r.id).record_types || [];
+        if (typeof r.type === "string" && types.indexOf(r.type) < 0) { types = types.concat([r.type]).sort(); nodes.get(r.id).record_types = types; }
+        edge(r.id, "in", "arn:aws:route53:::hostedzone/" + r.zoneId, "api", "Route 53 ListResourceRecordSets");
+        if (r.alias && typeof r.alias.dnsName === "string") recordTargets.push({ id: r.id, host: r.alias.dnsName, how: "alias" });
+        if (r.type === "CNAME" && Array.isArray(r.values)) r.values.forEach(function (v) { if (typeof v === "string") recordTargets.push({ id: r.id, host: v, how: "CNAME" }); });
+      });
+    }
+    function joinRecords() {
+      recordTargets.forEach(function (t) {
+        var h = t.host.toLowerCase().replace(/\.$/, ""), d = distHosts[h];
+        if (d) return edge(t.id, "refers_to", d.arn, "api", "Route 53 " + t.how + " target " + h + " is the distribution's " + d.as);
+        var k = root.CloudFrontApi && root.CloudFrontApi.originKind ? root.CloudFrontApi.originKind(h) : null;
+        if (k && k.target) edge(t.id, "refers_to", k.target, "naming", "Route 53 " + t.how + " target " + h + " names the bucket by its " + k.kind + " endpoint");
+      });
+    }
     var distHosts = Object.create(null), logHosts = Object.create(null);
     // A log file records each distribution one of its lines' hosts is the domain or alias of (content), citing the
     // first such host in sorted order; a host no distribution answers for makes no edge (ontology.aws.a's builder).
@@ -493,6 +527,7 @@
     function toJSON() {
       cfnResolve();
       joinLogs();
+      joinRecords();
       logsThroughStreams();
       packagesFunctions();
       // Node trust from the edges that name it (design 03): verified wins, then claimed, curated only if nothing else.
@@ -532,6 +567,7 @@
         iam: as("verified", "IAM ListRoles, GetRole and ListAttachedRolePolicies", iam),
         cfn: as("verified", "CloudFormation ListStacks, DescribeStacks and ListStackResources", cfn),
         cloudfront: as("verified", "CloudFront ListDistributions, GetDistribution and ListFunctions", cloudfront),
+        route53: as("verified", "Route 53 ListHostedZones, GetHostedZone and ListResourceRecordSets", route53),
         activity: as("claimed", "CloudTrail log files in a bucket", activity),
         content: as("claimed", "files in a bucket", content),
         zips: as("claimed", "zip files in a bucket", addZips)
