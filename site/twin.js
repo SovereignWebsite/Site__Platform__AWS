@@ -82,7 +82,10 @@
   // Bodies stay lazy: data.body is a recipe ({ text }, { gzipText } or { zip: [[name, text], ...] }), made into
   // bytes the first time something reads it, then kept, as v0 kept its promises.
   var journal = [];
-  function emptyWorld() { return { objects: {}, cors: {}, roles: {}, template: null, stackStatus: "CREATE_COMPLETE", changeSets: {}, requests: {} }; }
+  // Maps keyed by request values (bucket, key, role, change set names) have no prototype, so a name such as
+  // "__proto__" or "constructor" is only ever a missing entry (security.aws.a's note on 88831eb).
+  function map() { return Object.create(null); }
+  function emptyWorld() { return { objects: map(), cors: map(), roles: map(), template: null, stackStatus: "CREATE_COMPLETE", changeSets: map(), requests: map() }; }
   function bodyOf(spec) {
     if (spec.gzipText != null) return gzip(enc.encode(spec.gzipText));
     if (spec.zip) return makeZip(spec.zip);
@@ -95,7 +98,7 @@
   }
   // One small function per operation on the world: (world, entry) -> world changed in place.
   var OPS = {
-    "s3.putObject": function (w, e) { var d = e.data; (w.objects[d.bucket] = w.objects[d.bucket] || {})[d.key] = lazyObject(d); },
+    "s3.putObject": function (w, e) { var d = e.data; (w.objects[d.bucket] = w.objects[d.bucket] || map())[d.key] = lazyObject(d); },
     "s3.putBucketCors": function (w, e) { w.cors[e.data.bucket] = JSON.parse(JSON.stringify(e.data.cors)); },
     "s3.addCorsRule": function (w, e) { w.cors[e.data.bucket].CorsRules.push(JSON.parse(JSON.stringify(e.data.rule))); },
     "iam.createRole": function (w, e) { w.roles[e.data.name] = JSON.parse(JSON.stringify(e.data.trust)); },
