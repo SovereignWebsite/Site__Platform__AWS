@@ -54,7 +54,7 @@ const fail = (m) => { throw new Error(m); };
     await pg.evaluate(() => { window.__gets.length = 0; });
     const bucket = await pg.textContent("#s3-buckets button[aria-pressed=true]");
     await pg.evaluate((h) => { location.hash = h; }, "#/s3/" + bucket + "/" + key);
-    await pg.waitForFunction(() => /size is not known yet, so it was not opened/.test(document.querySelector("#s3-status").textContent), null, { timeout: 5000 })
+    await pg.waitForFunction(() => /size is not known yet, so it was not opened|not in the part of this folder listed so far/.test(document.querySelector("#s3-status").textContent), null, { timeout: 5000 })
       .catch(async () => fail(key + ": status " + (await pg.textContent("#s3-status"))));
     const gets = await pg.evaluate(() => window.__gets.slice());
     if (gets.some((p) => p.endsWith("/" + key))) fail(key + " was fetched: " + gets.join(", "));

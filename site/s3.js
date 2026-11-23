@@ -13,10 +13,12 @@
   // bytes (one Range request), and the whole file is fetched only when the user asks for it with Download.
   // autoPages: how many listing pages (500 keys each) load by themselves while scrolling before "Load more" waits.
   var LIMITS = { show: 5 * 1024 * 1024, preview: 256 * 1024, autoPages: 20 };
-  var state = { acct: null, region: "us-east-1", bucket: null, prefix: "", view: 0, file: 0, sizes: {}, key: "" };
+  var state = { acct: null, region: "us-east-1", bucket: null, prefix: "", view: 0, file: 0, sizes: noProto(), key: "" };
   // Quick clicks: each new view (buckets, a bucket, a folder) and each file opened takes a number; an answer that
   // comes back after a newer click is dropped, so a slow, older answer never lands under the newer one.
   function newView(alsoFile) { if (alsoFile) state.file++; return ++state.view; }
+  // Sizes by key: a key such as "constructor" must not find Object.prototype's (R-016).
+  function noProto() { return Object.create(null); }
 
   // Cloud Control: listing and reading work from us-east-1 for buckets in any region (checked 23 Nov 2026);
   // a change must go to the bucket's own region (S3 answers 301 otherwise).
@@ -40,13 +42,28 @@
   // An address is input from whoever sent the link: the bucket must be a valid S3 name and one of this account's
   // buckets before S3 is asked anything, and an address only ever reads; it cannot approve or change anything.
   var BUCKET = /^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/, pending = null;
+  // Arriving by an address (a link, the twin's "See it in", Back, reload) can leave the place below the fold, so the
+  // first listing after an arrival scrolls to it and moves the focus there (sherpa walk 3, finding 2). Clicks inside
+  // the browser do not set this: their address is the page's own, so apply() is not called for them.
+  var arrive = false;
+  function land(el) {
+    if (!el) return;
+    if (!/^(BUTTON|A|INPUT)$/.test(el.tagName) && !el.hasAttribute("tabindex")) el.setAttribute("tabindex", "-1");
+    el.scrollIntoView({ block: "start" }); el.focus({ preventScroll: true });
+  }
   function route(bucket, path) { return "#/s3/" + bucket + "/" + path.split("/").map(encodeURIComponent).join("/"); }
-  function go(bucket, path) { var h = route(bucket, path); if (location.hash !== h) location.hash = h; }
+  // The same place written another way (#/s3/<bucket> without the slash): tidy it in place, adding no Back step.
+  function go(bucket, path) {
+    var h = route(bucket, path); if (location.hash === h) return;
+    var r = parse(location.hash);
+    if (r && !r.bad && r.bucket === bucket && r.prefix + r.key === path) history.replaceState(history.state, "", h); else location.hash = h;
+  }
   // The address already says where the page is (it was written by the page itself, or nothing moved).
   function here(r) { return !!r && !r.bad && r.bucket === state.bucket && r.prefix === state.prefix && r.key === state.key; }
   function parse(hash) {
-    var m = /^#\/s3\/([^/]*)\/(.*)$/.exec(hash || ""), path; if (!m) return null;
-    try { path = m[2].split("/").map(decodeURIComponent).join("/"); } catch (e) { return { bad: true }; }
+    // #/s3/<bucket> with or without the slash; #/s3 or #/s3/ alone names no bucket (the list of buckets).
+    var m = /^#\/s3\/([^/]+)(?:\/(.*))?$/.exec(hash || ""), path; if (!m) return null;
+    try { path = (m[2] || "").split("/").map(decodeURIComponent).join("/"); } catch (e) { return { bad: true }; }
     if (!BUCKET.test(m[1]) || path.length > 1024 || /(^|\/)\.\.?(\/|$)/.test(path)) return { bad: true };
     var cut = path.lastIndexOf("/") + 1;
     return { bucket: m[1], prefix: path.slice(0, cut), key: cut < path.length ? path : "" };
@@ -55,26 +72,40 @@
     if (!state.acct) state.acct = P.accounts().filter(function (a) { return a.id === $("s3-account").value; })[0] || P.accounts()[0] || null;
     return state.acct;
   }
-  function press(name) { Array.prototype.forEach.call($("s3-buckets").querySelectorAll("button"), function (x) { x.setAttribute("aria-pressed", x.textContent === name ? "true" : "false"); }); }
+  // The bucket chips are one Tab stop (roving tabindex, as the tabs are): the pressed chip, or the first; the arrow
+  // keys move between chips (sherpa walk 5: one Tab per bucket before, hundreds on a real account).
+  function press(name) {
+    var all = $("s3-buckets").querySelectorAll("button"), on = null;
+    Array.prototype.forEach.call(all, function (x) { var p = x.textContent === name; x.setAttribute("aria-pressed", p ? "true" : "false"); if (p) on = x; });
+    Array.prototype.forEach.call(all, function (x, i) { x.tabIndex = x === on || (!on && i === 0) ? 0 : -1; });
+  }
   function apply(r) {
     if (!r) return;
     var st = $("s3-status");
     if (r.bad) return P.say(st, "This address does not name an S3 bucket and file; nothing was opened.", "bad");
     if (!P.signedIn() || !pickAccount()) { pending = r; return; }
+    arrive = true;
     var tab = $("tab-s3"); if (tab && tab.getAttribute("aria-selected") !== "true") tab.click();
     if (r.bucket === state.bucket && state.bucketRegion && $("s3-list")) {
       // Same bucket, already answering: only the folder or the file changes.
       if (r.prefix !== state.prefix) { state.prefix = r.prefix; return listObjects(null, r.key); }
-      if (r.key) return openFile(r.key, state.sizes[r.key]);
-      state.file++; state.key = ""; $("s3-file").textContent = ""; return;
+      arrive = false;
+      if (r.key) return linked(r.key, $("s3-objects"));
+      state.file++; state.key = ""; $("s3-file").textContent = ""; return land($("s3-objects").querySelector(".crumbs button:last-of-type"));
     }
     listBuckets(function (names) {
       if (names.indexOf(r.bucket) < 0) return P.say(st, r.bucket + " is not one of this account's buckets; nothing was opened.", "bad");
       press(r.bucket); openBucket(r.bucket, r);
     });
   }
+  // Back past the first bucket opened leaves an address with no bucket: show the list of buckets again.
+  function closeBucket() {
+    newView(true); state.bucket = null; state.prefix = ""; state.key = ""; state.bucketRegion = null;
+    $("s3-objects").textContent = ""; $("s3-file").textContent = ""; press(""); P.say($("s3-status"), "");
+  }
   window.addEventListener("hashchange", function () {
     var r = parse(location.hash);
+    if (!r && state.bucket && /^(#?|#\/s3\/?)$/.test(location.hash)) return closeBucket();
     if (!here(r)) apply(r);
   });
 
@@ -97,9 +128,10 @@
       names.sort();
       names.forEach(function (n) {
         var b = P.el("button", { type: "button", text: n, "aria-pressed": "false" });
-        b.onclick = function () { press(n); openBucket(n); };
+        b.onclick = function () { press(n); openBucket(n, null, true); };
         out.appendChild(P.el("li", {}, [b]));
       });
+      press(state.bucket || "");
       P.say(st, names.length + " bucket" + (names.length === 1 ? "" : "s") + ".", "ok");
       if (then) then(names);
     }).catch(function (e) { if (my === state.view) P.say(st, e.message + (/AccessDenied|not authorized/.test(e.message) ? " (The account needs template v2: see step 3.)" : ""), "bad"); });
@@ -107,9 +139,10 @@
 
   // ---- a bucket: check its CORS rule, offer the plan, then list ----
   // at: { prefix, key } when opened from an address; otherwise the bucket's top.
-  function openBucket(name, at) {
+  // focus: opened from its chip, so the focus moves on to the folder's crumbs once listed.
+  function openBucket(name, at, focus) {
     state.bucket = name; state.prefix = ""; state.key = ""; state.bucketRegion = null;
-    if (!at) go(name, "");
+    if (!at) { arrive = !!focus; go(name, ""); }
     var my = newView(true), st = $("s3-status"), box = $("s3-objects"); box.textContent = ""; $("s3-file").textContent = "";
     P.say(st, "Reading " + name + "'s settings...");
     read().then(function (c) { return cc(c, "GetResource", { TypeName: "AWS::S3::Bucket", Identifier: name }); }).then(function (j) {
@@ -125,6 +158,9 @@
   function showCorsPlan(name, plan) {
     var box = $("s3-objects"), st = P.el("p", { class: "status" });
     P.say($("s3-status"), "");
+    var arrived = arrive; arrive = false;
+    // Reached from a link (security.aws.a's note to R-016): say so, as the link's sender chose this bucket, not you.
+    if (arrived) box.appendChild(P.el("p", { class: "small", text: "You came here from a link. Check that this is the bucket you meant; nothing changes unless you approve." }));
     box.appendChild(P.el("p", { text: name + " does not answer this site yet. S3 lets a web page read a bucket only when the bucket's CORS rules allow it. This plan adds one rule: GET and HEAD, from " + location.origin + " only. Rules already there are kept." }));
     var now = plan.before ? JSON.stringify(plan.before, null, 2) : "", after = JSON.stringify(plan.after, null, 2);
     box.appendChild(P.el("h4", { text: "What changes (- removed, + added)" }));
@@ -152,6 +188,7 @@
     };
     box.appendChild(go); box.appendChild(st);
     P.say(st, "This is the plan. Nothing has changed yet.");
+    if (arrived) land(box.firstChild);
   }
 
   // openKey: a file to open once its folder is listed (from an address).
@@ -207,7 +244,8 @@
     // A search (names starting with what was typed, asked of S3) holds only for the listing it was asked for.
     if (!token) { if (!state.keepSearch) state.search = ""; state.keepSearch = false; state.pages = 0; }
     var listPrefix = state.prefix + (state.search || "");
-    if (!token) { box.textContent = ""; state.sizes = {}; state.key = openKey || ""; go(b, openKey || state.prefix); if (!openKey) { state.file++; $("s3-file").textContent = ""; } }
+    var arriving = !token && arrive; if (!token) arrive = false;
+    if (!token) { box.textContent = ""; state.sizes = noProto(); state.key = openKey || ""; go(b, openKey || state.prefix); if (!openKey) { state.file++; $("s3-file").textContent = ""; } }
     P.say(st, "Listing " + b + "/" + listPrefix + (state.search ? "* (names starting with " + state.search + ")" : "") + "...");
     // Refresh asks S3 again for every page of this listing, not only the first.
     if (!token) { state.listFresh = state.fresh; state.fresh = false; }
@@ -282,8 +320,21 @@
       var sb = box.querySelector(".s3-search"); if (sb && sb.parentNode) { var fi = box.querySelector("input.filter"); if (fi && fi.oninput) fi.oninput(); }
       sortRows();
       P.say(st, b + "/" + state.prefix + (state.search ? " (names starting with " + state.search + ")" : "") + ": " + countRows() + (nt ? " so far, more in S3" : "") + (got.age ? " (listed " + Math.round(got.age / 1000) + " s ago; Refresh to list again)" : ""), "ok");
-      if (openKey) openFile(openKey, state.sizes[openKey]);
+      if (openKey) linked(openKey, box, arriving);
+      else if (arriving) land(box.querySelector(".crumbs button:last-of-type"));
     }).catch(function (e) { if (my === state.view) P.say(st, e.message + (/Failed to fetch/.test(e.message) ? " (S3 refused the browser: check the bucket's CORS rule and region " + region + ".)" : ""), "bad"); });
+  }
+  // A file named by a link opens with no click only when the listing gave its size and it is small enough to show
+  // (or a zip, read by byte ranges). Otherwise the folder is shown and the file waits for a click, so a link alone
+  // cannot make the page download a large object (R-016, security.aws.a).
+  function linked(key, box, arriving) {
+    var size = state.sizes[key], name = key.split("/").pop(), zip = window.Zip && Zip.isZip(key) && size > 22;
+    var why = !(size >= 0) ? name + " is not in the part of this folder listed so far; find it in the list (Load more) and click it to open it."
+      : !zip && size > LIMITS.show ? name + " is " + human(size) + ", more than a link opens by itself; click it in the list to open it." : "";
+    if (!why) { openFile(key, size); if (arriving !== false) land($("s3-file").firstChild); return; }
+    state.file++; $("s3-file").textContent = "";
+    P.say($("s3-status"), why, "ok");
+    if (arriving !== false) land(box.querySelector(".crumbs button:last-of-type"));
   }
   function human(n) { return n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(1) + " MB"; }
 
@@ -702,7 +753,49 @@
     if (pending && P.signedIn() && accts.length) { var r = pending; pending = null; return apply(r); }
     if (window.AwsTransport && AwsTransport.isTwin() && P.signedIn() && accts.length && !state.acct && lb && lb.onclick) lb.onclick();
   }
+  // ---- keyboard (first note, item 13) ----
+  // In a listing: Up and Down (Home, End) move between rows; Enter opens (the rows are buttons). Backspace or
+  // Alt+Up goes up a level: from a file to its folder, from a folder to its parent. "/" moves to the filter;
+  // Escape in a filter clears it. Typing in a field is never taken over.
+  function typing(t) { return /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName) || t.isContentEditable; }
+  function onKey(ev) {
+    if (ev.ctrlKey || ev.metaKey) return;
+    var t = ev.target, k = ev.key;
+    if (k === "Escape" && t.classList && t.classList.contains("filter") && t.value) {
+      t.value = ""; t.dispatchEvent(new Event("input")); ev.preventDefault(); return;
+    }
+    if (typing(t)) return;
+    var chips = t.closest && t.closest("#s3-buckets");
+    if (chips && /^(ArrowRight|ArrowLeft|ArrowDown|ArrowUp|Home|End)$/.test(k) && !ev.altKey) {
+      var bs = Array.prototype.slice.call(chips.querySelectorAll("button")), at = bs.indexOf(t);
+      var to = k === "Home" ? 0 : k === "End" ? bs.length - 1 : (at + (/Right|Down/.test(k) ? 1 : -1) + bs.length) % bs.length;
+      bs.forEach(function (x, i) { x.tabIndex = i === to ? 0 : -1; }); bs[to].focus(); ev.preventDefault(); return;
+    }
+    var table = t.closest && t.closest(".s3-table");
+    if (table && !ev.altKey && /^(ArrowDown|ArrowUp|Home|End)$/.test(k)) {
+      var rows = Array.prototype.filter.call(table.querySelectorAll("tbody tr"), function (tr) { return !tr.hidden; })
+        .map(function (tr) { return tr.querySelector("button"); }).filter(Boolean);
+      var i = rows.indexOf(t), n = k === "Home" ? 0 : k === "End" ? rows.length - 1 : i + (k === "ArrowDown" ? 1 : -1);
+      if (rows[n]) { rows[n].focus(); rows[n].scrollIntoView({ block: "nearest" }); }
+      ev.preventDefault(); return;
+    }
+    if (k === "/" && !ev.altKey) {
+      var f = (t.closest && t.closest(".viewer, #s3-objects") || $("s3-objects")).querySelector(".filter") || $("s3-objects").querySelector(".filter");
+      if (f) { f.focus(); ev.preventDefault(); }
+      return;
+    }
+    if ((k === "Backspace" && !ev.altKey) || (k === "ArrowUp" && ev.altKey)) {
+      if (!state.bucket || !$("s3-list")) return;
+      ev.preventDefault();
+      // The address moves, and apply() lands the focus on the crumbs of the folder shown.
+      if (state.key) return go(state.bucket, state.prefix);
+      if (!state.prefix) return;
+      var up = state.prefix.replace(/[^/]*\/$/, "");
+      arrive = true; state.prefix = up; listObjects();
+    }
+  }
   function init() {
+    $("step4").addEventListener("keydown", onKey);
     $("s3-list-buckets").onclick = function () {
       state.acct = P.accounts().filter(function (a) { return a.id === $("s3-account").value; })[0];
       state.region = "us-east-1";
