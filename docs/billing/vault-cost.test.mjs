@@ -39,3 +39,10 @@ test("unknown region or missing price is refused, never guessed", () => {
   assert.throws(() => vaultCost({ region: "us-east-1" }));
   assert.throws(() => price("ecr.storage", "eu-west-2"));
 });
+
+test("not-priced lines are reported as unknown (null), never $0", () => {
+  const r = vaultCost({ hours: 1 });
+  assert.ok(r.not_priced.length >= 3);
+  assert.ok(r.not_priced.every((n) => n.cost === null));
+  assert.equal(r.total_is_lower_bound, true);
+});
