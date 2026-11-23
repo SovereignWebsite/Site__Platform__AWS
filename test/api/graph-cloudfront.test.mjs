@@ -2,7 +2,7 @@
 // botocore cloudfront 2020-05-31 shapes (the twin's answers come from dev.1.aws.a), with CfnApi over the twin: a node per
 // distribution by its ARN, serves_from origin targets (api), no edge for an origin without a target, invokes for
 // CloudFront Functions, logs_to the logging bucket; one node with the stack's resource (CfnApi's derived ARN) and with a
-// naming node from log files whose name is the distribution's id. Node 22, no network. Run: node test/api/graph-cloudfront.test.mjs
+// log files whose lines' host header is its domain (design 06 section 3). Node 22, no network. Run: node test/api/graph-cloudfront.test.mjs
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
@@ -54,7 +54,7 @@ const build = (order) => {
   for (const step of order) {
     if (step === "cf") g.add.cloudfront({ distributions, functions });
     if (step === "cfn") g.add.cfn({ stacks: [site] });
-    if (step === "logs") g.add.content([{ bucket: LOGS, key: "cloudfront/2026/11/22/edemotwin00001-2026-11-22-10-00-00.gz", text: JSON.stringify({ c_ip: "198.51.100.7", cs_uri_stem: "/", sc_status: 200 }) }]);
+    if (step === "logs") g.add.content([{ bucket: LOGS, key: "cloudfront/2026/11/22/10/demo-cloudfront-logs-1-2026-11-22-10-00-00-0f0e0d0c-0b0a-0908-0706-050403020100.gz", text: JSON.stringify({ c_ip: "198.51.100.7", cs_uri_stem: "/", sc_status: 200, "x-host-header": "d111111abcdef8.cloudfront.net" }) }]);
   }
   return JSON.parse(JSON.stringify(g.toJSON()));
 };
@@ -81,16 +81,17 @@ ok(!JSON.stringify(j).includes("topsecret-value"), "no header value anywhere in 
 // ---- one node per distribution ----
 ok(j.nodes.filter((n) => n.type === "distribution").length === 2, "two distributions, two nodes");
 ok(has(D1, "made_by", site.arn) && node(D1).logical_id === undefined, "the stack's resource (derived ARN) is the same node: made_by the stack, CloudFront's own node kept");
-ok(!node("urn:sws:cloudfront-distribution:edemotwin00001") && j.edges.some((e) => e.rel === "records" && e.to === D1 && e.evidence === "naming"), "the log files' naming node folds into the ARN node; its records edge moves with its own evidence");
+ok(!j.nodes.some((n) => n.id.startsWith("urn:sws:cloudfront-distribution:")) && j.edges.some((e) => e.rel === "records" && e.to === D1 && e.evidence === "content"), "the log file records the ARN node by its host header (content); no naming node");
 for (const order of [["cfn", "logs", "cf"], ["logs", "cf", "cfn"], ["cfn", "cf", "logs"]])
   ok(JSON.stringify(build(order).edges) === JSON.stringify(j.edges) && build(order).nodes.length === j.nodes.length, "the same graph whatever order the adapters run: " + order);
 
-// A name that matches no distribution id stays its own node.
+// A host no distribution answers for, or a name that looks like an id, makes nothing.
 {
   const g = Graph({ account: A, backend: "twin" });
   g.add.cloudfront({ distributions });
-  g.add.content([{ bucket: LOGS, key: "cloudfront/demo-distribution-1-2026-11-22-10-00-00.gz", text: JSON.stringify({ c_ip: "198.51.100.7", cs_uri_stem: "/", sc_status: 200 }) }]);
-  ok(g.toJSON().nodes.some((n) => n.id === "urn:sws:cloudfront-distribution:demo-distribution-1"), "a log name that is no distribution's id stays its own node");
+  g.add.content([{ bucket: LOGS, key: "cloudfront/edemotwin00001-2026-11-22-10-00-00.gz", text: JSON.stringify({ c_ip: "198.51.100.7", cs_uri_stem: "/", sc_status: 200, "x-host-header": "elsewhere.example" }) }]);
+  const k = JSON.parse(JSON.stringify(g.toJSON()));
+  ok(!k.edges.some((e) => e.rel === "records") && k.nodes.filter((n) => n.type === "distribution").length === 2, "an unknown host makes no edge and no node, whatever the file's name");
 }
 // Bad input skipped.
 {

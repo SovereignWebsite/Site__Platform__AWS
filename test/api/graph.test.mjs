@@ -31,7 +31,7 @@ const ctx = {
 };
 ctx.window = ctx; ctx.globalThis = ctx;
 vm.createContext(ctx);
-for (const f of ["sigv4.js", "twin.js", "transport.js", "zip.js", "api/all.js", "api/s3-api.js", "api/lambda-api.js", "api/firehose-api.js", "api/iam-api.js", "data/extract.js", "api/decode.js", "api/activity.js", "api/graph.js"])
+for (const f of ["sigv4.js", "twin.js", "transport.js", "zip.js", "api/all.js", "api/s3-api.js", "api/lambda-api.js", "api/firehose-api.js", "api/iam-api.js", "api/cloudfront-api.js", "data/extract.js", "api/decode.js", "api/activity.js", "api/graph.js"])
   vm.runInContext(readFileSync(new URL("../../site/" + f, import.meta.url), "utf8"), ctx, { filename: f });
 const here = (p) => new URL(p, import.meta.url);
 // Pinned copies (golden/README.md): ontology.aws.a's builder run against this branch's twin.
@@ -90,6 +90,10 @@ const lam = ctx.LambdaApi(readSend), fh = ctx.FirehoseApi(readSend, { account: A
 g.add.lambda((await ctx.LambdaApi.all((next) => lam.functions(R, { next }))).items);
 const names = (await ctx.FirehoseApi.all((next) => fh.streams(R, { next }))).items;
 g.add.firehose(await Promise.all(names.map((s) => fh.stream(R, s.name))));
+// CloudFront (design 06): each distribution in full, so log lines join on its domain and aliases.
+const cf = ctx.CloudFrontApi(readSend, { account: A });
+g.add.cloudfront({ distributions: await Promise.all((await ctx.CloudFrontApi.all((next) => cf.distributions({ next }))).items.map((d) => cf.distribution(d.id))),
+  functions: (await ctx.CloudFrontApi.all((next) => cf.functions({ next }))).items });
 // Deployment packages: every zip the graph shows, its facts read in memory.
 const zipFacts = [];
 for (const b of buckets) for (const o of b.objects.filter((o) => ctx.Zip.isZip(o.key) && !(o.key.includes("/") && grouped(b, o.key))))
@@ -128,6 +132,8 @@ const covered = (e, typeOf) => {
   if (e.rel === "in" && e.evidence === "api" && (ft === "function" || ft === "stream")) return true;
   if (["runs_as", "writes_to", "transforms_with"].includes(e.rel) && e.evidence === "api") return true;
   if (e.rel === "logs_to" && (e.evidence === "naming" || e.evidence === "content") && ft === "distribution") return true;
+  // CloudFront adapter
+  if (e.rel === "serves_from" && e.evidence === "api" && ft === "distribution") return true;
   if (e.rel === "packages") return true;
   // IAM adapter
   if (e.rel === "in" && e.evidence === "api" && ft === "role") return true;
@@ -206,32 +212,39 @@ ok(!/\beval\s*\(|new Function|innerHTML|document\.|localStorage|fetch\(/.test(re
   ok(!j.edges.some((x) => x.to === "arn:aws:s3:::not-config-file") && j.edges.filter((x) => x.to === "arn:aws:s3:::bucket-one").length === 1, "s3:// only from config files, once per file");
   ok(!has("urn:sws:actor-net:192.0.2.0/24") && has("urn:sws:actor-net:198.51.100.0/24") && !has("urn:sws:actor-net:203.0.113.0/24"), "actor rule per network: at least 10 requests, at least 80% 4xx");
   ok(e("urn:sws:actor-net:198.51.100.0/24", "targeted", "urn:sws:vault:v1") && e("logs/cf/d2-2026-11-22-10-00-00.gz".replace(/^/, "arn:aws:s3:::"), "refers_to", "urn:sws:vault:v1"), "actor targets the vault; the log file refers to it");
-  ok(has("urn:sws:cloudfront-distribution:d1") && !has("urn:sws:cloudfront-distribution:d4"), "a distribution only from files with log lines");
+  ok(!j.nodes.some((n) => n.type === "distribution") && !j.edges.some((x) => x.rel === "records"), "no distribution from log files alone (no CloudFront answer, no edge)");
 }
 
-// ---- CloudFront log files by their records (design 06): distribution_id in the lines, any key; the name only as a fallback ----
+// ---- CloudFront log files joined by host header to a distribution's domain or alias (design 06 section 3) ----
 {
-  const r = ctx.Graph({ account: A, backend: "twin" });
-  const rec = (id, ip = "198.51.100.9") => JSON.stringify(Object.assign({ c_ip: ip, cs_uri_stem: "/", sc_status: 200 }, id === undefined ? {} : { distribution_id: id }));
-  r.add.firehose([{ name: "s", arn: "arn:aws:firehose:eu-west-2:" + A + ":deliverystream/s", destinations: [{ kind: "s3", bucket: "logs", prefix: "cf/" }] }]);
-  r.add.content([
-    { bucket: "logs", key: "cf/s-1-2026-11-22-10-00-00-0f0e0d0c-0b0a-0908-0706-050403020100.gz", text: [rec("EAAA111"), rec("EAAA111"), rec("EBBB222")].join("\n") + "\n" },
-    { bucket: "logs", key: "cf/old-2026-11-22-10-00-00.gz", text: rec(undefined) + "\n" },
-    { bucket: "logs", key: "cf/both-2026-11-22-10-00-00.gz", text: rec("ECCC333") + "\n" },
-    { bucket: "logs", key: "cf/bad.gz", text: [rec("e-lower"), rec("<script>"), rec(7), rec("E" + "1".repeat(64))].join("\n") + "\n" },
-    { bucket: "other", key: "x.log", text: rec("EDDD444") + "\n" }
-  ]);
-  const j = JSON.parse(JSON.stringify(r.toJSON())), node = (id) => j.nodes.find((n) => n.id === id), D = (id) => "urn:sws:cloudfront-distribution:" + id;
-  const edge = (f, rel, t) => j.edges.find((e) => e.from === f && e.rel === rel && e.to === t), obj = (b, k) => "arn:aws:s3:::" + b + "/" + k;
-  const f1 = obj("logs", "cf/s-1-2026-11-22-10-00-00-0f0e0d0c-0b0a-0908-0706-050403020100.gz");
-  ok(edge(f1, "records", D("EAAA111")) && edge(f1, "records", D("EAAA111")).evidence === "content" && edge(f1, "records", D("EBBB222")), "Firehose's name: each distribution_id in the records, once, evidence content");
-  ok(node(D("EAAA111")).distribution_id === "EAAA111" && node(D("EAAA111")).trust === "claimed", "the naming node carries the id; claimed (records are content)");
-  ok(edge(obj("logs", "cf/old-2026-11-22-10-00-00.gz"), "records", D("old")).evidence === "naming", "no id in the records: the old key name, naming");
-  ok(edge(obj("logs", "cf/both-2026-11-22-10-00-00.gz"), "records", D("ECCC333")) && !node(D("both")), "an id in the records wins over the name");
-  ok(!j.edges.some((e) => e.from === obj("logs", "cf/bad.gz") && e.rel === "records") && !j.nodes.some((n) => /e-lower|script|1111111111/.test(n.id)), "an id that is not upper-case letters and digits (1 to 64) makes nothing");
-  ok(edge(obj("other", "x.log"), "records", D("EDDD444")), "any key: recognised by the lines, not the name");
-  ok(edge(D("EAAA111"), "logs_to", "arn:aws:firehose:eu-west-2:" + A + ":deliverystream/s").evidence === "content" && edge(D("old"), "logs_to", "arn:aws:firehose:eu-west-2:" + A + ":deliverystream/s").evidence === "naming", "logs_to the stream whose prefix holds the files, with the records edge's evidence");
-  ok(!j.edges.some((e) => e.from === D("EDDD444") && e.rel === "logs_to"), "no logs_to for files outside every stream's prefix");
+  const ST = "arn:aws:firehose:eu-west-2:" + A + ":deliverystream/s", DA = "arn:aws:cloudfront::" + A + ":distribution/EAAA111", DB = "arn:aws:cloudfront::" + A + ":distribution/EBBB222";
+  const rec = (host, ip = "198.51.100.9") => JSON.stringify(Object.assign({ c_ip: ip, cs_uri_stem: "/", sc_status: 200 }, host === undefined ? {} : { "x-host-header": host }));
+  const files = [
+    { bucket: "logs", key: "cf/s-1-2026-11-22-10-00-00-0f0e0d0c-0b0a-0908-0706-050403020100.gz", text: [rec("www.a.example"), rec("WWW.A.EXAMPLE"), rec("d1.cloudfront.net"), rec("b.example")].join("\n") + "\n" },
+    { bucket: "logs", key: "cf/none.gz", text: [rec(undefined), rec("unknown.example")].join("\n") + "\n" },
+    { bucket: "logs", key: "cf/bad.gz", text: [rec("<script>.example"), rec(7), rec("a".repeat(64) + ".example"), rec("-x.example")].join("\n") + "\n" },
+    { bucket: "other", key: "x.log", text: rec("b.example") + "\n" }
+  ];
+  const dists = [{ id: "EAAA111", arn: DA, domain: "d1.cloudfront.net", aliases: ["www.a.example"], origins: [], functions: [] },
+    { id: "EBBB222", arn: DB, domain: "d2.cloudfront.net", aliases: ["b.example"], origins: [], functions: [] }];
+  const build = (order) => {
+    const r = ctx.Graph({ account: A, backend: "twin" });
+    r.add.firehose([{ name: "s", arn: ST, destinations: [{ kind: "s3", bucket: "logs", prefix: "cf/" }] }]);
+    for (const step of order) { if (step === "cf") r.add.cloudfront({ distributions: dists, functions: [] }); if (step === "logs") r.add.content(files); }
+    return JSON.parse(JSON.stringify(r.toJSON()));
+  };
+  const j = build(["logs", "cf"]), obj = (b, k) => "arn:aws:s3:::" + b + "/" + k, f1 = obj("logs", files[0].key);
+  const edge = (f, rel, t) => j.edges.find((e) => e.from === f && e.rel === rel && e.to === t);
+  ok(edge(f1, "records", DA) && edge(f1, "records", DA).evidence === "content" && edge(f1, "records", DA).source === "log lines (host header d1.cloudfront.net is the distribution's domain)", "records the distribution, content, citing the first host in sorted order (its domain)");
+  ok(edge(f1, "records", DB) && edge(f1, "records", DB).source === "log lines (host header b.example is the distribution's alias)", "one file, two distributions: one edge each, by alias");
+  ok(!j.nodes.some((n) => n.id.startsWith("urn:sws:cloudfront-distribution:")) && j.nodes.filter((n) => n.type === "distribution").length === 2, "straight to the ARN nodes: no naming node");
+  ok(!j.edges.some((e) => e.rel === "records" && (e.from === obj("logs", "cf/none.gz") || e.from === obj("logs", "cf/bad.gz"))), "no host, an unknown host or a malformed one: no edge");
+  ok(edge(obj("other", "x.log"), "records", DB), "any key: recognised by its lines, not its name");
+  ok(edge(DA, "logs_to", ST).evidence === "content" && edge(DB, "logs_to", ST) && j.edges.filter((e) => e.rel === "logs_to").length === 2, "logs_to the stream whose prefix holds its files (content), once per distribution");
+  const k = build(["cf", "logs"]), key = (g) => g.edges.map((e) => [e.from, e.rel, e.to, e.evidence, e.source].join(" | ")).sort().join("\n");
+  ok(key(j) === key(k), "the same edges whichever adapter runs first");
+  const lone = ctx.Graph({ account: A, backend: "twin" }); lone.add.content(files);
+  ok(!JSON.parse(JSON.stringify(lone.toJSON())).edges.some((e) => e.rel === "records"), "log files without CloudFront's answer record nothing");
 }
 
 // ---- packages: by SHA-256 (api), else by METADATA name (naming), whichever order adapters run ----

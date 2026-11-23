@@ -167,9 +167,10 @@
     // Content: what the files say, by what they hold rather than by their names (the builder's rules made general):
     //   - an s3://<bucket> reference in a config file (YAML, JSON, TOML, INI, .conf, .env) refers_to that bucket;
     //   - a JSON document with a "vaults" list names vaults (in a region, part of the site if it sits in the site's bucket);
-    //   - a CloudFront log file (any object whose lines are JSON with c_ip, cs_uri_stem and sc_status) records the
-    //     distribution each line's distribution_id names (content; design 06); a file whose lines carry no id falls back
-    //     to a key <name>-YYYY-MM-DD-HH-MM-SS.gz (naming). It refers_to the vaults its paths name, and an address with at least 10
+    //   - a CloudFront log file (any object whose lines are JSON with c_ip, cs_uri_stem and sc_status, whatever its key)
+    //     records the distribution whose domain or alias its lines' host header names (content; design 06 section 3,
+    //     joined at toJSON against add.cloudfront's answers; no match, no edge: AWS's v2 records carry no distribution
+    //     id). It refers_to the vaults its paths name, and an address with at least 10
     //     requests, at least 80% of them refused (4xx), becomes an actor seen_in those files and targeting those vaults.
     //     Addresses are counted and named by their network only (/24, /48; design 03, Privacy).
     // Vault lists are read before logs, so log lines can name known vaults. Files nothing recognises are left alone.
@@ -180,7 +181,8 @@
       if (!X || typeof X.network !== "function") throw new Error("Graph needs LogExtract.network (site/data/extract.js)");
       return X.network(ip) || "";
     }
-    var LOG_KEY = /\/([a-z0-9-]+)-\d{4}-\d\d-\d\d-\d\d-\d\d-\d\d\.gz$/, DIST_ID = /^[A-Z0-9]{1,64}$/, CONFIG = /\.(ya?ml|json|toml|ini|conf|cfg|env)$/i;
+    // Log line fields read by name in one place (boto3.aws.a is checking AWS's v2 field names against the twin's).
+    var LOG_FIELD = { host: "x-host-header" }, HOST = /^[a-z0-9]([a-z0-9-]{0,62}\.)*[a-z0-9-]{1,63}$/, CONFIG = /\.(ya?ml|json|toml|ini|conf|cfg|env)$/i;
     function content(files, o) {
       o = o || {};
       var siteId = null;
@@ -217,21 +219,9 @@
         var lines = f.text.split("\n").map(function (l) { try { return JSON.parse(l); } catch (e) { return null; } })
           .filter(function (l) { return l && typeof l === "object" && "c_ip" in l && "cs_uri_stem" in l && "sc_status" in l; });
         if (!lines.length) return;
-        var fid = ids.object(f.bucket, f.key), dists = Object.create(null), any = false;
-        lines.forEach(function (l) { if (typeof l.distribution_id === "string" && DIST_ID.test(l.distribution_id)) { dists[l.distribution_id] = 1; any = true; } });
-        if (any) Object.keys(dists).sort().forEach(function (id) {
-          var did = node("urn:sws:cloudfront-distribution:" + id, "distribution", "A2", id, { cfn_type: "AWS::CloudFront::Distribution", distribution_id: id, inferred: true, note: "named by its log records" });
-          edge(fid, "records", did, "content", "log records (distribution_id " + id + ")");
-          (recorded[fid] = recorded[fid] || []).push(did);
-        });
-        else {
-          var m = LOG_KEY.exec(f.key);
-          if (m) {
-            var did = node("urn:sws:cloudfront-distribution:" + m[1], "distribution", "A2", m[1], { cfn_type: "AWS::CloudFront::Distribution", inferred: true, note: "named by its log files" });
-            edge(fid, "records", did, "naming", "log object key names " + m[1]);
-            (recorded[fid] = recorded[fid] || []).push(did);
-          }
-        }
+        var fid = ids.object(f.bucket, f.key), hosts = Object.create(null);
+        lines.forEach(function (l) { var h = l[LOG_FIELD.host]; if (typeof h === "string" && h.length <= 253 && HOST.test(h = h.toLowerCase())) hosts[h] = 1; });
+        logHosts[fid] = Object.keys(hosts).sort();
         var vaults = Object.create(null);
         lines.forEach(function (l) {
           var v = /^\/vault\/([^/?]+)/.exec(String(l.cs_uri_stem));
@@ -361,8 +351,7 @@
     // domain); serves_from each origin's target (api), an origin with no target making no edge (its domain stays an
     // attribute, never a guess); invokes each associated CloudFront Function (event and path pattern in the source,
     // until the schema gives edges attributes); logs_to the legacy logging bucket (api). CfnApi's derived ARN is the same
-    // id, so the stack's resource and this answer are one node; a naming node urn:sws:cloudfront-distribution:<id> folds
-    // into the ARN node at toJSON (distMerge) when <id> is a distribution's id.
+    // id, so the stack's resource and this answer are one node. Its domain and aliases are the hosts log lines join on.
     function cloudfront(o) {
       o = o || {};
       var fnByArn = Object.create(null);
@@ -376,7 +365,8 @@
         vouch(node(d.arn, "distribution", "A2", d.domain || d.id, { cfn_type: "AWS::CloudFront::Distribution", distribution_id: d.id || undefined,
           aliases: Array.isArray(d.aliases) && d.aliases.length ? d.aliases.slice() : undefined, status: d.status || undefined, enabled: typeof d.enabled === "boolean" ? d.enabled : undefined,
           origin_domains: Array.isArray(d.origins) && d.origins.length ? d.origins.map(function (x) { return x && x.domain; }).filter(Boolean) : undefined }));
-        if (d.id) distIds[d.id] = d.arn;
+        if (typeof d.domain === "string" && d.domain) distHosts[d.domain.toLowerCase()] = { arn: d.arn, as: "domain" };
+        (Array.isArray(d.aliases) ? d.aliases : []).forEach(function (a) { if (typeof a === "string" && a) distHosts[a.toLowerCase()] = { arn: d.arn, as: "alias" }; });
         (Array.isArray(d.origins) ? d.origins : []).forEach(function (x) {
           if (x && typeof x.target === "string" && /^arn:aws[a-z-]*:s3:::[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(x.target))
             edge(d.arn, "serves_from", x.target, "api", "CloudFront GetDistribution (origin " + x.id + ")");
@@ -390,28 +380,20 @@
         if (lb && lb.target) edge(d.arn, "logs_to", lb.target, "api", "CloudFront GetDistribution (Logging)");
       });
     }
-    var distIds = Object.create(null);
-    // A naming node urn:sws:cloudfront-distribution:<id> is the distribution with that id: its edges move to the ARN node
-    // with their own evidence and sources, and attributes the ARN node lacks are copied (ontology.aws.a, design 06).
-    function distMerge() {
-      // Log file names are matched in lower case (the content adapter's LOG_KEY), ids are upper case: compare both.
-      Object.keys(distIds).forEach(function (id) {
-        var arn = distIds[id], urn = "urn:sws:cloudfront-distribution:" + id;
-        if (!nodes.has(urn)) urn = "urn:sws:cloudfront-distribution:" + id.toLowerCase();
-        var u = nodes.get(urn), a = nodes.get(arn);
-        if (!u || !a) return;
-        Object.keys(u).forEach(function (k) {
-          if (["id", "type", "label", "altitude", "attribute_trust", "inferred", "note"].indexOf(k) >= 0 || a[k] !== undefined) return;
-          a[k] = u[k];
-          if (u.attribute_trust && u.attribute_trust[k]) { a.attribute_trust = a.attribute_trust || {}; a.attribute_trust[k] = u.attribute_trust[k]; }
+    var distHosts = Object.create(null), logHosts = Object.create(null);
+    // A log file records each distribution one of its lines' hosts is the domain or alias of (content), citing the
+    // first such host in sorted order; a host no distribution answers for makes no edge (ontology.aws.a's builder).
+    var recorded = Object.create(null);
+    function joinLogs() {
+      Object.keys(logHosts).forEach(function (fid) {
+        var done = Object.create(null);
+        logHosts[fid].forEach(function (h) {
+          var d = distHosts[h];
+          if (!d || done[d.arn]) return;
+          done[d.arn] = 1;
+          edge(fid, "records", d.arn, "content", "log lines (host header " + h + " is the distribution's " + d.as + ")");
         });
-        var moved = [];
-        edges.forEach(function (e, k) { if (e.from === urn || e.to === urn) { moved.push(e); edges.delete(k); } });
-        moved.forEach(function (e) {
-          e.source.split("; ").forEach(function (src) { edge(e.from === urn ? arn : e.from, e.rel, e.to === urn ? arn : e.to, e.evidence, src); });
-        });
-        if (verified.has(urn)) verified.add(arn);
-        verified.delete(urn); nodes.delete(urn);
+        recorded[fid] = Object.keys(done).sort();
       });
     }
 
@@ -483,9 +465,7 @@
       });
     }
 
-    // A distribution whose log files sit under a stream's prefix in that stream's bucket logs through that stream:
-    // content when its records name it, naming when only the files' names do (the evidence of the records edge).
-    var recorded = Object.create(null);
+    // A distribution whose log files sit under a stream's prefix in that stream's bucket logs through that stream (content).
     function logsThroughStreams() {
       var fids = Object.keys(recorded);
       if (!fids.length) return;
@@ -494,10 +474,8 @@
         fids.forEach(function (fid) {
           if (fid.indexOf(under) !== 0) return;
           recorded[fid].forEach(function (did) {
-            var r = edges.get(fid + "\u0000records\u0000" + did), ev = r ? r.evidence : "naming", k = did + "|" + ev;
-            if (seen[k]) return; seen[k] = 1;
-            var label = nodes.get(did).label;
-            edge(did, "logs_to", sd.stream, ev, (ev === "content" ? "log records naming " : "log files named after ") + label + " sit under the stream's prefix " + (sd.prefix || "(none)"));
+            if (seen[did]) return; seen[did] = 1;
+            edge(did, "logs_to", sd.stream, "content", "its log files sit under the stream's prefix " + (sd.prefix || "(none)"));
           });
         });
       });
@@ -514,9 +492,9 @@
     var nodeTrustMap = null;
     function toJSON() {
       cfnResolve();
+      joinLogs();
       logsThroughStreams();
       packagesFunctions();
-      distMerge();
       // Node trust from the edges that name it (design 03): verified wins, then claimed, curated only if nothing else.
       var named = new Map();
       edges.forEach(function (e) {
