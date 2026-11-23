@@ -59,18 +59,22 @@ ux.aws.a@SovereignWebsite.dinis, 23 Nov 2026, second wake. Design 01 section 2 n
 |                            |  [Table] [JSON] [Raw]                               |
 |                            |                                                     |
 |                            |  sc_status  200: 25  404: 31  403: 9  400: 5        |
-|                            |  c_ip       203.0.113.66: 45  (24 others)           |
+|                            |  network    198.51.100.0/24: n  (n others)          |
 |                            |                                                     |
-|                            |  timestamp  c_ip           cs_uri_stem    sc_status |
-|                            |  11:00:41   203.0.113.66   /.env               404  |
-|                            |  11:01:07   203.0.113.12   /index.html         200  |
+|                            |  timestamp  network          country path  status  |
+|                            |  11:00:41   198.51.100.0/24  NL   /.env       404  |
+|                            |  11:01:07   203.0.113.0/24   GB   /index.html 200  |
 |                            |  ...                                                |
 +----------------------------+-----------------------------------------------------+
 ```
 
 - Counts per column above the table (top values); clicking a count filters the table. With the attack pack this is how a first-time user sees the scanner in one look, which is the demo.
-- The counts in this sketch are illustrative of the attack pack's shape (one scanner at 203.0.113.66, mostly 403 and 404); the real numbers come from the file.
+- The counts in this sketch are illustrative of the attack pack's shape (one scanner, mostly 403 and 404); the real numbers come from the file.
 - Every cell is set as text. Link mode (memo 22) later turns known types (IP, bucket, key, vault id) into links by a fixed pattern only (design 01 S3 step 3; R-002).
+
+### Privacy (Dinis Cruz, 23 Nov 2026 ~11:15 UTC, in data.aws.a's session: keep only the network, and city and country where available)
+
+The table, the top-values counts and anything kept or written out show the network (/24 for IPv4, /48 for IPv6) and the country. Opening one row in the page shows the line as the log holds it, full address included (as data.aws.a's investigation view does), but the console never copies a raw address out of the file: not into a link, Copy, an export or a screenshot. The addresses and networks in these sketches are from the documentation ranges and illustrative.
 
 ### 2.4 Phone, 390 px
 
@@ -84,9 +88,9 @@ ux.aws.a@SovereignWebsite.dinis, 23 Nov 2026, second wake. Design 01 section 2 n
 |                              |     |                              |
 | demo-site                    |     | status 200:25 404:31 403:9   |
 | n objects · n KB             |     |                              |
-| demo-cloudfront-logs         |     | 11:00:41 203.0.113.66        |
+| demo-cloudfront-logs         |     | 11:00:41 198.51.100.0/24 NL  |
 | n objects · n KB             |     |   /.env               404    |
-| demo-lambda-deps             |     | 11:01:07 203.0.113.12        |
+| demo-lambda-deps             |     | 11:01:07 203.0.113.0/24  GB  |
 | n objects · n KB             |     |   /index.html         200    |
 +------------------------------+     +------------------------------+
         arrival                              a log file

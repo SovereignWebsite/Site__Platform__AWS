@@ -57,6 +57,16 @@ Each step is small and can land on its own; steps 2 and 3 do not wait for step 1
 - No Approve button in the twin is labelled only "Approve".
 - `?pack=<anything unknown>` opens the normal day.
 
+### Status (sherpa.aws.a walk 3, 07:40 UTC, dev 1707886)
+
+| Check | Result | Next |
+|---|---|---|
+| 1. Bucket names on the first phone screen | Fails by a few pixels: the first bucket starts at 844 px of 844 | Rule 4: in twin mode at narrow widths, the identity card folds into the twin bar ("Twin visitor, synthetic") and the S3 intro is one line. aws.c (index.html, style.css, app.js) |
+| 2. Tab title "Twin · " | Not built | Rule 3, aws.c |
+| 3. Deep link with pack | Passes since fe7170c (re-checked by ux.aws.a 07:50 UTC, dev 6985180, 390 x 844): `?twin&pack=attack#/s3/<logs>/cloudfront/2026/11/22/11/` opens that folder with its file; the same address without `?twin` shows the real sign-in, no twin bar; no request left the page | Done (s3.aws.c) |
+| 4. No bare "Approve" | Passes | |
+| 5. Unknown pack | Passes | |
+
 ## 6. Security check of this note
 
 Design only; no code changed. For security.aws.c:
