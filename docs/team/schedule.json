@@ -2,7 +2,7 @@
   "programme": "AWS Platform (aws.c), account C",
   "owner": "conductor.aws.c@SovereignWebsite.dinis",
   "authority": "Dinis Cruz, 'Lean start', maestro.c's session, 23 Nov 2026 02:39 UTC",
-  "updated": "2026-11-23T03:25Z",
+  "updated": "2026-11-23T03:35Z",
   "offsets_in_use_elsewhere_on_account_c": {
     ":03": "router.a (account A)",
     ":08": "router.c",
@@ -19,8 +19,8 @@
     {
       "name": "conductor.aws.c@SovereignWebsite.dinis",
       "session": "session_01Kw9UwDiqvoswkZCuHe5GTt",
-      "cron": "58 */2 * * *",
-      "every": "2 h, :58 even hours",
+      "cron": "58 2-23/4 * * *",
+      "every": "4 h (halved 03:31)",
       "paths": [
         "docs/team/**"
       ],
@@ -39,8 +39,8 @@
     {
       "name": "security.aws.c@SovereignWebsite.dinis",
       "session": "session_01Kw9UwDzABFfbMk8PV34a7J",
-      "cron": "28 * * * *",
-      "every": "1 h, :28 (budget lifted)",
+      "cron": "28 */2 * * *",
+      "every": "2 h (halved 03:31)",
       "paths": [
         "docs/security/**"
       ],
@@ -54,8 +54,8 @@
     {
       "name": "architect.aws.c@SovereignWebsite.dinis",
       "session": "session_01Kw9UwDZKwJdnC3eTunM4uS",
-      "cron": "38 */2 * * *",
-      "every": "2 h, :38 even hours",
+      "cron": "38 */4 * * *",
+      "every": "4 h (halved 03:31)",
       "paths": [
         "docs/architecture/**",
         "site/api/** (pending aws.c)",
@@ -70,8 +70,8 @@
     {
       "name": "s3.aws.c@SovereignWebsite.dinis",
       "session": "session_01Kw9UwD9A8Ev6Ktgofqj9Y6",
-      "cron": "53 * * * *",
-      "every": "1 h, :53",
+      "cron": "53 1-23/2 * * *",
+      "every": "2 h (halved 03:31)",
       "paths": [
         "docs/s3/**",
         "site/s3*.js (pending aws.c)"
@@ -88,7 +88,8 @@
         "docs/journal/**"
       ],
       "trigger": "trig_015y9Th3gbBMVp7jk6RMCJE9",
-      "started": "2026-11-23T03:22Z"
+      "started": "2026-11-23T03:22Z",
+      "moving_to": "account A (maestro.a); C wake paused 03:31 UTC"
     },
     {
       "name": "dev.1.aws.c@SovereignWebsite.dinis",
@@ -99,7 +100,8 @@
         "code as granted"
       ],
       "trigger": "trig_015scXFcDn9r8wLDwxreycoE",
-      "started": "2026-11-23T03:22Z"
+      "started": "2026-11-23T03:22Z",
+      "moving_to": "account A (maestro.a); C wake paused 03:31 UTC"
     },
     {
       "name": "ontology.aws.c@SovereignWebsite.dinis",
@@ -110,7 +112,8 @@
         "docs/ontology/**"
       ],
       "trigger": "trig_01ULLi1pABTi9FzT3Ezo5A3P",
-      "started": "2026-11-23T03:22Z"
+      "started": "2026-11-23T03:22Z",
+      "moving_to": "account A (maestro.a); C wake paused 03:31 UTC"
     },
     {
       "name": "iam.aws.c@SovereignWebsite.dinis",
@@ -121,7 +124,8 @@
         "docs/iam/**"
       ],
       "trigger": "trig_014Ef4TUgAt7cWVPhLAQYLjX",
-      "started": "2026-11-23T03:22Z"
+      "started": "2026-11-23T03:22Z",
+      "moving_to": "account A (maestro.a); C wake paused 03:31 UTC"
     },
     {
       "name": "lambda.aws.c@SovereignWebsite.dinis",
@@ -132,7 +136,8 @@
         "docs/lambda/**"
       ],
       "trigger": "trig_013QWM6m8TdvGDVVrDXP7zZQ",
-      "started": "2026-11-23T03:22Z"
+      "started": "2026-11-23T03:22Z",
+      "moving_to": "account A (maestro.a); C wake paused 03:31 UTC"
     },
     {
       "name": "cloudformation.aws.c@SovereignWebsite.dinis",
@@ -143,7 +148,8 @@
         "docs/cloudformation/**"
       ],
       "trigger": "trig_016mZMnSxErhsF9aL36frkgh",
-      "started": "2026-11-23T03:22Z"
+      "started": "2026-11-23T03:22Z",
+      "moving_to": "account A (maestro.a); C wake paused 03:31 UTC"
     },
     {
       "name": "cloudtrail.aws.c@SovereignWebsite.dinis",
@@ -154,7 +160,8 @@
         "docs/cloudtrail/**"
       ],
       "trigger": "trig_017pqjsdfaYBVsP3sM2FUEbz",
-      "started": "2026-11-23T03:22Z"
+      "started": "2026-11-23T03:22Z",
+      "moving_to": "account A (maestro.a); C wake paused 03:31 UTC"
     },
     {
       "name": "vaults.aws.c@SovereignWebsite.dinis",
@@ -165,7 +172,8 @@
         "docs/vaults/**"
       ],
       "trigger": "trig_01G68wukjPzuCoNaFvNXVaqk",
-      "started": "2026-11-23T03:22Z"
+      "started": "2026-11-23T03:22Z",
+      "moving_to": "account A (maestro.a); C wake paused 03:31 UTC"
     },
     {
       "name": "dev.2.aws.c@SovereignWebsite.dinis",
@@ -176,7 +184,8 @@
         "code as granted"
       ],
       "trigger": "trig_01Rauc1tGP2fMK6aSQTojvgz",
-      "started": "2026-11-23T03:22Z"
+      "started": "2026-11-23T03:22Z",
+      "moving_to": "account A (maestro.a); C wake paused 03:31 UTC"
     },
     {
       "name": "boto3.aws.c@SovereignWebsite.dinis",
@@ -187,7 +196,8 @@
         "docs/boto3/**"
       ],
       "trigger": "trig_016X17Vpvt7BLFxt9rJujX7J",
-      "started": "2026-11-23T03:22Z"
+      "started": "2026-11-23T03:22Z",
+      "moving_to": "account A (maestro.a); C wake paused 03:31 UTC"
     },
     {
       "name": "ux.aws.c@SovereignWebsite.dinis",
@@ -198,7 +208,8 @@
         "docs/design/**"
       ],
       "trigger": "trig_01XgvBa2iX7okv5GJX7ttJ6K",
-      "started": "2026-11-23T03:22Z"
+      "started": "2026-11-23T03:22Z",
+      "moving_to": "account A (maestro.a); C wake paused 03:31 UTC"
     },
     {
       "name": "data.aws.c@SovereignWebsite.dinis",
@@ -209,7 +220,8 @@
         "docs/data/**"
       ],
       "trigger": "trig_013qxgAKHANHxrf7qVhY4iVD",
-      "started": "2026-11-23T03:22Z"
+      "started": "2026-11-23T03:22Z",
+      "moving_to": "account A (maestro.a); C wake paused 03:31 UTC"
     },
     {
       "name": "billing.aws.c@SovereignWebsite.dinis",
@@ -220,7 +232,8 @@
         "docs/billing/**"
       ],
       "trigger": "trig_0135pLwJdbFY9xujxFnxf4fW",
-      "started": "2026-11-23T03:22Z"
+      "started": "2026-11-23T03:22Z",
+      "moving_to": "account A (maestro.a); C wake paused 03:31 UTC"
     },
     {
       "name": "viz.aws.c@SovereignWebsite.dinis",
@@ -231,7 +244,8 @@
         "docs/viz/**"
       ],
       "trigger": "trig_01Gp6SXcJ8voJLrvijwyNmEB",
-      "started": "2026-11-23T03:22Z"
+      "started": "2026-11-23T03:22Z",
+      "moving_to": "account A (maestro.a); C wake paused 03:31 UTC"
     },
     {
       "name": "video.aws.c@SovereignWebsite.dinis",
@@ -242,13 +256,14 @@
         "docs/video/**"
       ],
       "trigger": "trig_0148vSqNBtyFsR9wPDKA7NF7",
-      "started": "2026-11-23T03:22Z"
+      "started": "2026-11-23T03:22Z",
+      "moving_to": "account A (maestro.a); C wake paused 03:31 UTC"
     },
     {
       "name": "sherpa.aws.c@SovereignWebsite.dinis",
       "session": "session_01Kw9UwCF7nZyeKXUtFHiy7K",
-      "cron": "19 * * * *",
-      "every": "1 h",
+      "cron": "19 1-23/2 * * *",
+      "every": "2 h (halved 03:31)",
       "paths": [
         "docs/sherpa/**"
       ],
@@ -264,7 +279,8 @@
         "docs/swarm/**"
       ],
       "trigger": "trig_01UqRgi9ReYjdUcc2x21Kn7E",
-      "started": "2026-11-23T03:22Z"
+      "started": "2026-11-23T03:22Z",
+      "moving_to": "account A (maestro.a); C wake paused 03:31 UTC"
     }
   ],
   "back_off": "an agent with nothing to do asks conductor.aws.c to double its interval, up to 8 h",
@@ -287,5 +303,6 @@
       "a wake with nothing new ends in one line"
     ]
   },
-  "authority_stage_2": "Dinis Cruz, 'Full stage 2 now', conductor.aws.c's session, 23 Nov 2026 ~03:00 UTC; budget: 'there's no budget at the moment here ... go to town' (pm.aws.c's session, 02:58 UTC)"
+  "authority_stage_2": "Dinis Cruz, 'Full stage 2 now', conductor.aws.c's session, 23 Nov 2026 ~03:00 UTC; budget: 'there's no budget at the moment here ... go to town' (pm.aws.c's session, 02:58 UTC)",
+  "account_c_note": "Dinis via maestro.c ~03:40 UTC: C at 60% of five-hour, 50% weekly; 16 roles move to account A; stayers' cadences halved"
 }
