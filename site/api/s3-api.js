@@ -13,6 +13,8 @@
 //                                 -> { status, contentType, contentRange, bytes: Uint8Array }
 //   api.getBucketCors(bucket, region)
 //                                 -> { CorsRules: [...] } in getBucket's (Cloud Control) shape, or null if none
+//                                    (null is defensive: from a browser, a bucket with no rule for this origin fails
+//                                    with TypeError before S3's 404 NoSuchCORSConfiguration is readable; build no UI on it)
 //                                    For buckets already reachable from this page, for example to re-check after a
 //                                    plan is applied: S3 GetBucketCors needs only s3:GetBucketCORS. It cannot replace
 //                                    getBucket, since a bucket with no CORS rule for this site fails in the browser
