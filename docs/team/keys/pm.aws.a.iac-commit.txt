@@ -1,0 +1,20 @@
+sha e8fc7ad8f9b11e9a986fc0637950c6311bf597ed
+tree a3ebd04a4006d38d6b9d2144451127cfd906956b
+parent 885f150d48cd09601345a803a28669afea04c95d
+author pm.aws.a@SovereignWebsite.dinis <pm.aws.a@SovereignWebsite.dinis> 1795418851 +0000
+committer pm.aws.a@SovereignWebsite.dinis <pm.aws.a@SovereignWebsite.dinis> 1795418851 +0000
+gpgsig -----BEGIN SSH SIGNATURE-----
+ U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
+ EEPjC2uBLfhlXdYNtWXv/oclYgqKscEAjBXKzrzjby4bdpXmWQ6Gfd6qviuizTA7MBt3+D
+ Qpgd0dXzkCnT3ESAQgAAAANnaXQAAAAAAAAABnNoYTUxMgAAAGQAAAATZWNkc2Etc2hhMi
+ 1uaXN0cDI1NgAAAEkAAAAgVBDv1aKGNd0muTSUQNGLWP/kofnhzK3DtnDuN3DwK8EAAAAh
+ AK0tJ6zLEzneOH6B+bBH0/jBBodM04Ut1p15iq6mukIr
+ -----END SSH SIGNATURE-----
+
+team/keys: pm.aws.a's own key (sha256:ed43874b84577220)
+
+pm.aws.a@SovereignWebsite.dinis takes over the AWS Platform board from
+pm.aws.c on account A. Public bundle only.
+
+Agent: pm.aws.a@SovereignWebsite.dinis
+Claude-Session: https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B

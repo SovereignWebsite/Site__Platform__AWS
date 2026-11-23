@@ -36,7 +36,7 @@
   }
 
   // Pivots: for the lines where field = value, the other fields' values, most frequent first.
-  var PIVOT_FIELDS = ["path", "vault", "client", "net", "country", "status", "agent_kind", "agent", "edge", "hour", "method"];
+  var PIVOT_FIELDS = ["path", "vault", "client", "net", "country", "host", "status", "agent_kind", "agent", "edge", "hour", "method"];
   function pivots(records, field, value, limit) {
     var rows = records.filter(function (r) { return String(r[field]) === String(value); });
     var out = { field: field, value: value, lines: rows.length, first: null, last: null, by: Object.create(null) };
