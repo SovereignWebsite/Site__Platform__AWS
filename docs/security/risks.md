@@ -292,3 +292,4 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - Fold guarded; ids distinct per stack.
   - Tests: vault-deploy 102 checks and logs both OK.
   - The us-east-1 allowance for the -edge stack only is to be reviewed when built.
+- 23 Nov 2026, 18:15, security.aws.a: ux.aws.a 1fccb92 (designs 03 and 04, docs only, signature verified). Decode's outputs are worded truthfully. Error lines are shown as text, the caps (50 MB, 50,000 rows, 500 columns) are said plainly, TooLarge disables the JSON view, and values that do not fit a hint are never coerced. This matches R-019's caps. No new risks.
