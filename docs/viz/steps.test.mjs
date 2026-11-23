@@ -1,0 +1,75 @@
+// Run: node --test docs/viz/steps.test.mjs
+// Builds the steps from a real line of the twin's CloudFront logs (site/twin.js, unchanged, in a sandbox). No network.
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import vm from "node:vm";
+import { gunzipSync } from "node:zlib";
+import { stepsFor, asText, parseLine, edgeCity } from "./steps.mjs";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+function loadTwin() {
+  const win = {};
+  const ctx = vm.createContext({ window: win, TextEncoder, TextDecoder, Response, Blob, CompressionStream, URL, URLSearchParams, setTimeout, Promise, JSON, Math, Date, String, Object, Array, Uint8Array, Uint32Array, DataView, ArrayBuffer, TypeError, encodeURIComponent, decodeURIComponent, document: { baseURI: "https://twin.invalid/" } });
+  vm.runInContext(readFileSync(join(root, "site", "twin.js"), "utf8"), ctx, { filename: "site/twin.js" });
+  return win.AwsTwin;
+}
+const READ = { authorization: "AWS4-HMAC-SHA256 Credential=ASIATWINREAD/20261123/eu-west-2/s3/aws4_request" };
+const CHANGE = { authorization: "AWS4-HMAC-SHA256 Credential=ASIATWINCHANGE/20261123/eu-west-2/cloudcontrolapi/aws4_request" };
+
+async function twinPacket() {
+  const twin = loadTwin(), B = twin.buckets;
+  for (const b of [B.site, B.logs]) await twin.handle("https://cloudcontrolapi.eu-west-2.amazonaws.com/", { method: "POST", headers: { ...CHANGE, "x-amz-target": "CloudApiService.UpdateResource" },
+    body: JSON.stringify({ TypeName: "AWS::S3::Bucket", Identifier: b, PatchDocument: JSON.stringify([{ op: "add", path: "/CorsConfiguration", value: { CorsRules: [] } }]) }) });
+  const s3 = (b, q) => "https://" + b + ".s3.eu-west-2.amazonaws.com/" + q;
+  const list = await (await twin.handle(s3(B.logs, "?list-type=2&prefix=cloudfront/"), { headers: READ })).text();
+  let logKey, line;
+  for (const [, k] of list.matchAll(/<Key>([^<]+)<\/Key>/g)) {
+    const gz = new Uint8Array(await (await twin.handle(s3(B.logs, k), { headers: READ })).arrayBuffer());
+    line = gunzipSync(gz).toString("utf8").trim().split("\n").find((x) => JSON.parse(x).cs_uri_stem === "/data/vaults.json");
+    if (line) { logKey = k; break; }
+  }
+  const obj = await twin.handle(s3(B.site, "data/vaults.json"), { headers: READ });
+  const body = new Uint8Array(await obj.arrayBuffer());
+  return { line, ctx: { site: B.site, logs: B.logs, logKey, object: { size: body.length, type: obj.headers.get("content-type") } } };
+}
+
+test("a twin log line for /data/vaults.json becomes six steps, in storyboard order", async () => {
+  const { line, ctx } = await twinPacket();
+  assert.ok(line, "the twin's CloudFront logs hold a /data/vaults.json request");
+  const steps = stepsFor(line, ctx);
+  assert.deepEqual(steps.map((s) => s.title), ["Ask", "Edge", "Origin", "Answer", "Log", "Batch"]);
+  assert.deepEqual(steps.map((s) => s.from + ">" + s.to), ["visitor>edge", "edge>edge", "edge>keeper", "keeper>visitor", "edge>scribe", "scribe>archivist"]);
+  const l = JSON.parse(line);
+  assert.equal(steps[0].fields.path, "/data/vaults.json");
+  assert.equal(steps[2].fields.bucket, "111122223333--demo-site--eu-west-2");
+  assert.ok(steps[2].fields.size > 0);
+  assert.equal(steps[3].fields.bytes, l.sc_bytes);
+  assert.match(steps[5].fields.key, /^cloudfront\/2026\/11\/2\d\/\d\d\/demo-distribution-1-.*\.gz$/);
+});
+
+test("the timeline is true to the line's time_taken and only moves forward", async () => {
+  const { line, ctx } = await twinPacket();
+  const steps = stepsFor(line, ctx), tt = JSON.parse(line).time_taken;
+  assert.equal(steps[0].t, 0);
+  assert.ok(Math.abs(steps[3].t - tt * 0.75) < 1e-3);
+  for (let n = 1; n < steps.length; n++) assert.ok(steps[n].t >= steps[n - 1].t);
+});
+
+test("what the twin lacks is marked as a gap, not filled in", async () => {
+  const { line, ctx } = await twinPacket();
+  const gaps = stepsFor(line, ctx).filter((s) => s.gap).map((s) => s.gap);
+  assert.deepEqual(gaps, ["cache hit or miss", "origin access setting", "Firehose stream"]);
+  const noObj = stepsFor(line, { ...ctx, object: null });
+  assert.equal(noObj[2].gap, "object not in the twin");
+  assert.ok(asText(noObj).every((t) => typeof t === "string" && t.length > 0));
+  assert.match(asText(noObj)[1], /not yet in the twin/);
+});
+
+test("lines that are not CloudFront lines are refused; unknown edges say so", () => {
+  assert.throws(() => parseLine("{\"cs_uri_stem\":\"/\"}"), /no timestamp/);
+  assert.equal(edgeCity("LHR50-C1"), "London");
+  assert.equal(edgeCity("XYZ1"), "unknown edge");
+});
