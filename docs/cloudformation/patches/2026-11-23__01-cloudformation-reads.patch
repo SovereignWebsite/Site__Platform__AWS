@@ -1,7 +1,7 @@
 --- a/site/twin.js
 +++ b/site/twin.js
-@@ -194,17 +194,113 @@
-     if (A === "UpdateAssumeRolePolicy") { var p = JSON.parse(form.get("PolicyDocument")); p.Statement.forEach(function (st) { st.Condition = collapse(st.Condition); }); s.roles[name] = p; return xml("<UpdateAssumeRolePolicyResponse/>"); }
+@@ -297,17 +297,113 @@
+     if (A === "UpdateAssumeRolePolicy") { var p = JSON.parse(form.get("PolicyDocument")); p.Statement.forEach(function (st) { st.Condition = collapse(st.Condition); }); s.roles[name] = p; return xml("<UpdateAssumeRolePolicyResponse" + IAM_NS + "><ResponseMetadata><RequestId>00000000-0000-4000-8000-0000000000ab</RequestId></ResponseMetadata></UpdateAssumeRolePolicyResponse>"); }
      return xmlErr("InvalidAction", "Not in the twin yet: iam " + A);
    }
 -  function cloudformation(form, init) {
@@ -117,7 +117,7 @@
        return xmlErr("InvalidAction", "Not in the twin yet: cloudformation " + A);
      });
    }
-@@ -342,7 +438,7 @@
+@@ -453,7 +549,7 @@
      try {
        if (host === "sts.amazonaws.com" || /^sts\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = sts(new URLSearchParams(body), init);
        else if (host === "iam.amazonaws.com") p = iam(new URLSearchParams(body), init);
