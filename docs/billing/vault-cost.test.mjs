@@ -7,11 +7,11 @@ const close = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, a + " != " + b);
 test("idle Vault for a whole month costs the secret plus storage, and nothing per use", () => {
   const r = vaultCost({ region: "eu-west-2", storedGb: 1 });
   close(r.totals.per_use, 0);
-  close(r.totals.fixed, price("secretsmanager.secret", "eu-west-2") + price("s3.storage.standard.first50tb", "eu-west-2"));
+  close(r.totals.fixed, price("secretsmanager.secret", "eu-west-2") + price("s3.storage.standard.first50tb", "eu-west-2") + 0.09 * price("ecr.storage", "eu-west-2"));
 });
 
 test("a two-hour ephemeral Vault pays two hours of the secret, prorated", () => {
-  const r = vaultCost({ region: "eu-west-1", hours: 2 });
+  const r = vaultCost({ region: "eu-west-1", hours: 2, imageGb: 0 });
   close(r.totals.total, (2 * price("secretsmanager.secret", "eu-west-1")) / 720);
   assert.equal(r.series.length, 2);
 });
@@ -37,12 +37,12 @@ test("per-use cost scales with requests", () => {
 
 test("unknown region or missing price is refused, never guessed", () => {
   assert.throws(() => vaultCost({ region: "us-east-1" }));
-  assert.throws(() => price("ecr.storage", "eu-west-2"));
+  assert.throws(() => price("ebs.gp3.storage", "eu-west-2"));
 });
 
 test("not-priced lines are reported as unknown (null), never $0", () => {
   const r = vaultCost({ hours: 1 });
-  assert.ok(r.not_priced.length >= 3);
+  assert.ok(r.not_priced.length >= 2);
   assert.ok(r.not_priced.every((n) => n.cost === null));
   assert.equal(r.total_is_lower_bound, true);
 });
