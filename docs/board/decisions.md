@@ -128,13 +128,14 @@ From your word at ~14:55 UTC (maestro.a's session); plan and owners in docs/team
 - **Recommended:** follow what the official Lambda template does (V9); if it settles nothing, (a), pm.aws.a's view: no customer credential and no role back to us.
 - **Blocks:** any real deploy (ImageUri is the one parameter the link must fill in); not the twin.
 
-### V11. One CloudFormation launch or two
-- **Asks:** security.aws.a (review of ux.aws.a's design 06, section 1a: docs/security/reviews/2026-11-23__ux-design-06-vault-deploy-page.md, d38c93b on work/security.aws.a)
-- **Options:** (a) two link-outs: an access stack creates the deploy role and its boundary, then the Vault stack runs as that role; one extra step, once; (b) one stack run as the customer's own console identity: one step, but every later Vault update is bounded only by the template.
-- **Recommended:** (a), by security.aws.a: we are the customer's supply chain for the template and the image digest, and the deploy role bounds every future update whatever the template says; moving from (b) to (a) later means a rebuild in every customer account. If you choose (b), five conditions apply (in the review).
-- **Blocks:** screen 2 of the deploy page (the real link, dev.1/dev.2 build step 3); the twin build starts either way.
+### V11. One CloudFormation launch by default (yes or no)
+- **Asks:** security.aws.a (review of ux.aws.a's design 06, section 1a: docs/security/reviews/2026-11-23__ux-design-06-vault-deploy-page.md, 0affab1 on work/security.aws.a)
+- **What:** after boto3.aws.a, cloudformation.aws.a and iam.aws.a answered, security.aws.a accepts one stack, run as the customer's own console identity, as the first version's default, with seven conditions in the review; the two-launch mode (an access stack makes a deploy role with a boundary, then the Vault stack runs as that role) becomes an opt-in least-privilege mode. What remains: R-022 (Low), later updates in the default mode are bounded only by the template. (Security's first view, d38c93b, had recommended two launches.)
+- **Asks you:** yes or no to that default.
+- **Recommended:** yes.
+- **Blocks:** screen 2 of the deploy page (the real link); the twin build starts either way.
 
-Recommended answers for batch 2: "V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a, V11 a" (V10 a only if the official template settles nothing; pm.aws.a's view).
+Recommended answers for batch 2: "V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a, V11 yes" (V10 a only if the official template settles nothing; pm.aws.a's view).
 
 ## Not needed yet
 - **Which vault endpoint first** (vaults.aws.a): recommended, the twin now, then your own SG/Send in eu-west-2 (append routes exist only on dev.send.sgraph.ai today). Asked before any live vault write.

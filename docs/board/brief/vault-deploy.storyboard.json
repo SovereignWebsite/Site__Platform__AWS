@@ -183,14 +183,14 @@
   },
   {
    "id": "b11a",
-   "narration": "V11. Recommended by security: two launches, so a deploy role with a boundary bounds every later update.",
+   "narration": "V11. Security now accepts one stack by default, least-privilege mode opt-in. Recommended: yes.",
    "visual": {
     "kind": "svg",
     "src": "v11",
-    "caption": "V11: one launch or two",
+    "caption": "V11: one launch by default",
     "at": 0,
-    "play": 7.4,
-    "end": 6.8
+    "play": 5.8,
+    "end": 5.2
    },
    "facts": [
     "s-sec-06"
@@ -198,14 +198,14 @@
   },
   {
    "id": "b12",
-   "narration": "All a, except V4 and V5, b, and V7, c. Answer in pm.aws.a's session.",
+   "narration": "All a, except V4 and V5, b, V7, c, and V11, yes. Answer in pm.aws.a's session.",
    "visual": {
     "kind": "svg",
     "src": "outro",
-    "caption": "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a (if the official template settles nothing), V11 a",
+    "caption": "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a (if the official template settles nothing), V11 yes",
     "at": 0,
-    "play": 6.2,
-    "end": 5.6
+    "play": 7,
+    "end": 6.4
    },
    "facts": [
     "s-plan"
@@ -555,34 +555,34 @@
   },
   {
    "id": "V11",
-   "question": "V11. One CloudFormation launch or two?",
+   "question": "V11. One CloudFormation launch by default, with a least-privilege two-launch mode as an opt-in?",
    "options": [
     {
-     "id": "a",
-     "label": "a. Two link-outs: access stack (deploy role and boundary), then the Vault stack as that role",
+     "id": "yes",
+     "label": "Yes: one stack by default (seven conditions); least-privilege mode opt-in",
      "good": [
-      "The deploy role bounds every future update, whatever the template says"
+      "One step for most customers",
+      "Security accepts it (0affab1)"
      ],
      "bad": [
-      "One extra step, once"
+      "R-022 (Low): later updates bounded only by the template"
      ],
      "blocks": []
     },
     {
-     "id": "b",
-     "label": "b. One stack, run as the customer's own console identity",
+     "id": "no",
+     "label": "No: two launches for everyone",
      "good": [
-      "One step"
+      "A deploy role bounds every update"
      ],
      "bad": [
-      "Later updates bounded only by the template",
-      "Moving to a later means a rebuild in every customer account"
+      "One extra step for every customer"
      ],
      "blocks": []
     }
    ],
-   "recommendation": "a",
-   "why": "security.aws.a (d38c93b): we are the customer's supply chain for the template and the image digest. If b, five conditions apply."
+   "recommendation": "yes",
+   "why": "security.aws.a, after boto3, cloudformation and iam answered (0affab1); its first view (d38c93b) had recommended two launches."
   }
  ],
  "connections": {
@@ -654,8 +654,8 @@
   },
   {
    "id": "s-sec-06",
-   "title": "security.aws.a: review of ux.aws.a's design 06, the Vault deploy page (d38c93b)",
-   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/d38c93b/docs/security/reviews/2026-11-23__ux-design-06-vault-deploy-page.md",
+   "title": "security.aws.a: review of ux.aws.a's design 06, the Vault deploy page (0affab1)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/0affab1/docs/security/reviews/2026-11-23__ux-design-06-vault-deploy-page.md",
    "read": "2026-11-23"
   }
  ],
