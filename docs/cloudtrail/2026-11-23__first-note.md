@@ -50,3 +50,23 @@ CloudWatch follows the same path: alarms first (they answer "is anything wrong")
 ## For security.aws.c
 
 A dropped-in dump is untrusted input from the user's own file. The reader must show it through `textContent` only (as the S3 browser does), cap the size it will unzip, and never fetch anything a record names. No new network calls, no change to the CSP.
+
+## Update on account A (cloudtrail.aws.a, 23 Nov ~04:40 UTC)
+
+The role moved to account A as cloudtrail.aws.a@SovereignWebsite.dinis. I wrote a second first note before this one reached dev; this section folds in what it added, so there is one note. Read against dev 003976e.
+
+### Done since this note
+
+- aws.c (787735b) fixed points 1, 2, 4 (the comment) and 6: full records, one file per region, IAM under us-east-1, the role named `sovereignwebsite-factory-dns`.
+- Point 5 (the page's changes leave no trail), the first twin task aws.c gave this role: patch ready, `docs/cloudtrail/patches/2026-11-23__01-live-trail.patch`, for aws.c to apply to site/twin.js with a new test, test/twin/cloudtrail-live.test.mjs. Every sign-in (AssumeRoleWithWebIdentity, refused ones with `errorCode` AccessDenied), trust change (UpdateAssumeRolePolicy), CreateChangeSet, ExecuteChangeSet and Cloud Control UpdateResource now writes a record into the trail bucket at once, one `.json.gz` per region and five minutes (`..._twin-live.json.gz`), global services under us-east-1. Reads add nothing; `reset()` clears them. Real CloudTrail delivers a few minutes late; the twin does not, so a user sees the change they just made. With the patch, the twin's own tests (twin S3 fidelity, s3-api, twin e2e, the five pure modules) and the new test all pass.
+
+*To check* (boto3.aws.c): whether CloudTrail records CreateChangeSet's template body or hides it, and whether a Cloud Control UpdateResource also leaves a record from the service it calls (here, S3 PutBucketCors with `invokedBy`). The patch records neither.
+
+### Added to the plan
+
+- **A trail per demo pack**, seeded so it is the same every time, over the same three days as the CloudFront logs: *baseline* (sign-ins, reads, Firehose writing logs, one stack update through a change set, the odd AccessDenied); *attack* (the same, plus R-008 played as a story: CreateChangeSet with a template that adds `PutRolePolicy`, ExecuteChangeSet, then UpdateAssumeRolePolicy on the DNS role (R-005), from an address and user agent never seen before, so the alarm view has something real to catch); *surge* (the trail barely changes: "the site is busy but nobody changed anything" is itself an answer).
+- **More alarm rules** beside R-008 (c): CloudTrail itself changed (StopLogging, DeleteTrail, PutEventSelectors); a call from an address or user agent not seen in the earlier days; a burst of AccessDenied from one identity; policy changes beyond trust (PutRolePolicy, AttachRolePolicy, CreatePolicyVersion). Each rule written in words, each showing the records that fired it; the same rules are what aws.c can later plan as EventBridge rules or CloudWatch alarms, at Dinis's word.
+- **The timeline**: filters as chips (read or change, failed only, service, who, asset), a small bar chart of events per hour as a time brush, and every state in the address (`#from=...&who=...`) so a link shows the same view. No cookie.
+- **Large dumps**: stream records, index by time, asset and identity, render only what is on screen, show counts first ("41,233 events over 9 days, 3 alarms").
+- **Fixtures** use documentation ranges only (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24) and account 111122223333.
+- **Views 4 and 5**, after the first three: a map (who connects to what over the period, from ontology's graph) and a story (one session from sign-in to its last call, as a narrative).
