@@ -135,9 +135,11 @@ DescribeInstanceAttribute and ModifyInstanceAttribute are not in 2b, so the twin
 
 ### 2g. Seed data (pack baseline)
 
-Synthetic and labelled as such, in account 111122223333 like the rest of the twin: one stopped instance `demo-ec2-vault` in eu-west-2 (tagged as managed, with an expiry in the past so the read page shows an overdue one), a default VPC, subnet and `default` security group in every twin region (RunInstances falls back to them), one security group with HTTPS from CloudFront only, no key pairs, one AMI owned by self, and nothing in other regions, so the region sweep shows empty regions as empty. The attack pack adds nothing to EC2 in v1.
+Synthetic and labelled as such, in account 111122223333 like the rest of the twin: one stopped instance `demo-ec2-vault` in eu-west-2 (tagged as managed, with an expiry in the past so the read page shows an overdue one), one running instance `demo-not-ours` in eu-west-2 with no `sws:*` tags (something in the account that is not ours, so rule 2f.6 and the read page's "not managed" flag are testable), a default VPC, subnet and `default` security group in every twin region (RunInstances falls back to them), one security group with HTTPS from CloudFront only, no key pairs, one AMI owned by self, and nothing in other regions, so the region sweep shows empty regions as empty. The attack pack adds nothing to EC2 in v1.
 
 ### 2h. Tests (test/twin/ec2.test.mjs)
+
+The executable form is docs/ec2/twin/ec2.test.mjs (ec2.aws.a): it runs against the twin today (each check fails until the EC2 twin exists, a few pass vacuously on an empty world) and moves to test/twin/ with dev.1.aws.a's patch.
 
 1. Signed calls only; an unsigned call is refused, as for the other services.
 2. DescribeRegions, then DescribeInstances in each region: the seed appears in eu-west-2 only.
