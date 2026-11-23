@@ -880,6 +880,8 @@
         body.hidden = !open; shut.textContent = open ? "" : " " + what + " ";
         fold.setAttribute("aria-expanded", open ? "true" : "false");
         fold.title = (open ? "Fold " : "Unfold ") + what;
+        // The bracket is what shows; its name is what it does (sherpa walk 6: a screen reader said "left brace").
+        fold.setAttribute("aria-label", fold.title);
       }
       fold.onclick = function () { setOpen(fold.getAttribute("aria-expanded") !== "true"); };
       to.appendChild(fold); to.appendChild(body); to.appendChild(shut); text(to, arr ? "]" : "}");
