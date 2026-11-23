@@ -2,7 +2,7 @@
   "programme": "AWS Platform (aws.c), account C",
   "owner": "conductor.aws.c@SovereignWebsite.dinis",
   "authority": "Dinis Cruz, 'Lean start', maestro.c's session, 23 Nov 2026 02:39 UTC",
-  "updated": "2026-11-23T02:45Z",
+  "updated": "2026-11-23T03:25Z",
   "offsets_in_use_elsewhere_on_account_c": {
     ":03": "router.a (account A)",
     ":08": "router.c",
@@ -14,13 +14,13 @@
     ":48": "maestro",
     "studio.c": "4-hourly update run, minute to confirm"
   },
-  "stage": 1,
+  "stage": 2,
   "agents": [
     {
       "name": "conductor.aws.c@SovereignWebsite.dinis",
       "session": "session_01Kw9UwDiqvoswkZCuHe5GTt",
-      "cron": "58 2-23/4 * * *",
-      "every": "4 h, :58 at 02,06,10,14,18,22",
+      "cron": "58 */2 * * *",
+      "every": "2 h, :58 even hours",
       "paths": [
         "docs/team/**"
       ],
@@ -30,7 +30,7 @@
     {
       "name": "pm.aws.c@SovereignWebsite.dinis",
       "session": "session_01Kw9UwBZAwm6766jrG94uX1",
-      "cron": "15 0-23/6 * * *",
+      "cron": "15 * * * * (pm.aws.c sets its own)",
       "every": "6 h, :15 (proposed; pm.aws.c proposes its own to Dinis)",
       "paths": [
         "docs/board/**"
@@ -39,8 +39,8 @@
     {
       "name": "security.aws.c@SovereignWebsite.dinis",
       "session": "session_01Kw9UwDzABFfbMk8PV34a7J",
-      "cron": "28 0-23/2 * * *",
-      "every": "2 h for the first 24 h (accountant.c), :28 even hours; hourly once it has findings to chase and the budget allows",
+      "cron": "28 * * * *",
+      "every": "1 h, :28 (budget lifted)",
       "paths": [
         "docs/security/**"
       ],
@@ -54,8 +54,8 @@
     {
       "name": "architect.aws.c@SovereignWebsite.dinis",
       "session": "session_01Kw9UwDZKwJdnC3eTunM4uS",
-      "cron": "38 0-23/3 * * *",
-      "every": "3 h, :38 at 00,03,06...",
+      "cron": "38 */2 * * *",
+      "every": "2 h, :38 even hours",
       "paths": [
         "docs/architecture/**",
         "site/api/** (pending aws.c)",
@@ -70,32 +70,155 @@
     {
       "name": "s3.aws.c@SovereignWebsite.dinis",
       "session": "session_01Kw9UwD9A8Ev6Ktgofqj9Y6",
-      "cron": "53 1-23/3 * * *",
-      "every": "3 h, :53 at 01,04,07...",
+      "cron": "53 * * * *",
+      "every": "1 h, :53",
       "paths": [
         "docs/s3/**",
         "site/s3*.js (pending aws.c)"
       ],
       "trigger": "trig_01RGpy5CqCKSZ8yxc8sTknjw",
       "started": "2026-11-23T02:44Z"
+    },
+    {
+      "name": "journalist.aws.c@SovereignWebsite.dinis",
+      "session": null,
+      "cron": "06 * * * *",
+      "every": "1 h",
+      "paths": [
+        "docs/journal/**"
+      ]
+    },
+    {
+      "name": "dev.1.aws.c@SovereignWebsite.dinis",
+      "session": null,
+      "cron": "09 * * * *",
+      "every": "1 h",
+      "paths": [
+        "code as granted"
+      ]
+    },
+    {
+      "name": "ontology.aws.c@SovereignWebsite.dinis",
+      "session": null,
+      "cron": "11 */2 * * *",
+      "every": "2 h even",
+      "paths": [
+        "docs/ontology/**"
+      ]
+    },
+    {
+      "name": "iam.aws.c@SovereignWebsite.dinis",
+      "session": null,
+      "cron": "16 * * * *",
+      "every": "1 h",
+      "paths": [
+        "docs/iam/**"
+      ]
+    },
+    {
+      "name": "lambda.aws.c@SovereignWebsite.dinis",
+      "session": null,
+      "cron": "21 */2 * * *",
+      "every": "2 h even",
+      "paths": [
+        "docs/lambda/**"
+      ]
+    },
+    {
+      "name": "cloudformation.aws.c@SovereignWebsite.dinis",
+      "session": null,
+      "cron": "26 1-23/2 * * *",
+      "every": "2 h odd",
+      "paths": [
+        "docs/cloudformation/**"
+      ]
+    },
+    {
+      "name": "cloudtrail.aws.c@SovereignWebsite.dinis",
+      "session": null,
+      "cron": "31 */2 * * *",
+      "every": "2 h even",
+      "paths": [
+        "docs/cloudtrail/**"
+      ]
+    },
+    {
+      "name": "vaults.aws.c@SovereignWebsite.dinis",
+      "session": null,
+      "cron": "36 1-23/2 * * *",
+      "every": "2 h odd",
+      "paths": [
+        "docs/vaults/**"
+      ]
+    },
+    {
+      "name": "dev.2.aws.c@SovereignWebsite.dinis",
+      "session": null,
+      "cron": "39 * * * *",
+      "every": "1 h",
+      "paths": [
+        "code as granted"
+      ]
+    },
+    {
+      "name": "boto3.aws.c@SovereignWebsite.dinis",
+      "session": null,
+      "cron": "41 */2 * * *",
+      "every": "2 h even",
+      "paths": [
+        "docs/boto3/**"
+      ]
+    },
+    {
+      "name": "ux.aws.c@SovereignWebsite.dinis",
+      "session": null,
+      "cron": "46 1-23/2 * * *",
+      "every": "2 h odd",
+      "paths": [
+        "docs/design/**"
+      ]
+    },
+    {
+      "name": "data.aws.c@SovereignWebsite.dinis",
+      "session": null,
+      "cron": "51 */2 * * *",
+      "every": "2 h even",
+      "paths": [
+        "docs/data/**"
+      ]
+    },
+    {
+      "name": "billing.aws.c@SovereignWebsite.dinis",
+      "session": null,
+      "cron": "56 1-23/2 * * *",
+      "every": "2 h odd",
+      "paths": [
+        "docs/billing/**"
+      ]
+    },
+    {
+      "name": "viz.aws.c@SovereignWebsite.dinis",
+      "session": null,
+      "cron": "01 1-23/2 * * *",
+      "every": "2 h odd",
+      "paths": [
+        "docs/viz/**"
+      ]
+    },
+    {
+      "name": "video.aws.c@SovereignWebsite.dinis",
+      "session": null,
+      "cron": "04 */4 * * *",
+      "every": "4 h",
+      "paths": [
+        "docs/video/**"
+      ]
     }
-  ],
-  "stage_2_waiting_on_dinis": [
-    "lambda (with Firehose)",
-    "iam",
-    "cloudformation (with Route 53)",
-    "cloudtrail (with CloudWatch)",
-    "vaults",
-    "boto3",
-    "design and UX",
-    "data",
-    "video with the studio",
-    "journalist and researcher"
   ],
   "back_off": "an agent with nothing to do asks conductor.aws.c to double its interval, up to 8 h",
   "budget": {
     "source": "accountant.c proposal, 23 Nov 02:50 UTC (material; Dinis and maestro.c set budgets)",
-    "stage_1_cap_first_24h": "40 wakes/day",
+    "stage_1_cap_first_24h": "lifted by Dinis (no budget cap); accountant.c still measures; no account maxed out",
     "planned": "38 wakes/day",
     "per_wake_ceiling_usd_equiv": {
       "security": 1.0,
@@ -111,5 +234,6 @@
       "over 300k context: compact or hand over before the next wake",
       "a wake with nothing new ends in one line"
     ]
-  }
+  },
+  "authority_stage_2": "Dinis Cruz, 'Full stage 2 now', conductor.aws.c's session, 23 Nov 2026 ~03:00 UTC; budget: 'there's no budget at the moment here ... go to town' (pm.aws.c's session, 02:58 UTC)"
 }
