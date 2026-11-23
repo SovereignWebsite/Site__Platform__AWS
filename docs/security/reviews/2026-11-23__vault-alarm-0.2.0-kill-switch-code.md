@@ -63,3 +63,16 @@ Verdict: **not yet accepted.** The design is right and the IAM matches iam.aws.a
   - an assertion on the region of the Lambda client: `lam_region` is computed but never checked.
 
 R-026 stays Medium and open. This review does not change Dinis's K1 to K4.
+
+## Follow-up: 0.3.0 (ef0a1a0) and 0.3.1 (133e4dc), 20:50 UTC
+
+Both signatures verified, both tests pass, cfn-lint is clean.
+
+- **The slow alarm is accepted.** `sws-vault-<id>-requests-slow` is a Sum over 21600 s with its own `SlowRequestThreshold` (0 means off).
+  - It has the same AlarmActions as the fast alarm, and neither alarm has OK or insufficient-data actions.
+  - The topic policy's Allow and Deny both name exactly the two alarm ARNs. With a list, ArnNotEquals denies any ARN that matches neither.
+  - The second invoke permission is for the slow alarm's SourceArn only.
+  - The function accepts exactly the two names, and the test rejects look-alikes.
+- **S3 is closed:** the code tags whenever the end state is paused and the tag is missing. The new ListTags and ListTagsForResource rights are read-only and on the one function and the one distribution.
+- **S5 is closed:** `DISTRIBUTION_ARN` is built with `${AWS::Partition}`.
+- **Still open:** S1 (levers ordered and isolated, failure destination, errors alarm), S2 (`ReservedConcurrentExecutions: 1` is still at line 242), S4, S7, S8 and the extra tests. Not yet accepted until S1 and S2 land.
