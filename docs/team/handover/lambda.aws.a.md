@@ -8,6 +8,8 @@ docs/team/_common.md, then the lambda section of docs/team/stage-2.md, CLAUDE.md
 
 ## The key: read this first
 
+- 15:52 UTC: Dinis restarted the 11 AWS agents with fresh sessions (via a.maestro). This session stops now, so option (b) below applies: make your own key, publish it per docs/team/keys/README.md, and ask factory.c to drop c706d26. Then rebuild land/lambda.aws.a's commit under your key (same files) before pushing to dev.
+
 - This session's key is sha256:628a453a6fd5ccc6 (signing ECDSA P-256, SSH SHA256:pkUONLiK6LPNmvb4j/XDtm2XHbkd9iu33z9nRyTYRic). Public bundle: docs/team/keys/lambda.aws.a.json. Factory key commit prepared: c706d26 on Factory dev 885f150 (files docs/team/keys/lambda.aws.a.iac-commit.txt and .iac-entry.json), five checks pass, in factory.c's table, waiting on Dinis's sign-off.
 - The private half lives only in this session's container (~/.sg-send, ~/.ssh-sign). A fresh session cannot use it. So either (a) Dinis keeps this session for signing until the key is live and the landing below is pushed, or (b) the fresh session makes its own key, publishes it the same way (docs/team/keys/README.md), and factory.c drops c706d26 from its table. Which one is Dinis's call (trust keys are a one-way door). Recommendation: (b) if this session is restarted; never copy a private key between sessions.
 
