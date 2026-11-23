@@ -2,9 +2,9 @@
   "openapi": "3.1.0",
   "info": {
     "title": "IamApi (browser)",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "summary": "The browser-side contract of IamApi (site/api/iam-api.js): IAM role reads.",
-    "description": "This site has no server. The paths are logical names for the methods of the browser object IamApi, not URLs anything listens on; operationId is the method name and parameters are its arguments in order. Each operation lists in x-aws-actions the IAM actions it needs on real AWS; iam.aws.a and aws.c check the list against the read role in template v3 before anything calls real AWS. Reads only: no users, groups or access keys, no policy evaluation (design 04). IAM is global: iam.amazonaws.com, signed for us-east-1, Query protocol."
+    "description": "This site has no server. The paths are logical names for the methods of the browser object IamApi, not URLs anything listens on; operationId is the method name and parameters are its arguments in order. Each operation lists in x-aws-actions the IAM actions it needs on real AWS; iam.aws.a and aws.c check the list against the read role in template v3 before anything calls real AWS. Nine read actions, Resource *. Reads only: no users, groups or access keys, no policy evaluation (design 04). IAM is global: iam.amazonaws.com, signed for us-east-1, Query protocol."
   },
   "servers": [],
   "x-browser-global": "IamApi",
@@ -79,7 +79,7 @@
     "/roles/{role}": {
       "get": {
         "operationId": "role",
-        "summary": "One role: trust policy read into statements, last use",
+        "summary": "One role: what ListRoles lacks (last use, permissions boundary), with its trust",
         "x-arguments": "role(name)",
         "x-wire": "IAM GetRole",
         "x-aws-actions": [
@@ -395,7 +395,8 @@
                     "type": "object",
                     "required": [
                       "arn",
-                      "url"
+                      "url",
+                      "urlDerived"
                     ],
                     "properties": {
                       "arn": {
@@ -406,7 +407,73 @@
                           "string",
                           "null"
                         ]
+                      },
+                      "urlDerived": {
+                        "const": true,
+                        "description": "ListOpenIDConnectProviders gives ARNs only; the host is read from the ARN"
                       }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        }
+      }
+    },
+    "/providers/{arn}": {
+      "get": {
+        "operationId": "provider",
+        "summary": "One OpenID Connect provider: its URL and client ids (to tie a trust's aud condition to it)",
+        "x-arguments": "provider(arn)",
+        "x-wire": "IAM GetOpenIDConnectProvider",
+        "x-aws-actions": [
+          "iam:GetOpenIDConnectProvider"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "arn",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The provider",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "arn",
+                    "url",
+                    "clientIds"
+                  ],
+                  "properties": {
+                    "arn": {
+                      "type": "string"
+                    },
+                    "url": {
+                      "type": "string"
+                    },
+                    "clientIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "created": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     }
                   }
                 }
@@ -428,7 +495,9 @@
           "name",
           "arn",
           "path",
-          "created"
+          "created",
+          "serviceLinked",
+          "trust"
         ],
         "properties": {
           "name": {
@@ -452,6 +521,13 @@
               "integer",
               "null"
             ]
+          },
+          "serviceLinked": {
+            "type": "boolean",
+            "description": "Under /aws-service-role/: AWS manages it; views group these and say so"
+          },
+          "trust": {
+            "$ref": "#/components/schemas/Trust"
           }
         }
       },
@@ -463,14 +539,12 @@
           {
             "type": "object",
             "required": [
-              "trust",
-              "lastUsed"
+              "lastUsed",
+              "boundary"
             ],
             "properties": {
-              "trust": {
-                "$ref": "#/components/schemas/Trust"
-              },
               "lastUsed": {
+                "description": "null: not used in the last 400 days (IAM's tracking period), never 'never used'",
                 "oneOf": [
                   {
                     "type": "null"
@@ -490,6 +564,31 @@
                           "string",
                           "null"
                         ]
+                      }
+                    }
+                  }
+                ]
+              },
+              "boundary": {
+                "description": "The permissions boundary, shown beside the role's policies in every view",
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "arn"
+                    ],
+                    "properties": {
+                      "type": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "arn": {
+                        "type": "string"
                       }
                     }
                   }

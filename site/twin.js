@@ -197,7 +197,11 @@
   // IAM's read answers (design 04). The platform roles' policies mirror site/cloudformation/bootstrap.yaml (a test
   // checks the names match); the demo roles' policies are synthetic. AWS managed policies are attached by ARN, and
   // their documents are a placeholder marked "TwinPlaceholder": AWS's own text is long and changes, so the twin
-  // does not copy it. Shapes follow AWS's IAM API reference; boto3.aws.a to confirm (see test/twin/iam.test.mjs).
+  // does not copy it. No permissions boundaries yet: they wait for decision 6 (P-IAM-001 v2.4), as on the real
+  // account today. Shapes checked by boto3.aws.a against AWS's IAM API reference (docs/boto3/
+  // 2026-11-23__06-iam-read-shapes.md, work/boto3.aws.a a83ea2f), except two it could not settle, marked here:
+  // an empty <RoleLastUsed/> for a role not used in 400 days (AWS does not say empty or absent; readers take both),
+  // and the error envelope (ErrorResponse > Error > Code, Message).
   var AWS_MANAGED = { "arn:aws:iam::aws:policy/SecurityAudit": "SecurityAudit", "arn:aws:iam::aws:policy/job-function/ViewOnlyAccess": "ViewOnlyAccess" };
   function iamSeed() {
     var stmt = function (sid, action, resource, extra) { var o = { Sid: sid, Effect: "Allow", Action: action, Resource: resource }; for (var k in extra || {}) o[k] = extra[k]; return o; };
@@ -256,6 +260,10 @@
     if (A === "ListRoles") {
       page = iamPage(Object.keys(s.roles).sort(), form, function (n) { return "<member>" + iamRoleXml(s, n, false) + "</member>"; }, 2);
       return iamOk("ListRoles", "<Roles>" + page.items + "</Roles>" + page.tail);
+    }
+    if (A === "GetOpenIDConnectProvider") {
+      if (form.get("OpenIDConnectProviderArn") !== "arn:aws:iam::" + ACCOUNT + ":oidc-provider/token.actions.githubusercontent.com") return xmlErr("NoSuchEntity", "OpenIDConnect Provider not found for arn " + form.get("OpenIDConnectProviderArn"), 404);
+      return iamOk("GetOpenIDConnectProvider", "<Url>token.actions.githubusercontent.com</Url><ClientIDList><member>sts.amazonaws.com</member></ClientIDList><CreateDate>2026-11-15T08:55:00Z</CreateDate>");
     }
     if (A === "ListOpenIDConnectProviders")
       return iamOk("ListOpenIDConnectProviders", "<OpenIDConnectProviderList><member><Arn>arn:aws:iam::" + ACCOUNT + ":oidc-provider/token.actions.githubusercontent.com</Arn></member></OpenIDConnectProviderList>");

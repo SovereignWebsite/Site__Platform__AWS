@@ -3,18 +3,24 @@
 // Reads only: no users, groups or access keys, and no policy evaluation (design 04, "Out, on purpose").
 //
 //   var api = IamApi(send);
-//   api.roles({ next, max })        -> { items: [{ name, arn, path, created, description, maxSession }], next }
-//   api.role(name)                  -> { name, arn, path, created, description, maxSession, trust, lastUsed }
+//   api.roles({ next, max })        -> { items: [role summary], next }   ListRoles, which carries each role's trust
+//   api.role(name)                  -> role summary + { lastUsed, boundary }   GetRole, for what ListRoles lacks
+//   role summary = { name, arn, path, created, description, maxSession, serviceLinked, trust }
 //   api.attached(name, { next })    -> { items: [{ name, arn }], next }
 //   api.inline(name, { next })      -> { items: [name], next }
 //   api.inlineDocument(name, policy)-> policy document (parsed JSON, as AWS wrote it)
 //   api.policyDocument(arn)         -> { version, document, awsManaged }   (GetPolicy, then its default version)
-//   api.providers()                 -> [{ arn, url }]                       (url from the provider's ARN)
+//   api.providers()                 -> [{ arn, url, urlDerived: true }]     (ARNs only from AWS; url read from the ARN)
+//   api.provider(arn)               -> { arn, url, clientIds, created }      GetOpenIDConnectProvider (for aud conditions)
 //   trust = { statements: [{ effect, actions, notActions, principals: [{ kind, id }], notPrincipals, conditions: [{ op, key, values }] }] }
-//           kind: "service" | "aws" | "federated" | "canonical"; read, never judged. lastUsed: { when, region } or null.
+//           kind: "service" | "aws" | "federated" | "canonical"; read, never judged.
+//   lastUsed: { when, region }, or null: IAM tracks 400 days, so null means "not used in the last 400 days", never
+//   "never used" (design 04, from boto3.aws.a). boundary: { type, arn } or null; a view that shows a role's policies
+//   shows its boundary beside them. serviceLinked: the role sits under /aws-service-role/ (AWS manages it).
 //   IamApi.all = ApiAll (site/api/all.js), to drain roles(), attached() or inline() with a cap.
 //
-// Policy documents come URL-encoded in IAM's XML: decoded and parsed here; values stay as AWS wrote them, with only
+// Policy documents (from any call) go through decodeURIComponent, then JSON.parse: AWS's notes say they are
+// URL-encoded and its samples show plain JSON, and decoding plain JSON leaves it as it is; values stay as AWS wrote them, with only
 // Statement, Action, Principal ids and condition values made arrays. Errors: an Error "Code: Message", .code,
 // .status; a CORS TypeError passes through. awsManaged documents may be a summary or placeholder where the source
 // does not carry AWS's text: the page points to AWS's documentation for those.
@@ -55,8 +61,10 @@
     }) };
   }
   function roleSummary(m) {
-    return { name: text(m, "RoleName"), arn: text(m, "Arn"), path: text(m, "Path"), created: text(m, "CreateDate"),
-      description: text(m, "Description"), maxSession: Number(text(m, "MaxSessionDuration")) || null };
+    var path = text(m, "Path"), d = text(m, "AssumeRolePolicyDocument");
+    return { name: text(m, "RoleName"), arn: text(m, "Arn"), path: path, created: text(m, "CreateDate"),
+      description: text(m, "Description"), maxSession: Number(text(m, "MaxSessionDuration")) || null,
+      serviceLinked: path.indexOf("/aws-service-role/") === 0, trust: d ? trust(doc(d)) : { statements: [] } };
   }
 
   function IamApi(send) {
@@ -85,9 +93,9 @@
     function role(name) {
       return call("GetRole", { RoleName: name }).then(function (t) {
         var m = blocks(t, "Role")[0] || "", lu = blocks(m, "RoleLastUsed")[0], when = lu ? text(lu, "LastUsedDate") : "";
-        var r = roleSummary(m);
-        r.trust = trust(doc(text(m, "AssumeRolePolicyDocument")));
+        var r = roleSummary(m), pb = blocks(m, "PermissionsBoundary")[0];
         r.lastUsed = when ? { when: when, region: text(lu, "Region") || null } : null;
+        r.boundary = pb && text(pb, "PermissionsBoundaryArn") ? { type: text(pb, "PermissionsBoundaryType") || null, arn: text(pb, "PermissionsBoundaryArn") } : null;
         return r;
       });
     }
@@ -109,11 +117,16 @@
     function providers() {
       return call("ListOpenIDConnectProviders").then(function (t) {
         return blocks(blocks(t, "OpenIDConnectProviderList")[0] || "", "member").map(function (m) {
-          var a = text(m, "Arn"); return { arn: a, url: a.split(":oidc-provider/")[1] || null };
+          var a = text(m, "Arn"); return { arn: a, url: a.split(":oidc-provider/")[1] || null, urlDerived: true };
         });
       });
     }
-    return { roles: roles, role: role, attached: attached, inline: inline, inlineDocument: inlineDocument, policyDocument: policyDocument, providers: providers };
+    function provider(arn) {
+      return call("GetOpenIDConnectProvider", { OpenIDConnectProviderArn: arn }).then(function (t) {
+        return { arn: arn, url: text(t, "Url"), clientIds: blocks(blocks(t, "ClientIDList")[0] || "", "member").map(unescape), created: text(t, "CreateDate") || null };
+      });
+    }
+    return { roles: roles, role: role, attached: attached, inline: inline, inlineDocument: inlineDocument, policyDocument: policyDocument, providers: providers, provider: provider };
   }
   IamApi.trust = trust;
   IamApi.all = function (page, opts) { return root.ApiAll(page, opts); };

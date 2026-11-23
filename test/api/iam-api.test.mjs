@@ -39,13 +39,14 @@ const first = await api.roles();
 ok(first.items.length === 2 && typeof first.next === "string", "roles: one page of two, with next");
 ok(seen[0].service === "iam" && seen[0].region === "us-east-1" && seen[0].url === "https://iam.amazonaws.com/" && /Action=ListRoles&Version=2010-05-08/.test(seen[0].body), "IAM request shape " + seen[0].body);
 const all = await IamApi.all((next) => api.roles({ next }));
-ok(all.items.length === 7 && !all.capped && all.items.every((r) => /^arn:aws:iam::\d{12}:role\//.test(r.arn) && r.path === "/" && r.maxSession === 3600), "roles: all seven through ApiAll");
+ok(all.items.length === 7 && !all.capped && all.items.every((r) => /^arn:aws:iam::\d{12}:role\//.test(r.arn) && r.path === "/" && r.maxSession === 3600 && r.serviceLinked === false && r.trust.statements.length === 1), "roles: all seven through ApiAll, each with its trust");
+ok(JSON.stringify(plain(all.items.find((r) => r.name === "sws-aws-platform-read").trust)) === JSON.stringify(plain((await api.role("sws-aws-platform-read")).trust)), "ListRoles trust equals GetRole trust");
 const read = await api.role("sws-aws-platform-read");
 ok(read.arn === "arn:aws:iam::" + A + ":role/sws-aws-platform-read" && read.description.startsWith("Read-only view") && JSON.stringify(read.lastUsed) === JSON.stringify({ when: "2026-11-22T10:01:02Z", region: "eu-west-2" }), "role(read) " + JSON.stringify(read.lastUsed));
 ok(JSON.stringify(plain(read.trust)) === JSON.stringify({ statements: [{ effect: "Allow", actions: ["sts:AssumeRoleWithWebIdentity"], notActions: [], principals: [{ kind: "federated", id: "accounts.google.com" }], notPrincipals: [],
   conditions: [{ op: "StringEquals", key: "accounts.google.com:aud", values: ["twin-client-id.apps.googleusercontent.com"] }, { op: "StringEquals", key: "accounts.google.com:sub", values: ["000000000000000000001"] }] }] }), "trust read into statements " + JSON.stringify(read.trust));
 const dns = await api.role("sovereignwebsite-factory-dns");
-ok(dns.lastUsed === null && dns.trust.statements[0].principals[0].id === "arn:aws:iam::" + A + ":oidc-provider/token.actions.githubusercontent.com" && dns.trust.statements[0].conditions.find((c) => c.key.endsWith(":sub")).values.length === 2, "role(dns): never used, OIDC trust, two subjects");
+ok(dns.lastUsed === null && read.boundary === null && dns.boundary === null && dns.trust.statements[0].principals[0].id === "arn:aws:iam::" + A + ":oidc-provider/token.actions.githubusercontent.com" && dns.trust.statements[0].conditions.find((c) => c.key.endsWith(":sub")).values.length === 2, "role(dns): never used, OIDC trust, two subjects");
 ok((await api.role("demo-handler-role")).trust.statements[0].principals[0].kind === "service", "a service principal");
 ok(JSON.stringify(plain((await api.attached("sws-aws-platform-read")).items)) === JSON.stringify([{ name: "ViewOnlyAccess", arn: "arn:aws:iam::aws:policy/job-function/ViewOnlyAccess" }, { name: "SecurityAudit", arn: "arn:aws:iam::aws:policy/SecurityAudit" }]), "attached");
 const inl = await api.inline("sws-aws-platform-change");
@@ -54,7 +55,9 @@ const su = await api.inlineDocument("sws-aws-platform-change", "self-update");
 ok(su.Statement.length === 4 && su.Statement[2].Condition["ForAnyValue:StringEquals"]["aws:CalledVia"] === "cloudformation.amazonaws.com", "inlineDocument as AWS wrote it");
 const pd = await api.policyDocument("arn:aws:iam::aws:policy/SecurityAudit");
 ok(pd.version === "v1" && pd.awsManaged === true && Array.isArray(pd.document.Statement), "policyDocument (AWS managed)");
-ok(JSON.stringify(plain(await api.providers())) === JSON.stringify([{ arn: "arn:aws:iam::" + A + ":oidc-provider/token.actions.githubusercontent.com", url: "token.actions.githubusercontent.com" }]), "providers");
+ok(JSON.stringify(plain(await api.providers())) === JSON.stringify([{ arn: "arn:aws:iam::" + A + ":oidc-provider/token.actions.githubusercontent.com", url: "token.actions.githubusercontent.com", urlDerived: true }]), "providers, url derived from the ARN");
+ok(JSON.stringify(plain(await api.provider("arn:aws:iam::" + A + ":oidc-provider/token.actions.githubusercontent.com"))) === JSON.stringify({ arn: "arn:aws:iam::" + A + ":oidc-provider/token.actions.githubusercontent.com", url: "token.actions.githubusercontent.com", clientIds: ["sts.amazonaws.com"], created: "2026-11-15T08:55:00Z" }), "provider: url and client ids");
+await rejects(api.provider("arn:aws:iam::" + A + ":oidc-provider/nope"), (e) => e.code === "NoSuchEntity" && e.status === 404, "missing provider");
 await rejects(api.role("nope"), (e) => e.code === "NoSuchEntity" && e.status === 404, "missing role");
 await rejects(api.inlineDocument("sws-aws-platform-read", "nope"), (e) => e.code === "NoSuchEntity", "missing inline policy");
 
@@ -65,6 +68,13 @@ const T2 = IamApi.trust({ Statement: [{ Effect: "Allow", Action: ["sts:AssumeRol
 ok(JSON.stringify(plain(T2.statements[0].principals)) === JSON.stringify([{ kind: "aws", id: "arn:aws:iam::444455556666:root" }, { kind: "aws", id: "arn:aws:iam::777788889999:role/x" }, { kind: "canonical", id: "abc" }]), "several principals of several kinds");
 const evil = IamApi.trust({ Statement: [{ Effect: "Allow", Action: "sts:AssumeRole", Principal: { AWS: "<img src=x onerror=alert(1)>" } }] });
 ok(evil.statements[0].principals[0].id === "<img src=x onerror=alert(1)>", "hostile values come back as they are");
+
+// ---- what the twin does not have yet: a boundary, a service-linked role, plain-JSON trust, no RoleLastUsed ----
+const roleXml = (extra) => "<GetRoleResponse><GetRoleResult><Role><Path>/aws-service-role/support.amazonaws.com/</Path><RoleName>AWSServiceRoleForSupport</RoleName><RoleId>AROAEXAMPLE0000000001</RoleId>" +
+  "<Arn>arn:aws:iam::" + A + ":role/aws-service-role/support.amazonaws.com/AWSServiceRoleForSupport</Arn><CreateDate>2026-01-01T00:00:00Z</CreateDate>" +
+  "<AssumeRolePolicyDocument>{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"support.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}</AssumeRolePolicyDocument>" + extra + "</Role></GetRoleResult></GetRoleResponse>";
+const sl = await IamApi(async () => new Response(roleXml("<PermissionsBoundary><PermissionsBoundaryType>Policy</PermissionsBoundaryType><PermissionsBoundaryArn>arn:aws:iam::" + A + ":policy/ReadBoundary</PermissionsBoundaryArn></PermissionsBoundary>"), { status: 200 })).role("AWSServiceRoleForSupport");
+ok(sl.serviceLinked && JSON.stringify(plain(sl.boundary)) === JSON.stringify({ type: "Policy", arn: "arn:aws:iam::" + A + ":policy/ReadBoundary" }) && sl.lastUsed === null && sl.trust.statements[0].principals[0].id === "support.amazonaws.com", "service-linked, boundary, plain-JSON trust, RoleLastUsed absent reads as null");
 
 // ---- paging and errors over a recording send ----
 const xml = (s, st = 200) => new Response(s, { status: st, headers: { "content-type": "text/xml" } });
@@ -87,7 +97,8 @@ const record = [];
 const okSend = async (rq) => { record.push("iam:" + new URLSearchParams(rq.body).get("Action")); return send(rq); };
 const rec = IamApi(okSend);
 const samples = { roles: [{}], role: ["sws-aws-platform-read"], attached: ["sws-aws-platform-read", {}], inline: ["sws-aws-platform-read", {}],
-  inlineDocument: ["sws-aws-platform-read", "s3-browse"], policyDocument: ["arn:aws:iam::aws:policy/SecurityAudit"], providers: [] };
+  inlineDocument: ["sws-aws-platform-read", "s3-browse"], policyDocument: ["arn:aws:iam::aws:policy/SecurityAudit"], providers: [],
+  provider: ["arn:aws:iam::" + A + ":oidc-provider/token.actions.githubusercontent.com"] };
 for (const o of ops) {
   const args = o["x-arguments"].slice(o["x-arguments"].indexOf("(") + 1, -1).replace(/\{[^}]*\}/g, "x").split(",").filter((x) => x.trim());
   ok(o["x-arguments"].startsWith(o.operationId + "(") && args.length === api[o.operationId].length, o.operationId + ": arguments");

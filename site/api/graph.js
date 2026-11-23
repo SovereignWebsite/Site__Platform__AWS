@@ -11,7 +11,7 @@
 //                                            optionally which bucket serves a site: { name, bucket }
 //   g.add.lambda(functions)                  LambdaApi functions (items of functions(), or function())
 //   g.add.firehose(streams)                  FirehoseApi stream() results
-//   g.add.iam({ roles, providers })          IamApi role() results, each with .attached (attached() items), and
+//   g.add.iam({ roles, providers })          IamApi roles() items or role() results, each with .attached, and
 //                                            providers() (optional)
 //   g.add.zips([{ bucket, key, sha256, packageName, entries }])   deployment packages; the facts come from
 //                                            Graph.zipFacts(bytes) -> Promise<{ sha256, packageName, entries }>
@@ -248,7 +248,8 @@
       (o.providers || []).forEach(function (p) { if (p && p.arn) node(p.arn, "identity_provider", "A4", p.url || p.arn, { cfn_type: "AWS::IAM::OIDCProvider" }); });
       (o.roles || []).forEach(function (r) {
         if (!r || !r.arn) return;
-        node(r.arn, "role", "A4", r.name, { cfn_type: "AWS::IAM::Role", last_used: r.lastUsed ? r.lastUsed.when : undefined });
+        node(r.arn, "role", "A4", r.name, { cfn_type: "AWS::IAM::Role", last_used: r.lastUsed ? r.lastUsed.when : undefined,
+          boundary: r.boundary ? r.boundary.arn : undefined, service_linked: r.serviceLinked || undefined });
         var a = accountNode();
         if (a) edge(r.arn, "in", a, "api", "IAM GetRole");
         ((r.trust && r.trust.statements) || []).forEach(function (st) {

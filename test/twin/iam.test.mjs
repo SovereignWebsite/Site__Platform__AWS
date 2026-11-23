@@ -2,7 +2,7 @@
 // page would send them: ListRoles paged, GetRole with RoleLastUsed, attached and inline policies, GetRolePolicy,
 // GetPolicy and GetPolicyVersion (a marked placeholder for AWS managed policies), ListOpenIDConnectProviders, and
 // AWS-shaped errors. Then a drift check: the platform roles' policies in the twin are the ones
-// site/cloudformation/bootstrap.yaml declares. Shapes follow AWS's IAM API reference; boto3.aws.a to confirm.
+// site/cloudformation/bootstrap.yaml declares. Shapes checked by boto3.aws.a against AWS's IAM API reference (work/boto3.aws.a a83ea2f).
 // Node 22, no network. Run: node test/twin/iam.test.mjs
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
@@ -85,6 +85,11 @@ ok(pv.Statement.length === 1 && pv.Statement[0].Sid === "TwinPlaceholder" && pv.
 // OIDC providers.
 r = await iam({ Action: "ListOpenIDConnectProviders" });
 ok(JSON.stringify(tag(r.text, "Arn")) === JSON.stringify(["arn:aws:iam::" + A + ":oidc-provider/token.actions.githubusercontent.com"]), "ListOpenIDConnectProviders");
+
+r = await iam({ Action: "GetOpenIDConnectProvider", OpenIDConnectProviderArn: "arn:aws:iam::" + A + ":oidc-provider/token.actions.githubusercontent.com" });
+ok(r.text.includes("<GetOpenIDConnectProviderResponse " + NS + ">") && one(r.text, "Url") === "token.actions.githubusercontent.com" && JSON.stringify(tag(one(r.text, "ClientIDList"), "member")) === JSON.stringify(["sts.amazonaws.com"]), "GetOpenIDConnectProvider");
+r = await iam({ Action: "GetRole", RoleName: "sws-aws-platform-read" });
+ok(!r.text.includes("PermissionsBoundary"), "no boundaries until decision 6");
 
 // Errors.
 r = await iam({ Action: "GetRole", RoleName: "nope" });

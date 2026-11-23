@@ -98,8 +98,9 @@ ok(zipFacts.length > 0 && zipFacts.every((z) => /^[A-Za-z0-9+/]{43}=$/.test(z.sh
 g.add.zips(zipFacts);
 // IAM: every role, its trust and attached policies, and the OIDC providers.
 const iamApi = ctx.IamApi(readSend);
+// ListRoles carries each role's trust, so no GetRole per role (design 04).
 const roles = await Promise.all((await ctx.IamApi.all((next) => iamApi.roles({ next }))).items.map(async (r) =>
-  Object.assign(await iamApi.role(r.name), { attached: (await ctx.IamApi.all((next) => iamApi.attached(r.name, { next }))).items })));
+  Object.assign(r, { attached: (await ctx.IamApi.all((next) => iamApi.attached(r.name, { next }))).items })));
 g.add.iam({ roles, providers: await iamApi.providers() });
 const mine = JSON.parse(JSON.stringify(g.toJSON()));
 
