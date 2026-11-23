@@ -36,6 +36,17 @@ This session's signing key (sha256:8699204a5b3a9875, signing sha256:2311c1b95a70
 
 Plan: docs/team/plan-vault-deploy.md on work/conductor.aws.a (ea9f61d). The architect supports step 1 (vault deployment design, owner vaults.aws.a: what the customer's account holds, inputs, outputs) and step 4 (a "customer account" in the twin that the stack deploys into, with DNS answering at the end; owner dev.1.aws.a). Open question for the architect and iam.aws.a, from sherpa.aws.a (docs/sherpa/2026-11-23__vault-deploy-01-simplest-path.md, b1281ba on work/sherpa.aws.a): how the page reads the stack's progress after the hand-off to the customer's own console. **Answered by iam.aws.a (68f4b8b on work/iam.aws.a), option (b):** v1 reads nothing from the customer account; the page checks DNS over HTTPS and https://<domain>/health (vault_id, template_sha256, CORS for the deploy origin); without a domain the customer pastes the Vault address. The live stack-event stream is the twin's view and a later opt-in (option a), not v1 on real accounts. The design note for the page's checks is the architect's next small piece (health shape with vaults.aws.a; CSP connect-src for the DoH resolver with security.aws.a). Earlier starting points, kept for context: the page holds no credentials for the customer's account, so either (a) the customer signs in to the page with a read role the stack itself creates (an output the console shows, then the page assumes it via the same web-identity flow as the hub), or (b) the page only polls public signals (the deployed domain answering, a status object the stack writes to a public-read prefix). Agreed with vaults.aws.a (its design docs/vaults/2026-11-23__04-vault-deploy-design.md, a0c53a4): design 02's vault twin is the Vault behind the customer's endpoint (Function URL host, later its custom domain via the twin's Route 53/CloudFront), answering from that customer account's own world: one journal per account, the deploy being the entries the stack creates; batch body stays 501 until the SG/Send library source is in hand. Design 04's IAM reads and design 03's CfnApi (DescribeStackEvents) are the read side either way; on the twin, design 02's journal gives the stack events and the clock.
 
+## EC2 in the twin (ec2.aws.a, 15:10)
+
+EC2 design 01 (f33a6b3 on work/ec2.aws.a, docs/ec2/) asked for the world shape and the lazy settle. My answer is agreed with changes (full text in docs/team/from-a/architect.aws.a.md, 15:10Z):
+- Settles are clock-driven derivations (`settles: { to, at }`, actor `aws:ec2`, why `clock.settle`), never writes on Describe.
+- Ids are made once, at write.
+- The shape has `groups`, `profile`, `vpc` and `subnet`.
+- One world per account.
+- Instance addresses: 10.0.0.0/16, public 198.51.100.240/28 (dev.1.aws.a asked to reserve it), and 2001:db8:ec2::/48.
+- Ec2Api and Graph.add.ec2 follow design 03.
+Review the EC2 twin patch (dev.2.aws.a or dev.1.aws.a) against that note.
+
 ## Who waits on what
 
 - **Dinis:** (1) Factory keys live (all .a agents); (2) decision 3 (R-010) for site/api/** and site/twin/** code; (3) yes for test/** one-liners in ~15 harnesses (dev.1's loader); (4) decision 6 (P-IAM-001 v2.4) before the twin gets platform-role boundaries; template v3 is a console apply (iam.aws.a's note in design 04).
