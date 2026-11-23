@@ -115,6 +115,12 @@ if (!trav.length || trav.some((r) => r.vault !== "" || r.vault_claim !== "..")) 
 if (base.recs.some((r) => r.vault_claim)) fail("baseline: the enricher and the extract should agree");
 eq(X.normalise({ raw: { cs_uri_stem: "/vault/%2e%2e/x" } }).vault, "", "encoded traversal is not a vault");
 eq(X.normalise({ raw: { cs_uri_stem: "/vault/a%2Fb/x" } }).vault, "", "encoded slash is not a vault");
+// vault cards: served apart from refused
+for (const pk of [base, atk, surge]) for (const v of pk.s.vaults) if (v.ok + v.refused !== v.requests) fail("vault ok + refused != requests for " + v.key);
+const v1 = atk.s.vaults.find((v) => v.key === "vault-demo-001");
+eq(v1.refused, atk.recs.filter((r) => r.vault === "vault-demo-001" && r.status >= 400).length, "attack: refused on vault-demo-001");
+if (v1.refused < 1 || base.s.vaults.some((v) => v.refused)) fail("refused: attack has some, baseline none");
+if (v1.ok_clients > v1.clients) fail("ok_clients above clients");
 // R-014 (security.aws.a): log values that are names on Object.prototype stay plain keys
 const hostile = ["__proto__", "constructor", "toString", "hasOwnProperty"];
 const hrecs = [];

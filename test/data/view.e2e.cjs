@@ -50,6 +50,9 @@ const fail = (m) => { console.error("FAIL", m); process.exit(1); };
     // "/" is the site's index.html
     await page.click('button[data-field="path"][data-value="/"]');
     if (!(await page.textContent(".log-refs")).includes("/index.html")) fail(pack + ": / should refer to index.html");
+    const refusedCards = await page.$$(".log-vault-refused");
+    if (pack === "attack" ? refusedCards.length < 1 : refusedCards.length !== 0) fail(pack + ": refused line on vault cards " + refusedCards.length);
+    if (!/^\d+ served to \d+ clients?$/.test(await page.textContent(".log-vault-ok"))) fail(pack + ": served line");
     if (pack === "attack") {
       // follow the attacker: client > its paths; traversal is not a resource
       await page.evaluate(() => { const b = [...document.querySelectorAll('button[data-field="client"]')].find((x) => x.dataset.value === "203.0.113.66"); b && b.click(); });

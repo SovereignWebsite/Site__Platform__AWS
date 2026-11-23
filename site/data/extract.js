@@ -202,7 +202,9 @@
       bytes += r.bytes; if (r.status >= 400) errors++; clients[r.client] = 1;
       bump(by.hour, r.hour, r); bump(by.path, r.path, r); bump(by.status, r.status === null ? "?" : Math.floor(r.status / 100) + "xx", r);
       bump(by.edge, r.edge, r); bump(by.agent_kind, r.agent_kind, r); bump(by.kind, r.kind, r); bump(by.net, r.net, r);
-      if (r.vault) { var v = bump(by.vault, r.vault, r); var d = r.t.slice(0, 10); (v.days = v.days || dict())[d] = (v.days[d] || 0) + 1; (v.edges = v.edges || dict())[r.edge] = 1; }
+      if (r.vault) { var v = bump(by.vault, r.vault, r); var d = r.t.slice(0, 10); (v.days = v.days || dict())[d] = (v.days[d] || 0) + 1; (v.edges = v.edges || dict())[r.edge] = 1;
+        // used (served: below 400) apart from refused (400 and up), so probes do not read as access
+        if (r.status !== null && r.status < 400) { v.ok = (v.ok || 0) + 1; (v.okClients = v.okClients || dict())[r.client] = 1; } else v.refused = (v.refused || 0) + 1; }
     });
     function finish(table, order) {
       return Object.keys(table).map(function (k) {
@@ -211,6 +213,7 @@
           first: e.first, last: e.last, p50_ms: quantile(ms, 0.5), p95_ms: quantile(ms, 0.95) };
         if (e.days) { o.days = dict(); Object.keys(e.days).sort().forEach(function (d) { o.days[d] = e.days[d]; }); }
         if (e.edges) o.edges = Object.keys(e.edges).sort();
+        if (e.days) { o.ok = e.ok || 0; o.refused = e.refused || 0; o.ok_clients = e.okClients ? Object.keys(e.okClients).length : 0; }
         return o;
       }).sort(order || function (a, b) { return b.requests - a.requests || (a.key < b.key ? -1 : 1); });
     }

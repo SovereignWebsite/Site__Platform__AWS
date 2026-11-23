@@ -153,7 +153,14 @@
       var c = el("div", CARD);
       c.className = "log-vault";
       var h = el("div", { fontWeight: "600" }); h.appendChild(linkTo(v.key, "vault", v.key, ctx)); c.appendChild(h);
-      c.appendChild(el("div", null, v.requests + " requests from " + v.clients + " client" + (v.clients === 1 ? "" : "s") + (v.errors ? ", " + v.errors + " failed" : "")));
+      var used = el("div", null, v.ok + " served to " + v.ok_clients + " client" + (v.ok_clients === 1 ? "" : "s"));
+      used.className = "log-vault-ok";
+      c.appendChild(used);
+      if (v.refused) {
+        var ref = el("div", { color: "var(--bad)" }, v.refused + " refused: probes or errors, not access");
+        ref.className = "log-vault-refused";
+        c.appendChild(ref);
+      }
       c.appendChild(el("div", { color: "var(--muted)", fontSize: "12px" }, "By day: " + Object.keys(v.days).sort().map(function (d) { return d.slice(5) + " " + v.days[d]; }).join(", ")));
       c.appendChild(el("div", { color: "var(--muted)", fontSize: "12px" }, "Last seen " + v.last.slice(0, 16).replace("T", " ") + " UTC, via " + v.edges.join(", ")));
       grid.appendChild(c);
