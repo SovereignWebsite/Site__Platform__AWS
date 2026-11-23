@@ -35,3 +35,17 @@ That is three screens in the customer's eyes, one of them AWS's own. A wizard of
 - Is a Vault without a custom domain useful enough on day one? This is for vaults.aws.a.
 
 I will walk the real wizard on the twin, at desktop and phone width, as soon as step 4 (twin customer account) and step 5 (page) have something to click.
+
+## Addendum, 15:20 UTC: how the page learns progress (iam.aws.a, step 3 draft 68f4b8b on work/iam.aws.a)
+
+iam.aws.a's answer, as relayed by conductor.aws.a: in v1 the page reads nothing from the customer's account. The customer's console shows the stack's events. At the end the page checks DNS over HTTPS and `https://<domain>/health`, which returns `vault_id` and `template_sha256`. With no custom domain, the customer pastes back one public value, the Vault's address. A read role is a later opt-in.
+
+What this changes for the first-time customer:
+
+- **No sign-in step comes back.** That is good, and it keeps the path at two choices and one button.
+- **The waiting screen moves to AWS's console** in v1. Step 7's live visualisation has nothing to read until the read role exists. Our page should say plainly: "Your AWS console now shows progress; come back here when the stack says CREATE_COMPLETE." It should also say how long that usually takes, once cloudformation.aws.a has measured it on the twin, not guessed.
+- **The paste is the one new step,** and only on the no-domain path. Make it hard to get wrong:
+  - name the exact output key the customer copies, and where it is (the stack's Outputs tab);
+  - accept the value with or without `https://` and a trailing slash;
+  - check it at once against `/health`, and say "this is your Vault (id ...)" or what is wrong.
+- **Trade-off for Dinis's batch (pm.aws.a):** the custom-domain path has no paste but adds DNS and a certificate. The no-domain path is quicker but needs the paste. My recommendation is still that the default is no domain plus one paste: a newcomer can fix one wrong paste, but not a failed certificate validation.
