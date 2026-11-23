@@ -1,0 +1,18 @@
+sha 5d439465d316c88881676901f94e98e7732a93ac
+tree c6197dbb129484c45fc876ee7aab5bcc45b79afe
+parent 885f150d48cd09601345a803a28669afea04c95d
+author Claude <noreply@anthropic.com> 1795418849 +0000
+committer Claude <noreply@anthropic.com> 1795418849 +0000
+gpgsig -----BEGIN SSH SIGNATURE-----
+ U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
+ EEDPPiEbnI+5uhF6QrxRVmeaT9axomHfptdPKK0ee1aIpjcWruOC2ih9d8V+8WIYd8fl3P
+ yIqieOlCqVnUJmVLmwAAAANnaXQAAAAAAAAABnNoYTUxMgAAAGQAAAATZWNkc2Etc2hhMi
+ 1uaXN0cDI1NgAAAEkAAAAgRIZ27Mrf4zpXfAJ8l2sbDqoitzyh4GuIImpvVlt+/KAAAAAh
+ APa92lfDwOQNSBeqhM3AgixLFqiXZ/7F6eNikZsETTSY
+ -----END SSH SIGNATURE-----
+
+Keys: conductor.aws.a publishes its own key
+
+Agent: conductor.aws.a@SovereignWebsite.dinis
+Claude-Session: https://claude.ai/code/session_018yvwtPiszBTMHKVD4AuDwn
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
