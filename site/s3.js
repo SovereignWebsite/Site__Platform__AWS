@@ -11,7 +11,8 @@
   var P = window.Platform, $ = function (id) { return document.getElementById(id); };
   // show: files up to this size are fetched whole and shown; larger ones are previewed from their first `preview`
   // bytes (one Range request), and the whole file is fetched only when the user asks for it with Download.
-  var LIMITS = { show: 5 * 1024 * 1024, preview: 256 * 1024 };
+  // autoPages: how many listing pages (500 keys each) load by themselves while scrolling before "Load more" waits.
+  var LIMITS = { show: 5 * 1024 * 1024, preview: 256 * 1024, autoPages: 20 };
   var state = { acct: null, region: "us-east-1", bucket: null, prefix: "", view: 0, file: 0, sizes: {}, key: "" };
   // Quick clicks: each new view (buckets, a bucket, a folder) and each file opened takes a number; an answer that
   // comes back after a newer click is dropped, so a slow, older answer never lands under the newer one.
@@ -203,10 +204,15 @@
   function listObjects(token, openKey) {
     var box = $("s3-objects"), st = $("s3-status"), b = state.bucket, region = state.bucketRegion;
     var my = token ? state.view : newView(false);
+    // A search (names starting with what was typed, asked of S3) holds only for the listing it was asked for.
+    if (!token) { if (!state.keepSearch) state.search = ""; state.keepSearch = false; state.pages = 0; }
+    var listPrefix = state.prefix + (state.search || "");
     if (!token) { box.textContent = ""; state.sizes = {}; state.key = openKey || ""; go(b, openKey || state.prefix); if (!openKey) { state.file++; $("s3-file").textContent = ""; } }
-    P.say(st, "Listing " + b + "/" + state.prefix + "...");
-    var fresh = state.fresh; state.fresh = false;
-    fetchList(b, region, state.prefix, token, fresh).then(function (got) {
+    P.say(st, "Listing " + b + "/" + listPrefix + (state.search ? "* (names starting with " + state.search + ")" : "") + "...");
+    // Refresh asks S3 again for every page of this listing, not only the first.
+    if (!token) { state.listFresh = state.fresh; state.fresh = false; }
+    var fresh = state.listFresh;
+    fetchList(b, region, listPrefix, token, fresh).then(function (got) {
       if (my !== state.view) return;
       var d = got.d;
       if (!token) {
@@ -220,13 +226,26 @@
         });
         box.appendChild(crumbs);
         var filter = P.el("input", { type: "search", class: "filter", placeholder: "Filter this folder", "aria-label": "Filter this folder" });
+        // The filter hides rows already listed. When S3 holds more than is listed, a button (or Enter) asks S3 for
+        // the names in this folder that start with what was typed, so a log folder of thousands is searchable.
+        var search = P.el("button", { type: "button", class: "quiet s3-search", hidden: "" }), clear = null;
+        function canSearch() { return filter.value && filter.value.indexOf("/") < 0 && (state.more || state.search) && filter.value !== state.search; }
+        function showSearch() { search.hidden = !canSearch(); search.textContent = "Find names starting with \u201c" + filter.value + "\u201d in S3"; }
         filter.oninput = function () {
           var q = filter.value.toLowerCase();
           Array.prototype.forEach.call($("s3-list").rows, function (tr) { tr.hidden = q && tr.textContent.toLowerCase().indexOf(q) < 0; });
+          showSearch();
         };
+        search.onclick = function () { if (!canSearch()) return; state.search = filter.value; state.keepSearch = true; listObjects(); };
+        filter.onkeydown = function (ev) { if (ev.key === "Enter" && canSearch()) { ev.preventDefault(); search.onclick(); } };
+        if (state.search) {
+          filter.value = state.search;
+          clear = P.el("button", { type: "button", class: "quiet", text: "Clear the search" });
+          clear.onclick = function () { state.search = ""; listObjects(); };
+        }
         var refresh = P.el("button", { type: "button", class: "quiet", text: "Refresh", title: "List this folder from S3 again" });
-        refresh.onclick = function () { state.fresh = true; listObjects(); };
-        box.appendChild(P.el("div", { class: "toolbar" }, [filter, refresh]));
+        refresh.onclick = function () { state.fresh = true; state.keepSearch = true; listObjects(); };
+        box.appendChild(P.el("div", { class: "toolbar" }, [filter, search].concat(clear ? [clear] : []).concat([refresh])));
         var table = P.el("table", { class: "s3-table" });
         var head = P.el("thead", {}, [P.el("tr", {}, [sortHead("Name", "name"), sortHead("Size", "size"), sortHead("Modified (UTC)", "when")])]);
         table.appendChild(head); table.appendChild(P.el("tbody", { id: "s3-list" }));
@@ -247,9 +266,22 @@
         list.appendChild(P.el("tr", { class: "file", "data-name": key, "data-size": String(size), "data-when": when }, [P.el("td", {}, [x]), P.el("td", { class: "n", text: human(size) }), P.el("td", { class: "n", text: when.slice(0, 16).replace("T", " ") })]));
       });
       var nt = d.getElementsByTagName("NextContinuationToken")[0];
-      if (nt) { var more = P.el("button", { type: "button", class: "quiet", text: "Load more" }); more.onclick = function () { more.remove(); listObjects(nt.textContent); }; box.appendChild(P.el("div", { class: "row" }, [more])); }
+      // Item 9: the next page loads by itself when the end of the list scrolls into view (up to limits.autoPages pages,
+      // 500 keys each); "Load more" stays for the keyboard and after that. One load per page, whichever comes first.
+      state.more = !!nt;
+      if (nt) {
+        var tok = nt.textContent, more = P.el("button", { type: "button", class: "quiet", text: "Load more" }), moreRow = P.el("div", { class: "row" }, [more]), io = null, loading = false;
+        var loadMore = function () { if (loading || my !== state.view) return; loading = true; if (io) io.disconnect(); moreRow.remove(); state.pages++; listObjects(tok); };
+        more.onclick = loadMore;
+        box.appendChild(moreRow);
+        if (window.IntersectionObserver && state.pages < LIMITS.autoPages) {
+          io = new IntersectionObserver(function (es) { if (es.some(function (e) { return e.isIntersecting; })) loadMore(); }, { rootMargin: "200px" });
+          io.observe(moreRow);
+        }
+      }
+      var sb = box.querySelector(".s3-search"); if (sb && sb.parentNode) { var fi = box.querySelector("input.filter"); if (fi && fi.oninput) fi.oninput(); }
       sortRows();
-      P.say(st, b + "/" + state.prefix + ": " + countRows() + (nt ? " so far, more in S3" : "") + (got.age ? " (listed " + Math.round(got.age / 1000) + " s ago; Refresh to list again)" : ""), "ok");
+      P.say(st, b + "/" + state.prefix + (state.search ? " (names starting with " + state.search + ")" : "") + ": " + countRows() + (nt ? " so far, more in S3" : "") + (got.age ? " (listed " + Math.round(got.age / 1000) + " s ago; Refresh to list again)" : ""), "ok");
       if (openKey) openFile(openKey, state.sizes[openKey]);
     }).catch(function (e) { if (my === state.view) P.say(st, e.message + (/Failed to fetch/.test(e.message) ? " (S3 refused the browser: check the bucket's CORS rule and region " + region + ".)" : ""), "bad"); });
   }
