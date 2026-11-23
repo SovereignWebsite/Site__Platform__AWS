@@ -108,4 +108,26 @@ const pv = L.pivots(atk.recs, "client", "203.0.113.66", 3);
 eq(pv.lines, probe.length, "pivot lines");
 if (!pv.by.path || pv.by.path.distinct < 5 || pv.by.client) fail("pivots of the attacker");
 eq(pv.by.net.top[0].value, "203.0.113.0/24", "pivot net");
-console.log("ok: extract (Discover, Read, Normalise, Summarise) on 3 packs and 4 extra formats");
+// R-014 (security.aws.a): log values that are names on Object.prototype stay plain keys
+const hostile = ["__proto__", "constructor", "toString", "hasOwnProperty"];
+const hrecs = [];
+hostile.forEach((h, i) => hrecs.push(X.normalise({ raw: { timestamp: "2026-11-21T10:0" + i + ":00Z", c_ip: h, cs_method: "GET", cs_uri_stem: "/vault/" + h + "/x", sc_status: 200, sc_bytes: 10, time_taken: 0.001, x_edge_location: h, cs_user_agent: h }, src: { key: h, line: 1 } })));
+hostile.forEach((h, i) => hrecs.push(X.normalise({ raw: { timestamp: "2026-11-21T11:0" + i + ":00Z", c_ip: "203.0.113.9", cs_uri_stem: h, sc_status: 404, sc_bytes: 1 }, src: { key: "k", line: i } })));
+const hs = X.summarise(hrecs);
+if (Object.prototype.requests !== undefined || Object.prototype.bytes !== undefined || ({}).clients !== undefined) fail("Object.prototype was written");
+eq(hs.requests, 8, "hostile requests"); eq(hs.vaults.map((v) => [v.key, v.requests]).sort(), hostile.map((h) => [h, 1]).sort(), "hostile vaults");
+eq(hs.paths.find((p) => p.key === "__proto__").requests, 1, "path __proto__"); eq(hs.edges.find((e) => e.key === "constructor").requests, 1, "edge constructor");
+eq(hs.vaults.find((v) => v.key === "__proto__").days, { "2026-11-21": 1 }, "vault days");
+const hp = L.pivots(hrecs, "client", "__proto__", 5);
+eq(hp.by.vault.top, [{ value: "__proto__", lines: 1 }], "pivot on __proto__");
+const ht = X.read("#Fields: __proto__ constructor c-ip\nx\ty\t203.0.113.4\n", "t");
+eq([ht.records.length, X.normalise(ht.records[0]).client], [1, "203.0.113.4"], "TSV header naming __proto__");
+eq(X.discover([{ Key: "a/2026/11/21/10/__proto__", Size: 1 }]).files, 1, "discover with a __proto__ key");
+// R-015: a gzip bomb stops at the ceiling
+const bomb = gzipSync(Buffer.alloc(3 * 1048576));
+if (bomb.length > 10000) fail("bomb not small");
+let stoppedBomb = false;
+try { await X.gunzip(bomb, 1048576); } catch (e) { stoppedBomb = /more than 1 MB/.test(e.message); }
+if (!stoppedBomb) fail("gzip bomb not stopped");
+eq((await X.gunzip(bomb, 4 * 1048576)).length, 3 * 1048576, "under the ceiling reads");
+console.log("ok: extract (Discover, Read, Normalise, Summarise) on 3 packs and 4 extra formats, R-014 hostile keys, R-015 gzip bomb");

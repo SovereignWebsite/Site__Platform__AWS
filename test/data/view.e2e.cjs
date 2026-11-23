@@ -79,9 +79,21 @@ const fail = (m) => { console.error("FAIL", m); process.exit(1); };
     document.querySelector(".log-vault button").click();
     return { imgs: document.querySelectorAll("#box img").length, text: document.getElementById("box").textContent.includes(evil) };
   });
+  // R-014 and R-015 in the page: a failing file, a gzip bomb and a __proto__ vault do not stop the run
+  const run = await page.evaluate(async () => {
+    const enc = (t) => new Response(new Blob([t]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer().then((b) => new Uint8Array(b));
+    const good = await enc('{"timestamp":"2026-11-21T10:00:00Z","c_ip":"203.0.113.5","cs_uri_stem":"/vault/__proto__/files","sc_status":200,"sc_bytes":5}\n');
+    const bomb = await enc("x".repeat(3 * 1048576));
+    const files = { "l/2026/11/21/10/a.gz": good, "l/2026/11/21/11/b.gz": "throw", "l/2026/11/21/12/c.gz": bomb };
+    const box = document.createElement("div"); document.body.appendChild(box);
+    const res = await LogView.run(box, Object.keys(files).map((k) => ({ Key: k, Size: 1 })), (k) => files[k] === "throw" ? Promise.reject(new Error("refused")) : Promise.resolve(files[k]), { maxUnzipped: 1048576 });
+    return { requests: res.summary.requests, vault: res.summary.vaults[0] && res.summary.vaults[0].key, skipped: res.read.skipped.map((x) => x.why), proto: Object.prototype.requests, note: box.querySelector(".log-note").textContent };
+  });
+  if (run.requests !== 1 || run.vault !== "__proto__" || run.proto !== undefined) fail("hostile run " + JSON.stringify(run));
+  if (!run.skipped.some((w) => /refused/.test(w)) || !run.skipped.some((w) => /more than 1 MB/.test(w))) fail("skips not recorded " + JSON.stringify(run.skipped));
   await page.waitForTimeout(200);
   if (injected.imgs !== 0 || await page.evaluate(() => window.pwned)) fail("a log value was rendered as HTML");
   if (!injected.text) fail("hostile value not shown as text");
   await browser.close();
-  console.log("ok: log view on 3 packs (headline, gaps, vault cards, link mode with provenance, investigation: refs, pivots, trail, open) and hostile values stay text");
+  console.log("ok: log view on 3 packs (headline, gaps, vault cards, link mode with provenance, investigation: refs, pivots, trail, open) hostile values stay text, __proto__ keys and gzip bombs handled");
 })().catch((e) => fail(e.stack || e));

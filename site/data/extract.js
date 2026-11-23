@@ -6,12 +6,15 @@
 (function (root) {
   "use strict";
   var SCHEMA = "sws-cloudfront-record/v0";
+  // Tables keyed by log values (paths, vaults, addresses) have no prototype, so a request for
+  // /vault/__proto__/ or a path "constructor" is just another key (security.aws.a, R-014).
+  function dict() { return Object.create(null); }
 
   // ---- 1. Discover: group a listing by hour, before reading anything ----
   // Keys in the Firehose-style hourly prefix: .../YYYY/MM/DD/HH/<name>. Anything else is reported, not dropped.
   var HOUR_KEY = /(?:^|\/)(\d{4})\/(\d{2})\/(\d{2})\/(\d{2})\/[^\/]+$/;
   function discover(objects) {
-    var hours = {}, other = [], bytes = 0;
+    var hours = dict(), other = [], bytes = 0;
     (objects || []).forEach(function (o) {
       var m = HOUR_KEY.exec(o.Key || ""), size = +o.Size || 0;
       bytes += size;
@@ -26,7 +29,7 @@
       var a = hourMs(list[i - 1].hour), b = hourMs(list[i].hour), missing = (b - a) / 3600000 - 1;
       if (missing > 0) gaps.push({ after: list[i - 1].hour, before: list[i].hour, hours: missing });
     }
-    var days = {};
+    var days = dict();
     list.forEach(function (e) { var d = e.hour.slice(0, 10); days[d] = (days[d] || 0) + e.files; });
     return { files: (objects || []).length, bytes: bytes, hours: list, days: days, gaps: gaps, other: other,
       first: list.length ? list[0].hour : null, last: list.length ? list[list.length - 1].hour : null };
@@ -57,7 +60,7 @@
       if (fields) {
         var v = line.split("\t");
         if (v.length !== fields.length) { out.skipped.push({ src: src, why: "expected " + fields.length + " fields, got " + v.length }); continue; }
-        var r = {};
+        var r = dict();
         fields.forEach(function (k, i) { r[k] = v[i] === "-" ? "" : v[i]; });
         out.records.push({ raw: r, src: src });
         continue;
@@ -81,10 +84,26 @@
     try { return parts.map(function (p) { return JSON.parse(p); }); } catch (e) { return null; }
   }
 
-  // Decompress gzip (one or more members) with the platform's DecompressionStream.
-  function gunzip(bytes) {
-    var ds = new DecompressionStream("gzip");
-    return new Response(new Blob([bytes]).stream().pipeThrough(ds)).text();
+  // Decompress gzip (one or more members) with the platform's DecompressionStream, stopping at a ceiling
+  // so a small file that unzips to gigabytes (a gzip bomb) cannot hang the tab (security.aws.a, R-015).
+  var MAX_UNZIPPED = 64 * 1048576;
+  function gunzip(bytes, maxBytes) {
+    var max = maxBytes || MAX_UNZIPPED, total = 0, parts = [];
+    var reader = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip")).getReader();
+    function pump() {
+      return reader.read().then(function (r) {
+        if (r.done) return new Blob(parts).text();
+        total += r.value.length;
+        if (total > max) {
+          return reader.cancel().catch(function () { /* already closed */ }).then(function () {
+            throw new Error("unzips to more than " + Math.round(max / 1048576) + " MB; not read");
+          });
+        }
+        parts.push(r.value);
+        return pump();
+      });
+    }
+    return pump();
   }
 
   // ---- 3. Normalise to one record shape (schema v0) ----
@@ -161,10 +180,10 @@
   function quantile(sorted, p) { if (!sorted.length) return null; return sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))]; }
   function summarise(records) {
     records = (records || []).slice().sort(function (a, b) { return a.t < b.t ? -1 : a.t > b.t ? 1 : 0; });
-    var by = { hour: {}, path: {}, status: {}, edge: {}, agent_kind: {}, kind: {}, vault: {}, net: {} };
-    var clients = {}, bytes = 0, errors = 0;
+    var by = { hour: dict(), path: dict(), status: dict(), edge: dict(), agent_kind: dict(), kind: dict(), vault: dict(), net: dict() };
+    var clients = dict(), bytes = 0, errors = 0;
     function bump(table, k, r) {
-      var e = table[k] || (table[k] = { key: k, requests: 0, bytes: 0, errors: 0, clients: {}, first: r.t, last: r.t, ms: [] });
+      var e = table[k] || (table[k] = { key: k, requests: 0, bytes: 0, errors: 0, clients: dict(), first: r.t, last: r.t, ms: [] });
       e.requests++; e.bytes += r.bytes; if (r.status >= 400) e.errors++;
       e.clients[r.client] = 1; if (r.t < e.first) e.first = r.t; if (r.t > e.last) e.last = r.t;
       if (r.ms !== null) e.ms.push(r.ms);
@@ -174,14 +193,14 @@
       bytes += r.bytes; if (r.status >= 400) errors++; clients[r.client] = 1;
       bump(by.hour, r.hour, r); bump(by.path, r.path, r); bump(by.status, r.status === null ? "?" : Math.floor(r.status / 100) + "xx", r);
       bump(by.edge, r.edge, r); bump(by.agent_kind, r.agent_kind, r); bump(by.kind, r.kind, r); bump(by.net, r.net, r);
-      if (r.vault) { var v = bump(by.vault, r.vault, r); var d = r.t.slice(0, 10); (v.days = v.days || {})[d] = (v.days[d] || 0) + 1; (v.edges = v.edges || {})[r.edge] = 1; }
+      if (r.vault) { var v = bump(by.vault, r.vault, r); var d = r.t.slice(0, 10); (v.days = v.days || dict())[d] = (v.days[d] || 0) + 1; (v.edges = v.edges || dict())[r.edge] = 1; }
     });
     function finish(table, order) {
       return Object.keys(table).map(function (k) {
         var e = table[k], ms = e.ms.sort(function (a, b) { return a - b; });
         var o = { key: e.key, requests: e.requests, bytes: e.bytes, errors: e.errors, clients: Object.keys(e.clients).length,
           first: e.first, last: e.last, p50_ms: quantile(ms, 0.5), p95_ms: quantile(ms, 0.95) };
-        if (e.days) o.days = e.days;
+        if (e.days) { o.days = dict(); Object.keys(e.days).sort().forEach(function (d) { o.days[d] = e.days[d]; }); }
         if (e.edges) o.edges = Object.keys(e.edges).sort();
         return o;
       }).sort(order || function (a, b) { return b.requests - a.requests || (a.key < b.key ? -1 : 1); });
@@ -211,6 +230,6 @@
   var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   function day(t) { return t ? +t.slice(8, 10) + " " + MONTHS[+t.slice(5, 7) - 1] : ""; }
 
-  root.LogExtract = { schema: SCHEMA, discover: discover, read: read, gunzip: gunzip, normalise: normalise,
+  root.LogExtract = { schema: SCHEMA, maxUnzipped: MAX_UNZIPPED, discover: discover, read: read, gunzip: gunzip, normalise: normalise,
     summarise: summarise, headline: headline, network: network, agentKind: agentKind };
 })(typeof window !== "undefined" ? window : globalThis);

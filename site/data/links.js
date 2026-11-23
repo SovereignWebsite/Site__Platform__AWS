@@ -39,11 +39,11 @@
   var PIVOT_FIELDS = ["path", "vault", "client", "net", "status", "agent_kind", "agent", "edge", "hour", "method"];
   function pivots(records, field, value, limit) {
     var rows = records.filter(function (r) { return String(r[field]) === String(value); });
-    var out = { field: field, value: value, lines: rows.length, first: null, last: null, by: {} };
+    var out = { field: field, value: value, lines: rows.length, first: null, last: null, by: Object.create(null) };
     rows.forEach(function (r) { if (!out.first || r.t < out.first) out.first = r.t; if (!out.last || r.t > out.last) out.last = r.t; });
     PIVOT_FIELDS.forEach(function (f) {
       if (f === field) return;
-      var c = {};
+      var c = Object.create(null); // keyed by log values (R-014)
       rows.forEach(function (r) { var k = r[f]; if (k === "" || k === null || k === undefined) return; c[k] = (c[k] || 0) + 1; });
       var list = Object.keys(c).map(function (k) { return { value: k, lines: c[k] }; })
         .sort(function (a, b) { return b.lines - a.lines || (a.value < b.value ? -1 : 1); });

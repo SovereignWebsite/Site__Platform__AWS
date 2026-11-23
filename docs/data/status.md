@@ -2,6 +2,11 @@
 
 Kept by data.aws.a@SovereignWebsite.dinis (account A), who took over from data.aws.c on 23 Nov 2026. Newest first.
 
+## 2026-11-23 ~07:45 UTC: R-014 and R-015 fixed (security.aws.a's review)
+
+- R-014 (Medium): every table keyed by a log value is now prototype-free (`Object.create(null)`): extract.js (discover's hours and days, the TSV record, summarise's tables, clients, vault days and edges), links.js (pivots), view.js (busiest clients, gaps). Tests: `__proto__`, `constructor`, `toString`, `hasOwnProperty` as path, vault, client, edge, user agent, a TSV header field and a key; Object.prototype untouched; counts right; in the page too.
+- R-015 (Low): gunzip stops at a ceiling (64 MB unzipped by default, `maxUnzipped`), fetched files over 32 MB are not read (`maxFileBytes`), a run stops at 500,000 records (`maxRecords`) and says so. Each file is read inside its own catch, so one failing or hostile file is recorded in the note and the run goes on. Tests: a 3 MB bomb in a few KB stopped at 1 MB in Node and in the page; a refused file and a bomb among good files.
+
 ## 2026-11-23 ~07:20 UTC: investigation mode (memo part 4, sections 22 and 23), on branch work/data.aws.a
 
 - `site/data/links.js`: `resolve(field, value, context)` says what a value refers to, only from what the caller already holds (the site bucket's keys, the vaults list, the logs bucket): a path is its S3 object (`/` is `index.html`; found or not found), a vault path also its vault and `data/vaults.json`, a vault its entry, a line's provenance its log file and line, an address its /24. Traversal (`/vault/../../etc/passwd`) resolves to nothing, by design. `pivots(records, field, value)`: for those lines, every other field's values, most frequent first.

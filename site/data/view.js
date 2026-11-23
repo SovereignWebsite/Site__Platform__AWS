@@ -111,7 +111,7 @@
   function hourStrip(s, d, ctx) {
     var wrap = el("div", { display: "flex", alignItems: "flex-end", gap: "2px", height: "90px", overflowX: "auto", padding: "4px 0" });
     var max = Math.max.apply(null, s.hours.map(function (h) { return h.requests; }).concat([1]));
-    var gapAfter = {};
+    var gapAfter = Object.create(null);
     (d ? d.gaps : []).forEach(function (g) { gapAfter[g.after] = g.hours; });
     s.hours.forEach(function (h) {
       var bar = el("button", { width: "22px", flex: "0 0 22px", height: Math.max(4, Math.round(70 * h.requests / max)) + "px", border: "0", padding: "0", cursor: "pointer",
@@ -204,25 +204,34 @@
     var status = el("p", { color: "var(--muted)" }, d.files + " files, " + d.hours.length + " hours (" + (d.first || "?").replace("T", " ") + " to " + (d.last || "?").replace("T", " ") + " UTC). Reading...");
     box.appendChild(status);
     if (keys.length > max) { status.textContent = keys.length + " hourly files: more than " + max + ". Pick a smaller folder (a day or a month)."; return Promise.resolve(null); }
-    var records = [], skipped = [], bytes = 0, done = 0;
+    // Ceilings (R-015): bytes per file as fetched and as unzipped, and records per run.
+    var maxRecords = opts.maxRecords || 500000, maxFileBytes = opts.maxFileBytes || 32 * 1048576;
+    var records = [], skipped = [], bytes = 0, done = 0, stopped = false;
     return keys.reduce(function (p, key) {
-      return p.then(function () { return fetchBytes(key); }).then(function (b) {
-        bytes += b.length;
-        var gz = b.length > 1 && b[0] === 0x1f && b[1] === 0x8b;
-        return gz ? X.gunzip(b) : new TextDecoder().decode(b);
-      }).then(function (text) {
-        var r = X.read(text, key);
-        r.records.forEach(function (x) { records.push(X.normalise(x)); });
-        skipped.push.apply(skipped, r.skipped);
-        status.textContent = "Read " + (++done) + " of " + keys.length + " files...";
-      }, function (e) {
-        skipped.push({ src: { key: key, line: 0 }, why: "could not read: " + (e && e.message || e) });
+      return p.then(function () {
+        if (stopped) return;
+        // one file at a time; any failure in this file is recorded and the run goes on
+        return Promise.resolve().then(function () { return fetchBytes(key); }).then(function (b) {
+          if (b.length > maxFileBytes) throw new Error("larger than " + Math.round(maxFileBytes / 1048576) + " MB; not read");
+          bytes += b.length;
+          var gz = b.length > 1 && b[0] === 0x1f && b[1] === 0x8b;
+          return gz ? X.gunzip(b, opts.maxUnzipped) : new TextDecoder().decode(b);
+        }).then(function (text) {
+          var r = X.read(text, key), room = maxRecords - records.length;
+          if (r.records.length > room) { r.records = r.records.slice(0, room); stopped = true; }
+          r.records.forEach(function (x) { records.push(X.normalise(x)); });
+          skipped.push.apply(skipped, r.skipped);
+          if (stopped) skipped.push({ src: { key: key, line: 0 }, why: "stopped at " + maxRecords + " records; later files not read" });
+          status.textContent = "Read " + (++done) + " of " + keys.length + " files...";
+        }).catch(function (e) {
+          skipped.push({ src: { key: key, line: 0 }, why: "could not read: " + (e && e.message || e) });
+        });
       });
     }, Promise.resolve()).then(function () {
       records.forEach(function (r) { r.status_class = r.status === null ? "?" : Math.floor(r.status / 100) + "xx"; });
       var s = X.summarise(records);
       // busiest clients by address, for the drill-down only (the raw address stays in the page)
-      var by = {};
+      var by = Object.create(null); // keyed by client address, a log value (R-014)
       records.forEach(function (r) { var e = by[r.client] || (by[r.client] = { key: r.client, requests: 0, errors: 0 }); e.requests++; if (r.status >= 400) e.errors++; });
       s.clients_top = Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return b.requests - a.requests || (a.key < b.key ? -1 : 1); });
       var result = { discover: d, summary: s, records: records, read: { files: keys.length, bytes: bytes, skipped: skipped } };
