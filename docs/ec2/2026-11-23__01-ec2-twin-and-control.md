@@ -92,7 +92,11 @@ The twin enforces the same rules the real path would, so a test proves the page 
 4. A public SSH rule (port 22 from 0.0.0.0/0 or ::/0) in a security group made through the twin fails.
 5. `MetadataOptions.HttpTokens` other than `required` fails (IMDSv2 only).
 6. Start, Stop and Terminate on an instance without `sws:managed=true` fail `UnauthorizedOperation` (an `ec2:ResourceTag` condition, *check*).
-7. (from 6e) `CreditSpecification.CpuCredits=unlimited` on a t4g instance fails.
+7. (from 6d) `CreditSpecification.CpuCredits=unlimited` on a t4g instance fails.
+8. An AMI not in the allow list fails (security.aws.a).
+9. CreateTags or DeleteTags on an `sws:*` key after launch fails, so an expiry cannot be pushed back (security.aws.a).
+
+DescribeInstanceAttribute and ModifyInstanceAttribute are not in 2b, so they answer `InvalidAction`: the page cannot read or change user data.
 
 ### 2g. Seed data (pack baseline)
 
@@ -114,7 +118,7 @@ Synthetic and labelled as such, in account 111122223333 like the rest of the twi
 
 **What it shows:** every region, the instances in it (name tag, type, state, age, `sws:expires-at` and whether it is overdue, public address, security group warnings), stopped instances' volumes still billed, and the cost so far and per hour from billing.aws.a's prices, labelled "list price, estimate" as billing.aws.a labels its others.
 
-**Permissions:** the read role already has AWS's `ViewOnlyAccess` (bootstrap.yaml:36). It should include the EC2 Describe actions the page needs (*check*, iam.aws.a: list exactly which; if one is missing, it is a template change and a plan for Dinis). So the read page needs no change in AWS.
+**Permissions (iam.aws.a, docs/iam/ec2-01-answer.md on work/iam.aws.a):** do not rely on the read role's `ViewOnlyAccess`. P-IAM-001 v2.5 (cleared, pending Dinis's console apply) caps the read role with a boundary that names its reads exactly, which caps ViewOnlyAccess's EC2 reads out. So the page's reads are added by name to the read role and its boundary: `ec2:DescribeRegions`, `ec2:DescribeInstances`, `ec2:DescribeSecurityGroups`, and `ec2:DescribeVolumes` and `ec2:DescribeAddresses` for billed volumes and addresses. That is a console apply, so a plan for Dinis. **Never** `ec2:DescribeInstanceAttribute`: it returns user data, and the page never fetches user data (security.aws.a).
 
 **Calls:** DescribeRegions in one region, then DescribeInstances (and DescribeSecurityGroups) in each enabled region, in parallel with a small limit, from the browser with the read role, through the one transport (twin or AWS, docs/architecture/2026-11-23__01-one-transport-two-back-ends.md). Two calls per region; with about 17 default regions, about 35 signed calls per refresh (*check* the count of default regions). No polling: refresh on demand.
 
@@ -126,10 +130,18 @@ Synthetic and labelled as such, in account 111122223333 like the rest of the twi
 
 The change role has **no EC2 right today** (bootstrap.yaml:84-131). Any EC2 action on the real account first needs a template change, which is itself a plan and Dinis's Approve. Proposed shape for that change (for iam.aws.a and security.aws.a to weigh, not a request yet):
 
-1. **Creating instances only through CloudFormation**, never a direct RunInstances from the page: every EC2 deployment is a stack `sws-ec2-<id>` made by the change set flow the site already has (diff, change set, two clicks). The change role's `cloudformation:*ChangeSet` rights grow to those stack names; CloudFormation creates the instance with the caller's credentials under `aws:CalledVia` (as v2.1 does for IAM), so the instance rights carry the conditions of 2f: required tags, allowed regions, IMDSv2, no key pair (*check* each condition key for RunInstances).
-2. **Start and stop directly**, as a one-click plan, only on instances with `sws:managed=true` (`ec2:ResourceTag` condition). These are reversible.
-3. **Terminate only by deleting the stack**, so nothing is left behind (volumes, security groups, addresses) and the delete is visible in CloudFormation's events.
-4. R-002 and R-008 apply: every right added to the change role is reachable by a script in the page. EC2 rights add cost risk (an attacker launching instances) on top of the access risk. So the instance types allowed are a short list (`ec2:InstanceType` condition, *check*), and section 6's cost cap applies to manual deployments too.
+1. **Creating instances only through CloudFormation, with a service role** (security.aws.a's point 1): every EC2 deployment is a stack `sws-ec2-<fixed-length id>` made by the change set flow the site already has (diff, change set, two clicks). The stack runs as its own CloudFormation service role, as iam.aws.a's Vault deploy role does, so the change role holds only the change-set rights on `stack/sws-ec2-<id>/*` and `iam:PassRole` on that one service role, never RunInstances itself. P-IAM-002 drafts it once V4 is decided (iam.aws.a).
+2. **What the service role may launch**, conditions per resource type (iam.aws.a checked the keys in cfn-lint's IAM data; boto3.aws.a confirms against the live reference):
+   - `ec2:RunInstances` on `instance/*` and `volume/*` with `aws:RequestTag/sws:managed`, `sws:owner`, `sws:expires-at` and `aws:TagKeys`; `aws:RequestedRegion` in the allowed list; `ec2:InstanceType` in the short list; `ec2:MetadataHttpTokens=required`; `ec2:Encrypted=true` on volumes;
+   - on `image/*`: an AMI allow list (`ec2:Owner` or exact ids);
+   - exactly one passable instance role, with `iam:PassedToService=ec2.amazonaws.com`. User data can send that role's credentials anywhere, so the role holds only the bucket, the secret and logs;
+   - a Deny on `key-pair/*` (no key pair, ever);
+   - `ec2:CreateTags` only with `ec2:CreateAction=RunInstances`; otherwise a Deny on CreateTags and DeleteTags for `sws:*` keys, so nobody can tag-hijack an unmanaged instance or push back an `sws:expires-at`;
+   - **never** `ec2:ModifyInstanceAttribute`: new user data plus a start is new code running under the instance role.
+3. **Start and stop directly**, as a one-click plan, only with `ec2:ResourceTag/sws:managed=true`. These are reversible.
+4. **Terminate only by deleting the stack**, so nothing is left behind (volumes, security groups, addresses) and the delete is visible in CloudFormation's events.
+5. **What IAM cannot say, recorded as gaps:** a security group's CIDR (a template check plus an AWS Config rule), the number of instances (a low vCPU quota, an AWS change for Dinis), the maximum lifetime and the cost cap (twin refusals, a template check and the sweeper of 6b).
+6. R-002 and R-008 still apply: a change-set right is reachable by a script in the page, so what the service role may launch is the real limit. EC2 adds cost risk on top of access risk.
 
 ## 5. EC2 as a second way to deploy the Vault
 
@@ -158,14 +170,14 @@ customer's account, chosen region (stack sws-vault-<id>, "ec2" variant)
 ### 6b. Who deletes it: two locks, not one
 
 - **Lock 1, inside each stack:** the stack carries its own one-time EventBridge Scheduler schedule at `sws:expires-at` that deletes the stack, with a role that may delete only that stack (*check* that a schedule can target `cloudformation:DeleteStack` through the universal target, and that a stack may hold the schedule that deletes it). The deployment ends on time even if everything else is down.
-- **Lock 2, a sweeper:** something that lists stacks tagged `sws:managed=true` with `sws:expires-at` in the past and deletes them, and raises an alert for any instance tagged managed that is not in a stack. Where it runs is a decision for Dinis: (a) an EventBridge schedule and a small Lambda in our account, made by an approved stack (recommended: no credential outside AWS); (b) a GitHub Actions job with an OIDC role (a new trust from GitHub to the account); (c) the site when Dinis is signed in (no schedule at all, so not a sweeper).
-- **Kill switch:** one SSM parameter (or one tag on the hub stack) that both locks read before creating anything: when set, nothing new starts, and the sweeper deletes every managed stack at once. Setting it is a plan with one click; clearing it is a plan Dinis approves.
+- **Lock 2, a sweeper:** something that lists stacks tagged `sws:managed=true` and deletes each at the **earlier** of `sws:expires-at` and its CreationTime plus the maximum lifetime (a tag is writable, the creation time is not; security.aws.a), and raises an alert for any instance not in a managed stack. Where it runs is a decision for Dinis: (a) an EventBridge schedule and a small Lambda in our account, made by an approved stack (recommended: no credential outside AWS); (b) a GitHub Actions job with an OIDC role (a new trust from GitHub to the account; if chosen, the OIDC `sub` pinned to repository, branch and environment); (c) the site when Dinis is signed in (no schedule at all, so not a sweeper).
+- **Kill switch, in two parts** (security.aws.a): "stop new" is one SSM parameter (or one tag on the hub stack) that everything reads before creating anything, set with one click; "end all" deletes every managed stack at once and is a plan Dinis approves. Clearing "stop new" is a plan Dinis approves.
 
 ### 6c. The daily region move
 
-Per vaults design 04 section 7, servers do not replicate, so a move is: create the deployment in the new region; `sgit push` each vault to it from a client holding the vault keys (data is encrypted client-side, so the server never sees plaintext); switch DNS; let the old deployment expire through 6b. Order matters: the old one is deleted only after the new one passes `/health` and the vault check. In the twin this is a test that runs a whole day in `tick` steps and checks that at every moment exactly one deployment answers DNS.
+Per vaults design 04 section 7, servers do not replicate, so a move is: create the deployment in the new region; copy the old bucket's encrypted objects to the new bucket, bucket to bucket, so no scheduled job ever holds a vault key (security.aws.a; *check* with vaults.aws.a that a server reads a copied bucket as its own); switch DNS with a role scoped like the Vault access stack's; let the old deployment expire through 6b. Order matters: the old one is deleted only after the new one passes `/health` and the vault check. **The move creates on a schedule**, so 7.2's "may delete, never create" does not hold for it: its role is V5's largest cost risk and gets its own line there, limited to the allowed regions, one deployment at a time and the stack names. In the twin this is a test that runs a whole day in `tick` steps and checks that at every moment exactly one deployment answers DNS.
 
-### 6e. What one deployment costs, first figures
+### 6d. What one deployment costs, first figures
 
 From billing.aws.a's rows (docs/billing/prices.json on work/billing.aws.a, retrieved 23 Nov 2026, AWS's public EC2 and VPC price data; list prices, on-demand Linux, USD), worked here by multiplication only:
 
@@ -180,7 +192,7 @@ eu-west-1 is a little lower for the instance (0.0046, 0.0184, 0.0368) and the sa
 1. **CPU credits:** t4g instances start in "unlimited" credit mode by default, which bills credits above baseline (*check*). Ephemeral instances should launch in "standard" mode (`CreditSpecification`), so an instance pinned at full CPU (a bug, or a flood) is slowed, not billed more. The twin refuses `unlimited` as a seventh rule in 2f.
 2. **The public address:** an instance behind CloudFront as a custom origin needs a public name, and so a public IPv4 billed by the hour, whether used or not (*check* whether CloudFront's VPC origins remove the need, which would also take the instance off the internet entirely). Counted above.
 
-### 6d. Guard rails for V5, to propose with numbers from the twin
+### 6e. Guard rails for V5, to propose with numbers from the twin
 
 | Guard rail | Proposal | Grounded in |
 |---|---|---|
@@ -189,6 +201,7 @@ eu-west-1 is a little lower for the instance (0.0046, 0.0184, 0.0368) and the sa
 | Cost cap | per deployment and per month, from billing.aws.a's EC2 rows once they exist; an AWS Budgets alert at the monthly cap (the read role already reads budgets) | billing.aws.a, to come |
 | Kill switch | 6b | |
 | Instance types | a short list, refused otherwise | section 4.4 |
+| The move's create role | its own line: allowed regions, one new deployment per move, `sws-ec2-*` names only | security.aws.a, 6c |
 | Concurrent deployments | at most N at once (N from Dinis), refused above it | a runaway loop is the main cost risk |
 
 No number is set here: V5 (b) says ec2.aws.a and billing.aws.a propose them from the twin, and Dinis approves them on a decision page before anything real runs.
@@ -196,17 +209,18 @@ No number is set here: V5 (b) says ec2.aws.a and billing.aws.a propose them from
 ## 7. Security notes (for security.aws.a)
 
 1. Every EC2 right on the change role widens R-002 and R-008 with a cost risk; 2f's conditions and the instance type list limit it, they do not remove it. The R-002 split (a change page with its own client ID) helps here as for IAM.
-2. The scheduler and sweeper roles of 6b may delete, never create, and only stacks tagged `sws:managed=true`: a bug in them can end deployments early, never start one.
+2. The scheduler and sweeper roles of 6b may delete, never create, and only stacks tagged `sws:managed=true`: a bug in them can end deployments early, never start one. The daily move (6c) is the exception: it creates, so its role is listed on its own in 6e.
 3. No SSH, no key material anywhere, IMDSv2 only, encrypted volumes, origin open to CloudFront only.
-4. The read page shows public addresses and security group rules. They are our own account's, read with Dinis signed in, rendered as text only (as the S3 browser does).
+4. The read page shows public addresses and security group rules. They are our own account's, read with Dinis signed in, rendered as text only (as the S3 browser does). It never fetches user data.
+5. Reviewed by security.aws.a: docs/security/reviews/2026-11-23__ec2-design-01.md on work/security.aws.a (ff92c75); its points are folded into 3, 4, 6b, 6c and 7 above.
 
 ## 8. Asks
 
 - **dev.2.aws.a (dev.1.aws.a after its deploy step 4 if dev.2 has no room):** build section 2 as one twin patch with test/twin/ec2.test.mjs, on top of work/dev.1.aws.a (49db094 or later, which holds the journal branch and the packs loader); I review it against this design. The lazy settle (2d) uses the twin clock dev.1.aws.a brings forward for stack events (dev.1.aws.a, 15:04 UTC): it needs only `now()` and `tick(ms)`.
 - **architect.aws.a:** the world shape (2c) and the lazy settle (2d) against design 02.
 - **boto3.aws.a:** every *check* above, most of all 2a, 2d, 2f and 6b.
-- **iam.aws.a:** whether `ViewOnlyAccess` covers the Describe actions of 3; the condition keys of 2f and 4 for RunInstances, Start, Stop, Terminate.
-- **billing.aws.a:** done for t4g and public IPv4 (15:05 UTC, section 6e); still open: EBS gp3 per GB-month.
-- **security.aws.a:** sections 4, 6b and 7.
+- **iam.aws.a:** answered (docs/iam/ec2-01-answer.md); P-IAM-002 once V4 is decided.
+- **billing.aws.a:** done for t4g and public IPv4 (15:05 UTC, section 6d); still open: EBS gp3 per GB-month.
+- **security.aws.a:** reviewed (ff92c75), folded in.
 - **cloudformation.aws.a:** the EC2 variant of the Vault stack (5) when V4 allows; the self-deleting schedule (6b lock 1).
 - **pm.aws.a:** nothing new for Dinis yet; V4 and V5 already cover this. The sweeper's home (6b: a, b or c) joins V5 when the decision page is drafted.
