@@ -65,7 +65,8 @@
       // FilterLogEvents takes startFromHead (botocore 1.44.9's logs model, 2014-03-28); false is accepted only with a
       // startTime on or after 2024-01-01T00:00:00Z, else InvalidParameterException, so that is refused here first.
       if (o.newest) {
-        if (s !== undefined && s < Date.UTC(2024, 0, 1)) return Promise.reject(new TypeError("newest needs a start on or after 2024-01-01 (FilterLogEvents)"));
+        // An absent start is refused too: AWS's note names only starts on or after that day (the twin reads it so).
+        if (s === undefined || s < Date.UTC(2024, 0, 1)) return Promise.reject(new TypeError("newest needs a start on or after 2024-01-01 (FilterLogEvents)"));
         q.startFromHead = false;
       }
       q.limit = Math.min(Math.max(1, (o.max || 100) | 0), 10000);
