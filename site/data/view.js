@@ -77,6 +77,7 @@
     box.appendChild(grid);
   }
   function showLines(ctx, field, value) {
+    stopPlay(ctx); // a drill-down (and its investigation) must not be wiped by Play's next tick
     var rows = ctx.records.filter(function (r) { return String(r[field]) === String(value); });
     var box = ctx.lines; box.textContent = "";
     box.appendChild(el("h4", { margin: "0 0 8px" }, rows.length + " line" + (rows.length === 1 ? "" : "s") + " where " + (NAMES[field] || field) + " is " + value));
@@ -111,6 +112,8 @@
   function hourStrip(s, d, ctx) {
     var wrap = el("div", { display: "flex", alignItems: "flex-end", gap: "2px", height: "90px", overflowX: "auto", padding: "4px 0" });
     var max = Math.max.apply(null, s.hours.map(function (h) { return h.requests; }).concat([1]));
+    // a release anywhere in the strip after a bar's own handler, or leaving the strip, ends any drag
+    wrap.onpointerup = wrap.onpointerleave = wrap.onpointercancel = function () { ctx.dragFrom = null; };
     var gapAfter = Object.create(null);
     (d ? d.gaps : []).forEach(function (g) { gapAfter[g.after] = g.hours; });
     s.hours.forEach(function (h) {
@@ -120,6 +123,7 @@
       bar.setAttribute("aria-label", bar.title); bar.setAttribute("data-field", "hour"); bar.setAttribute("data-value", h.key);
       // a press and release on the same bar is a click (its lines); on two bars, no click fires and it is a window
       bar.onclick = function () { showLines(ctx, "hour", h.key); };
+      bar.onpointercancel = function () { ctx.dragFrom = null; };
       bar.onpointerdown = function (e) { ctx.dragFrom = h.key; if (bar.releasePointerCapture && e.pointerId !== undefined) try { bar.releasePointerCapture(e.pointerId); } catch (x) { /* none */ } };
       bar.onpointerup = function () {
         var from = ctx.dragFrom; ctx.dragFrom = null;

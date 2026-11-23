@@ -8,14 +8,24 @@ const fail = (m) => { console.error("FAIL", m); process.exit(1); };
 const root = path.join(__dirname, "..", "..");
 const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json" };
 const ALLOWED = /^\/(site|test\/data)\//;
+// Loopback only; the allow-list is tested on the path after normalising (so /site/../CLAUDE.md is refused), and a
+// bad % escape answers 400 instead of crashing the server (security.aws.a, review of c73ea8d).
+const SERVED = /^(site|test\/data)\//;
 const srv = http.createServer((q, s) => {
-  const u = decodeURIComponent(q.url.split("?")[0]), p = path.join(root, u);
-  if (!ALLOWED.test(u) || !p.startsWith(root + path.sep) || !fs.existsSync(p) || !fs.statSync(p).isFile()) { s.writeHead(404); return s.end(); }
+  let u;
+  try { u = decodeURIComponent(q.url.split("?")[0]); } catch (e) { s.writeHead(400); return s.end(); }
+  const p = path.resolve(root, "." + u), rel = path.relative(root, p).split(path.sep).join("/");
+  if (!SERVED.test(rel) || rel.startsWith("..") || path.isAbsolute(rel) || !fs.existsSync(p) || !fs.statSync(p).isFile()) { s.writeHead(404); return s.end(); }
   s.writeHead(200, { "content-type": types[path.extname(p)] || "application/octet-stream" }); s.end(fs.readFileSync(p));
-}).listen(0);
+}).listen(0, "127.0.0.1");
 (async () => {
   const browser = await chromium.launch();
-  const origin = "http://localhost:" + srv.address().port;
+  const origin = "http://127.0.0.1:" + srv.address().port;
+  // the server itself: traversal, a hidden folder and a bad escape are refused; the fixture is served
+  const status = (u) => new Promise((ok) => http.get({ host: "127.0.0.1", port: srv.address().port, path: u }, (r) => { r.resume(); ok(r.statusCode); }));
+  for (const [u, want] of [["/site/../CLAUDE.md", 404], ["/site/%2e%2e/CLAUDE.md", 404], ["/test/data/../../.git/HEAD", 404], ["/.git/HEAD", 404], ["/site/%E0%A4%A", 400], ["/test/data/view.fixture.html", 200]]) {
+    const got = await status(u); if (got !== want) fail("test server: " + u + " gave " + got + ", want " + want);
+  }
   const url = origin + "/test/data/view.fixture.html";
   for (const pack of ["baseline", "attack", "surge"]) {
     const page = await browser.newPage();
@@ -88,6 +98,15 @@ const srv = http.createServer((q, s) => {
     await page.click('button[data-window="play"]');
     await page.waitForFunction(() => document.querySelector('button[data-window="play"]').textContent === "Play", null, { timeout: 10000 });
     if (!(await page.textContent(".log-window-label")).startsWith("2026-11-22 11:00 to 2026-11-22 11:59 UTC")) fail(pack + ": play did not reach the last hour");
+    // a drill-down during Play stops it, so the next tick does not wipe the lines
+    await page.click('button[data-window="all"]');
+    await page.click('button[data-window="play"]');
+    await page.click('.log-vault button[data-value="vault-demo-002"]');
+    await page.waitForTimeout(300);
+    if (await page.textContent('button[data-window="play"]') !== "Play") fail(pack + ": Play kept running after a drill-down");
+    if (!/where vault is vault-demo-002/.test(await page.textContent(".log-lines h4"))) fail(pack + ": drill-down wiped by Play");
+    await page.click('button[data-window="all"]'); await page.click('button[data-window="play"]');
+    await page.waitForFunction(() => document.querySelector('button[data-window="play"]').textContent === "Play", null, { timeout: 10000 });
     if (pack === "attack") {
       // the attack grows hour by hour: refused lines on vault-demo-001 only in the last window
       const refusedLast = await page.$$(".log-vault-refused");
