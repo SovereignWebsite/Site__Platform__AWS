@@ -157,6 +157,14 @@
         Condition: { StringEquals: { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com", [K]: ["repo:SovereignWebsite@358722364/SovereignWebsite__IaC@1464324035:environment:apply", "repo:SovereignWebsite@358722364/SovereignWebsite__Factory@1464324035:environment:apply"] } } }] } },
       template: null, stackStatus: "CREATE_COMPLETE", changeSets: {}, requests: {}
     };
+    // IAM read answers (design 04, dev.2.aws.a): the four demo roles the Lambda and Firehose twins run as, each
+    // trusting the service that runs as it, and every role's details, policies and last use.
+    function serviceTrust(svc) { return { Version: "2012-10-17", Statement: [{ Effect: "Allow", Principal: { Service: svc }, Action: "sts:AssumeRole" }] }; }
+    state.roles["demo-handler-role"] = serviceTrust("lambda.amazonaws.com");
+    state.roles["demo-log-enricher-role"] = serviceTrust("lambda.amazonaws.com");
+    state.roles["demo-nightly-report-role"] = serviceTrust("lambda.amazonaws.com");
+    state.roles["demo-cloudfront-logs-firehose"] = serviceTrust("firehose.amazonaws.com");
+    state.iam = iamSeed();
     return state;
   }
 
@@ -189,12 +197,107 @@
     }
     return xmlErr("InvalidAction", "Not in the twin yet: sts " + A);
   }
+  // IAM's read answers (design 04). The platform roles' policies mirror site/cloudformation/bootstrap.yaml (a test
+  // checks the names match); the demo roles' policies are synthetic. AWS managed policies are attached by ARN, and
+  // their documents are a placeholder marked "TwinPlaceholder": AWS's own text is long and changes, so the twin
+  // does not copy it. No permissions boundaries yet: they wait for decision 6 (P-IAM-001 v2.4), as on the real
+  // account today. Shapes checked by boto3.aws.a against AWS's IAM API reference (docs/boto3/
+  // 2026-11-23__06-iam-read-shapes.md, work/boto3.aws.a a83ea2f), except two it could not settle, marked here:
+  // an empty <RoleLastUsed/> for a role not used in 400 days (AWS does not say empty or absent; readers take both),
+  // and the error envelope (ErrorResponse > Error > Code, Message).
+  var AWS_MANAGED = { "arn:aws:iam::aws:policy/SecurityAudit": "SecurityAudit", "arn:aws:iam::aws:policy/job-function/ViewOnlyAccess": "ViewOnlyAccess" };
+  function iamSeed() {
+    var stmt = function (sid, action, resource, extra) { var o = { Sid: sid, Effect: "Allow", Action: action, Resource: resource }; for (var k in extra || {}) o[k] = extra[k]; return o; };
+    var doc = function () { return { Version: "2012-10-17", Statement: [].slice.call(arguments) }; };
+    var role = function (o) { o.path = "/"; o.maxSession = 3600; o.attached = o.attached || []; o.inline = o.inline || {}; return o; };
+    var logs = function (fn) { return { "logs-write": doc(stmt("OwnLogGroup", ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"], "arn:aws:logs:" + REGION + ":" + ACCOUNT + ":log-group:/aws/lambda/" + fn + ":*")) }; };
+    var R = "arn:aws:iam::" + ACCOUNT + ":role/";
+    return {
+      "sws-aws-platform-read": role({ id: 1, created: "2026-11-22T09:58:00Z", description: "Read-only view of this account from the AWS platform site, the owner's Google sign-in only",
+        lastUsed: { when: "2026-11-22T10:01:02Z", region: REGION }, attached: ["arn:aws:iam::aws:policy/job-function/ViewOnlyAccess", "arn:aws:iam::aws:policy/SecurityAudit"],
+        inline: { "costs-read": doc(stmt("BudgetsAndCostExplorerRead", ["budgets:ViewBudget", "budgets:DescribeBudgetAction", "budgets:DescribeBudgetActionsForAccount", "ce:GetCostAndUsage", "ce:GetCostForecast", "ce:GetDimensionValues"], "*")),
+          "s3-browse": doc(stmt("S3ListAndOpen", ["s3:Get*", "s3:List*"], "*"), stmt("CloudControlListBuckets", ["cloudformation:ListResources", "cloudformation:GetResource"], "*")) } }),
+      "sws-aws-platform-change": role({ id: 2, created: "2026-11-22T09:58:00Z", description: "The changes the owner approves on the AWS platform site; grows only by a reviewed change to this template",
+        lastUsed: { when: "2026-11-22T10:04:40Z", region: "us-east-1" },
+        inline: { "dns-role-trust-only": doc(stmt("TheDnsRoleTrustPolicy", ["iam:GetRole", "iam:UpdateAssumeRolePolicy"], R + "sovereignwebsite-factory-dns")),
+          "s3-cors": doc(stmt("BucketCorsThroughCloudControl", ["s3:Get*", "s3:List*", "s3:PutBucketCORS", "cloudformation:GetResource", "cloudformation:ListResources", "cloudformation:UpdateResource", "cloudformation:GetResourceRequestStatus"], "*")),
+          "self-update": doc(
+            stmt("ThisStackOnly", ["cloudformation:DescribeStacks", "cloudformation:DescribeStackEvents", "cloudformation:GetTemplate", "cloudformation:GetTemplateSummary", "cloudformation:CreateChangeSet", "cloudformation:DescribeChangeSet", "cloudformation:ExecuteChangeSet", "cloudformation:DeleteChangeSet"], "arn:aws:cloudformation:" + REGION + ":" + ACCOUNT + ":stack/sws-aws-platform/*"),
+            stmt("ValidateTemplates", "cloudformation:ValidateTemplate", "*"),
+            stmt("ThePlatformRolesThroughCloudFormationOnly", ["iam:GetRole", "iam:GetRolePolicy", "iam:ListRolePolicies", "iam:ListAttachedRolePolicies", "iam:ListRoleTags", "iam:UpdateRole", "iam:UpdateRoleDescription", "iam:PutRolePolicy", "iam:DeleteRolePolicy", "iam:DetachRolePolicy", "iam:UpdateAssumeRolePolicy", "iam:TagRole", "iam:UntagRole"], R + "sws-aws-platform-*",
+              { Condition: { "ForAnyValue:StringEquals": { "aws:CalledVia": "cloudformation.amazonaws.com" } } }),
+            stmt("AttachOnlyTheseManagedPolicies", "iam:AttachRolePolicy", R + "sws-aws-platform-*",
+              { Condition: { "ForAnyValue:StringEquals": { "aws:CalledVia": "cloudformation.amazonaws.com" }, ArnEquals: { "iam:PolicyARN": ["arn:aws:iam::aws:policy/job-function/ViewOnlyAccess", "arn:aws:iam::aws:policy/SecurityAudit"] } } })) } }),
+      // Made by the IaC repository's own stack, outside this account's platform template: no policies seeded here.
+      "sovereignwebsite-factory-dns": role({ id: 3, created: "2026-11-15T09:00:00Z", description: "DNS changes from the Factory and IaC repositories' apply environment", lastUsed: null }),
+      "demo-handler-role": role({ id: 4, created: "2026-11-18T16:50:00Z", description: "Lets demo-handler write its logs", lastUsed: null, inline: logs("demo-handler") }),
+      "demo-log-enricher-role": role({ id: 5, created: "2026-11-19T10:10:00Z", description: "Lets demo-log-enricher write its logs", lastUsed: null, inline: logs("demo-log-enricher") }),
+      "demo-nightly-report-role": role({ id: 6, created: "2026-11-17T22:35:00Z", description: "Lets demo-nightly-report write its logs", lastUsed: null, inline: logs("demo-nightly-report") }),
+      "demo-cloudfront-logs-firehose": role({ id: 7, created: "2026-11-19T10:15:00Z", description: "Lets the demo-cloudfront-logs stream write to its bucket and call its processor", lastUsed: null,
+        inline: { "deliver-to-s3": doc(stmt("WriteLogs", ["s3:PutObject", "s3:GetBucketLocation", "s3:ListBucket"], ["arn:aws:s3:::" + B.logs, "arn:aws:s3:::" + B.logs + "/*"]),
+          stmt("CallProcessor", ["lambda:InvokeFunction", "lambda:GetFunctionConfiguration"], "arn:aws:lambda:" + REGION + ":" + ACCOUNT + ":function:demo-log-enricher:*")) } })
+    };
+  }
+  var IAM_NS = " xmlns=\"https://iam.amazonaws.com/doc/2010-05-08/\"";
+  function iamOk(action, inner) {
+    return xml("<" + action + "Response" + IAM_NS + "><" + action + "Result>" + inner + "</" + action + "Result><ResponseMetadata><RequestId>00000000-0000-4000-8000-0000000000aa</RequestId></ResponseMetadata></" + action + "Response>");
+  }
+  function iamPage(list, form, itemXml, cap) {
+    // IAM may return fewer than MaxItems even when more exist (AWS's IAM API reference, on IsTruncated); the twin
+    // pages roles two at a time so the paging path runs. Marker is opaque: here, the index to start from.
+    var max = Math.min(+(form.get("MaxItems") || 100), cap || 1000), from = form.get("Marker") ? +atob(form.get("Marker")) : 0;
+    var page = list.slice(from, from + max), more = from + max < list.length;
+    return { items: page.map(itemXml).join(""), tail: "<IsTruncated>" + more + "</IsTruncated>" + (more ? "<Marker>" + btoa(String(from + max)) + "</Marker>" : "") };
+  }
+  function iamRoleXml(s, name, withLastUsed) {
+    var m = s.iam[name] || { path: "/", maxSession: 3600, created: "2026-11-15T09:00:00Z", id: 0 };
+    return "<Path>" + m.path + "</Path><RoleName>" + esc(name) + "</RoleName><RoleId>AROATWIN" + ("0000000000000" + m.id).slice(-13) + "</RoleId>" +
+      "<Arn>arn:aws:iam::" + ACCOUNT + ":role" + m.path + esc(name) + "</Arn><CreateDate>" + m.created + "</CreateDate>" +
+      "<AssumeRolePolicyDocument>" + encodeURIComponent(JSON.stringify(s.roles[name])) + "</AssumeRolePolicyDocument>" +
+      (m.description ? "<Description>" + esc(m.description) + "</Description>" : "") + "<MaxSessionDuration>" + m.maxSession + "</MaxSessionDuration>" +
+      (withLastUsed ? "<RoleLastUsed>" + (m.lastUsed ? "<LastUsedDate>" + m.lastUsed.when + "</LastUsedDate><Region>" + m.lastUsed.region + "</Region>" : "") + "</RoleLastUsed>" : "");
+  }
   function iam(form, init) {
     if (!signed(init)) return xmlErr("MissingAuthenticationToken", "Request is missing Authentication Token", 403);
-    var s = build(), A = form.get("Action"), name = form.get("RoleName");
+    var s = build(), A = form.get("Action"), name = form.get("RoleName"), page;
+    if (A === "ListRoles") {
+      page = iamPage(Object.keys(s.roles).sort(), form, function (n) { return "<member>" + iamRoleXml(s, n, false) + "</member>"; }, 2);
+      return iamOk("ListRoles", "<Roles>" + page.items + "</Roles>" + page.tail);
+    }
+    if (A === "GetOpenIDConnectProvider") {
+      if (form.get("OpenIDConnectProviderArn") !== "arn:aws:iam::" + ACCOUNT + ":oidc-provider/token.actions.githubusercontent.com") return xmlErr("NoSuchEntity", "OpenIDConnect Provider not found for arn " + form.get("OpenIDConnectProviderArn"), 404);
+      return iamOk("GetOpenIDConnectProvider", "<Url>token.actions.githubusercontent.com</Url><ClientIDList><member>sts.amazonaws.com</member></ClientIDList><CreateDate>2026-11-15T08:55:00Z</CreateDate>");
+    }
+    if (A === "ListOpenIDConnectProviders")
+      return iamOk("ListOpenIDConnectProviders", "<OpenIDConnectProviderList><member><Arn>arn:aws:iam::" + ACCOUNT + ":oidc-provider/token.actions.githubusercontent.com</Arn></member></OpenIDConnectProviderList>");
+    if (A === "GetPolicy" || A === "GetPolicyVersion") {
+      var arn = form.get("PolicyArn"), pn = AWS_MANAGED[arn];
+      if (!pn) return xmlErr("NoSuchEntity", "Policy " + arn + " does not exist or is not attachable.", 404);
+      var path = arn.slice("arn:aws:iam::aws:policy".length, arn.lastIndexOf("/") + 1);
+      if (A === "GetPolicy") return iamOk("GetPolicy", "<Policy><PolicyName>" + pn + "</PolicyName><PolicyId>ANPATWIN" + ("0000000000000" + pn.length).slice(-13) + "</PolicyId><Arn>" + arn + "</Arn><Path>" + path + "</Path>" +
+        "<DefaultVersionId>v1</DefaultVersionId><AttachmentCount>1</AttachmentCount><IsAttachable>true</IsAttachable><Description>Twin placeholder for an AWS managed policy: its text is in AWS's documentation</Description>" +
+        "<CreateDate>2026-11-01T00:00:00Z</CreateDate><UpdateDate>2026-11-01T00:00:00Z</UpdateDate></Policy>");
+      if (form.get("VersionId") !== "v1") return xmlErr("NoSuchEntity", "Policy " + arn + " version " + form.get("VersionId") + " does not exist or is not attachable.", 404);
+      return iamOk("GetPolicyVersion", "<PolicyVersion><Document>" + encodeURIComponent(JSON.stringify({ Version: "2012-10-17", Statement: [{ Sid: "TwinPlaceholder", Effect: "Allow", Action: [], Resource: [] }] })) +
+        "</Document><VersionId>v1</VersionId><IsDefaultVersion>true</IsDefaultVersion><CreateDate>2026-11-01T00:00:00Z</CreateDate></PolicyVersion>");
+    }
     if (!s.roles[name]) return xmlErr("NoSuchEntity", "The role with name " + name + " cannot be found.", 404);
-    if (A === "GetRole") return xml("<GetRoleResponse><GetRoleResult><Role><RoleName>" + esc(name) + "</RoleName><AssumeRolePolicyDocument>" + encodeURIComponent(JSON.stringify(s.roles[name])) + "</AssumeRolePolicyDocument></Role></GetRoleResult></GetRoleResponse>");
-    if (A === "UpdateAssumeRolePolicy") { var p = JSON.parse(form.get("PolicyDocument")); p.Statement.forEach(function (st) { st.Condition = collapse(st.Condition); }); s.roles[name] = p; return xml("<UpdateAssumeRolePolicyResponse/>"); }
+    var info = s.iam[name] || { attached: [], inline: {} };
+    if (A === "GetRole") return iamOk("GetRole", "<Role>" + iamRoleXml(s, name, true) + "</Role>");
+    if (A === "ListAttachedRolePolicies") {
+      page = iamPage(info.attached, form, function (a) { return "<member><PolicyName>" + esc(AWS_MANAGED[a] || a.split("/").pop()) + "</PolicyName><PolicyArn>" + esc(a) + "</PolicyArn></member>"; });
+      return iamOk("ListAttachedRolePolicies", "<AttachedPolicies>" + page.items + "</AttachedPolicies>" + page.tail);
+    }
+    if (A === "ListRolePolicies") {
+      page = iamPage(Object.keys(info.inline).sort(), form, function (n) { return "<member>" + esc(n) + "</member>"; });
+      return iamOk("ListRolePolicies", "<PolicyNames>" + page.items + "</PolicyNames>" + page.tail);
+    }
+    if (A === "GetRolePolicy") {
+      var pol = form.get("PolicyName");
+      if (!info.inline[pol]) return xmlErr("NoSuchEntity", "The role policy with name " + pol + " cannot be found.", 404);
+      return iamOk("GetRolePolicy", "<RoleName>" + esc(name) + "</RoleName><PolicyName>" + esc(pol) + "</PolicyName><PolicyDocument>" + encodeURIComponent(JSON.stringify(info.inline[pol])) + "</PolicyDocument>");
+    }
+    if (A === "UpdateAssumeRolePolicy") { var p = JSON.parse(form.get("PolicyDocument")); p.Statement.forEach(function (st) { st.Condition = collapse(st.Condition); }); s.roles[name] = p; return xml("<UpdateAssumeRolePolicyResponse" + IAM_NS + "><ResponseMetadata><RequestId>00000000-0000-4000-8000-0000000000ab</RequestId></ResponseMetadata></UpdateAssumeRolePolicyResponse>"); }
     return xmlErr("InvalidAction", "Not in the twin yet: iam " + A);
   }
   function cloudformation(form, init) {
@@ -240,6 +343,14 @@
     if (!s.objects[bucket]) return xml("<Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist</Message></Error>", 404);
     if (!s.cors[bucket]) return Promise.reject(new TypeError("Failed to fetch")); // a real browser sees a CORS failure
     if (!signed(init)) return xml("<Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>", 403);
+    if (!key && u.searchParams.has("cors")) {
+      // GetBucketCors: the bucket's rules as S3 returns them (Cloud Control's CorsRules, in S3's XML names).
+      var tag = function (t, v) { return "<" + t + ">" + esc(String(v)) + "</" + t + ">"; }, many = function (t, a) { return (a || []).map(function (v) { return tag(t, v); }).join(""); };
+      return xml("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<CORSConfiguration xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" + s.cors[bucket].CorsRules.map(function (r) {
+        return "<CORSRule>" + (r.Id ? tag("ID", r.Id) : "") + many("AllowedHeader", r.AllowedHeaders) + many("AllowedMethod", r.AllowedMethods) + many("AllowedOrigin", r.AllowedOrigins) +
+          many("ExposeHeader", r.ExposedHeaders) + (r.MaxAge !== undefined ? tag("MaxAgeSeconds", r.MaxAge) : "") + "</CORSRule>";
+      }).join("") + "</CORSConfiguration>");
+    }
     if (!key) {
       // ListObjectsV2: keys and common prefixes in key order, max-keys of them (default 1000) a page.
       var q = u.searchParams, prefix = q.get("prefix") || "", delim = q.get("delimiter"), max = Math.min(+(q.get("max-keys") || 1000), 1000);
