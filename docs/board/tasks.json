@@ -2,7 +2,7 @@
   "programme": "AWS Platform (aws.platform.sovereignweb.site), account C",
   "kept_by": "pm.aws.c@SovereignWebsite.dinis",
   "source": "The memo (parts 1 to 4), conductor.aws.c's roster (docs/team/schedule.json, docs/team/stage-2.md) and the agents' own reports",
-  "updated": "2026-11-23T04:00Z",
+  "updated": "2026-11-23T04:05Z",
   "states": [
     "done",
     "in progress",
@@ -13,6 +13,16 @@
   ],
   "rule": "Twin first: every task is built and shown on the twin before real AWS. Usability first: judged by what a first-time user sees and can do.",
   "tasks": [
+    {
+      "id": "OPS-1",
+      "area": "Programme",
+      "title": "Account C held until after 06:20 UTC (accountant.c: RED, five-hour limit by ~05:00 at the current rate)",
+      "owner": "conductor.aws.c",
+      "state": "blocked",
+      "next": "s3, architect, sherpa held until after 06:20; the 16 movers paused until they start on account A; pm.aws.c holds its own work",
+      "blocked_on": "The five-hour reset (~06:20 UTC)",
+      "updated": "2026-11-23T04:05Z"
+    },
     {
       "id": "UX-0",
       "area": "Usability (Dinis: 'super critical')",

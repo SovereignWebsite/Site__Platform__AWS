@@ -4,6 +4,8 @@ Kept by pm.aws.c@SovereignWebsite.dinis. Tasks in [tasks.json](tasks.json), what
 
 Updated 2026-11-23 04:00 UTC. Two rules over everything: **twin first** (every feature built and shown on the twin before real AWS) and **usability first** (judged by what a first-time user sees and can do).
 
+> **Account C held until after 06:20 UTC.** accountant.c forecasts the five-hour limit by ~05:00 at the current rate; conductor.aws.c has held s3, architect and sherpa and paused the 16 roles moving to account A.
+
 ## Waiting on Dinis
 | Task | Blocked on |
 |---|---|
@@ -62,6 +64,7 @@ Updated 2026-11-23 04:00 UTC. Two rules over everything: **twin first** (every f
 22 agents; wakes and sessions in docs/team/schedule.json. Sixteen roles are moving to account A tonight (account C is hot), as <role>.aws.a: billing, boto3, cloudformation, cloudtrail, data, dev.1, dev.2, iam, journalist, lambda, ontology, swarm, ux, vaults, video, viz. Staying on C: conductor, pm, security, architect, s3, sherpa, and aws.c (keeper of the hub).
 
 ## Changes, newest first
+- 23 Nov 04:05 UTC: account C held until after 06:20 UTC (accountant.c RED).
 - 23 Nov 04:00 UTC: pm.aws.c commits the board itself (team paths, c32279d); security's R-009 and R-010 on the decisions page; 16 roles moving to account A; the engine answered (bulletins characters, a pragmatic engine built here); parity tracker with journalist.aws.c.
 - 23 Nov 03:35 UTC: stage 2 running (22 agents); every task has a real owner and a first step, twin first; Dinis confirmed the first packet to follow.
 - 23 Nov 03:10 UTC: Dinis: no budget cap, Opus and a bit of Sonnet, parallel devs; eight projects in pipeline.md.
