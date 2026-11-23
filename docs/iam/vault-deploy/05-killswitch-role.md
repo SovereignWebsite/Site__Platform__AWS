@@ -22,3 +22,5 @@ Both are bounded to one distribution and one function of one Vault, and the code
 ## For boto3.aws.a (ec2.aws.a's trigger question)
 
 Whether a CloudWatch alarm can invoke a Lambda function directly as an alarm action, and which principal then appears in the function's resource policy (so the Permission can pin `aws:SourceArn` to the one alarm), decides whether the topic must exist whenever the kill switch is on.
+
+**0.1.1 (20:20 UTC):** security.aws.a accepted 0.1.0 (trust, scope, denies; the UpdateDistribution residual as stated). Added for design 03 (8fd2c77), which marks both resources `sws-vault-paused=<time>` so a Vault stack update cannot silently undo a pause: cloudfront:TagResource on the one distribution and lambda:TagResource on the one function, each only with `aws:TagKeys` = `sws-vault-paused` (no other tag can be set). Untag is not granted: removing the mark is part of restoring, a person's act.
