@@ -12,7 +12,7 @@
 //   api.importers(region, exportName, { next }) -> { items: [stackName], next }              ListImports
 //   stack    = { name, arn, region, status, reason, created, updated, description }
 //   resource = { logicalId, physicalId, type, status, reason, updated, arn, arnDerived }
-//   event    = { id, time, logicalId, physicalId, type, status, reason }
+//   event    = { id, stackArn, time, logicalId, physicalId, type, status, reason }   (stackArn: AWS's StackId)
 //   parameters: [{ key, value }]; outputs: [{ key, value, exportName, description }]
 //   CfnApi.all = ApiAll (site/api/all.js), to drain any list method with a cap.
 //
@@ -135,7 +135,7 @@
       try { need(name, "stack name or ARN"); } catch (e) { return Promise.reject(e); }
       return call(region, "DescribeStackEvents", { StackName: name, NextToken: o.next }).then(function (t) {
         return { items: members(t, "StackEvents").map(function (m) {
-          return { id: text(m, "EventId"), time: text(m, "Timestamp"), logicalId: text(m, "LogicalResourceId"), physicalId: text(m, "PhysicalResourceId"),
+          return { id: text(m, "EventId"), stackArn: text(m, "StackId"), time: text(m, "Timestamp"), logicalId: text(m, "LogicalResourceId"), physicalId: text(m, "PhysicalResourceId"),
             type: text(m, "ResourceType"), status: text(m, "ResourceStatus"), reason: text(m, "ResourceStatusReason") };
         }), next: text(t, "NextToken") };
       });

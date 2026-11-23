@@ -70,6 +70,7 @@ ok(ev.items.length === 5 && ev.next === null && ev.items.map((e) => e.time).join
 ok(ev.items[0].status === "UPDATE_ROLLBACK_COMPLETE" && ev.items[0].physicalId === lam.arn && ev.items[0].type === "AWS::CloudFormation::Stack", "events: the stack's own event names the stack ARN");
 const failed = ev.items.find((e) => e.status === "UPDATE_FAILED");
 ok(failed.logicalId === "Handler" && failed.physicalId === "demo-handler" && /dependencies zip/.test(failed.reason), "events: the failure and its reason");
+ok(ev.items.every((e) => e.stackArn === lam.arn), "events: every event carries its stack's ARN (StackId)");
 ok(new Set(ev.items.map((e) => e.id)).size === 5 && ev.items[4].reason === "User Initiated", "events: unique ids; reason on the first");
 
 const ex = await api.exports("eu-west-2");

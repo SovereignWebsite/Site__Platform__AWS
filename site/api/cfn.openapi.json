@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "CfnApi (browser)",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "summary": "The browser-side contract of CfnApi (site/api/cfn-api.js): CloudFormation stack reads.",
     "description": "This site has no server. The paths are logical names for the methods of the browser object CfnApi, not URLs anything listens on; operationId is the method name and parameters are its arguments in order. Each operation lists in x-aws-actions the CloudFormation action it needs on real AWS; iam.aws.a and aws.c check the list against the read role in template v3 before anything calls real AWS. Six read actions, each answering for the region of the endpoint called. Reads only: no change sets, drift detection or templates. CloudFormation is regional: cloudformation.<region>.amazonaws.com, Query protocol, Version 2010-05-15."
   },
@@ -207,6 +207,7 @@
         "type": "object",
         "required": [
           "id",
+          "stackArn",
           "time",
           "logicalId",
           "type",
@@ -215,6 +216,10 @@
         "properties": {
           "id": {
             "type": "string"
+          },
+          "stackArn": {
+            "type": "string",
+            "description": "AWS's StackId"
           },
           "time": {
             "type": "string",
