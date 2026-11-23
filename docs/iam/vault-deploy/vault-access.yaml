@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.2.6 (iam.aws.a, deploy plan step 3; for review by
+  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.2.7 (iam.aws.a, deploy plan step 3; for review by
   security.aws.a and cloudformation.aws.a; not for any real account). Run first, by the customer, from their own
   console. Makes two things only: the deploy role that stacks sws-vault-<id> and sws-vault-<id>-edge run with, and
   the boundary that caps the Vault's own role. Nothing here can reach outside this one Vault's resources.
@@ -275,6 +275,18 @@ Resources:
                   Action: [acm:DeleteCertificate, acm:RemoveTagsFromCertificate, acm:UpdateCertificateOptions]
                   Resource: !Ref CertificateArn
                 - !Ref AWS::NoValue
+              # billing.aws.a (cfe70fb): the cost guard rail is a CloudWatch alarm on the distribution's request count,
+              # not WAF (which bills every inspected request). CloudFront metrics are in us-east-1, so the alarm is too.
+              # Alarms named sws-vault-<id>-* only. What the alarm triggers (the kill switch) is its own design and role.
+              - Sid: CostAlarm
+                Effect: Allow
+                Action: [cloudwatch:PutMetricAlarm, cloudwatch:DeleteAlarms, cloudwatch:TagResource, cloudwatch:UntagResource,
+                  cloudwatch:ListTagsForResource]
+                Resource: !Sub "arn:aws:cloudwatch:us-east-1:${AWS::AccountId}:alarm:sws-vault-${VaultId}-*"
+              - Sid: CostAlarmDescribe
+                Effect: Allow
+                Action: cloudwatch:DescribeAlarms
+                Resource: "*"
               # security.aws.a point 5: the one zone by id, the Vault's name and the certificate's validation name only,
               # A, AAAA and CNAME only (no NS, no SOA, no delegation). ACM's validation name is "_" plus a fixed-length
               # token directly under the name (32 characters as security.aws.a recalls; boto3.aws.a to confirm), so 32 "?"
