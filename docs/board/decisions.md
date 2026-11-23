@@ -1,6 +1,6 @@
 # Decisions for Dinis: AWS Platform
 
-Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 12:20 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a".
+Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 13:45 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a, 8 a".
 
 This batch as a presentation (docs/board/brief/decisions-brief.html, https://claude.ai/artifact/Vpk7NnqQ3sz9MgkC2aDmVP) and a decision video in the studio's format (docs/board/brief/decision-video.html, https://claude.ai/artifact/FEaZ96X1APbEPmke5J6ido); both private to Dinis.
 
@@ -60,13 +60,22 @@ Nothing here stops the team: the agents are building on the twin. Decision 3 hol
 - **Recommended:** (a). The paths are the ones you already said yes to (c32279d); only the names change.
 - **Blocks:** 21 agents landing on dev, this board among them.
 
+### 8. vaults.aws.a reads the SG/Send browser vault library
+- **Asks:** vaults.aws.a (designs 01 to 03, 88588c6 on work/vaults.aws.a)
+- **What:** the vault twin should answer batches exactly as SG/Send's browser vault library does (vault UI v0.2.3, in the SGraph-AI__App__Send repository). vaults.aws.a's session refused attaching that repository (11:38 UTC), so it cannot read the library.
+- **Options:** (a) yes in vaults.aws.a's session (https://claude.ai/code/session_018yvwtPEp1ze9LonhajhRdg) to attach SGraph-AI__App__Send read-only, pinned to one commit; (b) let it fetch the twelve published library files from dev.vault.sgraph.ai instead (unversioned); (c) no: it designs from sgit.ai's published description only.
+- **Recommended:** (a). Read only, and a pinned commit is what design 01 already proposes copying into site/ for the CSP.
+- **Blocks:** the per-operation result shape and the batch-wide conflict rule in the vault twin (design 02 section 2); nothing else.
+
 ## Not needed yet
+- **Which vault endpoint first** (vaults.aws.a): recommended, the twin now, then your own SG/Send in eu-west-2 (append routes exist only on dev.send.sgraph.ai today). Asked before any live vault write.
+- **Who drains the snapshot lanes** (vaults.aws.a): recommended, the browser while you are signed in (no new credential anywhere), a GitHub Actions job later. Asked when the drain cadence is set (vaults design 01 section 4).
 - **Which models scoped access may call (pipeline P7):** recommended, Amazon Bedrock models in your own account, through roles the site issues with budgets; anything outside AWS would need a server, which these sites do not have. Asked when P7 starts.
 - **A GitHub Actions read-only inventory role** (aws.c): later, after security review.
 - **Template v3** (aws.c): reads for the next areas; drafted by the architect and iam.aws.c, reviewed by security, then a plan for your Approve.
 
 ## Being answered by others (comes to you only if they cannot)
-- Secure Send S3 API: where its code and deployment live, which clients and regions first. vaults.aws.c with maestro.c.
+- Secure Send S3 API: is it the SG/Send server in S3 mode, where its code and deployment live, which clients and regions first. Asked of maestro.c, no answer yet (vaults.aws.a, 13:37 UTC). Meanwhile vaults.aws.a assumes yes and designs against the documented API; confirmed before any plan. Blocks OP-3 and vaults design 01 section 6.
 
 ## Answered
 - Three account A agents' pushes (was 7): yes in iam.aws.a's and dev.1.aws.a's sessions (both branches pushed, signed); viz.aws.a pushed work/viz.aws.a unsigned at your word in its session (7495e89), so aws.c lands docs/viz/ under its own signature (conductor.aws.a, ~11:12 UTC). Still open in iam.aws.a's session: the Factory repository attached, for its key commit.

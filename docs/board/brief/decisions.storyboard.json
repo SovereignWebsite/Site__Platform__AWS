@@ -1,21 +1,21 @@
 {
  "format": "studio-storyboard/0",
  "slug": "aws-decisions-2026-11-23",
- "title": "Seven AWS decisions for Dinis",
+ "title": "Eight AWS decisions for Dinis",
  "audience": "Dinis",
  "requested_by": "pm.aws.a@SovereignWebsite.dinis",
- "summary": "Seven open decisions on the AWS Platform programme's decisions page, 23 Nov 2026 11:50 UTC: agent keys, the deploy's signer check (R-009), team code on the hub's origin (R-010), template v2.1 (R-001), the nine area sites, a permissions boundary (R-008), and the account A names in the site's policy. None stops the team; the agents build on the twin.",
+ "summary": "Eight open decisions on the AWS Platform programme's decisions page, 23 Nov 2026 13:45 UTC: agent keys, the deploy's signer check (R-009), team code on the hub's origin (R-010), template v2.1 (R-001), the nine area sites, a permissions boundary (R-008), the account A names in the site's policy, and reading SG/Send's vault library. None stops the team; the agents build on the twin.",
  "beats": [
   {
    "id": "b1",
-   "narration": "Seven decisions wait for you on the AWS programme. None stops the team: the agents keep building on the twin.",
+   "narration": "Eight decisions wait for you. None stops the team: the agents keep building on the synthetic twin.",
    "visual": {
     "kind": "svg",
     "src": "intro",
     "caption": "Red: a security risk. Amber: access, approval or a merge.",
     "at": 0,
-    "play": 8.6,
-    "end": 8
+    "play": 7.4,
+    "end": 6.8
    },
    "facts": [
     "s-decisions"
@@ -39,14 +39,14 @@
   },
   {
    "id": "b3",
-   "narration": "Two. Three ways round the deploy's signer check, including a checker run from the commit it checks. Recommended: run it from main; drop the override.",
+   "narration": "Two. Three ways round the deploy's signer check, one a checker run from the commit it checks. Recommended: run it from main.",
    "visual": {
     "kind": "svg",
     "src": "d2",
     "caption": "Decision 2: security R-009 (High)",
     "at": 0,
-    "play": 10.6,
-    "end": 10
+    "play": 9.4,
+    "end": 8.8
    },
    "facts": [
     "s-decisions",
@@ -87,14 +87,14 @@
   },
   {
    "id": "b6",
-   "narration": "Five. factory.c has the nine area sites ready to merge, each with its own Try the twin link. Recommended: merge all nine.",
+   "narration": "Five. The nine area sites are ready to merge, each with its own Try the twin link. Recommended: merge all nine.",
    "visual": {
     "kind": "svg",
     "src": "d5",
     "caption": "Decision 5: the nine area sites",
     "at": 0,
-    "play": 9.4,
-    "end": 8.8
+    "play": 9,
+    "end": 8.4
    },
    "facts": [
     "s-decisions"
@@ -102,14 +102,14 @@
   },
   {
    "id": "b7",
-   "narration": "Six. A change set or the DNS role's trust can still make the change role admin. Recommended: iam's v2.5 boundaries, cleared by security, applied by you.",
+   "narration": "Six. A change set or the DNS role's trust can still make the change role admin. Recommended: v2.5 boundaries, cleared by security.",
    "visual": {
     "kind": "svg",
     "src": "d6",
     "caption": "Decision 6: security R-008 (High), an AWS change",
     "at": 0,
-    "play": 11,
-    "end": 10.4
+    "play": 9.4,
+    "end": 8.8
    },
    "facts": [
     "s-decisions",
@@ -135,15 +135,31 @@
    ]
   },
   {
+   "id": "b7b",
+   "narration": "Eight. vaults.aws.a needs to read SG/Send's vault library. Recommended: attach it read-only, pinned to one commit.",
+   "visual": {
+    "kind": "svg",
+    "src": "d8",
+    "caption": "Decision 8: vaults.aws.a reads the SG/Send vault library",
+    "at": 0,
+    "play": 7,
+    "end": 6.4
+   },
+   "facts": [
+    "s-decisions",
+    "s-vaults"
+   ]
+  },
+  {
    "id": "b8",
-   "narration": "All recommended answers are a, except three, which is c. Answer in pm.aws.a's session; the trade-offs follow.",
+   "narration": "All recommended answers are a, except three, which is c. Answer in pm.aws.a's session.",
    "visual": {
     "kind": "svg",
     "src": "outro",
-    "caption": "Recommended: 1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a. Answer in pm.aws.a's session.",
+    "caption": "Recommended: 1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a, 8 a. Answer in pm.aws.a's session.",
     "at": 0,
-    "play": 7.4,
-    "end": 6.8
+    "play": 6.2,
+    "end": 5.6
    },
    "facts": [
     "s-decisions"
@@ -415,6 +431,50 @@
    ],
    "recommendation": "a",
    "why": "The paths were approved at c32279d; the move to account A only renamed the agents."
+  },
+  {
+   "id": "8",
+   "question": "8. May vaults.aws.a read SG/Send's browser vault library?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. Yes in vaults.aws.a's session: attach SGraph-AI__App__Send read-only, pinned to one commit",
+     "good": [
+      "The twin matches the real library's batch results and conflict rule",
+      "Read only, one pinned commit"
+     ],
+     "bad": [
+      "One more repository in that session"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. Fetch the twelve published library files from dev.vault.sgraph.ai",
+     "good": [
+      "No repository attached"
+     ],
+     "bad": [
+      "Unversioned: the files can change under it"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "c",
+     "label": "c. No: design from sgit.ai's published description only",
+     "good": [
+      "Nothing new attached"
+     ],
+     "bad": [
+      "The twin may differ from the real library"
+     ],
+     "blocks": [
+      "Design 02 section 2 of the vault twin"
+     ]
+    }
+   ],
+   "recommendation": "a",
+   "why": "Read only, and a pinned commit is what vaults design 01 already proposes copying into site/ for the CSP."
   }
  ],
  "connections": {
@@ -468,6 +528,12 @@
    "id": "s-iam-v25",
    "title": "iam.aws.a: P-IAM-001 proposal, v2.5 (ee7f7b9)",
    "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/ee7f7b9/docs/iam/proposals/P-IAM-001-boundary.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-vaults",
+   "title": "vaults.aws.a: designs 01 to 03 (88588c6)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/88588c6/docs/vaults/2026-11-23__02-vault-twin-contract.md",
    "read": "2026-11-23"
   }
  ],
