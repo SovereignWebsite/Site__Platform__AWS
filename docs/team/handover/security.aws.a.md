@@ -35,6 +35,20 @@ Hourly at :28 UTC, created by maestro.a (do not create schedules). Each wake: gi
 - Next R-010 review: the first change to index.html that loads site/api/*.js or site/data/*.js (the "Summarise these logs" wiring). Review it as keeper code.
 - Twin attack scenarios for viz (memo part 4) were never started; pick them up when the queue is quiet.
 
+## Vault deploy work (from 23 Nov, 15:00)
+
+Plan: docs/team/plan-vault-deploy.md on work/conductor.aws.a (ea9f61d), from Dinis's word relayed by maestro.a and conductor.aws.a. Our part:
+- Step 12: review every step before it lands (design, stack, twin, page, EC2, ephemeral). Same method as the site: AppSec and adversarial sub-agents, findings in docs/security/risks.md, notes to the owner.
+- Step 3, with iam.aws.a: least privilege in the customer's account (deploy role, boundary, what the page may and may not do, the trust story).
+- Step 11, with ec2.aws.a: guard rails for ephemeral deployments and the daily region move.
+
+Positions given so far (23 Nov), for the reviews to hold to:
+- D3: support the customer's own console session with a quick-create stack link; no customer credential and no cross-account role back to us, unless Dinis decides otherwise and the customer can see it in the template.
+- The template the link points to is pinned: a versioned object, its sha256 shown on the page and in the docs, so a changed template cannot be served under the same link.
+- The stack's own roles are scoped to the Vault's resources by name and carry a boundary; no iam:* or wildcard resources; teardown deletes what it made and nothing else.
+- DNS: teardown and region moves must delete the DNS record before (or with) the target it points at, so no name is left dangling (subdomain takeover). The record is in the stack, never made by hand.
+- Ephemeral and daily moves: no schedule creates or destroys anything real until Dinis approves the decision page (D5); the guard rails are a maximum lifetime, an allow list of regions, a cost cap and a kill switch, and the scheduler's role can delete only stacks it tagged.
+
 ## Agents (account A, send_message)
 
 conductor.aws.a session_018yvwtPiszBTMHKVD4AuDwn; pm.aws.a session_018yvwtLfieUut6hSirZ6W9B; iam.aws.a session_018yvwtLi5HNUo32ot6ApGm8; architect.aws.a session_018yvwtPuQzTBRoKGD45TYFV; data.aws.a session_018yvwtNsU9Ax9WMn2h6EhHU; dev.1.aws.a session_018yvwtLV1iZjUCMEKz1PZ51; dev.2.aws.a session_018yvwtN79NSkFnwbV7UzFuc; s3.aws.a session_018yvwtQbTmpHQ839siWGBQP; lambda.aws.a session_018yvwtLeVUPVXDaPda9ugLD; cloudformation.aws.a session_018yvwtPgweggdc6AykBpQay; maestro.a session_018yvwtLiem1AqdA1YkKse4h. Titles are now a.<role>.aws.
