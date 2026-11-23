@@ -70,7 +70,7 @@ ok(C.complete("", table).length === table.commands.length && C.complete("zz", ta
 // ---- every row parses from its own usage, and a parsed line runs on the real API over the twin ----
 for (const row of table.commands) {
   const sample = { region: "eu-west-2", bucket: "b", key: "k", name: "n", role: "r", policy: "p", arn: "arn:aws:iam::" + A + ":role/r", stack: "s", exportName: "e", group: "/g", id: "EDEMOTWIN00001" };
-  const line = row.command + row.params.map((p) => " " + sample[p.name]).join("");
+  const line = row.command + row.params.map((p) => " " + (row.service === "route53" ? "Z0DEMOTWIN0001" : sample[p.name])).join("");
   const x = C.parse(line, table);
   ok(x.ok && x.call.method === row.operationId, row.command + ": parses (" + line + ")" + (x.ok ? "" : " " + x.code));
 }
@@ -151,7 +151,7 @@ for (const row of table.commands) {
   // security.aws.a's rules (design 09): no alias shadows a row; an alias takes only its row's declared options.
   const sample = { region: "eu-west-2", bucket: "bkt", key: "k", name: "n", role: "r", policy: "p", arn: "arn:aws:iam::" + A + ":role/r", stack: "s", exportName: "e", group: "/g", id: "EDEMOTWIN00001" };
   for (const row of table.commands) {
-    const w = row.command.split(" ").concat(row.params.map((p) => sample[p.name])), x = E(w.join(" "), ctx1);
+    const w = row.command.split(" ").concat(row.params.map((p) => (row.service === "route53" ? "Z0DEMOTWIN0001" : sample[p.name]))), x = E(w.join(" "), ctx1);
     ok(x.ok && x.kind === "commands" && x.steps.length === 1 && JSON.stringify(x.steps[0].words) === JSON.stringify(w), "no alias shadows " + row.command);
   }
   ok(E("logs /g --bogus x", ctx1).code === "unknown-option" && E("logs /g --max lots", ctx1).code === "bad-number" && E("logs /g --newest --newest", ctx1).code === "duplicate-option", "logs takes only logs events' own options, checked by its grammar");

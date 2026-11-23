@@ -1,0 +1,396 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "Route53Api (browser)",
+  "version": "0.1.0",
+  "summary": "The browser-side contract of Route53Api (site/api/route53-api.js): Route 53 hosted zone and record reads.",
+  "description": "This site has no server. The paths are logical names for the methods of the browser object Route53Api, not URLs anything listens on; operationId is the method name and parameters are its arguments in order. Three read actions. Route 53 is global: route53.amazonaws.com/2013-04-01, signed for us-east-1, REST with XML answers. The SDK's table says it allows CORS; one browser call confirms it, which only aws.c's plan with Dinis's approval may make: twin only until then."
+ },
+ "servers": [],
+ "x-browser-global": "Route53Api",
+ "x-design": "docs/architecture/2026-11-23__03-every-service-one-shape.md, part 1 (work/architect.aws.a.s2); AWS shapes from botocore route53 2013-04-01 (boto3.aws.a, docs/boto3/2026-11-23__20-route53-reads.md)",
+ "x-not-in-route53api": {
+  "ChangeResourceRecordSets": "a write",
+  "health checks, traffic policies, query logging": "not read by this page",
+  "DNS queries": "never made: the page reads Route 53's own answers only"
+ },
+ "paths": {
+  "/zones": {
+   "get": {
+    "operationId": "zones",
+    "summary": "One page of the account's hosted zones",
+    "x-arguments": "zones({ next, max })",
+    "x-wire": "Route 53 ListHostedZones (GET /2013-04-01/hostedzone, marker, maxitems)",
+    "x-aws-actions": [
+     "route53:ListHostedZones"
+    ],
+    "x-role": "read",
+    "x-resource": "* (ListHostedZones has no resource type; Route 53 SAR)",
+    "parameters": [
+     {
+      "name": "next",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "max",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 300
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "One page of hosted zones",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "required": [
+          "items",
+          "next"
+         ],
+         "properties": {
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/Zone"
+           }
+          },
+          "next": {
+           "type": [
+            "string",
+            "null"
+           ],
+           "description": "Opaque cursor (NextMarker, when IsTruncated); null on the last page"
+          }
+         }
+        }
+       }
+      }
+     },
+     "default": {
+      "description": "An Error \"Code: Message\" with .code and .status; a CORS TypeError passes through",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AwsError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/zones/{id}": {
+   "get": {
+    "operationId": "zone",
+    "summary": "One hosted zone with its name servers",
+    "x-arguments": "zone(id)",
+    "x-wire": "Route 53 GetHostedZone (GET /2013-04-01/hostedzone/{Id}, the bare Z... id)",
+    "x-aws-actions": [
+     "route53:GetHostedZone"
+    ],
+    "x-role": "read",
+    "x-resource": "arn:aws:route53:::hostedzone/<id> (can be scoped; Route 53 SAR)",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^(/hostedzone/)?Z[A-Z0-9]{1,32}$"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "The zone and its delegation set's name servers",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ZoneDetail"
+        }
+       }
+      }
+     },
+     "default": {
+      "description": "An Error \"Code: Message\" with .code and .status; a TypeError for an id that is not a zone id, before any request",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AwsError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/zones/{zoneId}/records": {
+   "get": {
+    "operationId": "records",
+    "summary": "One page of a hosted zone's records",
+    "x-arguments": "records(zoneId, { next, max })",
+    "x-wire": "Route 53 ListResourceRecordSets (GET /2013-04-01/hostedzone/{Id}/rrset, name, type, identifier, maxitems)",
+    "x-aws-actions": [
+     "route53:ListResourceRecordSets"
+    ],
+    "x-role": "read",
+    "x-resource": "arn:aws:route53:::hostedzone/<id> (can be scoped; Route 53 SAR)",
+    "parameters": [
+     {
+      "name": "zoneId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^(/hostedzone/)?Z[A-Z0-9]{1,32}$"
+      }
+     },
+     {
+      "name": "next",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "max",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 300
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "One page of records",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "required": [
+          "items",
+          "next"
+         ],
+         "properties": {
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/Record"
+           }
+          },
+          "next": {
+           "type": [
+            "string",
+            "null"
+           ],
+           "description": "Opaque cursor (the triple NextRecordName, NextRecordType, NextRecordIdentifier, when IsTruncated); null on the last page"
+          }
+         }
+        }
+       }
+      }
+     },
+     "default": {
+      "description": "An Error \"Code: Message\" with .code and .status; a CORS TypeError passes through",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AwsError"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "AwsError": {
+    "type": "object",
+    "required": [
+     "code",
+     "message",
+     "status"
+    ],
+    "properties": {
+     "code": {
+      "type": "string",
+      "examples": [
+       "NoSuchDistribution",
+       "AccessDenied"
+      ]
+     },
+     "message": {
+      "type": "string"
+     },
+     "status": {
+      "type": "integer"
+     }
+    }
+   },
+   "Zone": {
+    "type": "object",
+    "required": [
+     "id",
+     "arn",
+     "name",
+     "private",
+     "comment",
+     "recordCount",
+     "callerReference"
+    ],
+    "properties": {
+     "id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "The bare Z... id (Route 53 answers /hostedzone/Z...)"
+     },
+     "arn": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "arn:aws:route53:::hostedzone/<id>, the id CfnApi derives for AWS::Route53::HostedZone"
+     },
+     "name": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "With Route 53's trailing dot; \\ddd escapes decoded. The owner's text: render as text"
+     },
+     "private": {
+      "type": "boolean"
+     },
+     "comment": {
+      "type": "string",
+      "description": "The owner's text: render as text"
+     },
+     "recordCount": {
+      "type": [
+       "integer",
+       "null"
+      ]
+     },
+     "callerReference": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    }
+   },
+   "ZoneDetail": {
+    "allOf": [
+     {
+      "$ref": "#/components/schemas/Zone"
+     },
+     {
+      "type": "object",
+      "required": [
+       "nameServers"
+      ],
+      "properties": {
+       "nameServers": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    ]
+   },
+   "Record": {
+    "type": "object",
+    "required": [
+     "zoneId",
+     "name",
+     "type",
+     "setIdentifier",
+     "ttl",
+     "values",
+     "alias"
+    ],
+    "properties": {
+     "zoneId": {
+      "type": "string"
+     },
+     "name": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "type": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "setIdentifier": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "ttl": {
+      "type": [
+       "integer",
+       "null"
+      ],
+      "description": "null for an alias record"
+     },
+     "values": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "The owner's text: render as text"
+     },
+     "alias": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "properties": {
+       "dnsName": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "hostedZoneId": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "evaluateTargetHealth": {
+        "type": "boolean"
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

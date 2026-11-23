@@ -566,6 +566,76 @@
       ]
     },
     {
+      "command": "route53 records",
+      "service": "route53",
+      "operationId": "records",
+      "global": "Route53Api",
+      "doc": "route53.openapi.json",
+      "params": [
+        {
+          "name": "zoneId",
+          "pattern": "^(/hostedzone/)?Z[A-Z0-9]{1,32}$"
+        }
+      ],
+      "options": [
+        {
+          "name": "next",
+          "type": "string"
+        },
+        {
+          "name": "max",
+          "type": "integer"
+        }
+      ],
+      "summary": "One page of a hosted zone's records",
+      "role": "read",
+      "actions": [
+        "route53:ListResourceRecordSets"
+      ]
+    },
+    {
+      "command": "route53 zone",
+      "service": "route53",
+      "operationId": "zone",
+      "global": "Route53Api",
+      "doc": "route53.openapi.json",
+      "params": [
+        {
+          "name": "id",
+          "pattern": "^(/hostedzone/)?Z[A-Z0-9]{1,32}$"
+        }
+      ],
+      "options": [],
+      "summary": "One hosted zone with its name servers",
+      "role": "read",
+      "actions": [
+        "route53:GetHostedZone"
+      ]
+    },
+    {
+      "command": "route53 zones",
+      "service": "route53",
+      "operationId": "zones",
+      "global": "Route53Api",
+      "doc": "route53.openapi.json",
+      "params": [],
+      "options": [
+        {
+          "name": "next",
+          "type": "string"
+        },
+        {
+          "name": "max",
+          "type": "integer"
+        }
+      ],
+      "summary": "One page of the account's hosted zones",
+      "role": "read",
+      "actions": [
+        "route53:ListHostedZones"
+      ]
+    },
+    {
       "command": "s3 getBucket",
       "service": "s3",
       "operationId": "getBucket",
