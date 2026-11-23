@@ -26,7 +26,7 @@
     b.onclick = function () { showLines(ctx, field, value); };
     return b;
   }
-  var NAMES = { path: "path", vault: "vault", client: "client", net: "network", country: "country (the enricher's claim)", status: "status", status_class: "status", agent_kind: "who asked",
+  var NAMES = { path: "path", vault: "vault", client: "client", net: "network", country: "country (the enricher's claim)", host: "host asked for", status: "status", status_class: "status", agent_kind: "who asked",
     agent: "user agent", edge: "edge", hour: "hour", method: "method" };
   // Investigation mode: what the value refers to, what the same lines share, and the trail so far.
   function investigate(ctx, field, value, box) {
@@ -116,9 +116,16 @@
     s.hours.forEach(function (h) {
       var bar = el("button", { width: "22px", flex: "0 0 22px", height: Math.max(4, Math.round(70 * h.requests / max)) + "px", border: "0", padding: "0", cursor: "pointer",
         borderRadius: "3px 3px 0 0", background: h.errors > h.requests / 2 ? "var(--bad)" : "var(--accent)" });
-      bar.type = "button"; bar.title = h.key.replace("T", " ") + ":00 UTC: " + h.requests + " requests, " + h.errors + " failed";
+      bar.type = "button"; bar.className = "log-hour"; bar.title = h.key.replace("T", " ") + ":00 UTC: " + h.requests + " requests, " + h.errors + " failed";
       bar.setAttribute("aria-label", bar.title); bar.setAttribute("data-field", "hour"); bar.setAttribute("data-value", h.key);
+      // a press and release on the same bar is a click (its lines); on two bars, no click fires and it is a window
       bar.onclick = function () { showLines(ctx, "hour", h.key); };
+      bar.onpointerdown = function (e) { ctx.dragFrom = h.key; if (bar.releasePointerCapture && e.pointerId !== undefined) try { bar.releasePointerCapture(e.pointerId); } catch (x) { /* none */ } };
+      bar.onpointerup = function () {
+        var from = ctx.dragFrom; ctx.dragFrom = null;
+        if (from && from !== h.key) { setWindow(ctx, from < h.key ? from : h.key, from < h.key ? h.key : from); }
+      };
+      ctx.bars.push({ key: h.key, el: bar });
       wrap.appendChild(bar);
       if (gapAfter[h.key]) {
         var g = el("div", { flex: "0 0 auto", alignSelf: "center", color: "var(--muted)", fontSize: "11px", padding: "0 6px", borderLeft: "1px dashed var(--line)", borderRight: "1px dashed var(--line)" }, gapAfter[h.key] + " h gap");
@@ -171,16 +178,76 @@
   // Draw a finished result into box.
   // opts.context: what the caller knows for investigation mode ({ siteBucket, siteKeys, logsBucket, vaults });
   // opts.open(ref): go to an S3 object ({ bucket, key, line? }), e.g. open it in the S3 browser.
-  function render(box, result, opts) {
-    opts = opts || {};
-    var s = result.summary, d = result.discover;
+  // One summary for any set of lines: the whole read, or a window of it.
+  function summaryOf(records) {
+    records.forEach(function (r) { r.status_class = r.status === null ? "?" : Math.floor(r.status / 100) + "xx"; });
+    var s = X.summarise(records);
+    // busiest clients by address, for the drill-down only (the raw address stays in the page)
+    var by = Object.create(null); // keyed by client address, a log value (R-014)
+    records.forEach(function (r) { var e = by[r.client] || (by[r.client] = { key: r.client, requests: 0, errors: 0 }); e.requests++; if (r.status >= 400) e.errors++; });
+    s.clients_top = Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return b.requests - a.requests || (a.key < b.key ? -1 : 1); });
+    return s;
+  }
+
+  // The time window (P5, docs/data/2026-11-23__02-time-lapse-first-design.md): drag across the hours, step, play.
+  // Records are sorted by time once; a window is the lines whose hour is in [from, to], and everything below the
+  // strip is drawn again for it. Hours are stepped over the hours present (a gap is skipped, not played as empty).
+  function setWindow(ctx, from, to) {
+    stopPlay(ctx);
+    ctx.win = from ? { from: from, to: to } : null;
+    ctx.records = from ? ctx.all.filter(function (r) { return r.hour >= from && r.hour <= to; }) : ctx.all;
+    var s = from ? summaryOf(ctx.records) : ctx.full;
+    var label = from ? "Window " + from.replace("T", " ") + ":00 to " + to.replace("T", " ") + ":59 UTC: " : "";
+    ctx.head.textContent = label + X.headline(s, from ? null : ctx.discover);
+    ctx.winLabel.textContent = from ? from.replace("T", " ") + ":00 to " + to.replace("T", " ") + ":59 UTC, " + ctx.records.length + " lines" : "All hours";
+    ctx.bars.forEach(function (b) { b.el.style.opacity = !from || (b.key >= from && b.key <= to) ? "1" : "0.3"; });
+    drawBody(ctx, s);
+    ctx.lines.textContent = ""; ctx.trail = [];
+  }
+  function step(ctx, by) {
+    var keys = ctx.bars.map(function (b) { return b.key; }), n = keys.length;
+    if (!n) return false;
+    var a, z;
+    if (!ctx.win) { a = z = by > 0 ? 0 : n - 1; }
+    else {
+      a = keys.indexOf(ctx.win.from) + by; z = keys.indexOf(ctx.win.to) + by;
+      if (a < 0 || z > n - 1) return false;
+    }
+    var playing = ctx.timer;
+    ctx.timer = null; setWindow(ctx, keys[a], keys[z]); ctx.timer = playing;
+    return true;
+  }
+  function stopPlay(ctx) {
+    if (ctx.timer) { clearInterval(ctx.timer); ctx.timer = null; if (ctx.playBtn) ctx.playBtn.textContent = "Play"; }
+  }
+  function windowBar(ctx) {
+    var bar = el("div", { display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px", margin: "4px 0 8px", fontSize: "13px" });
+    bar.className = "log-window";
+    bar.appendChild(el("span", { color: "var(--muted)" }, "Window:"));
+    ctx.winLabel = el("span", { fontWeight: "600" }, "All hours");
+    ctx.winLabel.className = "log-window-label";
+    bar.appendChild(ctx.winLabel);
+    function btn(text, name, fn) {
+      var b = el("button", { font: "inherit", padding: "2px 8px", border: "1px solid var(--line)", borderRadius: "6px", background: "var(--panel)", color: "var(--fg)", cursor: "pointer" }, text);
+      b.type = "button"; b.setAttribute("data-window", name); b.onclick = fn; bar.appendChild(b); return b;
+    }
+    btn("All", "all", function () { setWindow(ctx, null); });
+    btn("Back an hour", "back", function () { stopPlay(ctx); step(ctx, -1); });
+    btn("Forward an hour", "forward", function () { stopPlay(ctx); step(ctx, 1); });
+    ctx.playBtn = btn("Play", "play", function () {
+      if (ctx.timer) { stopPlay(ctx); return; }
+      if (!ctx.win) step(ctx, 1);
+      ctx.playBtn.textContent = "Pause";
+      ctx.timer = setInterval(function () {
+        if (!ctx.playBtn.isConnected || !step(ctx, 1)) stopPlay(ctx);
+      }, ctx.playMs);
+    });
+    bar.appendChild(el("span", { color: "var(--muted)", fontSize: "12px" }, "Drag across the hours to choose a window."));
+    return bar;
+  }
+  function drawBody(ctx, s) {
+    var box = ctx.body, d = ctx.discover;
     box.textContent = "";
-    var ctx = { records: result.records, lines: el("div", { marginTop: "12px" }), context: opts.context || {}, open: opts.open || null };
-    ctx.lines.className = "log-lines";
-    var head = el("p", { fontSize: "16px", fontWeight: "600", margin: "0 0 8px" }, X.headline(s, d));
-    head.className = "log-headline";
-    box.appendChild(head);
-    box.appendChild(hourStrip(s, d, ctx));
     box.appendChild(el("h4", { margin: "12px 0 6px" }, "Vaults"));
     box.appendChild(vaultCards(s, ctx));
     var grid = el("div", { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "8px", marginTop: "12px" });
@@ -191,6 +258,22 @@
     grid.appendChild(table("Busiest clients", s.clients_top || [], "client", ctx, [["requests", ""], ["errors", " failed"]]));
     grid.appendChild(table("Edges", s.edges, "edge", ctx, [["requests", ""], ["bytes", " B"]]));
     box.appendChild(grid);
+  }
+  function render(box, result, opts) {
+    opts = opts || {};
+    var s = result.summary, d = result.discover;
+    box.textContent = "";
+    var all = result.records.slice().sort(function (a, b) { return a.t < b.t ? -1 : a.t > b.t ? 1 : 0; });
+    var ctx = { all: all, records: all, full: s, discover: d, win: null, bars: [], timer: null, playMs: opts.playMs || 800,
+      lines: el("div", { marginTop: "12px" }), body: el("div"), context: opts.context || {}, open: opts.open || null };
+    ctx.lines.className = "log-lines";
+    ctx.head = el("p", { fontSize: "16px", fontWeight: "600", margin: "0 0 8px" }, X.headline(s, d));
+    ctx.head.className = "log-headline";
+    box.appendChild(ctx.head);
+    box.appendChild(hourStrip(s, d, ctx));
+    box.appendChild(windowBar(ctx));
+    box.appendChild(ctx.body);
+    drawBody(ctx, s);
     var note = "Read " + result.read.files + " file" + (result.read.files === 1 ? "" : "s") + " (" + kb(result.read.bytes) + "), " + s.requests + " lines";
     if (result.read.skipped.length) note += "; " + result.read.skipped.length + " skipped (" + result.read.skipped.slice(0, 3).map(function (k) { return k.src.key.split("/").pop() + ":" + k.src.line + " " + k.why; }).join("; ") + ")";
     if (d.other.length) note += "; " + d.other.length + " file" + (d.other.length === 1 ? "" : "s") + " outside the hourly layout not read";
@@ -235,17 +318,12 @@
         });
       });
     }, Promise.resolve()).then(function () {
-      records.forEach(function (r) { r.status_class = r.status === null ? "?" : Math.floor(r.status / 100) + "xx"; });
-      var s = X.summarise(records);
-      // busiest clients by address, for the drill-down only (the raw address stays in the page)
-      var by = Object.create(null); // keyed by client address, a log value (R-014)
-      records.forEach(function (r) { var e = by[r.client] || (by[r.client] = { key: r.client, requests: 0, errors: 0 }); e.requests++; if (r.status >= 400) e.errors++; });
-      s.clients_top = Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return b.requests - a.requests || (a.key < b.key ? -1 : 1); });
+      var s = summaryOf(records);
       var result = { discover: d, summary: s, records: records, read: { files: keys.length, bytes: bytes, skipped: skipped } };
       render(box, result, opts);
       return result;
     });
   }
 
-  root.LogView = { run: run, render: render };
+  root.LogView = { run: run, render: render, summaryOf: summaryOf };
 })(typeof window !== "undefined" ? window : globalThis);
