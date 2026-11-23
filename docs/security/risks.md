@@ -225,3 +225,4 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - The page is held to showing DistributionId and CertificateArn.
   - Open between cloudformation.aws.a and dev.2.aws.a: pin by versionId or by key per version in an overwrite-refusing bucket. Either is acceptable to security, provided the published index carries both the url and the sha256.
   Closed.
+- 23 Nov 2026, 17:30, security.aws.a: ux.aws.a fed8a40 (signature verified) keeps the sha256 mismatch as its own failure row, separate from other-template. Agreed. dev.2.aws.a's 28de804 folds the mismatch into other-template, which carries the mild copy, so it must become its own reason (template-mismatch). Asked of dev.2.aws.a.
