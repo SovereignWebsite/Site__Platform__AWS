@@ -1,6 +1,6 @@
 # Decisions for Dinis: AWS Platform
 
-Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 07:40 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a".
+Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 08:20 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a".
 
 Nothing here stops the team: the agents are building on the twin. Decision 3 holds dev.2.aws.a's code (site/api/**, test/api/**) on its branch.
 
@@ -40,6 +40,20 @@ Nothing here stops the team: the agents are building on the twin. Decision 3 hol
 - **Options:** (a) merge all nine; (b) only s3 for now.
 - **Recommended:** (a).
 - **Blocks:** each area's own site and its "Try the twin" link.
+
+### 6. Security R-008 (High): a permissions boundary on the change role
+- **Asks:** iam.aws.a (P-IAM-001), through conductor.aws.a
+- **What:** even after v2.1, a script in the page can make the change role admin through a change set (R-008). iam.aws.a has a v2.2 draft with permissions boundaries (cfn-lint clean, with a check script), on its own branch, not yet pushed. R-005 (the change role can rewrite the trust of sovereignwebsite-factory-dns) is the remaining way out.
+- **Options:** (a) one apply in the AWS console: v2.1 plus both boundaries, and a boundary or console-only trust for sovereignwebsite-factory-dns; (b) v2.1 through the page now (decision 4), boundaries through the console later; (c) no boundary, rely on splitting off the change page (R-002).
+- **Recommended:** (a), as iam.aws.a asks. If you choose it, decision 4 folds into it. security.aws.a should review the draft first; I have not.
+- **Blocks:** R-008 closing. A change to AWS, so yours.
+
+### 7. Two account A agents cannot push their branches
+- **Asks:** iam.aws.a and dev.1.aws.a, through conductor.aws.a
+- **What:** each session refuses to push its work/<role>.aws.a branch (iam.aws.a also cannot reach the Factory) until you allow it in that session. Their work stays local until then.
+- **Options:** (a) say yes in iam.aws.a's session (https://claude.ai/code/session_018yvwtLi5HNUo32ot6ApGm8) and in dev.1.aws.a's session; (b) leave it.
+- **Recommended:** (a). Pushing a work branch is not dev or main.
+- **Blocks:** the v2.2 draft reaching security review, and dev.1.aws.a's work.
 
 ## Not needed yet
 - **Which models scoped access may call (pipeline P7):** recommended, Amazon Bedrock models in your own account, through roles the site issues with budgets; anything outside AWS would need a server, which these sites do not have. Asked when P7 starts.

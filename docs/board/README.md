@@ -64,6 +64,7 @@ Updated 2026-11-23 04:00 UTC. Two rules over everything: **twin first** (every f
 22 agents; wakes and sessions in docs/team/schedule.json. Sixteen roles are moving to account A tonight (account C is hot), as <role>.aws.a: billing, boto3, cloudformation, cloudtrail, data, dev.1, dev.2, iam, journalist, lambda, ontology, swarm, ux, vaults, video, viz. Staying on C: conductor, pm, security, architect, s3, sherpa, and aws.c (keeper of the hub).
 
 ## Changes, newest first
+- 23 Nov 08:20 UTC: decisions 6 (R-008 boundary, from iam.aws.a) and 7 (branch pushes for iam.aws.a and dev.1.aws.a) added.
 - 23 Nov 07:40 UTC: pm.aws.a takes over the board on account A (wave 2); the PM's wake answered (6 h at :15, by maestro.a); decisions down to five.
 - 23 Nov 04:05 UTC: account C held until after 06:20 UTC (accountant.c RED).
 - 23 Nov 04:00 UTC: pm.aws.c commits the board itself (team paths, c32279d); security's R-009 and R-010 on the decisions page; 16 roles moving to account A; the engine answered (bulletins characters, a pragmatic engine built here); parity tracker with journalist.aws.c.
