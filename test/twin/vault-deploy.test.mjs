@@ -153,11 +153,19 @@ checks += 24;
   const del = e5.filter((e) => e.status === "DELETE_COMPLETE").map((e) => e.logical);
   assert.deepEqual(del, ["VaultFunction", "VaultFunctionRole", "VaultBucketPolicy", "VaultBoundary", "HealthFunction", "VaultLogs", "AccessToken", "VaultBucket"], "everything undone, in reverse creation order");
   assert.equal(e5.filter((e) => e.status === "DELETE_IN_PROGRESS").length, 7, "each made resource goes DELETE_IN_PROGRESS first (all but the failed function)");
+  // CloudFormation deletes by the dependency graph (cloudformation.aws.a, from memory, unconfirmed): nothing goes while
+  // a resource that references it is still there. The references in vault.yaml, referrer: [what it refers to].
+  const REFS = { VaultBucketPolicy: ["VaultBucket"], VaultFunctionRole: ["VaultBucket", "AccessToken", "VaultLogs", "VaultBoundary"],
+    VaultFunction: ["VaultFunctionRole", "AccessToken", "VaultLogs"], VaultFunctionUrl: ["VaultFunction"], VaultFunctionUrlPermission: ["VaultFunction"],
+    VaultFunctionInvokePermission: ["VaultFunction"], VaultDistribution: ["VaultFunctionUrl", "HealthFunction"], VaultRecordA: ["VaultDistribution"], VaultRecordAAAA: ["VaultDistribution"] };
+  Object.entries(REFS).forEach(([from, tos]) => tos.forEach((to) => {
+    if (del.includes(from) && del.includes(to)) assert.ok(del.indexOf(from) < del.indexOf(to), from + " is deleted before " + to + ", which it refers to");
+  }));
   assert.ok(!e5.some((e) => e.status === "DELETE_SKIPPED"), "RetainExceptOnCreate: nothing kept on a first create's rollback");
   assert.equal(o5.status, "ROLLBACK_COMPLETE"); assert.deepEqual(o5.out, {});
   const known = await create(fresh(), "sws-vault-" + ID, { VaultId: ID, ImageUri: "111122223333.dkr.ecr.eu-west-2.amazonaws.com/sws-vault@sha256:" + "0123456789abcdef".repeat(4) });
   assert.equal(known.status, 200, "the twin's published image is accepted");
-  checks += 9;
+  checks += 10;
 }
 // 3f. ListStacks: the region's stacks, newest first, filtered by status.
 {
