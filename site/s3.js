@@ -289,7 +289,16 @@
         var refresh = P.el("button", { type: "button", class: "quiet", text: "Refresh", title: "List this folder from S3 again" });
         refresh.onclick = function () { clearListCache(); state.fresh = true; state.keepSearch = true; listObjects(); };
         var sum = summariseButton(b, region, state.prefix);
-        box.appendChild(P.el("div", { class: "toolbar" }, [filter, search].concat(clear ? [clear] : []).concat([refresh]).concat(sum ? [sum] : [])));
+        // Sherpa walk 1, item 6: a log folder is several levels deep; "Newest file" opens the most recently changed
+        // file listed here, as a click on it would (its listed size goes through the same gates).
+        var newest = P.el("button", { type: "button", class: "quiet s3-newest", text: "Newest file", title: "Open the most recently changed file listed here" });
+        newest.onclick = function () {
+          var best = null;
+          Array.prototype.forEach.call($("s3-list").querySelectorAll("tr.file"), function (tr) { if (!best || tr.dataset.when > best.dataset.when) best = tr; });
+          if (!best) return P.say(st, "No files listed in this folder" + (state.more ? " yet; Load more, or open a folder." : "; open a folder."), "ok");
+          best.querySelector("button").click();
+        };
+        box.appendChild(P.el("div", { class: "toolbar" }, [filter, search].concat(clear ? [clear] : []).concat([refresh, newest]).concat(sum ? [sum] : [])));
         var table = P.el("table", { class: "s3-table" });
         var head = P.el("thead", {}, [P.el("tr", {}, [sortHead("Name", "name"), sortHead("Size", "size"), sortHead("Modified (UTC)", "when")])]);
         table.appendChild(head); table.appendChild(P.el("tbody", { id: "s3-list" }));
