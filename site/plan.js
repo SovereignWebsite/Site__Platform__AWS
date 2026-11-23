@@ -42,7 +42,8 @@
     if (!removed.length) return { after: after, removed: [], unchanged: true };
     var kept = subs.filter(function (s) { return plan.remove.indexOf(s) < 0; });
     if (!kept.length) throw new Error("refused: that would leave the role trusting no subject at all");
-    f.st.Condition[f.op][plan.condition_key] = kept.length === 1 ? kept[0] : kept;
+    // Kept as a list even when one is left (IAM reads a list of one the same way), so the diff shows only the removal.
+    f.st.Condition[f.op][plan.condition_key] = Array.isArray(f.st.Condition[f.op][plan.condition_key]) ? kept : kept[0];
     return { after: after, removed: removed, unchanged: false };
   }
 
@@ -61,13 +62,15 @@
   function same(a, b) { return canonical(a) === canonical(b); }
 
   // Line diff (longest common subsequence): [{ op: " " | "-" | "+", line }].
-  function lineDiff(a, b) {
+  // norm(line), if given, decides which lines count as the same (the after line is shown).
+  function lineDiff(a, b, norm) {
     var x = a.replace(/\r/g, "").split("\n"), y = b.replace(/\r/g, "").split("\n"), n = x.length, m = y.length, i, j;
+    var nx = norm ? x.map(norm) : x, ny = norm ? y.map(norm) : y;
     var L = []; for (i = 0; i <= n; i++) { L.push(new Array(m + 1).fill(0)); }
-    for (i = n - 1; i >= 0; i--) for (j = m - 1; j >= 0; j--) L[i][j] = x[i] === y[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+    for (i = n - 1; i >= 0; i--) for (j = m - 1; j >= 0; j--) L[i][j] = nx[i] === ny[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
     var out = []; i = 0; j = 0;
     while (i < n && j < m) {
-      if (x[i] === y[j]) { out.push({ op: " ", line: x[i] }); i++; j++; }
+      if (nx[i] === ny[j]) { out.push({ op: " ", line: y[j] }); i++; j++; }
       else if (L[i + 1][j] >= L[i][j + 1]) { out.push({ op: "-", line: x[i] }); i++; }
       else { out.push({ op: "+", line: y[j] }); j++; }
     }
@@ -95,5 +98,11 @@
     return { unchanged: false, before: before, after: after, patch: patch };
   }
 
-  root.Plans = { apply: apply, same: same, lineDiff: lineDiff, corsPlan: corsPlan };
+  // Two templates are the same if they differ only in parameter Default lines (the download fills those in).
+  function sameTemplate(a, b) {
+    function norm(t) { return t.replace(/\r/g, "").split("\n").filter(function (l) { return !/^    Default: /.test(l); }).join("\n").trim(); }
+    return norm(a) === norm(b);
+  }
+
+  root.Plans = { apply: apply, same: same, lineDiff: lineDiff, corsPlan: corsPlan, sameTemplate: sameTemplate };
 })(typeof window !== "undefined" ? window : globalThis);

@@ -117,10 +117,19 @@
   function awsError(doc, status) {
     return new Error((xmlText(doc, "Code") || ("HTTP " + status)) + ": " + (xmlText(doc, "Message") || "no message"));
   }
+  var pending = {};
   function assume(acct, role) {
     var key = acct.id + "/" + role, c = mem.creds[key];
     if (c && c.expiration - Date.now() > 5 * 60 * 1000) return Promise.resolve(c);
     if (!mem.idToken) return Promise.reject(new Error("Sign in with Google first."));
+    if (pending[key]) return pending[key]; // one STS call for callers asking at the same time
+    var p = assumeNow(acct, role, key);
+    pending[key] = p;
+    p.then(function () { delete pending[key]; }, function () { delete pending[key]; });
+    return p;
+  }
+  function assumeNow(acct, role, key) {
+    var c;
     var body = new URLSearchParams({
       Action: "AssumeRoleWithWebIdentity", Version: "2011-06-15", RoleArn: roleArn(acct, role),
       RoleSessionName: "sws-aws-platform", WebIdentityToken: mem.idToken, DurationSeconds: "3600"
@@ -275,28 +284,84 @@
 
   // ---- Step 3: plans, applied only on the owner's click ----
   var plans = [];
-  function renderPlans() {
-    var box = $("plans"); box.textContent = "";
-    $("step3").hidden = !mem.idToken || !accounts.length;
-    plans.forEach(function (plan) {
-      var sel = el("select", {}, accounts.map(function (a) { return el("option", { value: a.id, text: a.label }); }));
-      var show = el("button", { type: "button", text: "Show the plan against this account" });
-      var out = el("div", {}), st = el("p", { class: "status" });
-      show.onclick = function () { showPlan(plan, accounts.filter(function (a) { return a.id === sel.value; })[0], out, st); };
-      box.appendChild(el("li", {}, [el("strong", { text: plan.title }), el("p", { class: "small", text: plan.why }),
-        el("p", { class: "small", text: plan.summary || ("Adds: " + plan.add.join(", ") + ". Keeps " + plan.keep + ". Never touches " + plan.never + ".") }),
-        el("div", { class: "row" }, [sel, show]), out, st]));
+  // Each plan checks AWS when shown: Waiting for you (it would change something) or Done (AWS already holds
+  // what it asks for). Done plans move to the history below.
+  function checkPlan(plan, acct) {
+    return assume(acct, plan.role).then(function (c) {
+      if (plan.action === "cloudformation.update_stack") {
+        return Promise.all([
+          cfn(c, { Action: "GetTemplate", StackName: plan.stack, TemplateStage: "Original" }).then(function (d) { return xmlText(d, "TemplateBody"); }),
+          fetch(plan.template).then(function (r) { return r.text(); })
+        ]).then(function (t) { return Plans.sameTemplate(t[0], t[1]) ? "done" : "waiting"; });
+      }
+      return getRole(c, plan.target_role).then(function (now) { return Plans.apply(now, plan).unchanged ? "done" : "waiting"; });
     });
   }
-  function showPlan(plan, acct, out, st) {
-    if (plan.action === "cloudformation.update_stack") return showStackPlan(plan, acct, out, st);
+  var BADGE = { checking: ["badge", "checking..."], waiting: ["badge warn", "Waiting for you"], done: ["badge ok", "Done"],
+    blocked: ["badge", "Not possible yet"], error: ["badge bad", "Could not check"] };
+  var planChecks = [], planGen = 0;
+  function recheckPlans() { planChecks.forEach(function (f) { f(); }); }
+  function renderPlans() {
+    planChecks = []; var gen = ++planGen;
+    var box = $("plans"), hist = $("plans-done"); box.textContent = ""; hist.textContent = "";
+    $("step3").hidden = !mem.idToken || !accounts.length;
+    $("plans-history").hidden = true;
+    function count() { var n = hist.children.length; $("plans-done-count").textContent = n; $("plans-history").hidden = !n; }
+    plans.forEach(function (plan) {
+      var sel = el("select", { "aria-label": "Account" }, accounts.map(function (a) { return el("option", { value: a.id, text: a.label }); }));
+      var show = el("button", { type: "button", text: "Show the plan against this account" });
+      var out = el("div", {}), st = el("p", { class: "status" }), badge = el("span", { class: "badge" });
+      var li = el("li", { "data-plan": plan.id }, [el("div", { class: "card-head" }, [el("strong", { text: plan.title }), badge]), el("p", { class: "small", text: plan.why }),
+        el("p", { class: "small", text: plan.summary || ("Adds: " + plan.add.join(", ") + ". Keeps " + plan.keep + ". Never touches " + plan.never + ".") }),
+        el("div", { class: "row" }, [sel, show]), out, st]);
+      function acct() { return accounts.filter(function (a) { return a.id === sel.value; })[0]; }
+      function set(state, why) {
+        if (gen !== planGen) return; // a check from an earlier drawing of the list: ignore it
+        badge.className = BADGE[state][0]; badge.textContent = BADGE[state][1]; badge.title = why || "";
+        var to = state === "done" ? hist : box;
+        if (li.parentNode !== to) { to.appendChild(li); count(); }
+      }
+      function check() {
+        if (!mem.idToken || !acct()) return;
+        set("checking");
+        checkPlan(plan, acct()).then(function (s) { set(s); }, function (e) { set(/^refused/.test(e.message) ? "blocked" : "error", e.message); });
+      }
+      show.onclick = function () { showPlan(plan, acct(), out, st, recheckPlans); };
+      planChecks.push(check);
+      sel.onchange = check;
+      box.appendChild(li);
+      check();
+    });
+    count();
+  }
+  // A diff: changed lines in colour with a few lines of context; long unchanged runs fold to "...".
+  function diffView(a, b) {
+    // a line that differs only by its trailing comma (JSON lists) counts as unchanged
+    var d = Plans.lineDiff(a, b, function (l) { return l.replace(/,\s*$/, ""); }), pre = el("pre", { class: "diff" }), CTX = 3;
+    var near = d.map(function () { return false; });
+    d.forEach(function (x, i) { if (x.op !== " ") for (var k = Math.max(0, i - CTX); k <= Math.min(d.length - 1, i + CTX); k++) near[k] = true; });
+    var skipped = 0;
+    function flush() { if (skipped) { pre.appendChild(el("span", { class: "fold", text: "   ... " + skipped + " unchanged line" + (skipped === 1 ? "" : "s") + "\n" })); skipped = 0; } }
+    d.forEach(function (x, i) {
+      if (!near[i]) { skipped++; return; }
+      flush();
+      pre.appendChild(el("span", { class: x.op === "+" ? "add" : x.op === "-" ? "del" : "same", text: (x.op === " " ? "  " : x.op + " ") + x.line + "\n" }));
+    });
+    flush();
+    return pre;
+  }
+  function showPlan(plan, acct, out, st, onApplied) {
+    if (plan.action === "cloudformation.update_stack") return showStackPlan(plan, acct, out, st, onApplied);
     out.textContent = ""; say(st, "Reading the role as it is now, with the change role...");
     assume(acct, plan.role).then(function (c) {
       return getRole(c, plan.target_role).then(function (before) {
         var r = Plans.apply(before, plan);
         if (r.unchanged) return say(st, "Nothing to do: " + plan.target_role + " already " + (plan.add ? "trusts " + plan.add.join(", ") : "no longer trusts " + plan.remove.join(", ")) + ".", "ok");
-        out.appendChild(el("h4", { text: "Now" })); out.appendChild(el("pre", { text: JSON.stringify(before, null, 2) }));
-        out.appendChild(el("h4", { text: "After you approve" })); out.appendChild(el("pre", { text: JSON.stringify(r.after, null, 2) }));
+        out.appendChild(el("h4", { text: "What changes (- removed, + added)" }));
+        out.appendChild(diffView(JSON.stringify(before, null, 2), JSON.stringify(r.after, null, 2)));
+        out.appendChild(el("details", { class: "full" }, [el("summary", { text: "The whole policy, now and after" }),
+          el("h4", { text: "Now" }), el("pre", { text: JSON.stringify(before, null, 2) }),
+          el("h4", { text: "After you approve" }), el("pre", { text: JSON.stringify(r.after, null, 2) })]));
         var go = el("button", { type: "button", class: "approve", text: "Approve and apply to " + plan.target_role });
         go.onclick = function () {
           go.disabled = true; say(st, "Applying...");
@@ -308,6 +373,7 @@
           }).then(function () { return getRole(c, plan.target_role); }).then(function (now) {
             // Checked by reading the role back: it must hold exactly the planned policy.
             var ok = Plans.same(now, r.after);
+            if (ok && onApplied) setTimeout(onApplied, 1500);
             say(st, ok ? "Applied and checked: " + plan.target_role + (r.added ? " now trusts " + r.added.join(", ") : " no longer trusts " + r.removed.join(", ")) + "." : "Applied, but the role read back differs from the plan. Read it again.", ok ? "ok" : "bad");
           }).catch(function (e) { go.disabled = false; say(st, e.message, "bad"); });
         };
@@ -336,7 +402,7 @@
       return status;
     });
   }
-  function showStackPlan(plan, acct, out, st) {
+  function showStackPlan(plan, acct, out, st, onApplied) {
     out.textContent = ""; say(st, "Reading the stack's template as it is now, with the change role...");
     assume(acct, plan.role).then(function (c) {
       return Promise.all([
@@ -344,10 +410,8 @@
         fetch(plan.template).then(function (r) { return r.text(); })
       ]).then(function (t) {
         var before = t[0], after = t[1];
-        if (before.trim() === after.trim()) return say(st, "Nothing to do: " + plan.stack + " already runs this site's template.", "ok");
-        var diff = Plans.lineDiff(before, after), pre = el("pre", { class: "diff" });
-        diff.forEach(function (x) { pre.appendChild(el("span", { class: x.op === "+" ? "add" : x.op === "-" ? "del" : "same", text: x.op + " " + x.line + "\n" })); });
-        out.appendChild(el("h4", { text: "The template: what changes (- now, + after)" })); out.appendChild(pre);
+        if (Plans.sameTemplate(before, after)) return say(st, "Nothing to do: " + plan.stack + " already runs this site's template.", "ok");
+        out.appendChild(el("h4", { text: "The template: what changes (- removed, + added)" })); out.appendChild(diffView(before, after));
         var go = el("button", { type: "button", class: "approve", text: "1. Approve: ask AWS what this will change" });
         go.onclick = function () {
           go.disabled = true; say(st, "Asking CloudFormation for a change set (nothing changes yet)...");
@@ -368,7 +432,7 @@
               run.disabled = true; say(st, "Executing...");
               cfn(c, { Action: "ExecuteChangeSet", StackName: plan.stack, ChangeSetName: name })
                 .then(function () { return pollStack(c, plan, st, 0); })
-                .then(function (status) { say(st, /_COMPLETE$/.test(status) && !/ROLLBACK/.test(status) ? "Applied and checked: " + plan.stack + " is " + status + "." : "Stack ended " + status + ": see its events in CloudFormation.", /ROLLBACK|FAILED/.test(status) ? "bad" : "ok"); })
+                .then(function (status) { if (/_COMPLETE$/.test(status) && !/ROLLBACK/.test(status) && onApplied) setTimeout(onApplied, 1500); say(st, /_COMPLETE$/.test(status) && !/ROLLBACK/.test(status) ? "Applied and checked: " + plan.stack + " is " + status + "." : "Stack ended " + status + ": see its events in CloudFormation.", /ROLLBACK|FAILED/.test(status) ? "bad" : "ok"); })
                 .catch(function (e) { run.disabled = false; say(st, e.message, "bad"); });
             };
             out.appendChild(run);

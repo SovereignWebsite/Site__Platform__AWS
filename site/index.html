@@ -128,6 +128,10 @@
 <section class="panel" id="step3" data-panel="plans" role="tabpanel" aria-labelledby="tab-plans" hidden>
   <div class="panel-head"><h2>Plans</h2><p class="small">Each plan reads what AWS holds now, shows it beside what it will hold after, and changes nothing until you press Approve.</p></div>
   <ul class="grid one" id="plans"></ul>
+  <details class="card history" id="plans-history" hidden>
+    <summary>History: plans already done (<span id="plans-done-count">0</span>)</summary>
+    <ul class="grid one" id="plans-done"></ul>
+  </details>
 </section>
 
 <section class="panel" id="about" data-panel="about" role="tabpanel" aria-labelledby="tab-about">

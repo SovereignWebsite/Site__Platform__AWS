@@ -107,3 +107,11 @@ pre.code .t-num, pre.code .t-lit { color: var(--warn); } pre.code .t-com { color
 pre.code .t-kw { color: #8a3ffc; font-weight: 600; } pre.code .t-fn, pre.code .t-var { color: #0f7b8a; }
 pre.code .t-bad { color: var(--bad); } pre.code .t-warn { color: var(--warn); font-weight: 600; } pre.code .t-punc { color: var(--muted); }
 @media (prefers-color-scheme: dark) { pre.code .t-kw { color: #c7a6ff; } pre.code .t-fn, pre.code .t-var { color: #6fd3e0; } }
+
+details.history summary { cursor: pointer; font-weight: 600; }
+details.history[open] summary { margin-bottom: .8rem; }
+details.history ul.grid > li { box-shadow: none; }
+
+pre.diff span { display: block; } pre.diff .add { background: var(--ok-soft); } pre.diff .del { background: var(--bad-soft); text-decoration: line-through; text-decoration-color: rgba(127,127,127,.5); }
+pre.diff .fold { color: var(--muted); font-style: italic; }
+details.full { margin-top: .6rem; } details.full summary { cursor: pointer; color: var(--muted); font-size: .86rem; }
