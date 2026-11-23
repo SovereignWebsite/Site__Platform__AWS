@@ -10,7 +10,7 @@ Read, in order: CLAUDE.md, docs/team/_common.md (wake loop), the billing.aws.c s
 
 The old session's private key lived only in its container (~/.sg-send, ~/.ssh-sign) and is not carried over; private keys are never copied or printed. A fresh session cannot sign as sha256:cd5b29f632b02d3a.
 - Make a new key (sgit pki keygen, as _common.md says), write a new public bundle to docs/team/keys/billing.aws.a.json, and prepare a new Factory commit on Factory dev per docs/team/keys/README.md (new .iac-commit.txt and .iac-entry.json), replacing the old ones.
-- Tell factory.c (through conductor.aws.a / your from-a note) that the old entry (Factory commit a997bd7, key sha256:cd5b29f632b02d3a) should NOT be landed, or should be landed as retired, because its private half is gone with the old container.
+- The old entry (Factory commit a997bd7, key sha256:cd5b29f632b02d3a) was kept in the landing set (conductor.aws.a, 14:28 UTC) so the old session could push before restart. Once your key is live, ask factory.c to mark the old entry retired (status "retired", retired, retired_note).
 - When signing on the Factory clone, set gpg.ssh.program=ssh-keygen locally: the container's global git config points at another signer, and the first attempt was signed by the wrong key because of it.
 
 ## State (23 Nov ~14:30 UTC)
