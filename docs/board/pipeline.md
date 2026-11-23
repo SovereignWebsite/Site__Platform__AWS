@@ -1,6 +1,6 @@
 # The pipeline: what comes next, and in what order
 
-Kept by pm.aws.c. From Dinis Cruz in pm.aws.c's session, 23 Nov 2026 ~03:05 UTC (summarised faithfully; his words quoted). Each project enters the board when its agents exist and its dependencies are met; the conductor assigns it.
+Kept by pm.aws.a. From Dinis Cruz in pm.aws.a's session, 23 Nov 2026 ~03:05 UTC (summarised faithfully; his words quoted). Each project enters the board when its agents exist and its dependencies are met; the conductor assigns it.
 
 ## What Dinis set for the whole programme
 - **No budget cap here.** "there's no budget at the moment ... we can use as much as we can ... go to town." Five accounts, possibly nine, can take delegated work; this programme has only started on one.
@@ -14,7 +14,7 @@ Kept by pm.aws.c. From Dinis Cruz in pm.aws.c's session, 23 Nov 2026 ~03:05 UTC 
 
 ### P1. Follow the packet (the flagship view)
 "I want to see the exact package. I want to see the exact IAM use. I want to see the exact resources that we use." A live architecture diagram, threat-model style, drawn with the team's characters and game engine: follow one request through every component, replay it, speed it up, slow it down, see its logs. On the twin first (synthetic data), then live data, which also checks the twin is right. Five UIs.
-- **Needs:** the characters from PrompTugal__News__Bulletins (they already render, navigate and move) and, for moving and jumping, "something a bit more pragmatic" built here by viz.aws.c with swarm.aws.c (Dinis, ~03:35 UTC); the twin (TW-1), the API layer (AR-1), a visualisation agent, design and UX.
+- **Needs:** the characters from PrompTugal__News__Bulletins (they already render, navigate and move) and, for moving and jumping, "something a bit more pragmatic" built here by viz.aws.a with swarm.aws.a (Dinis, ~03:35 UTC); the twin (TW-1), the API layer (AR-1), a visualisation agent, design and UX.
 - **First step (confirmed by Dinis, ~03:35 UTC):** one visitor loads a page on a Sovereign Website: CloudFront, S3, the log through Firehose, the vault it touches, and the cost of that one request. "to have different data, and to visualize, again, step by step, color-coded, really nicely, zoomed in, zoomed out". Storyboard first, on the twin.
 
 ### P2. The fractal semantic graph of everything
@@ -24,11 +24,11 @@ Kept by pm.aws.c. From Dinis Cruz in pm.aws.c's session, 23 Nov 2026 ~03:05 UTC 
 
 ### P3. Vaults as the capture store
 S3 always works, but vaults also capture the events and map the capabilities: live reads, snapshots, the graph's cross-mapping.
-- **Needs:** vaults.aws.c (VA-1).
+- **Needs:** vaults.aws.a (VA-1).
 
 ### P4. Billing connected to everything, in real time, and predicted
 "the direct connection of billing to everything that happens, and including the ability to predict billing." Real-time billing estimated from logs, compared with the real bill afterwards ("when we got it right, when we got it wrong"), close enough to trust.
-- **Needs:** a new accountant for AWS billing (billing.aws.c; distinct from accountant.c, which keeps the team's own spend), AWS's public price lists, the logs (EX-1), Cost Explorer reads (already in the read role).
+- **Needs:** a new accountant for AWS billing (billing.aws.a; distinct from accountant.c, which keeps the team's own spend), AWS's public price lists, the logs (EX-1), Cost Explorer reads (already in the read role).
 - **First step:** a price model of today's stack from public pricing, run over twin traffic.
 
 ### P5. The time lapse: everything linked, Kibana style
@@ -41,11 +41,11 @@ Add EC2 as short-lived infrastructure, with metrics from the start.
 
 ### P7. Scoped access with budgets
 "Why can't I create a key, an access for a user that only has access to some capabilities, or maybe call some models": access made on demand (through the same Google sign-in, or keys), limited to chosen capabilities and models, with budgets, that can be blocked and are watched for abuse.
-- **Needs:** iam.aws.c, security (all three views), P4 for budgets; Dinis's choice of models (decision, later).
+- **Needs:** iam.aws.a, security (all three views), P4 for budgets; Dinis's choice of models (decision, later).
 
 ### P8. Feature launches, AWS style
 "you should be getting to the point where you're producing regular feature updates ... hey, this just launched." Documentation of everything, and a steady stream of launch posts.
-- **Needs:** journalist.aws.c now (more than one if the launches outpace one), the parity tracker.
+- **Needs:** journalist.aws.a now (more than one if the launches outpace one), the parity tracker.
 
 ## Proposed order (PM's recommendation; Dinis changes it at will)
 - **Now, in parallel with the AWS areas:** P8 (journalist), P2 (ontologist starts the ontology), P1 storyboard on the twin, P4 price model on the twin, P5 client data layer design.
@@ -53,4 +53,4 @@ Add EC2 as short-lived infrastructure, with metrics from the start.
 - **After the IAM area and a security review:** P6 EC2, then P7 scoped access (the riskiest: it hands out access).
 
 ## New roles this adds
-ontology.aws.c; billing.aws.c; viz.aws.c (the game engine and characters); dev.1 to dev.4.aws.c; ec2.aws.c later; a second journalist if needed.
+ontology.aws.a; billing.aws.a; viz.aws.a (the game engine and characters); dev.1 to dev.4.aws.c; ec2.aws.c later; a second journalist if needed.
