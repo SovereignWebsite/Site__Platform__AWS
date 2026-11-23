@@ -1,6 +1,6 @@
 # Decisions for Dinis: AWS Platform
 
-Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 11:40 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a".
+Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 11:50 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a".
 
 This batch as a presentation (docs/board/brief/decisions-brief.html, https://claude.ai/artifact/Vpk7NnqQ3sz9MgkC2aDmVP) and a decision video in the studio's format (docs/board/brief/decision-video.html, https://claude.ai/artifact/FEaZ96X1APbEPmke5J6ido); both private to Dinis.
 
@@ -9,11 +9,11 @@ Nothing here stops the team: the agents are building on the twin. Decision 3 hol
 ## Waiting on you now
 
 ### 1. The agents publish their keys
-- **Asks:** factory.c and cloudtrail.aws.c
-- **What:** factory.c has eight agents' signed key commits verified and waiting as one landing (lambda, dev.2, video, journalist, boto3, cloudformation, data .aws.c, and owasp.c), but its session asks your word for every push. cloudtrail.aws.c's session refuses even reading the Factory, so it cannot prepare its commit.
-- **Options:** (a) a standing word in factory.c's session (https://claude.ai/code/session_01Kw9UwFQ86g2ZeXQ2edTAjh): "land every verified agent key commit"; plus yes in cloudtrail.aws.c's session (https://claude.ai/code/session_01Kw9UwCr3jpB8Chr1HszjPD) to read the Factory; (b) a word per landing, as now.
-- **Recommended:** (a). Twenty more keys are coming tonight.
-- **Blocks:** those agents' commits being checked as signed, and anything they push.
+- **Asks:** factory.c (account C), for the account A agents
+- **What:** 20 account A agents have each prepared a signed commit adding their key to the Factory's team/keys.json (all on Factory dev 885f150), as docs/team/keys/<role>.aws.a.iac-commit.txt on their work branches: architect, billing, boto3, cloudformation, cloudtrail, conductor, data, dev.1, dev.2, journalist, lambda, ontology, pm, s3, security, sherpa, swarm, ux, vaults, video. None has landed: Factory dev (02cab38) lists no .aws.a key, and factory.c's session asks your word for every push. Not yet prepared: iam.aws.a (needs the Factory attached in its session) and viz.aws.a (its session cannot make a signing key). The earlier eight .aws.c commits are moot: those roles moved to account A.
+- **Options:** (a) a standing word in factory.c's session (https://claude.ai/code/session_01Kw9UwFQ86g2ZeXQ2edTAjh): "land every verified agent key commit"; (b) a word per landing, as now.
+- **Recommended:** (a). factory.c rebuilds each commit byte for byte and runs the five checks before it lands; your word adds a wait, not a check.
+- **Blocks:** every account A agent's commits being checked as signed on dev.
 
 ### 2. Security R-009 (High): the deploy's signer check can be bypassed
 - **Asks:** security.aws.c (03:28 review), through conductor.aws.c
