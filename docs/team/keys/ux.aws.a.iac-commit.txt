@@ -1,0 +1,18 @@
+sha abd2d0aa1028b56acddd117ae47dacd30049917c
+tree 7d413c32e61dd199a38d0ce6f7624065197e898a
+parent 885f150d48cd09601345a803a28669afea04c95d
+author ux.aws.a <ux.aws.a@SovereignWebsite.dinis> 1795449314 +0000
+committer ux.aws.a <ux.aws.a@SovereignWebsite.dinis> 1795449314 +0000
+gpgsig -----BEGIN SSH SIGNATURE-----
+ U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
+ EERX2nmlrww3Z4YJ2mlQjSsRy75b1nU+UyveH5+u2ES9hnCwX5T3icg1T2mDWOLI/Out5F
+ onIySTMvthX7ItYd1gAAAANnaXQAAAAAAAAABnNoYTUxMgAAAGUAAAATZWNkc2Etc2hhMi
+ 1uaXN0cDI1NgAAAEoAAAAhALheqMjveX9tVKbdYzVq/iAt63lxeOoxLrRKFiioeaIyAAAA
+ IQCsSvyr7ikuuBwXwZSHDaHE0ycmqBRVedebWAcCBKCK3w==
+ -----END SSH SIGNATURE-----
+
+team/keys.json: ux.aws.a's own key
+
+Agent: ux.aws.a@SovereignWebsite.dinis
+Claude-Session: https://claude.ai/code/session_018yvwtPrRuTC5Gpgcnd3neb
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

@@ -1,0 +1,23 @@
+{
+  "id": "ux-aws-a-sovereignwebsite",
+  "agent": "ux.aws.a@SovereignWebsite.dinis",
+  "role": "Design and UX of the AWS Platform programme on account A (Site__Platform__AWS docs/design/): the five console designs over one API layer, the S3 browser's next level and the Try the twin pattern, judged by a first-time user. Takes over from ux.aws.c; started by maestro.a at Dinis Cruz's word. A session key: it ends with its session.",
+  "how": "Made by the agent in its own session on 23 November 2026 with sgit pki keygen; public bundle from sgit pki export. Only the public half is here. Replaces the key of the earlier ux.aws.a session (sha256:d749fa051c41924c), which was never landed.",
+  "created": "2026-11-23",
+  "status": "active",
+  "session": "https://claude.ai/code/session_018yvwtPrRuTC5Gpgcnd3neb",
+  "fingerprint": "sha256:b6dca6f336d7308c",
+  "signing_fingerprint": "sha256:d993442964cc6266",
+  "bundle": {
+    "v": 1,
+    "encrypt": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAvZSGjZx1YrK2lFufN8RV\nsIcIx/+wNZAwHI6iOgCsU4ree+QreS0akf9PugbR+chSAHqMEdwEBH51v35N5Ll7\nyagUb4KCO60YHuSjD6LL7z2w+l0B/JSZwQ9xu3reRQ6So7kDvM/rbsSweNKm7M9V\nyrvuexrAX8kG80VolOk9Xjc233Zhk12Z0cnkUwCfUgI6J22HyrPUjhhdErKoQZMt\nmJ3J+1ytxMQknwSgQ7OflkUfGFr6lOux0+HMMeowKf7rdqMSANMndxpz7lBnUnV8\ne6Lnb1IHoRQUjjSCuQlndr9eguwu2hv3sawYXxsg442ATy6ldonfXG6jcdteoSfD\nyPTwI40D2vvvLBll5oYXLQqY4i7/NZoXthSVJTRNKB5ZoDlctIvHvScoo5TrV3SH\nvawi+XHpgxIxlKX2I7OvaoudNKx6An+ZqhsML41QEhnHZcgtpxyrjbc8onZID/KU\npZE+AMrRajZuc938aYuS5Uofy8+JHNtj3OByxLCDs0v6mvPlTAH7ffDymjyzbOIx\n5VEmbYcxhxaqOsKG7d7lEmWVmDav+hrMdtBPbOwBnw2a4pPRW7bXCAghF2EXJ1Gx\nXQl/AoBS40sEabhcV/OxHydmOMcVucrfTUv+9iDRomgPIq9BUoAzf7rfqQ+Tkr7q\n6J+e7A585EGwpQ5ltoZRmPcCAwEAAQ==\n-----END PUBLIC KEY-----\n",
+    "sign": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAERX2nmlrww3Z4YJ2mlQjSsRy75b1n\nU+UyveH5+u2ES9hnCwX5T3icg1T2mDWOLI/Out5FonIySTMvthX7ItYd1g==\n-----END PUBLIC KEY-----\n",
+    "label": "ux.aws.a@SovereignWebsite.dinis",
+    "fingerprint": "sha256:b6dca6f336d7308c",
+    "signing_fingerprint": "sha256:d993442964cc6266"
+  },
+  "ssh_signing": {
+    "from": "bundle.sign",
+    "note": "build/check-signatures.mjs derives the OpenSSH form from bundle.sign and verifies each commit with git verify-commit."
+  }
+}
