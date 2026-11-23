@@ -4,6 +4,8 @@
 // Targets use ontology.aws.a's node ids (ARNs) and type names (docs/ontology/2026-11-23__01-resource-ontology.md).
 (function (root) {
   "use strict";
+  // Derived ids (resources without an ARN): the graph's prefix. "twin:" today; "urn:sws:" if ontology.aws.a agrees (design 03).
+  var DERIVED = "twin:";
   var LABELS = { "sws-aws-platform-read": "the read role", "sws-aws-platform-change": "the change role" };
 
   function who(u) {
@@ -30,9 +32,9 @@
     if (p.roleName) role(p.roleName);
     if (p.roleArn) { var ra = roleFromArn(p.roleArn); if (ra) role(ra.name, ra.account); }
     if (p.policyArn) out.push({ type: "policy", id: p.policyArn, name: p.policyArn.split("/").pop() });
-    if (p.stackName) out.push({ type: "stack", id: "twin:cloudformation/stack/" + p.stackName, name: p.stackName }); // stack ARNs carry an id CloudTrail requests do not; *to agree with ontology*
+    if (p.stackName) out.push({ type: "stack", id: "arn:aws:cloudformation:" + r.awsRegion + ":" + acct + ":stack/" + p.stackName, name: p.stackName }); // as the graph names stacks (no stack uuid)
     if (svc === "cloudcontrolapi" && p.typeName === "AWS::S3::Bucket") bucket(p.identifier);
-    if (svc === "cloudtrail" && p.name) out.push({ type: "trail", id: "twin:cloudtrail/trail/" + p.name, name: p.name });
+    if (svc === "cloudtrail" && p.name) out.push({ type: "trail", id: DERIVED + "cloudtrail/trail/" + p.name, name: p.name });
     if (p.functionName) out.push({ type: "function", id: "arn:aws:lambda:" + r.awsRegion + ":" + acct + ":function:" + p.functionName, name: p.functionName });
     return out;
   }
@@ -76,6 +78,7 @@
       targets: targets(r),
       raw: r
     };
+    e.node = e.id ? DERIVED + "event/cloudtrail/" + e.id : null; // the event's own graph node id
     e.words = words(e);
     return e;
   }
@@ -109,5 +112,8 @@
     return { events: out, skipped: skipped };
   }
 
-  root.CloudTrailReader = { read: read, merge: merge, normalise: normalise };
+  // The event as handed to the graph: everything but raw (kept for the detail panel only, design 03).
+  function forGraph(e) { var o = {}; for (var k in e) if (k !== "raw") o[k] = e[k]; return o; }
+
+  root.CloudTrailReader = { read: read, merge: merge, normalise: normalise, forGraph: forGraph };
 })(typeof window !== "undefined" ? window : globalThis);
