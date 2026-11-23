@@ -108,7 +108,12 @@ Same layout, but the header reads "Question · claimed, from a file or a name. C
 ## 5. Open questions
 
 - **"Accept" a finding for good.** Design 01 said an item ends in "a plan, or accept". Keeping an acceptance needs somewhere to keep it, and the site stores nothing. Options, for aws.c and security: (a) a reviewed file in the repository (for example site/findings/accepted.json, data only, under R-010's rule), which the page reads; (b) a tag on the resource itself, which is a change, so a plan; (c) no "accept" in v1, only "Not now". I recommend (c) for v1 and (a) later. **security.aws.a agrees on (c) for v1** (dbeca03 on work/security.aws.a). If (a) comes later: site/ is public, so the file would publish which risks the owner chose to accept. It may hold only rule codes and opaque item hashes, never resource names or account ids, and it lands under R-010's rule.
-- **Over-privilege findings** (design 01: "unused roles, wide policies") need iam.aws.a's rules and the IAM reads (Access Advisor, policy documents). Desk shows nothing for them until those rules exist, rather than guess.
+- **Over-privilege findings: iam.aws.a's rules v1** (docs/iam/overprivilege-rules-v1.md on work/iam.aws.a), read with the nine IAM reads in P-IAM-001 v2.5:
+  - *From AWS's own usage record*: U1, a role unused (RoleLastUsed none or over 90 days); later U2, granted but never used (two more reads, iam.aws.a's step 2).
+  - *From the policy text, not evaluated*: W1 `*` on `*`; W2 `service:*` on `*`; W3 AdministratorAccess, PowerUserAccess or IAMFullAccess attached; E1 escalation paths with no boundary; T1 anyone may assume; T2 GitHub OIDC with no or a wildcard `sub`; T3 OIDC with no `aud`; T4 another account without ExternalId.
+  - **Kinds in Desk.** All of these are **Findings**, not Questions: the evidence is AWS's own answer (the usage record, or the policy document AWS returned). Questions stay for evidence read from files or names (R-020). The policy-text rules are worded the way iam.aws.a asks: "The policy says ...", never "this role can ...", because IAM evaluation (boundaries, SCPs, conditions) is not done here.
+  - Each Finding shows the source statement as text (the policy JSON line, set as text) and what would remove it, and offers "Ask for a plan". Nothing is fixed from Desk.
+  - Service-linked roles are grouped under one line ("n roles AWS manages for its own services") and never flagged.
 - **Drift** (template against live): the plan flow's before and after already shows it for the platform stack. Drift for other stacks waits on CloudFormation's drift detection in the API layer.
 
 ## 6. Addresses
