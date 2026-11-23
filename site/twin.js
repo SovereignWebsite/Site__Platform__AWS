@@ -85,6 +85,7 @@
   function build() {
     if (state) return state;
     var objects = {}; // bucket -> key -> { body: Promise<Uint8Array>, type, modified }
+    var hours = []; // one per delivered log file: { at: ISO hour, lines: [parsed lines] } (the metrics are built from these)
     function put(bucket, key, type, body, when) { (objects[bucket] = objects[bucket] || {})[key] = { body: Promise.resolve(body).then(function (b) { return typeof b === "string" ? enc.encode(b) : b; }), type: type, modified: when || "2026-11-20T09:00:00.000Z" }; }
     // a small static site
     put(B.site, "index.html", "text/html", "<!doctype html>\n<html lang=\"en-GB\">\n<head><title>Demo site</title></head>\n<body><h1>Demo site</h1><p>Served from S3 through CloudFront.</p></body>\n</html>\n");
@@ -112,6 +113,7 @@
         }
         lines.sort();
       }
+      hours.push({ at: "2026-11-" + day + "T" + pad(hour) + ":00:00Z", lines: lines.map(function (l) { return JSON.parse(l); }) });
       put(B.logs, "cloudfront/2026/11/" + day + "/" + pad(hour) + "/demo-distribution-1-2026-11-" + day + "-" + pad(hour) + "-00-00.gz", "application/x-gzip", gzip(enc.encode(lines.join("\n") + "\n")), "2026-11-" + day + "T" + pad(hour) + ":59:00.000Z");
     }
     // Lambda dependencies as zips
@@ -149,6 +151,7 @@
         Condition: { StringEquals: { "accounts.google.com:aud": "twin-client-id.apps.googleusercontent.com", "accounts.google.com:sub": "000000000000000000001" } } }] };
     }
     state = {
+      hours: hours,
       objects: objects, cors: seedCors(),
       roles: { "sws-aws-platform-read": platformTrust(), "sws-aws-platform-change": platformTrust(), "sovereignwebsite-factory-dns": { Version: "2012-10-17", Statement: [{ Effect: "Allow", Principal: { Federated: "arn:aws:iam::" + ACCOUNT + ":oidc-provider/token.actions.githubusercontent.com" }, Action: "sts:AssumeRoleWithWebIdentity",
         Condition: { StringEquals: { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com", [K]: ["repo:SovereignWebsite@358722364/SovereignWebsite__IaC@1464324035:environment:apply", "repo:SovereignWebsite@358722364/SovereignWebsite__Factory@1464324035:environment:apply"] } } }] } },
@@ -334,6 +337,53 @@
     return firehoseJson({ __type: "UnknownOperationException", message: "Not in the twin yet: " + target }, 400);
   }
 
+  // CloudWatch GetMetricData (Query protocol, API version 2010-08-01), read only. lambda.aws.a, 23 Nov 2026.
+  // Every value comes from the hourly log files the stream delivered, so charts and logs agree:
+  // AWS/Firehose IncomingRecords and DeliveryToS3.Records = lines in that hour's file;
+  // AWS/Lambda for demo-handler (the vault API) = requests to /vault/<id>/files (Errors: those answered 4xx or 5xx;
+  // Duration: their mean time_taken in ms); demo-log-enricher runs once per 900 s buffer, 4 times an hour, its
+  // Duration growing with the lines; demo-nightly-report runs at night, so these hours have no datapoints.
+  // Synthetic, as the rest of the twin. Datapoints exist only for the hours that have log files.
+  function metricSeries(ns, name, dims, stat, h) {
+    var d = Object.create(null); dims.forEach(function (x) { d[x[0]] = x[1]; });
+    var L = h.lines, api = L.filter(function (l) { return /^\/vault\/[^/]+\/files/.test(l.cs_uri_stem); });
+    var mean = function (a) { return a.length ? a.reduce(function (s, l) { return s + l.time_taken * 1000; }, 0) / a.length : null; };
+    if (ns === "AWS/Firehose" && d.DeliveryStreamName === "demo-cloudfront-logs" && (name === "IncomingRecords" || name === "DeliveryToS3.Records")) return stat === "Sum" ? L.length : null;
+    if (ns !== "AWS/Lambda") return null;
+    if (d.FunctionName === "demo-handler") {
+      if (name === "Invocations") return stat === "Sum" ? api.length : null;
+      if (name === "Errors") return stat === "Sum" ? api.filter(function (l) { return l.sc_status >= 400; }).length : null;
+      if (name === "Duration") return stat === "Average" && api.length ? +mean(api).toFixed(2) : null;
+    }
+    if (d.FunctionName === "demo-log-enricher") {
+      if (name === "Invocations") return stat === "Sum" ? 4 : null;
+      if (name === "Errors") return stat === "Sum" ? 0 : null;
+      if (name === "Duration") return stat === "Average" ? +(40 + L.length * 0.8 / 4).toFixed(2) : null;
+    }
+    return null;
+  }
+  function cloudwatch(form, init) {
+    if (!signed(init)) return xmlErr("MissingAuthenticationToken", "Request is missing Authentication Token", 403);
+    if (form.get("Action") !== "GetMetricData") return xmlErr("InvalidAction", "Not in the twin yet: cloudwatch " + form.get("Action"));
+    var t0 = Date.parse(form.get("StartTime") || ""), t1 = Date.parse(form.get("EndTime") || "");
+    if (isNaN(t0) || isNaN(t1) || t1 <= t0) return xmlErr("InvalidParameterValue", "The parameter StartTime must be less than the parameter EndTime.");
+    var asc = form.get("ScanBy") === "TimestampAscending", s = build(), out = [];
+    for (var i = 1; form.get("MetricDataQueries.member." + i + ".Id"); i++) {
+      var q = "MetricDataQueries.member." + i + ".", m = q + "MetricStat.Metric.", dims = [];
+      for (var j = 1; form.get(m + "Dimensions.member." + j + ".Name"); j++) dims.push([form.get(m + "Dimensions.member." + j + ".Name"), form.get(m + "Dimensions.member." + j + ".Value")]);
+      var period = +form.get(q + "MetricStat.Period"), stat = form.get(q + "MetricStat.Stat"), ns = form.get(m + "Namespace"), name = form.get(m + "MetricName");
+      if (period !== 3600) return xmlErr("InvalidParameterValue", "The twin keeps hourly datapoints only: use a Period of 3600.");
+      var pts = s.hours.filter(function (h) { var t = Date.parse(h.at); return t >= t0 && t < t1; })
+        .map(function (h) { return [h.at, metricSeries(ns, name, dims, stat, h)]; }).filter(function (p) { return p[1] !== null; });
+      if (!asc) pts.reverse();
+      out.push("<member><Id>" + esc(form.get(q + "Id")) + "</Id><Label>" + esc(form.get(q + "Label") || name || "") + "</Label><Timestamps>" +
+        pts.map(function (p) { return "<member>" + p[0] + "</member>"; }).join("") + "</Timestamps><Values>" +
+        pts.map(function (p) { return "<member>" + p[1] + "</member>"; }).join("") + "</Values><StatusCode>Complete</StatusCode></member>");
+    }
+    return xml("<GetMetricDataResponse xmlns=\"http://monitoring.amazonaws.com/doc/2010-08-01/\"><GetMetricDataResult><MetricDataResults>" + out.join("") +
+      "</MetricDataResults><Messages/></GetMetricDataResult><ResponseMetadata><RequestId>twin-metrics</RequestId></ResponseMetadata></GetMetricDataResponse>");
+  }
+
   // Answer a request as AWS would. Returns a Promise of a Response, or null if the host is not AWS.
   function handle(url, init) {
     init = init || {};
@@ -347,6 +397,7 @@
       else if (/^ce\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = ce();
       else if (/^cloudcontrolapi\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudcontrol((hdr(init, "x-amz-target") || "").split(".")[1], body, init, host);
       else if (/^lambda\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = lambda(url, init);
+      else if (/^monitoring\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudwatch(new URLSearchParams(body), init);
       else if (/^firehose\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = firehose((hdr(init, "x-amz-target") || "").split(".")[1], body, init);
       else if (/\.?s3\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = s3(url, init);
       else return null;
