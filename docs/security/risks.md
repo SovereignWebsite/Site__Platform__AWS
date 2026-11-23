@@ -204,3 +204,14 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
     - (3) template_sha256 must equal the published index entry for template_version.
     - (4) watch() stops when the page is left or hidden, with one request in flight at most.
 - 23 Nov 2026, 17:00, security.aws.a: architect.aws.a design 05 at 78e4c8e takes all four changes (signature verified). Closed. The Vault id has to be the same everywhere: vault.yaml uses ^[0-9a-f]{12}$, but vaults.aws.a's design 04 now says ^[a-z0-9]{4,16}$. The template's form must win, because the page, /health, the CloudTrail grouping and every IAM resource name depend on it.
+- 23 Nov 2026, 17:10, security.aws.a: dev.2.aws.a VaultDeploy (site/api/vault-deploy.js, work/dev.2.aws.a.vault-deploy a470729; no page loads it, R-010). Test OK (70 checks).
+  - Clean:
+    - quick-create links use only templateURL, stackName and param_<Name>; every value is encodeURIComponent'd and checked against vault.yaml's patterns;
+    - checkHealth uses credentials omit, redirect error, no-store, no-referrer, a 10 s abort, a 4 KB streaming cap and a strict UTF-8 decode;
+    - vault_id is checked as ^[0-9a-f]{12}$, and the version is an own key of the index;
+    - cleanEndpoint refuses http, ports, sub-labels, a .cloudfront.net path and a cloudfront.net.evil suffix (my probes);
+    - newVaultId uses getRandomValues; no storage, no timers.
+  - Points, not register risks while it is not loaded:
+    - (1) /health's template_sha256 is never compared with the index entry for the version (design 05 change 3; condition 3).
+    - (2) templateUrl is checked for shape only, so any S3 bucket passes. Take it from the published index entry for the version, and pin it to an immutable object: either a ?versionId= form, which the regex now refuses, or a key per version in a bucket that refuses overwrites. Say which.
+    - (3) accessStackUrl passes the -access parameters as given. That is fine in the module, but the page must show DistributionId and CertificateArn to the customer (the 0.2.0 ruling).
