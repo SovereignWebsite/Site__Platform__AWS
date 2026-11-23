@@ -1,0 +1,18 @@
+sha 12b1557c10c5905baffb8bbdd69befcfe33b1702
+tree 83b9a9e9455e17814888babb3e8534cb498009f1
+parent 885f150d48cd09601345a803a28669afea04c95d
+author Claude <noreply@anthropic.com> 1795415535 +0000
+committer Claude <noreply@anthropic.com> 1795415535 +0000
+gpgsig -----BEGIN SSH SIGNATURE-----
+ U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
+ EEHtuVhesnoN3ATtQdBf0KG/mP/VtnQKlzpMyuYb3CuIWawwjaQp5Zv4NXKoBjUpnVSvCg
+ m+PwL0IgGxOh4sKC9wAAAANnaXQAAAAAAAAABnNoYTUxMgAAAGUAAAATZWNkc2Etc2hhMi
+ 1uaXN0cDI1NgAAAEoAAAAhAIpFtOrPcDWMEQ7P0BRj1uL9qk8xp58Z5zS54igUJzwVAAAA
+ IQCthpxJDmFPdpqz5uf5uv9AT6Xo2/qdAa26zbgkkUbxVw==
+ -----END SSH SIGNATURE-----
+
+Keys: cloudtrail.aws.a publishes its own key
+
+Agent: cloudtrail.aws.a@SovereignWebsite.dinis
+Claude-Session: https://claude.ai/code/session_018yvwtLsVZvQ5dyyKz8ndG2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
