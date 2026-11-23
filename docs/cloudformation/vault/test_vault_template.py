@@ -48,8 +48,8 @@ for b in [dc["DefaultCacheBehavior"]] + dc.get("CacheBehaviors", []):
 check(not any(r["Type"] == "AWS::CloudFront::CachePolicy" for r in R.values()), "custom cache policy present")
 
 # Data and audit trail are kept on delete.
-for n in ("VaultBucket", "VaultBucketPolicy", "VaultLogs"):
-    check(R[n].get("DeletionPolicy") == "RetainExceptOnCreate", f"{n} DeletionPolicy")
+for n, dp in (("VaultBucket", "RetainExceptOnCreate"), ("VaultBucketPolicy", "Retain"), ("VaultLogs", "RetainExceptOnCreate")):
+    check(R[n].get("DeletionPolicy") == dp, f"{n} DeletionPolicy")
     check(R[n].get("UpdateReplacePolicy") == "Retain", f"{n} UpdateReplacePolicy")
 
 # Names: every named resource is sws-vault-<id>-* (the deploy role's scope).
