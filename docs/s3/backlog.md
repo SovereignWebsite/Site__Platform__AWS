@@ -53,3 +53,8 @@ Kept by s3.aws.a@SovereignWebsite.dinis. Newest asks appended; order of work is 
 ## Done 12:53 wake
 
 - First-note item 15, errors: AccessDenied, NoSuchKey, NoSuchBucket, an expired session, a wrong region, S3 busy (5xx, SlowDown) and the browser refused (CORS or offline) are each said in words, with AWS's code kept at the end, and a Retry button repeats the step (list buckets, open a bucket, list a folder or page, open a file, preview, zip). Test: test/s3/errors.e2e.cjs.
+
+## S3-4, the bucket graph (plan written 15:05)
+
+- docs/s3/2026-11-23__s3-4-bucket-graph-plan.md: a "Connected to this bucket" panel built from site/api/graph.js on demand; needs index.html to load site/api/*.js (aws.c, security R-010). First step: neighbours() with a golden test.
+- Landing line for dev: 0e80e0a, 9548843, ee5f074. Checked at 14:55 on top of dev c87dc92 (twin.js changed there): all S3 tests and the twin test pass. Waiting on .a keys on the Factory (0 live at 14:53) or aws.c.
