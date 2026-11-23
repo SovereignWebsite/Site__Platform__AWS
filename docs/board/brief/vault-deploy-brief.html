@@ -1,0 +1,887 @@
+<title>Vault Deploy Brief</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a briefing desk. The stage (the animated decision) on the left, the written brief on the right, the transport bar under the stage. */
+:root{
+  --bg:#eef1f4; --paper:#ffffff; --ink:#15202e; --mute:#5b6878; --line:#c9d1db;
+  --accent:#c47a12;  /* the decision itself: amber */
+  --risk:#b4322a; --ok:#11786b; --hold:#6b5bb5;
+  --stage:#f8fafb; --chip:#e6ebf0;
+  --f-display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body:"IBM Plex Sans", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f151d; --paper:#18212c; --ink:#e4e9ef; --mute:#93a0b0; --line:#2f3b4a;
+  --accent:#e9a43c; --risk:#ec6b5f; --ok:#3fbfa9; --hold:#a596f0; --stage:#131b25; --chip:#223040; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f151d; --paper:#18212c; --ink:#e4e9ef; --mute:#93a0b0; --line:#2f3b4a;
+  --accent:#e9a43c; --risk:#ec6b5f; --ok:#3fbfa9; --hold:#a596f0; --stage:#131b25; --chip:#223040; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1280px;margin:0 auto;display:grid;gap:16px}
+header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px}
+h1{font:800 clamp(22px,3vw,30px)/1.1 var(--f-display);margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--mute);margin:4px 0 0;font-size:14px}
+.tabs{display:flex;gap:4px;background:var(--chip);padding:4px;border-radius:8px}
+.tabs button{border:0;background:transparent;color:var(--ink);font:500 14px var(--f-body);padding:6px 14px;border-radius:6px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--paper);box-shadow:0 1px 2px #0002}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.desk{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.desk{grid-template-columns:minmax(0,1fr)}}
+.stagebox{background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:0}
+.scenehead{display:flex;justify-content:space-between;gap:8px;align-items:baseline;padding:10px 14px;border-bottom:1px solid var(--line)}
+.eyebrow{font:500 12px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.scenetitle{font:700 17px/1.25 var(--f-display);margin:2px 0 0;text-wrap:balance}
+.clock{font:400 12px var(--f-mono);color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
+.stage{position:relative;background:var(--stage);aspect-ratio:16/9;max-width:100%}
+.stage svg{position:absolute;inset:0;width:100%;height:100%}
+.caption{min-height:3.6em;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px 18px;border-top:1px solid var(--line);background:var(--ink);color:var(--paper);font:500 clamp(14px,1.5vw,16px)/1.45 var(--f-body);text-wrap:balance}
+.transport{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;border-top:1px solid var(--line)}
+.btn{border:1px solid var(--line);background:var(--paper);color:var(--ink);font:500 13px var(--f-body);padding:6px 12px;border-radius:6px;cursor:pointer}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink);min-width:78px}
+.btn[aria-pressed="true"]{background:var(--chip)}
+.scrub{flex:1 1 200px;min-width:0;accent-color:var(--accent)}
+.chapters{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 12px}
+.chapters button{border:1px solid var(--line);background:transparent;color:var(--mute);font:500 12px var(--f-mono);padding:3px 9px;border-radius:999px;cursor:pointer}
+.chapters button.cur{background:var(--accent);border-color:var(--accent);color:#fff}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:16px 18px;display:grid;gap:12px;min-width:0}
+.panel h2{font:700 18px/1.25 var(--f-display);margin:0;text-wrap:balance}
+.panel h3{font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:0 0 4px}
+.panel p{margin:0}
+.opts{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.opts li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px}
+.opts li b{font:700 15px var(--f-display);color:var(--mute)}
+.opts li.rec{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 9%,transparent)}
+.opts li.rec b{color:var(--ok)}
+.opts li.no{opacity:.7}
+.tag{display:inline-block;font:500 11px var(--f-mono);padding:1px 7px;border-radius:999px;background:var(--chip);color:var(--mute);margin-left:6px;vertical-align:1px}
+.tag.rec{background:var(--ok);color:#fff}
+.answer{font:700 clamp(18px,2.4vw,24px) var(--f-mono);letter-spacing:.02em;padding:10px 12px;background:var(--chip);border-radius:8px;user-select:all;overflow-wrap:anywhere}
+.src{font-size:13px;color:var(--mute)}
+.src a{color:inherit}
+.note{font-size:13px;color:var(--mute);border-top:1px solid var(--line);padding-top:10px}
+/* storyboard view */
+.board{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.beat{background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:grid;min-width:0}
+.beat .thumb{aspect-ratio:16/9;background:var(--stage);position:relative;border-bottom:1px solid var(--line);max-width:100%}
+.beat .thumb svg{position:absolute;inset:0;width:100%;height:100%}
+.beat .body{padding:10px 12px;display:grid;gap:6px}
+.beat .meta{font:500 11px var(--f-mono);color:var(--mute);display:flex;justify-content:space-between;gap:8px}
+.beat .nar{font-size:14px}
+.beat .vis{font-size:12.5px;color:var(--mute)}
+/* SVG vocabulary */
+svg text{font-family:var(--f-body);fill:var(--ink)}
+.t-s{font-size:13px}.t-m{font-size:16px;font-weight:600}.t-l{font:800 24px var(--f-display)}.t-xl{font:800 44px var(--f-display)}
+.t-mono{font-family:var(--f-mono);font-size:12px}
+.t-mute{fill:var(--mute)}.t-risk{fill:var(--risk)}.t-ok{fill:var(--ok)}.t-acc{fill:var(--accent)}.t-inv{fill:var(--paper)}
+.bx{fill:var(--paper);stroke:var(--line);stroke-width:1.5}
+.bx-risk{fill:color-mix(in srgb,var(--risk) 10%,var(--paper));stroke:var(--risk);stroke-width:2}
+.bx-ok{fill:color-mix(in srgb,var(--ok) 10%,var(--paper));stroke:var(--ok);stroke-width:2}
+.bx-acc{fill:color-mix(in srgb,var(--accent) 12%,var(--paper));stroke:var(--accent);stroke-width:2}
+.bx-hold{fill:color-mix(in srgb,var(--hold) 10%,var(--paper));stroke:var(--hold);stroke-width:2}
+.bx-ghost{fill:none;stroke:var(--line);stroke-width:1.5;stroke-dasharray:6 5}
+.fill-ink{fill:var(--ink)}.fill-risk{fill:var(--risk)}.fill-ok{fill:var(--ok)}.fill-acc{fill:var(--accent)}.fill-chip{fill:var(--chip)}.fill-hold{fill:var(--hold)}
+.ln{fill:none;stroke:var(--mute);stroke-width:2}
+.ln-risk{fill:none;stroke:var(--risk);stroke-width:2.5}
+.ln-ok{fill:none;stroke:var(--ok);stroke-width:2.5}
+.dash{stroke-dasharray:7 6}
+.draw{stroke-dasharray:1 1}
+.cue{opacity:0;transform:translateY(6px);transition:opacity .45s ease,transform .45s ease;transform-box:fill-box}
+.cue.on{opacity:1;transform:none}
+.cue.pop{transform:scale(.85);transform-origin:center}.cue.pop.on{transform:none}
+.mover{transition:none}
+@media (prefers-reduced-motion: reduce){.cue{transition:none}}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Deploy a Vault: ten decisions</h1>
+      <p class="sub">AWS Platform programme · from <span class="t-mono">docs/board/decisions.md</span>, 23 Nov 2026, 15:30 UTC (batch 2) · kept by pm.aws.a</p>
+    </div>
+    <div class="tabs" role="tablist" aria-label="View">
+      <button role="tab" id="tab-brief" aria-selected="true" aria-controls="view-brief">Brief</button>
+      <button role="tab" id="tab-board" aria-selected="false" aria-controls="view-board">Storyboard</button>
+    </div>
+  </header>
+
+  <section id="view-brief" class="desk" role="tabpanel" aria-labelledby="tab-brief">
+    <div class="stagebox">
+      <div class="scenehead">
+        <div><div class="eyebrow" id="eyebrow"></div><div class="scenetitle" id="scenetitle"></div></div>
+        <div class="clock" id="clock">0:00 / 0:00</div>
+      </div>
+      <div class="stage" id="stage" aria-live="off"></div>
+      <div class="caption" aria-hidden="true" id="caption"></div>
+      <p class="sr" aria-live="polite" id="srcaption"></p>
+      <div class="transport">
+        <button class="btn" id="prev" aria-label="Previous decision">◀</button>
+        <button class="btn primary" id="play">Play</button>
+        <button class="btn" id="next" aria-label="Next decision">▶</button>
+        <input class="scrub" id="scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="Position in the brief">
+        <button class="btn" id="mode" aria-pressed="false" title="Slides mode stops at the end of each decision">Slides</button>
+        <button class="btn" id="voice" aria-pressed="false" title="Speaks the captions with your browser's built-in synthetic voice">Voice</button>
+      </div>
+      <div class="chapters" id="chapters"></div>
+    </div>
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+  </section>
+
+  <section id="view-board" role="tabpanel" aria-labelledby="tab-board" hidden>
+    <p class="sub" style="margin:0 0 12px">Every beat of the brief: what is said, what is shown, where the fact comes from. The same beats are in <span class="t-mono">vault-deploy.storyboard.json</span> beside this page, for studio.c.</p>
+    <div class="board" id="board"></div>
+  </section>
+</div>
+
+<script type="application/json" id="storyboard">
+{
+ "title": "Deploy a Vault: ten decisions",
+ "source": "docs/board/decisions.md, batch 2, on work/pm.aws.a, 23 Nov 15:30 UTC",
+ "made_by": "pm.aws.a@SovereignWebsite.dinis",
+ "answer": "V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a",
+ "scenes": [
+  {
+   "id": "intro",
+   "eyebrow": "Batch 2",
+   "title": "Deploy a Vault into a customer's AWS account",
+   "dur": 16,
+   "beats": [
+    [
+     0,
+     "Ten decisions about deploying a Vault into a customer's AWS account, EC2 and short-lived deployments.",
+     "Ten tiles, V1 to V10, in two rows."
+    ],
+    [
+     6,
+     "Steps one to three have first drafts. Nothing runs outside the twin until you answer.",
+     "A banner: twin first, nothing real until you answer."
+    ],
+    [
+     11,
+     "Each scene shows the choice and the recommendation. Answer by number in pm.aws.a's session.",
+     "The recommended answer line appears."
+    ]
+   ],
+   "panel": {
+    "what": "Ten decisions from conductor.aws.a's plan (ea9f61d) and the first drafts of steps 1 to 3: vaults.aws.a (eec9d24), cloudformation.aws.a (42677c7), iam.aws.a (68f4b8b). Answer by number in pm.aws.a's session.",
+    "answer": true
+   }
+  },
+  {
+   "id": "v1",
+   "eyebrow": "V1 · Where the page lives",
+   "title": "Where the deploy page lives",
+   "dur": 16,
+   "beats": [
+    [
+     0,
+     "The deploy page can live on its own site, or as a tab of this hub.",
+     "The hub's origin with your session inside; a deploy page outside it on its own site."
+    ],
+    [
+     6,
+     "With the console sign-in, the page holds nothing secret, and keeping it off the hub avoids widening R-010.",
+     "A red dashed line from a tab to your session is crossed out."
+    ],
+    [
+     11,
+     "Recommended: a, its own site, requested from aws.c and factory.c.",
+     "The a option chip lights as recommended."
+    ]
+   ],
+   "panel": {
+    "asks": "conductor.aws.a (plan D1)",
+    "what": "A new site (for example deploy.<domain>) or a tab of this hub. Its own site is an IaC request to aws.c and factory.c (plan step 15).",
+    "options": [
+     [
+      "a",
+      "Its own site."
+     ],
+     [
+      "b",
+      "A tab of this hub."
+     ]
+    ],
+    "rec": "a",
+    "blocks": "The page's address and the IaC request. Recommendation is pm.aws.a's: no sign-in on the page (V3 a), and off the hub's origin (R-010, decision 3)."
+   }
+  },
+  {
+   "id": "v2",
+   "eyebrow": "V2 · The stack",
+   "title": "CloudFormation first, Terraform later",
+   "dur": 14,
+   "beats": [
+    [
+     0,
+     "The stack is a CloudFormation template; a Terraform module maps one-to-one onto the same resources.",
+     "The template, then CloudFormation drawn solid; Terraform drawn dashed, marked later."
+    ],
+    [
+     7,
+     "Recommended: a, CloudFormation first, Terraform once the template settles.",
+     "The a option chip lights as recommended."
+    ]
+   ],
+   "panel": {
+    "asks": "conductor.aws.a (plan D2); cloudformation.aws.a and vaults.aws.a recommend",
+    "what": "cloudformation.aws.a's first draft (42677c7): docs/cloudformation/vault/vault.yaml and vault-certificate.yaml.",
+    "options": [
+     [
+      "a",
+      "CloudFormation first; Terraform follows one-to-one once the template settles."
+     ],
+     [
+      "b",
+      "Both from the start."
+     ]
+    ],
+    "rec": "a",
+    "blocks": "Nothing on the twin; the scope of step 2."
+   }
+  },
+  {
+   "id": "v3",
+   "eyebrow": "V3 · Sign-in",
+   "title": "How the customer signs in",
+   "dur": 20,
+   "beats": [
+    [
+     0,
+     "The customer opens a one-click link in their own AWS console. Our page never sees a credential.",
+     "Customer, their console, the quick-create link, the stack: a green chain; our page sits apart with no key."
+    ],
+    [
+     8,
+     "The stack creates no role for us. A role trusting our account is never on the table.",
+     "A role pointing back to us is crossed out."
+    ],
+    [
+     14,
+     "Recommended: a. Account id and sign-in drop out: two choices and one button.",
+     "The a option chip lights as recommended."
+    ]
+   ],
+   "panel": {
+    "asks": "conductor.aws.a (plan D3); iam.aws.a, security.aws.a, vaults.aws.a and sherpa.aws.a agree",
+    "what": "The customer deploys from their own AWS console session. Sign-in inside the page may come later for reads and teardown, only with the R-002 split.",
+    "options": [
+     [
+      "a",
+      "The customer's own console with a one-click quick-create link."
+     ],
+     [
+      "b",
+      "A role our page assumes."
+     ]
+    ],
+    "rec": "a",
+    "blocks": "The page's shape (steps 5 and 6). Never: a role in the customer's account that trusts ours."
+   }
+  },
+  {
+   "id": "v4",
+   "eyebrow": "V4 · EC2",
+   "title": "EC2 as a second deploy path",
+   "dur": 14,
+   "beats": [
+    [
+     0,
+     "EC2 could be a second way to run a Vault, now or after the CloudFormation path works.",
+     "Two paths: CloudFormation solid, EC2 dashed and marked after."
+    ],
+    [
+     7,
+     "Recommended: b, after the first path works on the twin. One path at a time.",
+     "The b option chip lights as recommended."
+    ]
+   ],
+   "panel": {
+    "asks": "conductor.aws.a (plan D4)",
+    "what": "EC2 as a second deploy path for the Vault, and EC2 control in our environment (plan step 10).",
+    "options": [
+     [
+      "a",
+      "Now, alongside the CloudFormation path."
+     ],
+     [
+      "b",
+      "After the CloudFormation path works end to end on the twin."
+     ]
+    ],
+    "rec": "b",
+    "blocks": "The timing of step 10's second path. Recommendation is pm.aws.a's: twin first, one path at a time; ec2.aws.a designs it meanwhile."
+   }
+  },
+  {
+   "id": "v5",
+   "eyebrow": "V5 · Guard rails",
+   "title": "Guard rails for short-lived deployments",
+   "dur": 16,
+   "beats": [
+    [
+     0,
+     "Short-lived Vaults and a daily region move need limits: lifetime, regions, a cost cap and a kill switch.",
+     "Four empty boxes: maximum lifetime, regions, cost cap, kill switch."
+    ],
+    [
+     8,
+     "Nobody has proposed numbers yet. Recommended: b, proposed from the twin, then approved by you.",
+     "The boxes stay empty, marked numbers to come; the b option chip lights."
+    ]
+   ],
+   "panel": {
+    "asks": "conductor.aws.a (plan D5); security.aws.a: nothing real on a schedule before this",
+    "what": "Ephemeral deployments and the daily region move (plan step 11). cloudformation.aws.a adds: something must empty a bucket before delete, a scheduler role that can delete only stacks it tagged.",
+    "options": [
+     [
+      "a",
+      "Set the numbers now: maximum lifetime, regions allowed, cost cap, kill switch."
+     ],
+     [
+      "b",
+      "ec2.aws.a and billing.aws.a propose them from the twin; you approve them on a decision page before anything real runs."
+     ]
+    ],
+    "rec": "b",
+    "blocks": "Anything ephemeral outside the twin."
+   }
+  },
+  {
+   "id": "v6",
+   "eyebrow": "V6 · New agent",
+   "title": "Start a new agent, ec2.aws.a",
+   "dur": 12,
+   "beats": [
+    [
+     0,
+     "EC2 control and the short-lived design need an owner: a new agent, ec2.aws.a.",
+     "A new chip joins the team graph."
+    ],
+    [
+     6,
+     "Recommended: a, start it, twin only until V4 and V5.",
+     "The a option chip lights as recommended."
+    ]
+   ],
+   "panel": {
+    "asks": "conductor.aws.a (plan D6); start prompt in docs/team/handover/ec2.aws.md",
+    "what": "A new session, at your word in maestro.a's session.",
+    "options": [
+     [
+      "a",
+      "Yes, start ec2.aws.a."
+     ],
+     [
+      "b",
+      "Not yet."
+     ]
+    ],
+    "rec": "a",
+    "blocks": "Plan steps 10 and 11."
+   }
+  },
+  {
+   "id": "v7",
+   "eyebrow": "V7 · Audit trail",
+   "title": "How we read a customer's CloudTrail",
+   "dur": 18,
+   "beats": [
+    [
+     0,
+     "Three ways to see who deployed what: their trail to a bucket we read, a cross-account role, or a file they drop in.",
+     "The customer's trail with three routes to our page."
+    ],
+    [
+     8,
+     "Only the drop-in needs no trust back to us and no credential.",
+     "The bucket and role routes are marked trust; the drop-in route turns green."
+    ],
+    [
+     13,
+     "Recommended: c, the drop-in, read in the browser only.",
+     "The c option chip lights as recommended."
+    ]
+   ],
+   "panel": {
+    "asks": "cloudtrail.aws.a (plan step 9)",
+    "what": "Reading a customer's CloudTrail for the audit view of a deployment.",
+    "options": [
+     [
+      "a",
+      "The customer's trail delivered to a bucket we can read."
+     ],
+     [
+      "b",
+      "A cross-account read role."
+     ],
+     [
+      "c",
+      "The customer drops their own trail export into the page, read in the browser only."
+     ]
+    ],
+    "rec": "c",
+    "blocks": "The audit view for real customers; the twin goes ahead. Recommendation is pm.aws.a's: in line with V3 and security's no role back to us; a or b only if a customer asks for continuous monitoring."
+   }
+  },
+  {
+   "id": "v8",
+   "eyebrow": "V8 · Progress",
+   "title": "Live progress while the stack deploys",
+   "dur": 16,
+   "beats": [
+    [
+     0,
+     "The customer's console already shows progress. At the end our page checks DNS and the Vault's health address.",
+     "The console with progress; our page with two ticks: DNS, health."
+    ],
+    [
+     8,
+     "Live events on our page would need a read role and a sign-in. Recommended: a, none in the first version.",
+     "A read role is crossed out; the a option chip lights."
+    ]
+   ],
+   "panel": {
+    "asks": "iam.aws.a (step 3, 68f4b8b), from sherpa.aws.a's question",
+    "what": "Whether our page shows the stack's events as they happen.",
+    "options": [
+     [
+      "a",
+      "None in the first version: the console shows it; the page checks DNS and https://<domain>/health at the end (one paste when there is no custom domain)."
+     ],
+     [
+      "b",
+      "A read role in the customer's account trusting Google, limited to this stack's events: a sign-in step and a second trust ask."
+     ]
+    ],
+    "rec": "a",
+    "blocks": "The page's last screen (step 5); the visualisation runs on the twin either way."
+   }
+  },
+  {
+   "id": "v9",
+   "eyebrow": "V9 · Templates",
+   "title": "Read access to sgit.ai's deploy templates",
+   "dur": 14,
+   "beats": [
+    [
+     0,
+     "Official templates for Lambda, Fargate and EC2 sit in sgit.ai's encrypted deploy vault. Our agents cannot read them.",
+     "A locked vault holding three templates; our draft beside it."
+    ],
+    [
+     7,
+     "Recommended: a, read access, and build from the Lambda template.",
+     "The lock opens; the a option chip lights."
+    ]
+   ],
+   "panel": {
+    "asks": "vaults.aws.a and cloudformation.aws.a",
+    "what": "sgit.ai says the templates are \"written and lint-clean with live validation in progress\". Pairs with decision 8 (the server's source).",
+    "options": [
+     [
+      "a",
+      "Give vaults.aws.a and cloudformation.aws.a read access (the vault's key, or a copy in a repository); build from the Lambda template."
+     ],
+     [
+      "b",
+      "Keep our own template."
+     ]
+    ],
+    "rec": "a",
+    "blocks": "Step 2 following the official template, and whether the image runs on Lambda as it is."
+   }
+  },
+  {
+   "id": "v10",
+   "eyebrow": "V10 · Server image",
+   "title": "Where the server image comes from",
+   "dur": 18,
+   "beats": [
+    [
+     0,
+     "The server image is on Docker Hub, but Lambda runs container images only from Amazon ECR.",
+     "Docker Hub to Lambda, crossed out; ECR in between."
+    ],
+    [
+     7,
+     "Options: our ECR with pull access, a pull-through cache, Fargate, or a Lambda zip.",
+     "Four routes appear."
+    ],
+    [
+     12,
+     "Recommended: follow the official template; if it settles nothing, a, our ECR, pull only.",
+     "The a option chip lights as recommended."
+    ]
+   ],
+   "panel": {
+    "asks": "cloudformation.aws.a (O1), for you and vaults.aws.a",
+    "what": "sgit.ai publishes diniscruz/sg-send-vault:v0.33.0 on Docker Hub. ImageUri is the one parameter the link must fill in.",
+    "options": [
+     [
+      "a",
+      "Our own ECR repository granting pull to customer accounts: pull only, but a dependency on our account."
+     ],
+     [
+      "b",
+      "An ECR pull-through cache in the customer's account (needs Docker Hub credentials there)."
+     ],
+     [
+      "c",
+      "Fargate, which pulls from Docker Hub directly (more resources and a load balancer)."
+     ],
+     [
+      "d",
+      "A Lambda zip, if SG/Send publishes one."
+     ]
+    ],
+    "rec": "a",
+    "blocks": "Any real deploy; not the twin. Recommendation is pm.aws.a's, after V9."
+   }
+  },
+  {
+   "id": "outro",
+   "eyebrow": "Your answer",
+   "title": "One line answers all ten",
+   "dur": 10,
+   "beats": [
+    [
+     0,
+     "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a.",
+     "The full answer line, large."
+    ],
+    [
+     5,
+     "Answer in pm.aws.a's session. Nothing runs outside the twin before then.",
+     "Where to answer."
+    ]
+   ],
+   "panel": {
+    "what": "Type the line, or your own, in pm.aws.a's session.",
+    "answer": true
+   }
+  }
+ ]
+}
+</script>
+
+<script>
+(() => {
+const SB = JSON.parse(document.getElementById('storyboard').textContent);
+const W = 960, H = 540;
+
+/* ---------- tiny SVG vocabulary ---------- */
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const cue = (t, inner, extra='') => `<g class="cue ${extra}" data-t="${t}">${inner}</g>`;
+const cueOff = (t, off, inner) => `<g class="cue" data-t="${t}" data-off="${off}">${inner}</g>`;
+const box = (x,y,w,h,cls='bx',r=10) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" class="${cls}"/>`;
+const txt = (x,y,s,cls='t-s',anchor='middle') => `<text x="${x}" y="${y}" class="${cls}" text-anchor="${anchor}">${esc(s)}</text>`;
+const lbox = (x,y,w,h,label,cls='bx',tcls='t-m',sub) => box(x,y,w,h,cls) + txt(x+w/2, y+h/2+(sub?-3:5), label, tcls) + (sub?txt(x+w/2,y+h/2+16,sub,'t-s t-mute'):'');
+const path = (id,d,cls,d0,d1) => `<path id="${id}" d="${d}" class="${cls} draw" pathLength="1" data-d0="${d0}" data-d1="${d1}" marker-end="url(#ah-${cls.includes('risk')?'r':cls.includes('ok')?'o':'m'})"/>`;
+const route = (id,d) => `<path id="${id}" d="${d}" fill="none" stroke="none"/>`;
+const mover = (pid,t0,t1,inner,hideAfter=false) => `<g class="mover" data-m="${pid}" data-m0="${t0}" data-m1="${t1}" ${hideAfter?'data-mh="1"':''}>${inner}</g>`;
+const cross = (x,y,t) => cue(t, `<circle cx="${x}" cy="${y}" r="15" class="fill-risk"/><path d="M${x-6} ${y-6}L${x+6} ${y+6}M${x+6} ${y-6}L${x-6} ${y+6}" stroke="#fff" stroke-width="3"/>`, 'pop');
+const defs = `<defs>
+  <marker id="ah-m" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fill-ink" style="fill:var(--mute)"/></marker>
+  <marker id="ah-r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fill-risk"/></marker>
+  <marker id="ah-o" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fill-ok"/></marker>
+</defs>`;
+/* option chips along the bottom of a decision scene */
+function optionRow(opts, rec, tShow, tRec, notRec=[]) {
+  const n = opts.length, w = 150, gap = 14, total = n*w+(n-1)*gap, x0 = (W-total)/2, y = 452;
+  let s = '';
+  opts.forEach((o,i) => {
+    const x = x0 + i*(w+gap);
+    s += cue(tShow + i*0.35, box(x,y,w,40,'bx',20) + txt(x+22,y+26,o,'t-m t-mute') + txt(x+86,y+25,notRec.includes(o)?'not advised':'option '+o,'t-s t-mute'));
+    if (o === rec) s += cue(tRec, box(x,y,w,40,'bx-ok',20) + txt(x+22,y+26,o,'t-m t-ok') + txt(x+86,y+25,'recommended','t-s t-ok'), 'pop');
+  });
+  return s;
+}
+
+/* ---------- the scenes, drawn ---------- */
+const VIS = {
+intro(){
+  const n=[['V1','Where it lives','acc'],['V2','CloudFormation','acc'],['V3','Sign-in','risk'],['V4','EC2 path','acc'],['V5','Guard rails','risk'],['V6','ec2.aws.a','acc'],['V7','Audit trail','risk'],['V8','Progress','risk'],['V9','Templates','acc'],['V10','Server image','acc']];
+  let s = txt(W/2,70,'Deploy a Vault','t-xl') + cue(0.2, txt(W/2,104,'into a customer\'s AWS account · EC2 · short-lived deployments','t-m t-mute'));
+  n.forEach((d,i)=>{ const x=70+(i%5)*168, y=130+Math.floor(i/5)*118, c=d[2]==='risk'?'bx-risk':'bx-acc';
+    s += cue(0.8+i*0.3, box(x,y,150,100,c) + txt(x+75,y+50,d[0],'t-l '+(d[2]==='risk'?'t-risk':'t-acc')) + txt(x+75,y+80,d[1],'t-s'), 'pop'); });
+  s += cue(4, txt(70,384,'red: trust or safety · amber: scope or access','t-s t-mute','start'));
+  s += cue(6, box(180,398,600,40,'bx-ok',20) + txt(W/2,423,'Twin first: nothing real until you answer','t-s t-ok'));
+  s += cue(11, txt(W/2,480,SB.answer,'t-m'));
+  return s;
+},
+v1(){
+  let s = cue(0, box(60,90,420,280,'bx-acc',16) + txt(80,118,'the hub\'s origin','t-mono t-acc','start'));
+  s += cue(0.6, lbox(110,150,170,64,'the hub','bx','t-m')) + cue(1.2, lbox(110,250,170,64,'your session','bx-risk','t-m','change role'));
+  s += cue(2, box(600,120,300,220,'bx-ghost',16) + txt(750,148,'deploy.<domain>','t-mono'));
+  s += cue(2.6, lbox(660,190,180,70,'deploy page','bx-ok','t-m','nothing secret'));
+  s += cue(6, lbox(300,150,150,64,'as a tab?','bx-hold','t-s'));
+  s += path('p1a','M375 214 C380 250 320 270 282 282','ln-risk dash',6.5,7.5);
+  s += cross(330,256,8.5);
+  s += optionRow(['a','b'],'a',10,11);
+  return s;
+},
+v2(){
+  let s = lbox(70,170,200,80,'vault.yaml','bx','t-m','one Vault, its outputs');
+  s += cue(1, lbox(380,110,220,80,'CloudFormation','bx-ok','t-m','first'));
+  s += cue(2, `<rect x="380" y="240" width="220" height="80" rx="10" class="bx-ghost"/>` + txt(490,276,'Terraform','t-m t-mute') + txt(490,298,'later, one-to-one','t-s t-mute'));
+  s += path('p2a','M270 200 C320 180 340 160 378 152','ln-ok',1,2) + `<path d="M270 222 C320 250 340 270 378 280" class="ln dash"/>`;
+  s += cue(3, lbox(700,110,200,80,'customer stack','bx','t-m','sws-vault-<id>'));
+  s += path('p2b','M600 150 L698 150','ln-ok',3,4);
+  s += optionRow(['a','b'],'a',7,8);
+  return s;
+},
+v3(){
+  let s = lbox(40,110,150,70,'customer','bx','t-m');
+  s += cue(0.6, lbox(240,110,190,70,'their AWS console','bx','t-m','already signed in'));
+  s += cue(1.2, lbox(480,110,190,70,'quick-create link','bx-ok','t-m','pinned, sha256 shown'));
+  s += cue(1.8, lbox(720,110,190,70,'Vault stack','bx-ok','t-m','in their account'));
+  s += path('p3a','M190 145 L238 145','ln-ok',0.6,1.2)+path('p3b','M430 145 L478 145','ln-ok',1.2,1.8)+path('p3c','M670 145 L718 145','ln-ok',1.8,2.4);
+  s += cue(3, lbox(380,250,200,70,'our page','bx','t-m','holds no credential'));
+  s += path('p3d','M480 250 L560 182','ln dash',3,3.8);
+  s += cue(8, lbox(720,250,190,70,'role trusting us','bx-risk','t-s','never'));
+  s += path('p3e','M720 285 L582 285','ln-risk dash',8.4,9.2);
+  s += cross(650,285,9.6);
+  s += optionRow(['a','b'],'a',14,15);
+  return s;
+},
+v4(){
+  let s = lbox(60,180,180,80,'a Vault','bx','t-m');
+  s += cue(0.8, lbox(380,100,240,80,'CloudFormation path','bx-ok','t-m','now'));
+  s += cue(1.6, `<rect x="380" y="260" width="240" height="80" rx="10" class="bx-ghost"/>` + txt(500,296,'EC2 path','t-m t-mute') + txt(500,318,'after: designed meanwhile','t-s t-mute'));
+  s += path('p4a','M240 205 C300 170 330 150 378 142','ln-ok',0.8,1.6) + `<path d="M240 235 C300 270 330 290 378 298" class="ln dash"/>`;
+  s += cue(2.4, lbox(720,180,180,80,'running Vault','bx','t-m'));
+  s += path('p4b','M620 140 C680 150 700 190 718 210','ln-ok',2.4,3.2);
+  s += optionRow(['a','b'],'b',7,8);
+  return s;
+},
+v5(){
+  const g=[['maximum lifetime','hours'],['regions allowed','list'],['cost cap','per day'],['kill switch','who, how']];
+  let s = '';
+  g.forEach((x,i)=>{ const X=60+i*220; s += cue(0.6+i*0.6, `<rect x="${X}" y="140" width="190" height="120" rx="12" class="bx-ghost"/>` + txt(X+95,185,x[0],'t-m') + txt(X+95,212,x[1],'t-s t-mute')); });
+  s += cue(8, txt(W/2,300,'numbers to come: proposed from the twin, approved by you','t-s t-acc'));
+  s += optionRow(['a','b'],'b',8,10);
+  return s;
+},
+v6(){
+  const team=['conductor','pm','security','architect','iam','lambda','cloudformation','billing'];
+  let s='';
+  team.forEach((n,i)=>{ const a=-Math.PI/2+i*2*Math.PI/8, x=480+220*Math.cos(a), y=230+140*Math.sin(a);
+    s += box(x-62,y-14,124,28,'bx',14) + txt(x,y+5,n+'.aws.a','t-s'); });
+  s += cue(1.5, box(400,212,160,36,'bx-acc',18) + txt(480,236,'ec2.aws.a','t-m t-acc'), 'pop');
+  s += optionRow(['a','b'],'a',6,7);
+  return s;
+},
+v7(){
+  let s = lbox(50,190,190,80,'customer\'s CloudTrail','bx','t-s','who deployed what');
+  s += lbox(740,190,170,80,'our audit view','bx','t-m');
+  s += cue(1, lbox(400,80,180,56,'a: bucket we read','bx-hold','t-s'));
+  s += cue(2, lbox(400,202,180,56,'b: cross-account role','bx-hold','t-s'));
+  s += cue(3, lbox(400,324,180,56,'c: file they drop in','bx','t-s'));
+  s += `<path d="M240 215 L398 108" class="ln dash"/><path d="M240 230 L398 230" class="ln dash"/><path d="M240 245 L398 352" class="ln dash"/>`;
+  s += cue(8, txt(490,152,'trust back to us','t-s t-risk') + txt(490,274,'trust back to us','t-s t-risk'));
+  s += cue(9, lbox(400,324,180,56,'c: file they drop in','bx-ok','t-s'), 'pop');
+  s += path('p7a','M580 352 C660 340 700 290 738 262','ln-ok',9.5,10.5);
+  s += optionRow(['a','b','c'],'c',13,14);
+  return s;
+},
+v8(){
+  let s = lbox(60,100,240,90,'their console','bx','t-m','shows the stack\'s progress');
+  s += cue(1, lbox(380,100,240,90,'our page, at the end','bx-ok','t-m','two checks'));
+  s += cue(2, box(400,210,200,30,'bx-ok',15)+txt(500,230,'DNS answers','t-s t-ok')) + cue(3, box(400,250,200,30,'bx-ok',15)+txt(500,270,'/health answers','t-s t-ok'));
+  s += cue(8, lbox(700,100,200,90,'read role','bx-risk','t-s','sign-in, second trust'));
+  s += cross(800,210,9);
+  s += optionRow(['a','b'],'a',8,10);
+  return s;
+},
+v9(){
+  let s = cue(0, box(60,90,380,260,'bx-hold',16) + txt(80,118,'sgit.ai deploy vault (encrypted)','t-mono','start'));
+  ['Lambda','Fargate','EC2'].forEach((n,i)=>{ s += cue(0.6+i*0.4, lbox(100,140+i*64,300,48,n+' template','bx','t-s')); });
+  s += cueOff(1, 8, `<g transform="translate(470 220)">${box(-34,-14,68,28,'bx-risk',14)}${txt(0,5,'locked','t-s t-risk')}</g>`);
+  s += cue(2, lbox(560,180,300,80,'our draft (42677c7)','bx','t-m','may differ from the official one'));
+  s += cue(8, `<g transform="translate(470 220)">${box(-40,-14,80,28,'bx-ok',14)}${txt(0,5,'read','t-s t-ok')}</g>`, 'pop');
+  s += path('p9a','M400 164 C470 170 500 200 558 214','ln-ok',8.4,9.4);
+  s += optionRow(['a','b'],'a',7,9);
+  return s;
+},
+v10(){
+  let s = lbox(40,170,190,80,'Docker Hub','bx','t-m','sg-send-vault:v0.33.0');
+  s += lbox(730,170,190,80,'Lambda','bx','t-m','in their account');
+  s += `<path d="M230 210 L728 210" class="ln dash"/>`; s += cross(480,210,2);
+  s += cue(3, txt(480,180,'Lambda pulls only from ECR','t-s t-risk'));
+  s += cue(7, lbox(380,72,200,46,'a: our ECR, pull only','bx','t-s'));
+  s += cue(7.6, lbox(380,262,200,46,'b: pull-through cache','bx','t-s'));
+  s += cue(8.2, lbox(380,322,200,46,'c: Fargate instead','bx','t-s'));
+  s += cue(8.8, lbox(600,322,150,46,'d: a Lambda zip','bx','t-s'));
+  s += cue(12, lbox(380,72,200,46,'a: our ECR, pull only','bx-ok','t-s'), 'pop');
+  s += path('p10a','M230 190 C300 120 330 100 378 96','ln-ok',12.4,13.2)+path('p10b','M580 96 C660 100 700 140 728 180','ln-ok',13.2,14);
+  s += optionRow(['a','b','c','d'],'a',12,13);
+  return s;
+},
+outro(){
+  let s = txt(W/2,150,'Recommended','t-m t-mute');
+  s += cue(0.3, txt(W/2,226,'V1 a · V2 a · V3 a · V4 b · V5 b','t-l'), 'pop');
+  s += cue(0.6, txt(W/2,266,'V6 a · V7 c · V8 a · V9 a · V10 a','t-l'), 'pop');
+  s += cue(5, txt(W/2,330,'Answer in pm.aws.a\'s session','t-m'));
+  s += cue(5.6, txt(W/2,358,'claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B','t-mono t-mute'));
+  s += cue(6.2, txt(W/2,420,'Twin first: nothing real until you answer.','t-s t-ok'));
+  return s;
+}};
+
+/* ---------- timeline ---------- */
+const scenes = SB.scenes.map(s => ({...s}));
+let acc = 0; scenes.forEach(s => { s.start = acc; acc += s.dur; });
+const TOTAL = acc;
+const stage = document.getElementById('stage'), capEl = document.getElementById('caption'), srCap = document.getElementById('srcaption');
+let cur = -1, svg = null, lists = null, time = 0, playing = false, slides = false, voice = false, lastBeat = null, last = 0;
+
+function svgFor(id){ return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(scenes.find(s=>s.id===id).title)}">${defs}${VIS[id]()}</svg>`; }
+function mount(i){
+  if (svg) svg.remove();
+  stage.insertAdjacentHTML('afterbegin', svgFor(scenes[i].id));
+  svg = stage.querySelector('svg');
+  lists = {cues:[...svg.querySelectorAll('[data-t]')], draws:[...svg.querySelectorAll('[data-d0]')], movers:[...svg.querySelectorAll('[data-m]')].map(m => ({el:m, p:svg.querySelector('#'+m.dataset.m)}))};
+  cur = i; renderPanel(i); markChapters(i);
+}
+const clamp = v => Math.max(0, Math.min(1, v));
+const ease = p => p<.5 ? 2*p*p : 1-Math.pow(-2*p+2,2)/2;
+function applyT(L, t){
+  for (const c of L.cues){ const on = t >= +c.dataset.t && (c.dataset.off===undefined || t < +c.dataset.off); c.classList.toggle('on', on); }
+  for (const d of L.draws){ d.style.strokeDashoffset = 1 - clamp((t - d.dataset.d0)/(d.dataset.d1 - d.dataset.d0)); }
+  for (const {el,p} of L.movers){
+    const m0 = +el.dataset.m0, m1 = +el.dataset.m1, len = p.getTotalLength();
+    let pr = ease(clamp((t-m0)/(m1-m0)));
+    if (el.dataset.hold !== undefined && t < m0) pr = 0;
+    const pt = p.getPointAtLength(pr*len);
+    el.setAttribute('transform', `translate(${pt.x.toFixed(1)} ${pt.y.toFixed(1)})`);
+    const hidden = (el.dataset.hold === undefined && t < m0) || (el.dataset.mh && t > m1);
+    el.style.opacity = hidden ? 0 : 1;
+  }
+}
+function render(){
+  let i = scenes.findIndex(s => time < s.start + s.dur); if (i < 0) i = scenes.length-1;
+  if (i !== cur) mount(i);
+  const s = scenes[i], t = time - s.start;
+  applyT(lists, t);
+  const beat = [...s.beats].reverse().find(b => t >= b[0]) || s.beats[0];
+  if (beat !== lastBeat){
+    capEl.textContent = beat[1]; srCap.textContent = beat[1]; lastBeat = beat;
+    if (voice && playing) speak(beat[1]);
+  }
+  document.getElementById('eyebrow').textContent = s.eyebrow;
+  document.getElementById('scenetitle').textContent = s.title;
+  document.getElementById('clock').textContent = `${fmt(time)} / ${fmt(TOTAL)}`;
+  document.getElementById('scrub').value = Math.round(time/TOTAL*1000);
+}
+const fmt = x => `${Math.floor(x/60)}:${String(Math.floor(x%60)).padStart(2,'0')}`;
+function tick(now){
+  if (!playing) return;
+  const dt = Math.min(0.1, (now - last)/1000); last = now;
+  const s = scenes[cur];
+  let nt = time + dt;
+  if (slides && nt >= s.start + s.dur - 0.01){ nt = s.start + s.dur - 0.01; setPlaying(false); }
+  if (nt >= TOTAL){ nt = TOTAL - 0.01; setPlaying(false); }
+  time = nt; render();
+  if (playing) requestAnimationFrame(tick);
+}
+function setPlaying(p){
+  playing = p; document.getElementById('play').textContent = p ? 'Pause' : (time >= TOTAL-0.05 ? 'Replay' : 'Play');
+  if (p){ if (time >= TOTAL-0.05) { time = 0; } last = performance.now(); requestAnimationFrame(tick); }
+  else if (window.speechSynthesis) speechSynthesis.cancel();
+}
+function goScene(i, playAfter){
+  i = Math.max(0, Math.min(scenes.length-1, i)); time = scenes[i].start + 0.001; lastBeat = null; render();
+  if (playAfter) setPlaying(true);
+}
+function speak(text){
+  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'en-GB'; u.rate = 1.04; speechSynthesis.speak(u); } catch(e){}
+}
+
+/* ---------- the written brief beside the stage ---------- */
+function renderPanel(i){
+  const s = scenes[i], p = s.panel, el = document.getElementById('panel');
+  let h = `<div><div class="eyebrow">${esc(s.eyebrow)}</div><h2>${esc(s.title)}</h2></div>`;
+  if (p.asks) h += `<div><h3>Asks</h3><p>${esc(p.asks)}</p></div>`;
+  h += `<div><h3>What</h3><p>${esc(p.what)}</p></div>`;
+  if (p.before) h += `<div><h3>Before any apply</h3><p>${esc(p.before)}</p></div>`;
+  if (p.options){
+    h += `<div><h3>Options</h3><ul class="opts">` + p.options.map(o => `<li class="${o[0]===p.rec?'rec':''} ${o[2]==='no'?'no':''}"><b>${o[0]}</b><span>${esc(o[1])}${o[0]===p.rec?'<span class="tag rec">recommended</span>':''}${o[2]==='no'?'<span class="tag">not advised</span>':''}</span></li>`).join('') + `</ul></div>`;
+  }
+  if (p.blocks) h += `<div><h3>Blocks</h3><p>${esc(p.blocks)}</p></div>`;
+  if (p.answer){
+    h += `<div><h3>Recommended answer</h3><div class="answer" id="answer">${esc(SB.answer)}</div></div>
+          <div><button class="btn" id="copy">Copy the answer</button> <span class="src" id="copied"></span></div>
+          <p class="src">Answer in pm.aws.a's session: <span class="t-mono" style="user-select:all">https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B</span></p>`;
+  }
+  h += `<p class="note">Source: docs/board/decisions.md (batch 2) on work/pm.aws.a, and the drafts it cites. Diagrams simplify; the written brief is the record. Voice, when on, is your browser's built-in synthetic voice.</p>`;
+  el.innerHTML = h;
+  const c = document.getElementById('copy');
+  if (c) c.onclick = () => {
+    const done = m => document.getElementById('copied').textContent = m;
+    navigator.clipboard?.writeText(SB.answer).then(() => done('Copied'), () => { getSelection().selectAllChildren(document.getElementById('answer')); done('Selected: press copy'); })
+      ?? (getSelection().selectAllChildren(document.getElementById('answer')), done('Selected: press copy'));
+  };
+}
+
+/* ---------- chapters, controls, keys ---------- */
+const chap = document.getElementById('chapters');
+chap.innerHTML = scenes.map((s,i) => `<button data-i="${i}" title="${esc(s.title)}">${i===0?'Intro':i===scenes.length-1?'Answer':s.id.toUpperCase()}</button>`).join('');
+chap.onclick = e => { const b = e.target.closest('button'); if (b) goScene(+b.dataset.i, playing); };
+function markChapters(i){ [...chap.children].forEach((b,k) => b.classList.toggle('cur', k===i)); }
+document.getElementById('play').onclick = () => setPlaying(!playing);
+document.getElementById('prev').onclick = () => goScene(cur - 1, playing);
+document.getElementById('next').onclick = () => goScene(cur + 1, playing || slides);
+document.getElementById('scrub').oninput = e => { time = e.target.value/1000*TOTAL; if (time >= TOTAL) time = TOTAL-0.01; lastBeat = null; render(); };
+document.getElementById('mode').onclick = e => { slides = !slides; e.currentTarget.setAttribute('aria-pressed', slides); };
+document.getElementById('voice').onclick = e => { voice = !voice && 'speechSynthesis' in window; e.currentTarget.setAttribute('aria-pressed', voice); if (!voice && window.speechSynthesis) speechSynthesis.cancel(); else if (voice && lastBeat) speak(lastBeat[1]); };
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input,textarea')) return;
+  if (e.key === ' ') { e.preventDefault(); setPlaying(!playing); }
+  if (e.key === 'ArrowRight') goScene(cur + 1, playing || slides);
+  if (e.key === 'ArrowLeft') goScene(cur - 1, playing);
+});
+
+/* ---------- storyboard view ---------- */
+function thumbSvg(id, t){
+  const wrap = document.createElement('div'); wrap.innerHTML = svgFor(id);
+  const sv = wrap.firstElementChild;
+  document.body.appendChild(sv); sv.style.position='absolute'; sv.style.left='-9999px'; sv.style.width='960px';
+  const L = {cues:[...sv.querySelectorAll('[data-t]')], draws:[...sv.querySelectorAll('[data-d0]')], movers:[...sv.querySelectorAll('[data-m]')].map(m => ({el:m, p:sv.querySelector('#'+m.dataset.m)}))};
+  sv.querySelectorAll('.cue').forEach(c => c.style.transition='none');
+  applyT(L, t); sv.removeAttribute('style'); sv.remove();
+  sv.querySelectorAll('[id]').forEach(n => { if (n.tagName !== 'marker') n.removeAttribute('id'); });
+  return sv.outerHTML;
+}
+function buildBoard(){
+  const b = document.getElementById('board'); let h = '', n = 0;
+  scenes.forEach(s => s.beats.forEach((bt,k) => {
+    n++;
+    const end = k+1 < s.beats.length ? s.beats[k+1][0] : s.dur;
+    h += `<article class="beat"><div class="thumb">${thumbSvg(s.id, Math.max(bt[0], end-0.05))}</div><div class="body">
+      <div class="meta"><span>${String(n).padStart(2,'0')} · ${esc(s.eyebrow.split(' · ')[0])}</span><span>${fmt(s.start+bt[0])}</span></div>
+      <div class="nar">${esc(bt[1])}</div><div class="vis">${esc(bt[2])}</div></div></article>`;
+  }));
+  b.innerHTML = h;
+}
+let boardBuilt = false;
+const tabs = {brief:document.getElementById('tab-brief'), board:document.getElementById('tab-board')};
+function showTab(which){
+  tabs.brief.setAttribute('aria-selected', which==='brief'); tabs.board.setAttribute('aria-selected', which==='board');
+  document.getElementById('view-brief').hidden = which!=='brief'; document.getElementById('view-board').hidden = which!=='board';
+  if (which==='board'){ if (!boardBuilt){ buildBoard(); boardBuilt = true; } setPlaying(false); }
+  try { history.replaceState(null,'', which==='board' ? '#storyboard' : '#brief'); } catch(e){}
+}
+tabs.brief.onclick = () => showTab('brief'); tabs.board.onclick = () => showTab('board');
+
+window.__brief = {svgFor, scenes};  /* read by build-video.mjs */
+/* at rest: the intro fully drawn, ready to play */
+time = scenes[0].dur - 0.01; render();
+document.querySelectorAll('.cue').forEach(c => { c.style.transition='none'; requestAnimationFrame(() => c.style.transition=''); });
+if (location.hash === '#storyboard') showTab('board');
+window.addEventListener('hashchange', () => showTab(location.hash==='#storyboard'?'board':'brief'));
+})();
+</script>

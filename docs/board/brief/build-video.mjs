@@ -13,8 +13,10 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const studio = process.argv[2];
 if (!studio) { console.error('usage: node build-video.mjs <Site__Agent__Studio checkout>'); process.exit(2); }
 const player = readFileSync(path.join(studio, 'site/accounts/d/briefings/default-yes/index.html'), 'utf8');
-const sb = JSON.parse(readFileSync(path.join(here, 'decisions.storyboard.json'), 'utf8'));
-const brief = readFileSync(path.join(here, 'decisions-brief.html'), 'utf8');
+// Optional: node build-video.mjs <studio> [brief.html] [storyboard.json] [out.html]
+const briefFile = process.argv[3] || 'decisions-brief.html', sbFile = process.argv[4] || 'decisions.storyboard.json', outFile = process.argv[5] || 'decision-video.html';
+const sb = JSON.parse(readFileSync(path.join(here, sbFile), 'utf8'));
+const brief = readFileSync(path.join(here, briefFile), 'utf8');
 
 const words = s => s.trim().split(/\s+/).length;
 const secs = b => Math.max(2.5, words(b.narration) / 2.5);   // the player's own pace
@@ -99,6 +101,6 @@ out = out.replace(before, "const at=(!playing&&v.end!=null)?v.end:(v.at!=null?v.
 const playBefore = "if(p)speak(i);else{";
 if (!out.includes(playBefore)) throw new Error('player changed: play patch point not found');
 out = out.replace(playBefore, "if(p)show(i);else{");
-writeFileSync(path.join(here, 'decision-video.html'), out);
-writeFileSync(path.join(here, 'decisions.storyboard.json'), JSON.stringify(sb, null, 1) + '\n');
-console.log('decision-video.html', out.length, 'bytes;', sb.beats.length, 'beats;', Math.round(sb.beats.reduce((a, b) => a + secs(b) + 0.8, 0)), 's');
+writeFileSync(path.join(here, outFile), out);
+writeFileSync(path.join(here, sbFile), JSON.stringify(sb, null, 1) + '\n');
+console.log(outFile, out.length, 'bytes;', sb.beats.length, 'beats;', Math.round(sb.beats.reduce((a, b) => a + secs(b) + 0.8, 0)), 's');

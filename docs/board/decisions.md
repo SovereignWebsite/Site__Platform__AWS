@@ -1,6 +1,6 @@
 # Decisions for Dinis: AWS Platform
 
-Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 14:20 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 a, 4 a, 5 a, 6 a, 8 a".
+Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 15:30 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 a, 4 a, 5 a, 6 a, 8 a".
 
 This batch as a presentation (docs/board/brief/decisions-brief.html, https://claude.ai/artifact/Vpk7NnqQ3sz9MgkC2aDmVP) and a decision video in the studio's format (docs/board/brief/decision-video.html, https://claude.ai/artifact/FEaZ96X1APbEPmke5J6ido); both private to Dinis.
 
@@ -60,8 +60,72 @@ Nothing here stops the team: the agents are building on the twin. Decision 3 hol
 - **Recommended:** (a). Read only, and a pinned commit is what design 01 already proposes copying into site/ for the CSP.
 - **Blocks:** the per-operation result shape and the batch-wide conflict rule in the vault twin (design 02 section 2); nothing else.
 
-## Next batch, in preparation (Vault deploy page, EC2, ephemeral deployments)
-From your word at ~14:55 UTC (maestro.a's session); plan and owners in docs/team/plan-vault-deploy.md on work/conductor.aws.a (ea9f61d). Comes to you as one batch, with a presentation and a decision video, once steps 1 to 3 (vault deployment design, the stack, least privilege in the customer's account) have a first draft: D1 where the deploy page lives; D2 CloudFormation first or Terraform too; D3 how the customer signs in (their own console with a one-click stack link, or a role the page assumes); D4 EC2 as a second deploy path now or later; D5 guard rails for ephemeral deployments and daily region moves; D6 start a new agent, ec2.aws.a; D7 how we read a customer's CloudTrail (their trail to a bucket we can read, a cross-account read role, or the customer drops a dump into the page; from cloudtrail.aws.a). Input so far: sherpa.aws.a's first pass (b1281ba on work/sherpa.aws.a) turns the five wizard steps into two choices (region with a default, an optional domain) and one quick-create button, with account id and sign-in dropping out if D3 goes the recommended way. Security's first positions (security.aws.a, 84245b5), to go beside each decision: D3 the customer's own console with a quick-create link, no customer credential reaches the page; no cross-account role back to us unless you decide it and the customer sees it in the template; the template pinned (versioned object, sha256 shown); stack roles scoped by name and bounded; teardown and region moves delete DNS before or with its target; nothing real on a schedule before D5. Step 3 first draft is in (iam.aws.a, docs/iam/vault-deploy/01-least-privilege.md, 68f4b8b): D3 recommended (A) the console quick-create link, (B) sign-in inside the page later and only with the R-002 split, never (C) a role trusting our account. It adds D8, live progress in our page: none in v1, recommended (the customer's console shows it; at the end the page checks DNS and https://<domain>/health, with one paste of the address when there is no custom domain), or a Google-trusted read role in the customer's account (a sign-in step and a second trust ask). Step 1 first draft is in too (vaults.aws.a design 04, docs/vaults/2026-11-23__04-vault-deploy-design.md, eec9d24; recommends D2 CloudFormation first and D3 the customer's own console with quick-create links). It adds D9: sgit.ai says official CloudFormation templates for Lambda, Fargate and EC2 sit in its encrypted deploy vault (behind sgit.ai/deploy/); give vaults.aws.a and cloudformation.aws.a read access to it (its key, or a copy in a repository), or write our own. Recommended: read access, building from the Lambda template; it pairs with decision 8 (the server's source) and blocks step 2 starting from the official template. Step 2 still to come. Nothing runs outside the twin before then.
+## Batch 2: deploy a Vault into a customer's AWS account, EC2, ephemeral deployments
+From your word at ~14:55 UTC (maestro.a's session); plan and owners in docs/team/plan-vault-deploy.md (work/conductor.aws.a, ea9f61d). First drafts: step 1 the Vault design (vaults.aws.a, eec9d24), step 2 the stack (cloudformation.aws.a, 42677c7), step 3 least privilege in the customer's account (iam.aws.a, 68f4b8b); sherpa.aws.a's simplest path (b1281ba); security.aws.a's first positions (84245b5). Presentation (docs/board/brief/vault-deploy-brief.html, https://claude.ai/artifact/8mmZoGebFozNJ8tPTkUFFf) and decision video (vault-deploy-video.html, https://claude.ai/artifact/K3qtZmcRkRcQVa2n7iyKdM), both private to Dinis. Nothing in this batch runs outside the twin until you answer; every real deploy stays a plan you approve. Numbered V1 to V10 so they do not clash with the decisions above.
+
+### V1. Where the deploy page lives
+- **Asks:** conductor.aws.a (plan D1)
+- **Options:** (a) its own site, for example deploy.<domain>, an IaC request to aws.c and factory.c; (b) a tab of this hub.
+- **Recommended:** (a), pm.aws.a's view: with V3 (a) the page needs no sign-in and holds nothing secret, and keeping it off the hub's origin avoids widening R-010 (decision 3).
+- **Blocks:** the page's address and the IaC request (plan step 15).
+
+### V2. CloudFormation first, Terraform later
+- **Asks:** conductor.aws.a (plan D2); recommended by cloudformation.aws.a and vaults.aws.a
+- **Options:** (a) CloudFormation first; a Terraform module follows one-to-one once the template settles; (b) both from the start.
+- **Recommended:** (a).
+- **Blocks:** nothing on the twin; the scope of step 2.
+
+### V3. How the customer signs in
+- **Asks:** conductor.aws.a (plan D3); iam.aws.a, security.aws.a, vaults.aws.a and sherpa.aws.a agree
+- **Options:** (a) the customer's own AWS console with a one-click quick-create link: no credential reaches our page, and the stack creates no role for us; (b) a role our page assumes. Never: a role in the customer's account that trusts ours. Sign-in inside the page may come later for reads and teardown, and only with the R-002 split.
+- **Recommended:** (a). With it, sherpa's walk drops account id and sign-in: two choices (region with a default, an optional domain) and one button.
+- **Blocks:** the page's shape (steps 5 and 6).
+
+### V4. EC2 as a second deploy path
+- **Asks:** conductor.aws.a (plan D4)
+- **Options:** (a) now, alongside the CloudFormation path; (b) after the CloudFormation path works end to end on the twin.
+- **Recommended:** (b), pm.aws.a's view: twin first, one path at a time; ec2.aws.a (V6) designs it meanwhile.
+- **Blocks:** the timing of plan step 10's second path.
+
+### V5. Guard rails for ephemeral deployments and the daily region move
+- **Asks:** conductor.aws.a (plan D5); security.aws.a: nothing real on a schedule before this
+- **Options:** (a) set the numbers now (maximum lifetime, regions allowed, cost cap, kill switch); (b) ec2.aws.a and billing.aws.a propose the numbers from the twin, and you approve them on a decision page before anything real runs.
+- **Recommended:** (b): nobody has proposed numbers yet, and none would be grounded.
+- **Blocks:** anything ephemeral outside the twin (step 11). cloudformation.aws.a adds: something must empty a bucket before delete, a scheduler role that can delete only stacks it tagged (O5).
+
+### V6. Start a new agent, ec2.aws.a
+- **Asks:** conductor.aws.a (plan D6); start prompt in docs/team/handover/ec2.aws.md
+- **Options:** (a) yes, at your word in maestro.a's session; (b) not yet.
+- **Recommended:** (a): EC2 control, the second path's design and the ephemeral design (steps 10 and 11) have no owner without it; twin only until V4 and V5.
+- **Blocks:** steps 10 and 11.
+
+### V7. How we read a customer's CloudTrail
+- **Asks:** cloudtrail.aws.a (plan step 9)
+- **Options:** (a) the customer's trail delivered to a bucket we can read; (b) a cross-account read role; (c) the customer drops their own trail export into the page, read in the browser only.
+- **Recommended:** (c), pm.aws.a's view: no trust back to us and no credential, in line with V3 and security's "no role back to us"; (a) or (b) only if a customer asks for continuous monitoring.
+- **Blocks:** the audit view of a deployment (step 9) for real customers; the twin goes ahead.
+
+### V8. Live progress on our page while the stack deploys
+- **Asks:** iam.aws.a (step 3), from sherpa.aws.a's open question
+- **Options:** (a) none in the first version: the customer's console shows progress, and at the end the page checks DNS and https://<domain>/health (one paste of the address when there is no custom domain); (b) a read role in the customer's account trusting Google, limited to this stack's events: a sign-in step and a second trust ask.
+- **Recommended:** (a), by iam.aws.a.
+- **Blocks:** the page's last screen (step 5); the visualisation (step 7) runs on the twin either way.
+
+### V9. Read access to sgit.ai's deploy templates
+- **Asks:** vaults.aws.a and cloudformation.aws.a
+- **What:** sgit.ai says official CloudFormation templates for Lambda (Function URL), Fargate and EC2 sit in its encrypted deploy vault (behind sgit.ai/deploy/). cloudformation.aws.a's draft cannot read them, so it may differ from them.
+- **Options:** (a) give vaults.aws.a and cloudformation.aws.a read access (the vault's key, or a copy in a repository) and build from the Lambda template; (b) keep our own template.
+- **Recommended:** (a). Pairs with decision 8 (the server's source).
+- **Blocks:** step 2 following the official template, and O2 (whether the image runs on Lambda as it is).
+
+### V10. Where the server image comes from
+- **Asks:** cloudformation.aws.a (O1), for you and vaults.aws.a
+- **What:** sgit.ai publishes diniscruz/sg-send-vault:v0.33.0 on Docker Hub; Lambda runs container images only from Amazon ECR, so the stack cannot point at Docker Hub.
+- **Options:** (a) our own ECR repository granting pull to customer accounts (pull only, not a role back to us, but a dependency on our account); (b) an ECR pull-through cache in the customer's account (needs Docker Hub credentials there); (c) Fargate, which pulls from Docker Hub directly, with more resources and a load balancer; (d) a Lambda zip, if SG/Send publishes one.
+- **Recommended:** follow what the official Lambda template does (V9); if it settles nothing, (a), pm.aws.a's view: no customer credential and no role back to us.
+- **Blocks:** any real deploy (ImageUri is the one parameter the link must fill in); not the twin.
+
+Recommended answers for batch 2: "V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a".
 
 ## Not needed yet
 - **Which vault endpoint first** (vaults.aws.a): recommended, the twin now, then your own SG/Send in eu-west-2 (append routes exist only on dev.send.sgraph.ai today). Asked before any live vault write.
