@@ -59,22 +59,39 @@ export function boardAt(steps, t) {
   return [...rows.values()];
 }
 
-// "How long is left", without guessing: count against the template's resources (expected logical ids, from
-// vaults.aws.a / cloudformation.aws.a), and estimate time left only from durations measured on earlier runs
-// (`history`: { [logicalId]: seconds }). With no history, `left` is null and the page says "N of M ready".
+// The Vault stack's resources in creation waves (cloudformation.aws.a, draft 0.2.0, 7ea995f,
+// docs/cloudformation/vault/vault.yaml). Conditional resources drop out by the customer's choices.
+export const VAULT_WAVES = [
+  ["VaultBucket", "AccessToken", "VaultLogs", "HealthFunction"],
+  ["VaultBucketPolicy", "VaultFunctionRole"],
+  ["VaultFunction"],
+  ["VaultFunctionUrl", "VaultFunctionUrlPermission"],
+  ["VaultDistribution"],
+  ["VaultRecordA", "VaultRecordAAAA"]
+];
+export function vaultWaves({ ownSecret = false, hostedZone = false } = {}) {
+  return VAULT_WAVES.map((w) => w.filter((id) => !(ownSecret && id === "AccessToken") && !(!hostedZone && /^VaultRecord/.test(id))))
+    .filter((w) => w.length);
+}
+
+// "How long is left", without guessing: count against the template's resources (`expected`: a flat list of
+// logical ids, or waves as above), and estimate time left only from durations measured on earlier runs
+// (`history`: { [logicalId]: seconds }). Waves run one after another, resources in a wave alongside each other.
+// With no history for every resource, `left` is null and the page says "N of M ready".
 export function progress(steps, t, expected = [], history = null) {
   const board = boardAt(steps, t).filter((r) => !["stack", "dns", "health"].includes(r.station));
   const done = new Set(board.filter((r) => r.kind === "done").map((r) => r.station));
   const failed = board.some((r) => r.kind === "failed");
-  const ids = expected.length ? expected : board.map((r) => r.station);
+  const waves = !expected.length ? [board.map((r) => r.station)] : Array.isArray(expected[0]) ? expected : [expected];
+  const ids = waves.flat();
   let left = null;
   if (history && ids.every((id) => id in history)) {
     const started = new Map(steps.filter((s) => s.t <= t && s.kind === "working" && s.to !== "stack").map((s) => [s.to, s.t]));
     left = 0;
-    for (const id of ids) {
-      if (done.has(id)) continue;
-      const ran = started.has(id) ? t - started.get(id) : 0;
-      left = Math.max(left, Math.max(0, history[id] - ran));
+    for (const w of waves) {
+      let wave = 0;
+      for (const id of w) if (!done.has(id)) wave = Math.max(wave, history[id] - (started.has(id) ? t - started.get(id) : 0), 0);
+      left += wave;
     }
     left = Math.round(left);
   }

@@ -44,3 +44,7 @@ sherpa.aws.a's walk cuts the wizard to two choices and one button; the waiting s
 
 - Boxes read in plain words from ontology.aws.a's docs/ontology/type-labels.json: "File store (S3 bucket)", "Front door (CloudFront distribution)". The short label goes in the box, the AWS name underneath, the full label on focus. A type with no label keeps its logical id. One file, so every view says the same thing.
 - iam.aws.a's design (68f4b8b): the live event stream is a twin view, opt-in later on real accounts. On a real account, v1 ends with two checks: the address answers (DNS) and the Vault's /health answers. Both are steps at the end of the scene; with no live events, the scene is those two checks and the stack's outputs.
+
+## Revision 4 (the Vault's logical ids)
+
+cloudformation.aws.a gave the Vault stack's resources in creation order (draft 0.2.0, 7ea995f): six waves, from the bucket, logs and health function through the Lambda and its URL to the CloudFront distribution (the slowest) and, only with a hosted zone, the A and AAAA records. `VAULT_WAVES` and `vaultWaves({ ownSecret, hostedZone })` in docs/viz/deploy-steps.mjs hold them; the scene lays out the stations in that order before the events arrive, and "time left" adds wave after wave (resources in a wave run alongside each other), still only from measured durations. The us-east-1 edge stack (certificate) and iam.aws.a's access stack run first and appear as their own hubs.
