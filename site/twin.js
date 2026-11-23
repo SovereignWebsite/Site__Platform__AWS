@@ -158,8 +158,10 @@
     "cloudcontrol.requestFailed": function (w, e) { w.requests[e.data.token] = e.data.message; },
     // ---- Customer accounts (deploy plan step 4): stacks in another account, keyed account -> "region/name" ----
     "cloudformation.createStack": function (w, e) {
-      var d = e.data, a = w.accounts[d.account] || (w.accounts[d.account] = { stacks: map() });
-      a.stacks[d.region + "/" + d.name] = { name: d.name, kind: d.kind, mode: d.mode || null, region: d.region, account: d.account, stackId: d.stackId, roleArn: d.roleArn || null,
+      var d = e.data, a = w.accounts[d.account] || (w.accounts[d.account] = { stacks: map() }), key = d.region + "/" + d.name, was = a.stacks[key];
+      // A name used again after a delete: the deleted stack stays, found by its stack id (and in ListStacks), as AWS keeps it.
+      if (was && was.status === "DELETE_COMPLETE") (a.deleted || (a.deleted = map()))[was.stackId] = was;
+      a.stacks[key] = { name: d.name, kind: d.kind, mode: d.mode || null, region: d.region, account: d.account, stackId: d.stackId, roleArn: d.roleArn || null,
         params: d.params, created: e.t, status: "CREATE_IN_PROGRESS", resources: map(), outputs: [], ids: d.ids,
         events: [{ id: d.stackId.split("/").pop() + "-" + e.seq, t: e.t, logical: d.name, physical: d.stackId, type: "AWS::CloudFormation::Stack", status: "CREATE_IN_PROGRESS", reason: "User Initiated" }] };
     },
@@ -848,7 +850,9 @@
     var s = build(), A = form.get("Action"), acc = s.accounts[account] || { stacks: map() };
     // By name, a deleted stack is gone; by stack id it is still found (DELETE_COMPLETE), as AWS answers.
     var live = function (x) { return x.status !== "DELETE_COMPLETE"; };
-    var find = function (n) { var st = n && acc.stacks[region + "/" + n]; if (st && !live(st)) st = null; if (!st && n) Object.keys(acc.stacks).forEach(function (k) { if (acc.stacks[k].stackId === n && acc.stacks[k].region === region) st = acc.stacks[k]; }); return st || null; };
+    // Every stack the account has had: the current ones by region and name, and deleted ones whose name was used again.
+    var every = function () { var out = Object.keys(acc.stacks).map(function (k) { return acc.stacks[k]; }); if (acc.deleted) Object.keys(acc.deleted).forEach(function (k) { out.push(acc.deleted[k]); }); return out; };
+    var find = function (n) { var st = n && acc.stacks[region + "/" + n]; if (st && !live(st)) st = null; if (!st && n) every().forEach(function (x) { if (x.stackId === n && x.region === region) st = x; }); return st || null; };
     var NS = " xmlns=\"http://cloudformation.amazonaws.com/doc/2010-05-15/\"";
     if (A === "CreateStack") {
       var name = form.get("StackName") || "", params = map(), m = /^sws-vault-([0-9a-f]{12})(-access)?$/.exec(name);
@@ -951,7 +955,7 @@
     }
     if (A === "ListStacks") {
       // Every stack in the region, newest first, filtered and paged as in the platform account (listStacksPage).
-      var pg = listStacksPage(Object.keys(acc.stacks).map(function (k) { return acc.stacks[k]; }).filter(function (x) { return x.region === region; })
+      var pg = listStacksPage(every().filter(function (x) { return x.region === region; })
         .sort(function (a, b) { return a.created < b.created ? 1 : a.created > b.created ? -1 : 0; }), form, function (x) { return x.status; });
       if (!pg) return cfnErr("ValidationError", "Invalid NextToken");
       return xml("<ListStacksResponse" + NS + "><ListStacksResult><StackSummaries>" + pg.rows.map(function (x) {

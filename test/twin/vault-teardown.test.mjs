@@ -61,6 +61,16 @@ assert.match((await cfn(twin, { Action: "DescribeStacks", StackName: V })).text,
 checks += 4;
 assert.equal((await create(twin, V, { VaultId: ID })).status, 200, "the name can be used again");
 assert.notEqual(tag((await cfn(twin, { Action: "DescribeStacks", StackName: V })).text, "StackId")[0], stackId, "with a new stack id");
+// The old stack stays after its name is used again (security.aws.a's note on 1784b48): by its id it is still
+// DELETE_COMPLETE with its events, ListStacks has both, and a DeleteStack by the old id leaves the new stack alone.
+assert.equal(tag((await cfn(twin, { Action: "DescribeStacks", StackName: stackId })).text, "StackStatus")[0], "DELETE_COMPLETE", "the old stack, by its id, after the name is reused");
+assert.ok(tag((await cfn(twin, { Action: "DescribeStackEvents", StackName: stackId })).text, "ResourceStatus").length > 10, "with its own events");
+{ const ls = (await cfn(twin, { Action: "ListStacks" })).text;
+  assert.deepEqual(tag(ls, "StackName").filter((n) => n === V).length, 2, "ListStacks has the new stack and the old one");
+  assert.ok(tag(ls, "StackId").includes(stackId), "the old one by its id"); }
+assert.equal((await cfn(twin, { Action: "DeleteStack", StackName: stackId })).status, 200, "a DeleteStack by the old id is a quiet success");
+assert.equal(tag((await cfn(twin, { Action: "DescribeStacks", StackName: V })).text, "StackStatus")[0], "CREATE_IN_PROGRESS", "and leaves the new stack alone");
+checks += 6;
 assert.equal((await cfn(twin, { Action: "DeleteStack", StackName: V })).status, 400, "a stack still being created refuses the delete (the twin's rule)");
 assert.equal((await cfn(twin, { Action: "DeleteStack", StackName: "sws-vault-ffffffffffff" })).status, 200, "a missing stack deletes quietly, as AWS answers");
 checks += 9;
