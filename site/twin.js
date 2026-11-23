@@ -297,17 +297,113 @@
     if (A === "UpdateAssumeRolePolicy") { var p = JSON.parse(form.get("PolicyDocument")); p.Statement.forEach(function (st) { st.Condition = collapse(st.Condition); }); s.roles[name] = p; return xml("<UpdateAssumeRolePolicyResponse" + IAM_NS + "><ResponseMetadata><RequestId>00000000-0000-4000-8000-0000000000ab</RequestId></ResponseMetadata></UpdateAssumeRolePolicyResponse>"); }
     return xmlErr("InvalidAction", "Not in the twin yet: iam " + A);
   }
-  function cloudformation(form, init) {
+  // ---- CloudFormation stacks (CF-1: every stack mapped to what it made) ----
+  // Synthetic, as docs/cloudformation/seed/cloudformation.json; moves to site/twin/data/ with design 02.
+  // sws-aws-platform is the hub's own stack: its status is state.stackStatus, so a plan applied in the twin shows here.
+  var STACKS = [
+    { name: "sws-aws-platform", region: "us-east-1", id: "00000000-0000-4000-8000-0000000c0001", created: "2026-11-20T09:12:00Z",
+      description: "The hub's own stack: the read and change roles.",
+      parameters: [["GoogleClientId", "twin-client-id.apps.googleusercontent.com"], ["GoogleSub", "000000000000000000000"]],
+      outputs: [["ReadRoleArn", "arn:aws:iam::" + ACCOUNT + ":role/sws-aws-platform-read"], ["ChangeRoleArn", "arn:aws:iam::" + ACCOUNT + ":role/sws-aws-platform-change"]],
+      resources: [["PlatformRead", "sws-aws-platform-read", "AWS::IAM::Role"], ["PlatformChange", "sws-aws-platform-change", "AWS::IAM::Role"]],
+      events: [["2026-11-20T09:13:10Z", "sws-aws-platform", "AWS::CloudFormation::Stack", "CREATE_COMPLETE"],
+        ["2026-11-20T09:13:00Z", "PlatformChange", "AWS::IAM::Role", "CREATE_COMPLETE"], ["2026-11-20T09:12:50Z", "PlatformRead", "AWS::IAM::Role", "CREATE_COMPLETE"],
+        ["2026-11-20T09:12:00Z", "sws-aws-platform", "AWS::CloudFormation::Stack", "CREATE_IN_PROGRESS", "User Initiated"]] },
+    { name: "demo-site", region: "eu-west-2", id: "00000000-0000-4000-8000-0000000c0002", created: "2026-11-18T14:00:00Z", status: "CREATE_COMPLETE",
+      description: "The demo site: its bucket, a CloudFront distribution in front of it, and the distribution's logs bucket.",
+      outputs: [["DistributionDomain", "d111111abcdef8.cloudfront.net", "demo-site-distribution-domain"]],
+      resources: [["SiteBucket", B.site, "AWS::S3::Bucket"], ["LogsBucket", B.logs, "AWS::S3::Bucket"], ["Distribution", "EDEMOTWIN00001", "AWS::CloudFront::Distribution"]],
+      events: [["2026-11-18T14:21:00Z", "demo-site", "AWS::CloudFormation::Stack", "CREATE_COMPLETE"], ["2026-11-18T14:20:30Z", "Distribution", "AWS::CloudFront::Distribution", "CREATE_COMPLETE"],
+        ["2026-11-18T14:00:00Z", "demo-site", "AWS::CloudFormation::Stack", "CREATE_IN_PROGRESS", "User Initiated"]] },
+    { name: "demo-dns", region: "eu-west-2", id: "00000000-0000-4000-8000-0000000c0003", created: "2026-11-18T15:00:00Z", status: "CREATE_COMPLETE",
+      description: "The demo zone and its www alias to the demo site's distribution (imported from demo-site).", imports: ["demo-site-distribution-domain"],
+      resources: [["Zone", "Z0DEMOTWIN0001", "AWS::Route53::HostedZone"], ["WwwAlias", "www.example.com", "AWS::Route53::RecordSet"]],
+      events: [["2026-11-18T15:02:00Z", "demo-dns", "AWS::CloudFormation::Stack", "CREATE_COMPLETE"], ["2026-11-18T15:00:00Z", "demo-dns", "AWS::CloudFormation::Stack", "CREATE_IN_PROGRESS", "User Initiated"]] },
+    { name: "demo-lambda", region: "eu-west-2", id: "00000000-0000-4000-8000-0000000c0004", created: "2026-11-19T11:00:00Z", updated: "2026-11-21T16:40:00Z", status: "UPDATE_ROLLBACK_COMPLETE",
+      description: "One function, its role and its dependencies bucket.", parameters: [["HandlerVersion", "v1.0.0"]],
+      resources: [["Handler", "demo-handler", "AWS::Lambda::Function", "UPDATE_COMPLETE"], ["HandlerRole", "demo-handler-role", "AWS::IAM::Role"], ["DepsBucket", B.deps, "AWS::S3::Bucket"]],
+      events: [["2026-11-21T16:40:00Z", "demo-lambda", "AWS::CloudFormation::Stack", "UPDATE_ROLLBACK_COMPLETE"],
+        ["2026-11-21T16:39:30Z", "Handler", "AWS::Lambda::Function", "UPDATE_COMPLETE"],
+        ["2026-11-21T16:39:00Z", "demo-lambda", "AWS::CloudFormation::Stack", "UPDATE_ROLLBACK_IN_PROGRESS", "The following resource(s) failed to update: [Handler]."],
+        ["2026-11-21T16:38:10Z", "Handler", "AWS::Lambda::Function", "UPDATE_FAILED", "(twin) The dependencies zip for v1.1.0 is not in the bucket."],
+        ["2026-11-21T16:38:00Z", "demo-lambda", "AWS::CloudFormation::Stack", "UPDATE_IN_PROGRESS", "User Initiated"]] }
+  ];
+  function stackArn(st) { return "arn:aws:cloudformation:" + st.region + ":" + ACCOUNT + ":stack/" + st.name + "/" + st.id; }
+  function stackStatus(s, st) { return st.name === "sws-aws-platform" ? s.stackStatus : st.status; }
+  function stackUpdated(s, st) { return st.name === "sws-aws-platform" ? s.stackUpdated : st.updated; }
+  function el(tag, v) { return v === undefined || v === null ? "" : "<" + tag + ">" + esc(v) + "</" + tag + ">"; }
+  function members(list, f) { return (list || []).map(function (x) { return "<member>" + f(x) + "</member>"; }).join(""); }
+  function stackEvents(s, st) {
+    var ev = st.events.slice();
+    if (st.name === "sws-aws-platform") ev = (s.stackEvents || []).concat(ev);
+    return ev;
+  }
+  // The read calls. Each answers for the stacks in the region of the endpoint called, as real CloudFormation does.
+  function cfnRead(s, A, form, region) {
+    var here = STACKS.filter(function (st) { return st.region === region; });
+    var find = function () {
+      var n = form.get("StackName"), st = here.filter(function (x) { return x.name === n || stackArn(x) === n; })[0];
+      return st || null;
+    };
+    var missing = function () { return xmlErr("ValidationError", "Stack with id " + form.get("StackName") + " does not exist", 400); };
+    var wrap = function (name, inner) { return xml("<" + name + "Response><" + name + "Result>" + inner + "</" + name + "Result></" + name + "Response>"); };
+    if (A === "ListStacks") return wrap("ListStacks", "<StackSummaries>" + members(here, function (st) {
+      return el("StackId", stackArn(st)) + el("StackName", st.name) + el("TemplateDescription", st.description) + el("CreationTime", st.created) + el("LastUpdatedTime", stackUpdated(s, st)) + el("StackStatus", stackStatus(s, st));
+    }) + "</StackSummaries>");
+    if (A === "DescribeStacks") {
+      var list = form.get("StackName") ? [find()] : here;
+      if (!list[0] && form.get("StackName")) return missing();
+      return wrap("DescribeStacks", "<Stacks>" + members(list, function (st) {
+        return el("StackId", stackArn(st)) + el("StackName", st.name) + el("Description", st.description) +
+          "<Parameters>" + members(st.parameters, function (p) { return el("ParameterKey", p[0]) + el("ParameterValue", p[1]); }) + "</Parameters>" +
+          el("CreationTime", st.created) + el("LastUpdatedTime", stackUpdated(s, st)) + el("StackStatus", stackStatus(s, st)) +
+          "<Outputs>" + members(st.outputs, function (o) { return el("OutputKey", o[0]) + el("OutputValue", o[1]) + el("ExportName", o[2]); }) + "</Outputs>";
+      }) + "</Stacks>");
+    }
+    if (A === "ListStackResources") {
+      var st = find(); if (!st) return missing();
+      return wrap("ListStackResources", "<StackResourceSummaries>" + members(st.resources, function (r) {
+        var status = r[3] || (/^UPDATE_COMPLETE$/.test(stackStatus(s, st)) ? "UPDATE_COMPLETE" : "CREATE_COMPLETE");
+        return el("LogicalResourceId", r[0]) + el("PhysicalResourceId", r[1]) + el("ResourceType", r[2]) + el("LastUpdatedTimestamp", stackUpdated(s, st) || st.created) + el("ResourceStatus", status);
+      }) + "</StackResourceSummaries>");
+    }
+    if (A === "DescribeStackEvents") {
+      var se = find(); if (!se) return missing();
+      return wrap("DescribeStackEvents", "<StackEvents>" + members(stackEvents(s, se).map(function (e, i) { return [e, i]; }), function (x) {
+        var e = x[0], phys = e[1] === se.name ? stackArn(se) : (se.resources.filter(function (r) { return r[0] === e[1]; })[0] || [])[1];
+        return el("StackId", stackArn(se)) + el("EventId", se.id + "-" + pad(x[1], 4)) + el("StackName", se.name) + el("LogicalResourceId", e[1]) + el("PhysicalResourceId", phys) +
+          el("ResourceType", e[2]) + el("Timestamp", e[0]) + el("ResourceStatus", e[3]) + el("ResourceStatusReason", e[4]);
+      }) + "</StackEvents>");
+    }
+    if (A === "ListExports") {
+      var ex = []; here.forEach(function (st) { (st.outputs || []).forEach(function (o) { if (o[2]) ex.push([stackArn(st), o[2], o[1]]); }); });
+      return wrap("ListExports", "<Exports>" + members(ex, function (e) { return el("ExportingStackId", e[0]) + el("Name", e[1]) + el("Value", e[2]); }) + "</Exports>");
+    }
+    if (A === "ListImports") {
+      // An export can only be imported in its own region, so both lists are per region.
+      var name = form.get("ExportName"), by = here.filter(function (st) { return (st.imports || []).indexOf(name) >= 0; });
+      if (!by.length) return xmlErr("ValidationError", "Export '" + name + "' is not imported by any stack.", 400);
+      return wrap("ListImports", "<Imports>" + members(by, function (st) { return esc(st.name); }) + "</Imports>");
+    }
+    return null;
+  }
+  function cloudformation(form, init, host) {
     if (!signed(init)) return xmlErr("MissingAuthenticationToken", "Request is missing Authentication Token", 403);
     var s = build(), A = form.get("Action");
+    var read = cfnRead(s, A, form, host.split(".")[1]);
+    if (read) return read;
     var ready = s.template ? Promise.resolve(s.template) : fetch(new URL("cloudformation/bootstrap.yaml", document.baseURI)).then(function (r) { return r.text(); })
       .then(function (t) { s.template = t.replace("Description: >-\n", "Description: >-\n  (twin: an older version)\n"); return s.template; });
     return ready.then(function () {
       if (A === "GetTemplate") return xml("<GetTemplateResponse><GetTemplateResult><TemplateBody>" + esc(s.template) + "</TemplateBody></GetTemplateResult></GetTemplateResponse>");
       if (A === "CreateChangeSet") { s.changeSets[form.get("ChangeSetName")] = form.get("TemplateBody"); return xml("<CreateChangeSetResponse><CreateChangeSetResult><Id>twin</Id></CreateChangeSetResult></CreateChangeSetResponse>"); }
       if (A === "DescribeChangeSet") return xml("<DescribeChangeSetResponse><DescribeChangeSetResult><Status>CREATE_COMPLETE</Status><Changes><member><ResourceChange><Action>Modify</Action><LogicalResourceId>PlatformRead</LogicalResourceId><ResourceType>AWS::IAM::Role</ResourceType><Replacement>False</Replacement></ResourceChange></member><member><ResourceChange><Action>Modify</Action><LogicalResourceId>PlatformChange</LogicalResourceId><ResourceType>AWS::IAM::Role</ResourceType><Replacement>False</Replacement></ResourceChange></member></Changes></DescribeChangeSetResult></DescribeChangeSetResponse>");
-      if (A === "ExecuteChangeSet") { s.template = s.changeSets[form.get("ChangeSetName")]; s.stackStatus = "UPDATE_COMPLETE"; return xml("<ExecuteChangeSetResponse/>"); }
-      if (A === "DescribeStacks") return xml("<DescribeStacksResponse><DescribeStacksResult><Stacks><member><StackName>sws-aws-platform</StackName><StackStatus>" + s.stackStatus + "</StackStatus></member></Stacks></DescribeStacksResult></DescribeStacksResponse>");
+      if (A === "ExecuteChangeSet") {
+        var t = new Date().toISOString().replace(/\.\d+Z$/, "Z");
+        s.template = s.changeSets[form.get("ChangeSetName")]; s.stackStatus = "UPDATE_COMPLETE"; s.stackUpdated = t;
+        s.stackEvents = [[t, "sws-aws-platform", "AWS::CloudFormation::Stack", "UPDATE_COMPLETE"], [t, "sws-aws-platform", "AWS::CloudFormation::Stack", "UPDATE_IN_PROGRESS", "User Initiated"]].concat(s.stackEvents || []);
+        return xml("<ExecuteChangeSetResponse/>");
+      }
       return xmlErr("InvalidAction", "Not in the twin yet: cloudformation " + A);
     });
   }
@@ -453,7 +549,7 @@
     try {
       if (host === "sts.amazonaws.com" || /^sts\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = sts(new URLSearchParams(body), init);
       else if (host === "iam.amazonaws.com") p = iam(new URLSearchParams(body), init);
-      else if (/^cloudformation\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudformation(new URLSearchParams(body), init);
+      else if (/^cloudformation\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudformation(new URLSearchParams(body), init, host);
       else if (/^ce\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = ce();
       else if (/^cloudcontrolapi\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudcontrol((hdr(init, "x-amz-target") || "").split(".")[1], body, init, host);
       else if (/^lambda\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = lambda(url, init);
