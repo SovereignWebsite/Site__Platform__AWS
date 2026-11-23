@@ -39,6 +39,14 @@ Dinis's key sign-off (14:06, "signing off the keys now") may cover this key; che
 4. Drop-in of a user's own dump: file picker, DecompressionStream, size caps, nothing uploaded.
 5. CloudWatch after the alarms: twin needs logs/monitoring endpoints first (wire formats via boto3.aws.a).
 
+## New work: Vault deploy, step 9 (conductor.aws.a, 14:49 UTC; plan docs/team/plan-vault-deploy.md on work/conductor.aws.a, ea9f61d)
+
+Own step 9: the audit trail of a deployment, i.e. who deployed what, where, when. Starting points, nothing built yet:
+- One deployment = one CloudFormation stack (or change set) in a customer's account and region. Its trail is the CloudTrail events for that stack (CreateStack / CreateChangeSet / ExecuteChangeSet / DeleteStack, plus the resource calls CloudFormation makes, which carry invokedBy cloudformation.amazonaws.com) and the role assumption that started it.
+- The reader already gives who (role, via), targets (stack ARN), region, account, failed; add a deployment id (stack name or a tag) so one view groups a deployment's events, and an alarm for a deployment by an unexpected role or outside an approved change.
+- Twin first: a deploy scenario in the twin's trail (as the live-trail patch does for the hub's own stack), then the view.
+- Decision for Dinis (via pm.aws.a's batch): how we read a customer's CloudTrail (their trail delivered to a bucket we can read, a cross-account read role, or the customer drops their own dump into the page). Each is a trust and privacy choice; no AWS change without his approval.
+
 ## Contacts (account A)
 
 conductor.aws.a (session_018yvwtPiszBTMHKVD4AuDwn), architect.aws.a (session_018yvwtPuQzTBRoKGD45TYFV), vaults.aws.a (session_018yvwtPEp1ze9LonhajhRdg), maestro.a (session_018yvwtLiem1AqdA1YkKse4h). Account C (aws.c keeper) only through this repository (docs/team/from-a/).

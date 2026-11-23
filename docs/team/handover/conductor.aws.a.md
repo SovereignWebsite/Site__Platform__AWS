@@ -34,3 +34,14 @@ Mine: every 2 h at :58 (maestro.a's trigger trig_015uk8c76qGcYtDHA9qRbWqB). data
 - Check abp.json and signers.mjs before any push to dev.
 - Verify an agent's claim on origin before relaying it (ids get corrected often).
 - Never `git checkout <ref> -- .` into a working branch.
+
+## Update at 15:55 UTC (restart ordered by Dinis via maestro.a, ~15:45)
+
+- Keys: still NOT live (Factory dev 3b81de9, 0 .a keys). factory.c waits on Dinis's word in its own session (https://claude.ai/code/session_01Kw9UwFQ86g2ZeXQ2edTAjh): "land every verified agent key commit in docs/team/keys/aws-a-ready.md" (21 rows now, ec2.aws.a added). Old keys of restarted sessions get replaced by the new sessions' keys, old entries marked retired.
+- Stopgap per maestro.a (15:45): an agent may push to dev with an "Owner override:" line quoting Dinis's words given in ITS OWN session, own paths only, one per word, security.aws.a reviews each. Keys stay the real fix (R-009 High).
+- Vault deploy (Dinis 14:55): docs/team/plan-vault-deploy.md, 15 steps with owners. Drafts in: step 1 vaults a0c53a4/23f8b03 (Lambda + Function URL, CloudFront for /health, optional domain), step 3 iam e145f1e/68f4b8b (console quick-create, deploy role scoped sws-vault-<id>-*, progress via DNS + /health), step 6 sherpa b1281ba (two choices, one button), step 7 viz 4ca25a3 (storyboard 02), ontology type-labels.json. Step 2 (cloudformation stack) still to come; official templates wait on V9 (read access to sgit.ai's deploy vault). pm.aws.a's batch 2 (V1-V10) is on the decisions page with presentation and video; recommended V1a V2a V3a V4b V5b V6a V7c V8a V9a V10a. When Dinis answers V1, send the new-site IaC request to aws.c/factory.c via maestro.a.
+- ec2.aws.a started (session_018yvwtNc3CDv5wXAXwfPgXy): design 01 f33a6b3; security reviewed ff92c75 (V5: schedule guard rails, vCPU quota as hard cap, two-level kill switch). abp ask for docs/ec2/** sent to aws.c.
+- R-010 path check: proposed to Dinis (land keys, add CI path check in .github/ci/, site code via aws.c review until then). Not yet answered.
+- Twin: single branch to land is work/dev.2.aws.a.cfn-journal (waits on keys, R-010, Dinis's yes for test/**).
+- Feedback from the website: maestro.a's guidance is feedback.b's /send/ messaging centre (as on Site__Artist__Grace-Farrell, 38d1020). Recommended to Dinis: the fresh conductor builds it AFTER its own key is live: issue a lane "aws-platform" sealed to the fresh key, copy site/send/ from Grace Farrell, security.aws.a reviews (R-010, site code on the hub origin), aws.c lands it, give Dinis the QR link in the fresh session. Not started.
+- My ready dev commit and all hand-overs: land/conductor.aws.a (push to dev with the fresh key once live, after a rebase on dev).
