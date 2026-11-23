@@ -129,7 +129,7 @@
   // Maps keyed by request values (bucket, key, role, change set names) have no prototype, so a name such as
   // "__proto__" or "constructor" is only ever a missing entry (security.aws.a's note on 88831eb).
   function map() { return Object.create(null); }
-  function emptyWorld() { return { objects: map(), cors: map(), roles: map(), iam: map(), template: null, stackStatus: "CREATE_COMPLETE", stackUpdated: null, stackEvents: [], changeSets: map(), requests: map() }; }
+  function emptyWorld() { return { objects: map(), cors: map(), roles: map(), iam: map(), template: null, stackStatus: "CREATE_COMPLETE", stackUpdated: null, stackEvents: [], changeSets: map(), requests: map(), pending: [], marks: [] }; }
   function bodyOf(spec) {
     if (spec.gzipText != null) return gzip(enc.encode(spec.gzipText));
     if (spec.zip) return makeZip(spec.zip);
@@ -155,18 +155,57 @@
       w.template = w.changeSets[e.data.name]; w.stackStatus = "UPDATE_COMPLETE"; w.stackUpdated = t;
       w.stackEvents = [[t, "sws-aws-platform", "AWS::CloudFormation::Stack", "UPDATE_COMPLETE"], [t, "sws-aws-platform", "AWS::CloudFormation::Stack", "UPDATE_IN_PROGRESS", "User Initiated"]].concat(w.stackEvents || []);
     },
-    "cloudcontrol.requestFailed": function (w, e) { w.requests[e.data.token] = e.data.message; }
+    "cloudcontrol.requestFailed": function (w, e) { w.requests[e.data.token] = e.data.message; },
+    // A marker a scenario or test can schedule (the clock's own op): the world keeps the labels in order.
+    "clock.mark": function (w, e) { w.marks.push(e.data.label); }
   };
-  function apply(w, e) { var f = OPS[e.op]; if (!f) throw new Error("twin: no operation " + e.op); f(w, e); return w; }
+  // An entry may schedule later entries (e.schedule: [{ at, op, target, data, actor, why }]); they wait in the world's
+  // pending list, so a refold rebuilds the list, and leave it when the clock emits them (e.settles: { from, i }).
+  function apply(w, e) {
+    var f = OPS[e.op]; if (!f) throw new Error("twin: no operation " + e.op); f(w, e);
+    if (e.settles) w.pending = w.pending.filter(function (p) { return !(p.from === e.settles.from && p.i === e.settles.i); });
+    if (e.schedule) e.schedule.forEach(function (x, i) { w.pending.push({ at: x.at, from: e.seq, i: i, entry: x }); });
+    return w;
+  }
   function fold(entries) { return entries.reduce(apply, emptyWorld()); }
-  // Append an entry to the journal and apply it to the live world.
-  function record(e) {
-    var full = { seq: journal.length + 1, t: e.t || new Date().toISOString(), actor: e.actor || "twin", op: e.op, target: e.target || null,
+  // ---- The twin's clock (design 02 step 5, brought forward for deploy step 4; architect.aws.a's rules, 23 Nov) ----
+  // now() is the twin's time: real time plus an offset, or frozen while paused; tick(ms) moves it on. Scheduled entries
+  // are emitted by catch-up only, each with t = its own at, in at order (ties: the scheduling entry's seq, then its
+  // place in that entry's list), so the journal depends on the clock alone, never on who read the twin or when.
+  // Catch-up runs on tick, before any new entry is recorded, and on a read while the clock runs.
+  var clock = { offset: 0, frozen: null };
+  function nowMs() { return clock.frozen != null ? clock.frozen : Date.now() + clock.offset; }
+  function nowIso() { return new Date(nowMs()).toISOString(); }
+  var settling = false;
+  function settle() {
+    if (settling || !state) return;
+    settling = true;
+    try {
+      var upTo = nowMs();
+      for (;;) {
+        var due = state.pending.filter(function (p) { return Date.parse(p.at) <= upTo; });
+        if (!due.length) break;
+        due.sort(function (a, b) { return Date.parse(a.at) - Date.parse(b.at) || a.from - b.from || a.i - b.i; });
+        var p = due[0], x = p.entry;
+        append({ t: p.at, actor: x.actor || "twin", op: x.op, target: x.target, data: x.data, why: x.why || "clock.settle", source: "clock",
+          settles: { from: p.from, i: p.i }, schedule: x.schedule });
+      }
+    } finally { settling = false; }
+  }
+  function append(e) {
+    var full = { seq: journal.length + 1, t: e.t || nowIso(), actor: e.actor || "twin", op: e.op, target: e.target || null,
       data: e.data, why: e.why || null, source: e.source || "twin" };
+    if (e.settles) full.settles = e.settles;
+    if (e.schedule) full.schedule = e.schedule.map(function (x) {
+      if (!own(OPS, x.op)) throw new Error("twin: no operation " + x.op);
+      return { at: new Date(Date.parse(x.at)).toISOString(), op: x.op, target: x.target || null, data: x.data, actor: x.actor || null, why: x.why || null, schedule: x.schedule };
+    });
     journal.push(full);
     if (state) apply(state, full);
     return full;
   }
+  // Append an entry to the journal and apply it to the live world; anything the clock owes is emitted first.
+  function record(e) { settle(); return append(e); }
   // Who made a call: the twin's credentials name the role (ASIATWINREAD, ASIATWINCHANGE).
   function actorOf(init) { var m = /Credential=ASIATWIN(\w+)/.exec(hdr(init, "authorization") || ""); return m ? "role:sws-aws-platform-" + m[1].toLowerCase() : "anonymous"; }
 
@@ -863,6 +902,7 @@
     if (!AWS_HOST.test(host)) return null;
     // Wait for the pack; if it did not load, an AWS-shaped 503 (fail closed: nothing reaches the network).
     return ready.then(function () {
+      if (loaded && clock.frozen == null) { build(); settle(); }
       if (!loaded) return xmlErr("ServiceUnavailable", "The twin's demo pack did not load (" + ((loadError && loadError.message) || "unknown") + "). Twin mode never calls real AWS.", 503);
       return answer(url, init, host);
     });
@@ -885,9 +925,23 @@
     return Promise.resolve(p).then(function (r) { return new Promise(function (res) { setTimeout(function () { res(r); }, 60 + lag() * 120); }); });
   }
 
-  root.AwsTwin = { handle: handle, account: ACCOUNT, buckets: B, reset: function () { state = null; journal = []; streams = {}; },
+  root.AwsTwin = { handle: handle, account: ACCOUNT, buckets: B, reset: function () { state = null; journal = []; streams = {}; clock.offset = 0; clock.frozen = null; },
     // The journal (design 02): a copy of every entry so far, and a fold of any list of entries into a world.
     journal: function () { build(); return JSON.parse(JSON.stringify(journal)); },
+    // The twin's clock: now() (ISO), tick(ms) moves it on and emits what is due, pause() freezes it, resume() runs it
+    // on from the frozen time; schedule(at, entry) records a clock.mark entry that schedules entry at that time.
+    clock: {
+      now: function () { return nowIso(); },
+      paused: function () { return clock.frozen != null; },
+      // Set the twin's time while paused (a scenario's or pack's start); time never moves back past an entry.
+      at: function (iso) { var t = Date.parse(iso); if (clock.frozen == null || !isFinite(t)) throw new Error("twin: clock.at needs a paused clock and a time");
+        if (journal.length && t < Date.parse(journal[journal.length - 1].t)) throw new Error("twin: clock.at would move time back past the journal"); clock.frozen = t; return nowIso(); },
+      pause: function () { if (clock.frozen == null) clock.frozen = Date.now() + clock.offset; },
+      resume: function () { if (clock.frozen != null) { clock.offset = clock.frozen - Date.now(); clock.frozen = null; } },
+      tick: function (ms) { if (typeof ms !== "number" || !(ms >= 0)) throw new Error("twin: tick needs a number of ms");
+        if (clock.frozen != null) clock.frozen += ms; else clock.offset += ms; build(); settle(); return nowIso(); },
+      schedule: function (label, entries) { build(); return append({ op: "clock.mark", data: { label: String(label) }, why: "clock.schedule", schedule: entries }).seq; }
+    },
     // Resolves once the pack has loaded (or failed to: then every AWS request is a 503); loadError says why.
     ready: function () { return ready; }, loadError: function () { return loadError ? loadError.message : null; },
     fold: function (entries) { return fold(entries); },
