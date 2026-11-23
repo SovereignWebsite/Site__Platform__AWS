@@ -176,6 +176,8 @@
       st.events.unshift({ id: st.stackId.split("/").pop() + "-" + e.seq, t: e.t, logical: d.logical, physical: d.physical || "", type: d.type, status: d.status, reason: d.reason || "" });
       if (d.logical === d.name) { st.status = d.status; if (d.outputs) st.outputs = d.outputs; }
       else st.resources[d.logical] = { type: d.type, physical: d.physical || (st.resources[d.logical] || {}).physical || "", status: d.status, t: e.t, reason: d.reason || "" };
+      // What a delete leaves behind stays in the account (the retained bucket, policy and log group), by name.
+      if (d.status === "DELETE_SKIPPED" && st.resources[d.logical].physical) (acc.retained || (acc.retained = map()))[d.type + " " + st.resources[d.logical].physical] = true;
     },
     // A marker a scenario or test can schedule (the clock's own op): the world keeps the labels in order.
     "clock.mark": function (w, e) { w.marks.push(e.data.label); }
@@ -213,14 +215,24 @@
       }
     } finally { settling = false; }
   }
+  // A schedule tree is checked whole before anything is appended (architect.aws.a's review of 4aca0ee): every op known,
+  // every at a time and never before the entry (or step) that schedules it. Otherwise refused, journal unchanged.
+  function checkSchedule(list, notBefore, depth) {
+    if (!Array.isArray(list) || depth > 16) throw new Error("twin: a schedule is a list, at most 16 deep");
+    return list.map(function (x) {
+      if (!x || !own(OPS, x.op)) throw new Error("twin: no operation " + (x && x.op));
+      var at = Date.parse(x.at);
+      if (!isFinite(at)) throw new Error("twin: a scheduled step needs a time");
+      if (at < notBefore) throw new Error("twin: a step cannot be scheduled before the entry that schedules it (" + new Date(at).toISOString() + " < " + new Date(notBefore).toISOString() + ")");
+      return { at: new Date(at).toISOString(), op: x.op, target: x.target || null, data: x.data, actor: x.actor || null, why: x.why || null,
+        schedule: x.schedule ? checkSchedule(x.schedule, at, depth + 1) : undefined };
+    });
+  }
   function append(e) {
     var full = { seq: journal.length + 1, t: e.t || nowIso(), actor: e.actor || "twin", op: e.op, target: e.target || null,
       data: e.data, why: e.why || null, source: e.source || "twin" };
     if (e.settles) full.settles = e.settles;
-    if (e.schedule) full.schedule = e.schedule.map(function (x) {
-      if (!own(OPS, x.op)) throw new Error("twin: no operation " + x.op);
-      return { at: new Date(Date.parse(x.at)).toISOString(), op: x.op, target: x.target || null, data: x.data, actor: x.actor || null, why: x.why || null, schedule: x.schedule };
-    });
+    if (e.schedule) full.schedule = checkSchedule(e.schedule, Date.parse(full.t), 0);
     journal.push(full);
     if (state) apply(state, full);
     return full;
@@ -723,8 +735,9 @@
   };
   function vaultIds(account, region, name) {
     // Each stack its own stream, seeded from its name, so two stacks do not share ids (R-025 (d)).
-    var seed = 20261124; for (var c = 0; c < name.length; c++) seed = (seed * 31 + name.charCodeAt(c)) & 0x7fffffff;
-    var r = rng("vault.ids:" + account + "/" + region + "/" + name, seed), pick = function (abc, n) { var o = ""; for (var i = 0; i < n; i++) o += abc[Math.floor(r() * abc.length)]; return o; };
+    var seed = 20261124 + journal.length; for (var c = 0; c < name.length; c++) seed = (seed * 31 + name.charCodeAt(c)) & 0x7fffffff;
+    // Its own stream per create (name and the journal position), so a stack made again under the same name gets new ids.
+    var r = rng("vault.ids:" + account + "/" + region + "/" + name + "@" + journal.length, seed), pick = function (abc, n) { var o = ""; for (var i = 0; i < n; i++) o += abc[Math.floor(r() * abc.length)]; return o; };
     var lower = "abcdefghijklmnopqrstuvwxyz0123456789", upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     return { stack: pick("0123456789abcdef", 8) + "-" + pick("0123456789abcdef", 4) + "-11ef-" + pick("0123456789abcdef", 4) + "-" + pick("0123456789abcdef", 12),
       url: pick(lower, 32), distribution: "E" + pick(upper, 13), cfDomain: "d" + pick(lower, 13) + ".cloudfront.net", secret: pick("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 6) };
@@ -801,6 +814,7 @@
     ev(at, st.name, "AWS::CloudFormation::Stack", "CREATE_COMPLETE", { physical: st.stackId, outputs: stackOutputs(st) });
     return out;
   }
+  function taken(acc, type, physical) { return !!(acc.retained && acc.retained[type + " " + physical]); }
   function cfnErr(code, msg, status) { return xml("<ErrorResponse xmlns=\"http://cloudformation.amazonaws.com/doc/2010-05-15/\"><Error><Type>Sender</Type><Code>" + code + "</Code><Message>" + esc(msg) + "</Message></Error><RequestId>twin</RequestId></ErrorResponse>", status || 400); }
   function formParams(form, prefix) {
     var out = [];
@@ -846,6 +860,10 @@
       var failure = null;
       if (collides) failure = { logical: "VaultBoundary", after: 0.9,
         reason: "Resource handler returned message: \"A policy called sws-vault-" + m[1] + "-boundary already exists. Duplicate names are not allowed.\" (HandlerErrorCode: AlreadyExists)" };
+      else if (kind === "vault" && taken(acc, "AWS::Logs::LogGroup", "/aws/lambda/sws-vault-" + m[1] + "-api")) failure = { logical: "VaultLogs", after: 0.8,
+        // A VaultId used before: its retained log group (and bucket) are still in the account (cloudformation.aws.a). The
+        // log group, the quicker resource, fails first; the page must always make a fresh id.
+        reason: "Resource handler returned message: \"Resource of type 'AWS::Logs::LogGroup' with identifier '/aws/lambda/sws-vault-" + m[1] + "-api' already exists.\" (HandlerErrorCode: AlreadyExists)" };
       else if (kind === "vault" && plain.ImageUri && plain.ImageUri !== TWIN_IMAGE) failure = { logical: "VaultFunction", after: 3,
         reason: "Resource handler returned message: \"Lambda can't access the image " + plain.ImageUri + ". Check the repository's policy lists this account and the digest is in " + region + ".\" (twin's wording)" };
       var st = { name: name, kind: kind, region: region, account: account, stackId: stackId, params: plain, ids: ids, mode: mode, failure: failure };
@@ -878,11 +896,12 @@
       // Teardown (cloudformation.aws.a's stack notes): resources in reverse creation order, so the DNS records go before
       // the distribution and nothing goes while something that refers to it remains; Retain and RetainExceptOnCreate
       // resources are DELETE_SKIPPED (the bucket, its policy, the log group stay with the customer); then
-      // DELETE_COMPLETE. AWS answers a DeleteStack for a missing or already-deleting stack with success, and so does the
+      // DELETE_COMPLETE. AWS answers a DeleteStack for a missing, already-deleting or deleted stack with success, and so does the
       // twin. The twin's own choice: a stack still being created or rolled back refuses the delete until it settles.
       var sd = find(form.get("StackName"));
       var ok = xml("<DeleteStackResponse" + NS + "><ResponseMetadata><RequestId>twin</RequestId></ResponseMetadata></DeleteStackResponse>");
-      if (!sd || sd.status === "DELETE_IN_PROGRESS") return ok;
+      // A stack already deleted (found by its id) deletes quietly too, and stays DELETE_COMPLETE (security.aws.a, 5dc4519).
+      if (!sd || sd.status === "DELETE_IN_PROGRESS" || sd.status === "DELETE_COMPLETE") return ok;
       if (/_IN_PROGRESS$/.test(sd.status)) return cfnErr("ValidationError", "Stack [" + sd.name + "] is in " + sd.status + " state and can not be deleted until it settles (the twin's rule).");
       var t0 = nowIso(), at = Date.parse(t0) + 1000, sched = [], base = { account: account, region: region, name: sd.name };
       var ev = function (ms, logical, type, status, extra) { sched.push({ at: new Date(ms).toISOString(), op: "cloudformation.stackEvent", target: sd.stackId,

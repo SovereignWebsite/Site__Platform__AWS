@@ -52,11 +52,34 @@ assert.ok(!/sws-vault-/.test((await cfn(twin, { Action: "DescribeStacks" })).tex
 assert.deepEqual(tag((await cfn(twin, { Action: "ListStacks", "StackStatusFilter.member.1": "DELETE_COMPLETE" })).text, "StackName"), [V], "ListStacks keeps it, filtered");
 const kept = (await cfn(twin, { Action: "ListStackResources", StackName: stackId })).text;
 assert.deepEqual(tag(kept, "ResourceStatus").filter((x) => x === "DELETE_SKIPPED").length, 3, "the three kept resources say so");
+// A DeleteStack by id on the deleted stack is a no-op (security.aws.a, 5dc4519): no new event, still gone by name.
+const nEv = tag((await cfn(twin, { Action: "DescribeStackEvents", StackName: stackId })).text, "ResourceStatus").length;
+assert.equal((await cfn(twin, { Action: "DeleteStack", StackName: stackId })).status, 200, "deleting a deleted stack by id succeeds");
+assert.equal(tag((await cfn(twin, { Action: "DescribeStackEvents", StackName: stackId })).text, "ResourceStatus").length, nEv, "and adds no event");
+assert.equal(tag((await cfn(twin, { Action: "DescribeStacks", StackName: stackId })).text, "StackStatus")[0], "DELETE_COMPLETE", "it stays DELETE_COMPLETE");
+assert.match((await cfn(twin, { Action: "DescribeStacks", StackName: V })).text, /does not exist/, "and by name it is still gone");
+checks += 4;
 assert.equal((await create(twin, V, { VaultId: ID })).status, 200, "the name can be used again");
 assert.notEqual(tag((await cfn(twin, { Action: "DescribeStacks", StackName: V })).text, "StackId")[0], stackId, "with a new stack id");
 assert.equal((await cfn(twin, { Action: "DeleteStack", StackName: V })).status, 400, "a stack still being created refuses the delete (the twin's rule)");
 assert.equal((await cfn(twin, { Action: "DeleteStack", StackName: "sws-vault-ffffffffffff" })).status, 200, "a missing stack deletes quietly, as AWS answers");
 checks += 9;
+
+// 2b. The VaultId used again after a delete: the kept log group and bucket are still there, so the create fails on the
+// name and rolls back (cloudformation.aws.a: the page must always make a fresh 12-hex id). A fresh id deploys.
+{
+  const t = fresh();
+  await create(t, V, { VaultId: ID }); t.clock.tick(10 * 60 * 1000);
+  await cfn(t, { Action: "DeleteStack", StackName: V }); t.clock.tick(15 * 60 * 1000);
+  await create(t, V, { VaultId: ID }); t.clock.tick(10 * 60 * 1000);
+  const st = (await cfn(t, { Action: "DescribeStacks", StackName: V })).text;
+  assert.equal(tag(st, "StackStatus")[0], "ROLLBACK_COMPLETE", "the reused id rolls back");
+  assert.match((await cfn(t, { Action: "DescribeStackEvents", StackName: V })).text, /AWS::Logs::LogGroup' with identifier '\/aws\/lambda\/sws-vault-0a1b2c3d4e5f-api' already exists/, "on the kept log group's name");
+  const fresh2 = "0a1b2c3d4e60";
+  await create(t, "sws-vault-" + fresh2, { VaultId: fresh2 }); t.clock.tick(10 * 60 * 1000);
+  assert.equal(tag((await cfn(t, { Action: "DescribeStacks", StackName: "sws-vault-" + fresh2 })).text, "StackStatus")[0], "CREATE_COMPLETE", "a fresh id deploys");
+  checks += 3;
+}
 
 // 3. A rolled-back stack deletes at once: nothing was left to delete.
 {
