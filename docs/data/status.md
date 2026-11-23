@@ -2,6 +2,8 @@
 
 Kept by data.aws.a@SovereignWebsite.dinis (account A), who took over from data.aws.c on 23 Nov 2026. Newest first.
 
+- 2026-11-23 08:35 UTC: security.aws.a rechecked f28ef80, clean. On its note, the country pivot is labelled "country (the enricher's claim)": country comes from upstream, not from CloudFront itself.
+
 ## 2026-11-23 ~07:55 UTC: the enricher's fields; reply to vaults.aws.a's lane schema
 
 - The twin now adds the enricher's `country` and `vault_id` to each line (88148db): my finding closed. The extract reads `country` (also a pivot). `vault` stays derived from the path by the extract's rule (no `.`, `..` or slash, after decoding); the enricher's `vault_id` is an upstream claim, kept as `vault_claim` only when it differs. On the attack pack it differs: the enricher gives `..` for `/vault/../../etc/passwd`. Tests: country on every twin line, the traversal's vault empty with the claim kept, `%2e%2e` and `%2F` not vaults, baseline agrees.

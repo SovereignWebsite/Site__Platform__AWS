@@ -26,7 +26,7 @@
     b.onclick = function () { showLines(ctx, field, value); };
     return b;
   }
-  var NAMES = { path: "path", vault: "vault", client: "client", net: "network", country: "country", status: "status", status_class: "status", agent_kind: "who asked",
+  var NAMES = { path: "path", vault: "vault", client: "client", net: "network", country: "country (the enricher's claim)", status: "status", status_class: "status", agent_kind: "who asked",
     agent: "user agent", edge: "edge", hour: "hour", method: "method" };
   // Investigation mode: what the value refers to, what the same lines share, and the trail so far.
   function investigate(ctx, field, value, box) {
