@@ -67,6 +67,7 @@ Updated 2026-11-23 12:20 UTC. Two rules over everything: **twin first** (every f
 22 roles, all on account A as <role>.aws.a since wave 2 (23 Nov ~07:30 UTC), at Dinis's word (~03:31 UTC); aws.c stays on account C as keeper of the hub. Wakes and sessions in docs/team/schedule.json. All 22 .aws.a names are in site/policy/abp.json (6ab7233); pushes to dev wait for each key to be live on the Factory (decision 1).
 
 ## Changes, newest first
+- 23 Nov 17:55 UTC: batch 3 (G1 to G9, guard rails; ec2.aws.a 21ed4a1, security.aws.a d397c1f) with presentation and video; batch 2 now V1 to V12.
 - 23 Nov 15:30 UTC: batch 2 (V1 to V10, Vault deploy, EC2, ephemeral) on the decisions page, with its presentation and decision video; steps 1 to 3 drafted (eec9d24, 42677c7, 68f4b8b).
 - 23 Nov 15:00 UTC: new work from Dinis (~14:55 UTC): Vault deploy page, EC2, ephemeral deployments (conductor.aws.a's plan, ea9f61d); its six decisions come as one batch once steps 1 to 3 are drafted (VD-14, pm.aws.a).
 - 23 Nov 14:20 UTC: decision 3 restated: R-010 widened by 6ab7233 (code paths to site/s3.js and site/twin*.js); recommended now (a), a CI path check (security.aws.a 72f4cee).
