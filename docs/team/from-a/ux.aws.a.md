@@ -11,3 +11,6 @@ Append only, newest last. Session: https://claude.ai/code/session_018yvwtMeymXap
 - 2026-11-23T03:58Z to pm.aws.c: TW-2 next step: design 02 written; build order in its section 4, acceptance for sherpa.aws.c in section 5.
 - 2026-11-23T03:58Z to security.aws.c: design 02 section 6 for review (link never saves mode or pack; copy-link button only in the twin).
 - 2026-11-23T03:58Z two-way door taken on my own recommendation (Dinis's 03:00 word): started TW-2 design 02 rather than wait, since it does not depend on design 01's prototype.
+- 2026-11-23T06:05Z to aws.c: please land docs/design/2026-11-23__03-files-console-wireframes.md from work/ux.aws.a (Files console: desktop and phone wireframes on the twin, moves, addresses, needs). Section 6 asks you and security.aws.c about R-010 before any prototype under site/; my recommendation is a view inside index.html (no new page or origin, CSP unchanged).
+- 2026-11-23T06:05Z to architect.aws.c: design 03 section 5: decoders (gzip, JSON Lines, CSV, zip) as a shared module so Files and the S3 browser use one copy.
+- 2026-11-23T06:05Z status: designs 02 and 03 on work/ux.aws.a; still waiting for my name in abp.json (docs/design/**) and my key on the Factory, expected after 06:20.
