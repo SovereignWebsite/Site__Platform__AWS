@@ -159,7 +159,7 @@
     // ---- Customer accounts (deploy plan step 4): stacks in another account, keyed account -> "region/name" ----
     "cloudformation.createStack": function (w, e) {
       var d = e.data, a = w.accounts[d.account] || (w.accounts[d.account] = { stacks: map() });
-      a.stacks[d.region + "/" + d.name] = { name: d.name, kind: d.kind, region: d.region, account: d.account, stackId: d.stackId, roleArn: d.roleArn || null,
+      a.stacks[d.region + "/" + d.name] = { name: d.name, kind: d.kind, mode: d.mode || null, region: d.region, account: d.account, stackId: d.stackId, roleArn: d.roleArn || null,
         params: d.params, created: e.t, status: "CREATE_IN_PROGRESS", resources: map(), outputs: [], ids: d.ids,
         events: [{ id: d.stackId.split("/").pop() + "-" + e.seq, t: e.t, logical: d.name, physical: d.stackId, type: "AWS::CloudFormation::Stack", status: "CREATE_IN_PROGRESS", reason: "User Initiated" }] };
     },
@@ -168,7 +168,7 @@
       var d = e.data, st = w.accounts[d.account].stacks[d.region + "/" + d.name];
       st.events.unshift({ id: st.stackId.split("/").pop() + "-" + e.seq, t: e.t, logical: d.logical, physical: d.physical || "", type: d.type, status: d.status, reason: d.reason || "" });
       if (d.logical === d.name) { st.status = d.status; if (d.outputs) st.outputs = d.outputs; }
-      else st.resources[d.logical] = { type: d.type, physical: d.physical || "", status: d.status };
+      else st.resources[d.logical] = { type: d.type, physical: d.physical || (st.resources[d.logical] || {}).physical || "", status: d.status, t: e.t, reason: d.reason || "" };
     },
     // A marker a scenario or test can schedule (the clock's own op): the world keeps the labels in order.
     "clock.mark": function (w, e) { w.marks.push(e.data.label); }
@@ -685,17 +685,19 @@
   // ---- Deploy plan step 4: a customer's account, where the Vault's stacks are created ----
   // The customer is a second account in the same journal (AWS's documentation example id). The twin credential
   // ASIATWINCUSTOMER calls as the customer's own administrator, as D3's recommended path has them do in their console.
-  // Stacks follow cloudformation.aws.a's Vault stack 0.3.3 and iam.aws.a's vault-access 0.1.1: the -access stack
-  // makes the deploy role and boundary; sws-vault-<id> is created with that role; resources appear wave by wave on
+  // Stacks follow cloudformation.aws.a's Vault stack 0.4.4 and iam.aws.a's vault-access 0.1.1. DeployMode one-stack
+  // (the default): no RoleARN, the stack runs as the caller and makes its own boundary (VaultBoundary, wave 1);
+  // access-stack: the -access stack makes the deploy role and boundary, and sws-vault-<id> is created with that role.
+  // Resources appear wave by wave on
   // the twin clock (the distribution takes minutes), then the stack completes with its outputs. Not yet here: the
   // -edge stack, DNS and the health address answering, DeleteStack, and the CloudTrail records derived from these.
-  var CUSTOMER = "444455556666", VAULT_TEMPLATE = "0.3.3";
+  var CUSTOMER = "444455556666", VAULT_TEMPLATE = "0.4.4-draft";
   function customerOf(init) { return /Credential=ASIATWINCUSTOMER\//.test(hdr(init, "authorization") || "") ? CUSTOMER : null; }
   // [logical id, type, seconds to create], wave by wave; each wave starts a second after the last one ends.
   var VAULT_WAVES = {
     access: [[["VaultBoundary", "AWS::IAM::ManagedPolicy", 3]], [["DeployRole", "AWS::IAM::Role", 12]]],
     vault: [
-      [["VaultBucket", "AWS::S3::Bucket", 3], ["AccessToken", "AWS::SecretsManager::Secret", 2], ["VaultLogs", "AWS::Logs::LogGroup", 1], ["HealthFunction", "AWS::CloudFront::Function", 4]],
+      [["VaultBucket", "AWS::S3::Bucket", 3], ["AccessToken", "AWS::SecretsManager::Secret", 2], ["VaultLogs", "AWS::Logs::LogGroup", 1], ["HealthFunction", "AWS::CloudFront::Function", 4], ["VaultBoundary", "AWS::IAM::ManagedPolicy", 3]],
       [["VaultBucketPolicy", "AWS::S3::BucketPolicy", 2], ["VaultFunctionRole", "AWS::IAM::Role", 12]],
       [["VaultFunction", "AWS::Lambda::Function", 8]],
       [["VaultFunctionUrl", "AWS::Lambda::Url", 2], ["VaultFunctionUrlPermission", "AWS::Lambda::Permission", 1], ["VaultFunctionInvokePermission", "AWS::Lambda::Permission", 1]],
@@ -725,18 +727,32 @@
     var base = p.DomainName ? "https://" + p.DomainName : "https://" + x.cfDomain;
     var out = [kv("Endpoint", base), kv("HealthCheck", base + "/api/info/health"), kv("DeployCheck", "https://" + x.cfDomain + "/health"),
       kv("TokenSecretArn", physicalOf(st, "AccessToken")), kv("BucketName", physicalOf(st, "VaultBucket")), kv("DistributionId", x.distribution),
-      kv("VaultId", id), kv("AccountId", a), kv("Region", rg), kv("TemplateVersion", VAULT_TEMPLATE)];
+      kv("VaultId", id), kv("AccountId", a), kv("Region", rg), kv("DeployMode", st.mode), kv("TemplateVersion", VAULT_TEMPLATE)];
     if (p.DomainName && !p.HostedZoneId) out.push(kv("DnsRecords", p.DomainName + " CNAME " + x.cfDomain));
     return out;
   }
   // The stack's steps on the clock, from the time it was created.
   function stackSchedule(st, t0) {
     var waves = VAULT_WAVES[st.kind].map(function (wv) {
-      return wv.filter(function (r) { return !/^VaultRecordA/.test(r[0]) || (st.params.DomainName && st.params.HostedZoneId); });
+      return wv.filter(function (r) {
+        if (st.kind === "vault" && r[0] === "VaultBoundary") return st.mode === "one-stack";
+        return !/^VaultRecordA/.test(r[0]) || (st.params.DomainName && st.params.HostedZoneId);
+      });
     }).filter(function (wv) { return wv.length; });
     var out = [], at = Date.parse(t0) + 1000, base = { account: st.account, region: st.region, name: st.name };
     var ev = function (ms, logical, type, status, extra) { var d = Object.assign({ logical: logical, type: type, status: status }, base, extra || {});
       out.push({ at: new Date(ms).toISOString(), op: "cloudformation.stackEvent", target: st.stackId, data: d, actor: "aws:cloudformation", why: "clock.settle" }); };
+    if (st.collides) {
+      // One-stack mode with an -access stack's boundary already there: the name collides, wave 1 is cancelled, rollback.
+      var w1 = waves[0], bad = "sws-vault-" + st.params.VaultId + "-boundary";
+      w1.forEach(function (r) { ev(at, r[0], r[1], "CREATE_IN_PROGRESS"); });
+      ev(at + 900, "VaultBoundary", "AWS::IAM::ManagedPolicy", "CREATE_FAILED", { reason: "Resource handler returned message: \"A policy called " + bad + " already exists. Duplicate names are not allowed.\" (HandlerErrorCode: AlreadyExists)" });
+      w1.forEach(function (r) { if (r[0] !== "VaultBoundary") ev(at + 1000, r[0], r[1], "CREATE_FAILED", { reason: "Resource creation cancelled" }); });
+      ev(at + 1100, st.name, "AWS::CloudFormation::Stack", "ROLLBACK_IN_PROGRESS", { physical: st.stackId, reason: "The following resource(s) failed to create: [" + w1.map(function (r) { return r[0]; }).sort().join(", ") + "]. Rollback requested by user." });
+      w1.forEach(function (r, i) { ev(at + 2000 + i * 300, r[0], r[1], "DELETE_COMPLETE"); });
+      ev(at + 2000 + w1.length * 300 + 500, st.name, "AWS::CloudFormation::Stack", "ROLLBACK_COMPLETE", { physical: st.stackId });
+      return out;
+    }
     waves.forEach(function (wv) {
       var end = at;
       wv.forEach(function (r) {
@@ -770,18 +786,24 @@
       if (existing && existing.status !== "DELETE_COMPLETE") return cfnErr("AlreadyExistsException", "Stack [" + name + "] already exists");
       var caps = []; for (var c = 1; c <= 8; c++) { var cv = form.get("Capabilities.member." + c); if (cv) caps.push(cv); }
       if (caps.indexOf("CAPABILITY_NAMED_IAM") < 0) return cfnErr("InsufficientCapabilitiesException", "Requires capabilities : [CAPABILITY_NAMED_IAM]");
-      var kind = m[2] ? "access" : "vault", roleArn = form.get("RoleARN") || null;
+      var kind = m[2] ? "access" : "vault", roleArn = form.get("RoleARN") || null, mode = null, collides = false;
       if (kind === "vault") {
+        mode = params.DeployMode || "one-stack";
+        if (mode !== "one-stack" && mode !== "access-stack") return cfnErr("ValidationError", "Parameter 'DeployMode' must be one of AllowedValues");
         var access = find(name + "-access"), want = "arn:aws:iam::" + account + ":role/" + name + "-deploy";
-        if (!access || access.status !== "CREATE_COMPLETE" || roleArn !== want)
+        // A RoleARN, in either mode, must be the completed -access stack's deploy role; access-stack mode needs one.
+        if ((mode === "access-stack" || roleArn) && (!access || access.status !== "CREATE_COMPLETE" || roleArn !== want))
           return cfnErr("ValidationError", "Role " + (roleArn || "(none)") + " is invalid or cannot be assumed");
+        // One-stack mode makes its own boundary; an -access stack's boundary of the same name makes the create fail.
+        collides = mode === "one-stack" && !!access && access.status === "CREATE_COMPLETE";
+        params.DeployMode = mode;
       }
       var ids = vaultIds(account, region, m[1]), stackId = "arn:aws:cloudformation:" + region + ":" + account + ":stack/" + name + "/" + ids.stack;
       var plain = {}; Object.keys(params).forEach(function (k) { plain[k] = params[k]; });
-      var st = { name: name, kind: kind, region: region, account: account, stackId: stackId, params: plain, ids: ids };
+      var st = { name: name, kind: kind, region: region, account: account, stackId: stackId, params: plain, ids: ids, mode: mode, collides: collides };
       var t = nowIso();
       record({ t: t, actor: "user:customer-admin@" + account, op: "cloudformation.createStack", target: stackId, why: "deploy.create",
-        data: { account: account, region: region, name: name, kind: kind, params: plain, roleArn: roleArn, stackId: stackId, ids: ids }, schedule: stackSchedule(st, t) });
+        data: { account: account, region: region, name: name, kind: kind, mode: mode, params: plain, roleArn: roleArn, stackId: stackId, ids: ids }, schedule: stackSchedule(st, t) });
       return xml("<CreateStackResponse" + NS + "><CreateStackResult><StackId>" + esc(stackId) + "</StackId></CreateStackResult></CreateStackResponse>");
     }
     if (A === "DescribeStacks") {
@@ -803,6 +825,18 @@
           "</LogicalResourceId><PhysicalResourceId>" + esc(ev.physical) + "</PhysicalResourceId><ResourceType>" + ev.type + "</ResourceType><Timestamp>" + ev.t +
           "</Timestamp><ResourceStatus>" + ev.status + "</ResourceStatus>" + (ev.reason ? "<ResourceStatusReason>" + esc(ev.reason) + "</ResourceStatusReason>" : "") + "</member>";
       }).join("") + "</StackEvents></DescribeStackEventsResult></DescribeStackEventsResponse>");
+    }
+    if (A === "ListStackResources") {
+      var st3 = find(form.get("StackName"));
+      if (!st3) return cfnErr("ValidationError", "Stack with id " + (form.get("StackName") || "") + " does not exist");
+      // In creation order (the order the clock first touched them), as the stack's template lists them.
+      var order = st3.events.slice().reverse().map(function (ev) { return ev.logical; }).filter(function (l, i, a) { return l !== st3.name && a.indexOf(l) === i; });
+      return xml("<ListStackResourcesResponse" + NS + "><ListStackResourcesResult><StackResourceSummaries>" + order.map(function (l) {
+        var rs = st3.resources[l];
+        return "<member><LogicalResourceId>" + esc(l) + "</LogicalResourceId><PhysicalResourceId>" + esc(rs.physical) + "</PhysicalResourceId><ResourceType>" + rs.type +
+          "</ResourceType><LastUpdatedTimestamp>" + rs.t + "</LastUpdatedTimestamp><ResourceStatus>" + rs.status + "</ResourceStatus>" +
+          (rs.reason ? "<ResourceStatusReason>" + esc(rs.reason) + "</ResourceStatusReason>" : "") + "</member>";
+      }).join("") + "</StackResourceSummaries></ListStackResourcesResult></ListStackResourcesResponse>");
     }
     return cfnErr("InvalidAction", "Not in the twin's customer account yet: cloudformation " + A);
   }
