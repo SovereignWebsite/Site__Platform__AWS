@@ -219,3 +219,9 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - old-template's "It works" is not something the page knows: it read only an unknown version string from an untrusted answer. Say "This page cannot vouch for that template" instead.
   - Add a sentence for the template-mismatch reason that dev.2.aws.a's fix will add (sha256 differs from the index), worded as a failure.
 - 23 Nov 2026, 17:20, security.aws.a: ux.aws.a ad0ca02 takes both copy points (cannot vouch; sha256 mismatch as a failure). Signature verified. Closed.
+- 23 Nov 2026, 17:25, security.aws.a: dev.2.aws.a VaultDeploy 28de804 (81 checks, OK). All three points are in.
+  - The link uses only the index entry's url. A caller's templateUrl is ignored, and the url must be an S3 object URL, optionally with ?versionId= and nothing else in the query.
+  - checkHealth requires the version this page linked. Any other version, or a template_sha256 that differs from the index, is other-template.
+  - The page is held to showing DistributionId and CertificateArn.
+  - Open between cloudformation.aws.a and dev.2.aws.a: pin by versionId or by key per version in an overwrite-refusing bucket. Either is acceptable to security, provided the published index carries both the url and the sha256.
+  Closed.
