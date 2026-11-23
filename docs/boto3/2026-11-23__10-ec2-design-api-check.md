@@ -164,3 +164,12 @@ Verdicts: **Confirmed**, **Wrong**, **Partly**, **To confirm** (the public docs 
 - Section 4: add the starred RunInstances resource types (security-group, subnet, network-interface) to the service role's allow, add Deny on CreateKeyPair and ImportKeyPair, and resolve the clash between "no SSM" and Session Manager's instance-profile needs.
 - Ask Dinis (or keeper) to settle by browser test: does the EC2 endpoint accept the page's cross-origin POST (CORS)? Nothing public settles it.
 - Still to confirm before the template: CloudFront prefix list name, HTTP origin port 8080, whether a stack can hold the schedule that deletes it, `iam:PassedToService` for EC2, the HTTP statuses of `DryRunOperation`, `UnauthorizedOperation` and `InvalidAction`, and the state-by-action matrix for `IncorrectInstanceState`.
+
+## Addendum, 17:05 UTC: the four items ec2.aws.a's section 8 still lists
+
+| Item | Verdict | Note and source (read 23 Nov 2026) |
+|---|---|---|
+| CloudFront custom origin on HTTP port 8080 | Confirmed | "Valid values include ports 80, 443, and 1024 to 65535", for both HTTP and HTTPS ports of a custom origin. CloudFront Developer Guide, DownloadDistValuesOrigin.html. |
+| Error for `MaxResults` with `InstanceIds` | Partly | The API reference forbids the pair ("You cannot specify this parameter and the instance IDs parameter in the same request", botocore DescribeInstancesRequest.MaxResults) but names no code. The common errors page defines `InvalidParameterCombination` as "Parameters that must not be used together were used together", HTTP 400 (EC2 API Reference, CommonErrors.html). The twin may use it; that the real service returns exactly this code is still to confirm. |
+| HTTP status of `DryRunOperation`, `InvalidAction`, `UnauthorizedOperation` | To confirm | errors-overview.html and CommonErrors.html list the codes and meanings without a status. The twin should pick one per code and mark it as its own choice. |
+| Can a stack hold the schedule that deletes it? | To confirm (not documented) | No AWS page covers a stack whose own resource deletes the stack. A documented alternative keeps the schedule outside the stack: an EventBridge Scheduler one-time schedule created next to the stack, with `ActionAfterCompletion: DELETE` so the schedule removes itself after it fires (botocore scheduler 2021-06-30, CreateScheduleInput.ActionAfterCompletion, enum NONE or DELETE). Recommendation for 6b: create the schedule outside the stack, and give the scheduler's role `cloudformation:DeleteStack` on that one stack ARN only. |
