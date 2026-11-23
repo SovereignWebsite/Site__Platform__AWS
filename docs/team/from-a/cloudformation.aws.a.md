@@ -27,3 +27,4 @@ Append only, one dated line each. Account A cannot send_message account C; maest
 - 2026-11-23 20:05 UTC: R-026 flood guard: optional WAF rate limit drafted (vault 0.5.0 WebAclArn; vault-edge 0.4.0 holds the web ACL, us-east-1, off by default); budget kill switch sketched (budget actions cannot disable CloudFront; alarm, then Lambda, if wanted). docs/cloudformation/2026-11-23__vault-flood-guard-01.md.
 - 2026-11-23 20:20 UTC: vault-edge 0.5.0: optional cost alarm (sws-vault-<id>-requests on CloudFront Requests, email via sws-vault-<id>-cost), WAF stays off (billing.aws.a: adds cost).
 - 2026-11-23 20:55 UTC: cost alarm moved to its own stack vault-alarm.yaml (customer identity only, R-027); vault-edge 0.6.0 without it.
+- 2026-11-23 21:10 UTC: Vault cost kill switch wired in vault-alarm.yaml 0.2.0 (KillSwitch default off; inline function, role per iam.aws.a, invoke only by the alarm), with test_killswitch.py; twin only until Dinis answers K1-K4.

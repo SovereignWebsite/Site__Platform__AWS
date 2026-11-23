@@ -140,8 +140,21 @@ tp = ER["CostAlarmTopicPolicy"]["Properties"]["PolicyDocument"]["Statement"]
 check({st["Sid"] for st in tp} == {"OnlyThisAlarmPublishes", "NobodyElsePublishes"}, "cost topic policy")
 # IAM can limit AlarmActions but no documented key covers OKActions or InsufficientDataActions (boto3.aws.a note 16).
 check(not ({"OKActions", "InsufficientDataActions"} & set(ER["CostAlarm"]["Properties"])), "cost alarm has OK or insufficient-data actions")
-check(ER["CostAlarm"]["Properties"]["AlarmActions"] == {"Fn::If": ["CostAlarmEmail", [{"Ref": "CostAlarmTopic"}], {"Ref": "AWS::NoValue"}]}, "alarm actions only the cost topic")
-check(all(r["Type"] in ("AWS::CloudWatch::Alarm", "AWS::SNS::Topic", "AWS::SNS::TopicPolicy") for r in ER.values()), "alarm stack holds more than alarm, topic and policy")
+acts = [a for a in walk(ER["CostAlarm"]["Properties"]["AlarmActions"]) if isinstance(a, dict) and ("Ref" in a or "Fn::GetAtt" in a)]
+check(all(a in ({"Ref": "CostAlarmTopic"}, {"Fn::GetAtt": ["KillSwitchFunction", "Arn"]}, {"Ref": "AWS::NoValue"}) for a in acts), f"alarm actions beyond the topic and the switch: {acts}")
+base = {"AWS::CloudWatch::Alarm", "AWS::SNS::Topic", "AWS::SNS::TopicPolicy"}
+switch = {"KillSwitchRole", "KillSwitchLogs", "KillSwitchFunction", "KillSwitchPermission"}
+for n, r in ER.items():
+    check(r["Type"] in base or (n in switch and r.get("Condition") == "KillSwitchOn"), f"alarm stack holds {n} ({r['Type']}) outside the kill switch")
+check(a_t["Parameters"]["KillSwitch"]["Default"] == "off", "kill switch on by default")
+ksp = ER["KillSwitchPermission"]["Properties"]
+check(ksp["Principal"] == "lambda.alarms.cloudwatch.amazonaws.com" and "SourceArn" in ksp and "SourceAccount" in ksp, "kill switch invocable by more than its alarm")
+check(ER["KillSwitchFunction"]["Properties"]["ReservedConcurrentExecutions"] == 1, "kill switch concurrency")
+check(len(ER["KillSwitchFunction"]["Properties"]["Code"]["ZipFile"]) < 4096, "kill switch code over 4 KB")
+for st in walk(ER["KillSwitchRole"]["Properties"]["Policies"]):
+    if isinstance(st, dict) and st.get("Effect") == "Allow":
+        check(st.get("Resource") != "*", f"kill switch Allow on *: {st.get('Sid')}")
+        check(all(not a.endswith(("Delete", "DeleteFunctionConcurrency")) and "Delete" not in a for a in (st["Action"] if isinstance(st["Action"], list) else [st["Action"]])), f"kill switch may delete: {st.get('Sid')}")
 
 if fails:
     print("FAIL\n  " + "\n  ".join(fails)); sys.exit(1)

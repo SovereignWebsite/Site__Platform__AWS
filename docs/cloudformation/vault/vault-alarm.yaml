@@ -4,11 +4,13 @@ Description: >-
   CloudFront request count (R-026), emailing the customer. Always run by the customer with their OWN console identity,
   never with the deploy role, in both deploy modes: IAM cannot pin an alarm's OK or insufficient-data actions or its
   metric, so the deploy role is never allowed to create alarms (security.aws.a, R-027). Run it after the Vault stack
-  exists, with its DistributionId output. DRAFT 0.1.0 by cloudformation.aws.a, 23 Nov 2026.
+  exists, with its DistributionId output. Optional kill switch (KillSwitch, default off; ec2.aws.a's design 03): the
+  alarm invokes a small inline function that throttles the Vault's function to 0 and disables its distribution, marks
+  both sws-vault-paused, and never deletes or restores. Twin only until Dinis decides (K1 to K4). DRAFT 0.2.0 by cloudformation.aws.a, 23 Nov 2026.
 
 Metadata:
   SovereignWebsite:
-    TemplateVersion: 0.1.0-draft
+    TemplateVersion: 0.2.0-draft
 
 Parameters:
   VaultId:
@@ -34,11 +36,31 @@ Parameters:
     Description: >-
       Where the cost alarm emails. Typed by the customer in their own console: the deploy page never asks for it,
       prefills it or stores it (security.aws.a). AWS sends a confirmation email first. Empty means console only.
+  KillSwitch:
+    Type: String
+    Default: "off"
+    AllowedValues: ["off", throttle-and-disable]
+    Description: >-
+      off: the alarm only notifies. throttle-and-disable: when the alarm fires, the Vault stops serving (its function
+      throttled to 0, its distribution disabled) until you restore it by hand. Anyone who can send enough requests can
+      then switch the Vault off: a bounded bill in exchange for availability.
+  VaultRegion:
+    Type: String
+    MaxLength: 20
+    Default: ""
+    AllowedPattern: "^$|^[a-z]{2}(-[a-z]+)+-[0-9]$"
+    Description: The region of stack sws-vault-<id> (needed with the kill switch).
 
 Conditions:
   CostAlarmEmail: !Not [!Equals [!Ref AlertEmail, ""]]
+  KillSwitchOn: !Equals [!Ref KillSwitch, throttle-and-disable]
 
 Rules:
+  KillSwitchNeedsRegion:
+    RuleCondition: !Equals [!Ref KillSwitch, throttle-and-disable]
+    Assertions:
+      - Assert: !Not [!Equals [!Ref VaultRegion, ""]]
+        AssertDescription: The kill switch needs VaultRegion, the region of the Vault stack.
   OnlyInUsEast1:
     Assertions:
       - Assert: !Equals [!Ref AWS::Region, us-east-1]
@@ -100,7 +122,137 @@ Resources:
       Threshold: !Ref RequestAlarmThreshold
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
-      AlarmActions: !If [CostAlarmEmail, [!Ref CostAlarmTopic], !Ref AWS::NoValue]
+      AlarmActions: !If
+        - CostAlarmEmail
+        - !If [KillSwitchOn, [!Ref CostAlarmTopic, !GetAtt KillSwitchFunction.Arn], [!Ref CostAlarmTopic]]
+        - !If [KillSwitchOn, [!GetAtt KillSwitchFunction.Arn], !Ref AWS::NoValue]
+
+  # ---- the kill switch (design 03, ec2.aws.a; role from iam.aws.a's killswitch-role.yaml 0.1.1) ----
+  KillSwitchRole:
+    Type: AWS::IAM::Role
+    Condition: KillSwitchOn
+    Properties:
+      RoleName: !Sub "sws-vault-${VaultId}-killswitch"
+      Description: Pauses one Vault when its cost alarm fires; never deletes or restores
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+            Condition: { StringEquals: { "aws:SourceAccount": !Ref AWS::AccountId } }
+      Policies:
+        - PolicyName: pause-this-vault
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # UpdateDistribution takes the whole configuration and IAM cannot limit it to Enabled: false; the code
+              # below only flips Enabled (residual, iam.aws.a).
+              - Sid: DisableTheOneDistribution
+                Effect: Allow
+                Action: [cloudfront:GetDistribution, cloudfront:GetDistributionConfig, cloudfront:UpdateDistribution]
+                Resource: !Sub "arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${DistributionId}"
+              - Sid: ThrottleTheOneFunction
+                Effect: Allow
+                Action: [lambda:PutFunctionConcurrency, lambda:GetFunctionConcurrency]
+                Resource: !Sub "arn:${AWS::Partition}:lambda:${VaultRegion}:${AWS::AccountId}:function:sws-vault-${VaultId}-api"
+              - Sid: MarkPausedDistribution
+                Effect: Allow
+                Action: cloudfront:TagResource
+                Resource: !Sub "arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${DistributionId}"
+                Condition: { "ForAllValues:StringEquals": { "aws:TagKeys": [sws-vault-paused] } }
+              - Sid: MarkPausedFunction
+                Effect: Allow
+                Action: lambda:TagResource
+                Resource: !Sub "arn:${AWS::Partition}:lambda:${VaultRegion}:${AWS::AccountId}:function:sws-vault-${VaultId}-api"
+                Condition: { "ForAllValues:StringEquals": { "aws:TagKeys": [sws-vault-paused] } }
+              - Sid: OwnLogs
+                Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt KillSwitchLogs.Arn
+              - Sid: NeverRestoreOrDelete
+                Effect: Deny
+                Action: [lambda:DeleteFunctionConcurrency, lambda:DeleteFunction, lambda:UpdateFunctionConfiguration,
+                  lambda:UpdateFunctionCode, lambda:AddPermission, cloudfront:DeleteDistribution, cloudfront:CreateDistribution,
+                  "iam:*", "s3:*", "secretsmanager:*", "ec2:*", "ssm:*"]
+                Resource: "*"
+      Tags:
+        - { Key: sws-vault, Value: !Ref VaultId }
+
+  KillSwitchLogs:
+    Type: AWS::Logs::LogGroup
+    Condition: KillSwitchOn
+    DeletionPolicy: RetainExceptOnCreate
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/sws-vault-${VaultId}-killswitch"
+      RetentionInDays: 90
+
+  KillSwitchFunction:
+    Type: AWS::Lambda::Function
+    Condition: KillSwitchOn
+    DependsOn: KillSwitchLogs
+    Properties:
+      FunctionName: !Sub "sws-vault-${VaultId}-killswitch"
+      Description: Pauses this one Vault when its cost alarm fires. Never deletes, never restores.
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt KillSwitchRole.Arn
+      Timeout: 60
+      MemorySize: 128
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          DISTRIBUTION_ID: !Ref DistributionId
+          FUNCTION_ARN: !Sub "arn:${AWS::Partition}:lambda:${VaultRegion}:${AWS::AccountId}:function:sws-vault-${VaultId}-api"
+          ALARM_NAME: !Sub "sws-vault-${VaultId}-requests"
+      Code:
+        ZipFile: |
+          import json, os, datetime, boto3
+          DIST = os.environ["DISTRIBUTION_ID"]
+          FN = os.environ["FUNCTION_ARN"]
+          ALARM = os.environ["ALARM_NAME"]
+          def log(**k):
+              print(json.dumps(k, default=str))
+          def handler(event, context):
+              # CHECK: the alarm-action event shape (alarmData.alarmName, alarmData.state.value).
+              d = (event or {}).get("alarmData") or {}
+              name = d.get("alarmName")
+              state = (d.get("state") or {}).get("value")
+              if name != ALARM or state != "ALARM":
+                  log(action="ignored", alarm=name, state=state)
+                  return
+              t = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+              lam = boto3.client("lambda", region_name=FN.split(":")[3])
+              cur = lam.get_function_concurrency(FunctionName=FN).get("ReservedConcurrentExecutions")
+              if cur != 0:
+                  lam.put_function_concurrency(FunctionName=FN, ReservedConcurrentExecutions=0)
+                  lam.tag_resource(Resource=FN, Tags={"sws-vault-paused": t})
+              log(lever="throttle", function=FN, before=cur, after=0, alarm_time=event.get("time"))
+              cf = boto3.client("cloudfront")
+              r = cf.get_distribution_config(Id=DIST)
+              cfg, etag = r["DistributionConfig"], r["ETag"]
+              was = cfg["Enabled"]
+              if was:
+                  cfg["Enabled"] = False
+                  cf.update_distribution(Id=DIST, IfMatch=etag, DistributionConfig=cfg)
+                  arn = "arn:aws:cloudfront::%s:distribution/%s" % (FN.split(":")[4], DIST)
+                  cf.tag_resource(Resource=arn, Tags={"Items": [{"Key": "sws-vault-paused", "Value": t}]})
+              log(lever="disable", distribution=DIST, before=was, after=False, alarm_time=event.get("time"))
+      Tags:
+        - { Key: sws-vault, Value: !Ref VaultId }
+
+  # Only this alarm may invoke the switch (CloudWatch UG, Lambda alarm actions; boto3.aws.a note 17).
+  KillSwitchPermission:
+    Type: AWS::Lambda::Permission
+    Condition: KillSwitchOn
+    Properties:
+      FunctionName: !Ref KillSwitchFunction
+      Action: lambda:InvokeFunction
+      Principal: lambda.alarms.cloudwatch.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:sws-vault-${VaultId}-requests"
 
 Outputs:
   CostAlarmName:
