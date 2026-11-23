@@ -15,6 +15,9 @@
     "route53_page": "https://aws.amazon.com/route53/pricing/",
     "cost_explorer_page": "https://aws.amazon.com/aws-cost-management/aws-cost-explorer/pricing/",
     "cloudformation_page": "https://aws.amazon.com/cloudformation/pricing/",
+    "cloudwatch_data": { "url": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/cloudwatch/USD/current/cloudwatch.json", "published": "2026-11-19T17:10:40Z", "note": "AWS's CloudWatch price data. Read by billing.aws.a on 23 Nov 2026." },
+    "ec2_data": { "url": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2.json", "published": "2026-11-21T00:48:16Z", "note": "AWS's EC2 on-demand price data. Read by billing.aws.a on 23 Nov 2026." },
+    "vpc_data": { "url": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/vpc/USD/current/vpc.json", "published": "2026-11-19T20:55:45Z", "note": "AWS's VPC price data (public IPv4 addresses). Read by billing.aws.a on 23 Nov 2026." },
     "datatransfer_data": { "url": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/datatransfer/USD/current/datatransfer.json", "published": "2026-11-19T10:58:41Z", "note": "AWS's regional data transfer price data. Read by billing.aws.a on 23 Nov 2026. Its tier ranges are in GB with 1 TB as 1,024 GB (10 TB ends at 10240)." }
   },
   "regions": {
@@ -58,13 +61,25 @@
     { "id": "transfer.internet_out.next100tb", "service": "Data transfer", "unit": "GB", "eu-west-2": 0.07, "eu-west-1": 0.07, "source": "datatransfer_data", "label": "DataTransfer External Outbound Next 100 TB", "range_gb": [51200, 153600] },
     { "id": "transfer.internet_out.over150tb", "service": "Data transfer", "unit": "GB", "eu-west-2": 0.05, "eu-west-1": 0.05, "source": "datatransfer_data", "label": "DataTransfer External Outbound Greater than 150 TB", "range_gb": [153600, null] },
 
+    { "id": "cloudwatch.vended_to_firehose.first10tb", "service": "CloudWatch Logs", "unit": "GB", "eu-west-2": 0.299, "eu-west-1": 0.285, "source": "cloudwatch_data", "label": "Amazon Kinesis Data Firehose Delivered Logs for first 10TB", "note": "CloudWatch Logs delivery of vended logs to Data Firehose, per GB. Whether the real CloudFront logs take this path (and pay this as well as Firehose ingestion) is open question 2 in the README; the CloudWatch pricing page's own wording on which sources it applies to is still to be read, so the twin estimate does not use these rows yet." },
+    { "id": "cloudwatch.vended_to_firehose.next20tb", "service": "CloudWatch Logs", "unit": "GB", "eu-west-2": 0.18, "eu-west-1": 0.171, "source": "cloudwatch_data", "label": "Amazon Kinesis Data Firehose Delivered Logs for next 20TB" },
+    { "id": "cloudwatch.vended_to_firehose.next20tb_2", "service": "CloudWatch Logs", "unit": "GB", "eu-west-2": 0.09, "eu-west-1": 0.086, "source": "cloudwatch_data", "label": "Amazon Kinesis Data Firehose Delivered Logs for next next 20 TB" },
+    { "id": "cloudwatch.vended_to_firehose.over50tb", "service": "CloudWatch Logs", "unit": "GB", "eu-west-2": 0.06, "eu-west-1": 0.057, "source": "cloudwatch_data", "label": "Amazon Kinesis Data Firehose Delivered Logs for over 50TB" },
+
+    { "id": "ec2.ondemand.linux.t4g.nano", "service": "EC2", "unit": "instance-hour", "eu-west-2": 0.0047, "eu-west-1": 0.0046, "source": "ec2_data", "label": "OnDemand Linux-instancetype-t4g.nano", "note": "On-demand, Linux, per instance-hour. t4g is burstable: CPU credits used above the baseline in unlimited mode may be charged on top; not priced yet." },
+    { "id": "ec2.ondemand.linux.t4g.micro", "service": "EC2", "unit": "instance-hour", "eu-west-2": 0.0094, "eu-west-1": 0.0092, "source": "ec2_data", "label": "OnDemand Linux-instancetype-t4g.micro" },
+    { "id": "ec2.ondemand.linux.t4g.small", "service": "EC2", "unit": "instance-hour", "eu-west-2": 0.0188, "eu-west-1": 0.0184, "source": "ec2_data", "label": "OnDemand Linux-instancetype-t4g.small" },
+    { "id": "ec2.ondemand.linux.t4g.medium", "service": "EC2", "unit": "instance-hour", "eu-west-2": 0.0376, "eu-west-1": 0.0368, "source": "ec2_data", "label": "OnDemand Linux-instancetype-t4g.medium" },
+    { "id": "vpc.public_ipv4.in_use", "service": "VPC", "unit": "address-hour", "eu-west-2": 0.005, "eu-west-1": 0.005, "source": "vpc_data", "label": "Hourly charge for In use Public IPv4 Addresses per Hrs", "note": "Each public IPv4 address, in use or idle (idle is the same $0.005 in both regions)." },
     { "id": "costexplorer.api.request", "service": "Cost Explorer", "unit": "request", "global": 0.01, "source": "cost_explorer_page", "quote": "Each request using your primary billing view ... will incur a cost of $0.01.", "note": "The page's billing view calls Cost Explorer: every refresh in real AWS mode costs a cent." }
   ],
   "not_priced_yet": [
+    "EBS gp3 storage per GB-month (for EC2): not in the EC2 or VPC price data read; the EBS pricing page or its data file is still to be read.",
+    "EC2 t4g CPU credits in unlimited mode, above the baseline: not yet read.",
     "STS and IAM: no price row found on a pricing page yet; treated as unknown, not as free.",
     "Cloud Control API: pricing page not yet read.",
     "CloudFormation: the pricing page says charges apply to registry extensions (third-party resource types and hooks) per handler operation; it does not state a price for AWS::IAM resources in one line, so the sws-aws-platform stack is left unpriced, not called free.",
-    "CloudWatch Logs vended log delivery (a possible path for CloudFront standard logs): not yet read.",
+    "CloudWatch Logs vended log delivery: the Firehose delivery tiers are copied (cloudwatch.vended_to_firehose.*), but which log sources they apply to is still to be read on the CloudWatch pricing page, so the estimate does not use them yet.",
     "Data transfer out to the internet: the tiers are copied (transfer.internet_out.*), but any monthly free allowance is not in the price data read, so none is applied yet; the S3 pricing page's own wording on it is still to be read.",
     "Free tiers for S3 and the AWS account-level credits: not applied; the model shows costs before them."
   ]

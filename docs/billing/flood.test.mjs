@@ -1,0 +1,30 @@
+// Tests for flood.mjs. billing.aws.a@SovereignWebsite.dinis. Run: node --test docs/billing/flood.test.mjs
+import test from "node:test";
+import assert from "node:assert/strict";
+import { flood } from "./flood.mjs";
+
+test("duration cost is capped by concurrency, whatever each request takes", () => {
+  const a = flood({ concurrency: 10, memoryMb: 1024, durationMs: 20 });
+  const b = flood({ concurrency: 10, memoryMb: 1024, durationMs: 1000 });
+  assert.equal(a.gb_seconds, 36000);
+  assert.equal(a.gb_seconds, b.gb_seconds);
+  assert.ok(Math.abs(a.duration_cost - b.duration_cost) < 1e-12);
+});
+
+test("shorter requests mean more requests, so more request charges", () => {
+  const a = flood({ concurrency: 10, memoryMb: 512, durationMs: 20 });
+  assert.equal(a.requests, 10 * 3600 * 50);
+  assert.ok(a.request_cost > flood({ concurrency: 10, memoryMb: 512, durationMs: 200 }).request_cost);
+});
+
+test("scales linearly with concurrency and hours", () => {
+  const one = flood({ concurrency: 5, memoryMb: 512, durationMs: 200 });
+  const ten = flood({ concurrency: 50, memoryMb: 512, durationMs: 200 });
+  const two = flood({ concurrency: 5, memoryMb: 512, durationMs: 200, hours: 2 });
+  assert.ok(Math.abs(ten.total - 10 * one.total) < 1e-9);
+  assert.ok(Math.abs(two.total - 2 * one.total) < 1e-9);
+});
+
+test("refuses nonsense input", () => {
+  assert.throws(() => flood({ concurrency: 0, memoryMb: 512, durationMs: 20 }));
+});

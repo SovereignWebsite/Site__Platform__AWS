@@ -1,0 +1,23 @@
+{
+  "id": "billing-aws-a-sovereignwebsite",
+  "agent": "billing.aws.a@SovereignWebsite.dinis",
+  "role": "AWS billing accountant on account A (AWS Platform programme), the fresh session that replaces the earlier billing.aws.a session: a price model of the stack from AWS's public pricing pages, run over the twin, then real-time and predicted billing (pipeline P4). Not accountant.c.",
+  "how": "Made by the agent in its own session on 23 November 2026 with sgit pki keygen; public bundle from sgit pki export. Only the public half is here.",
+  "created": "2026-11-23",
+  "status": "active",
+  "session": "https://claude.ai/code/session_018yvwtMJvHDhceWXbmYGvC6",
+  "fingerprint": "sha256:4d25179604ce68d4",
+  "signing_fingerprint": "sha256:6a98bf62998f26ff",
+  "bundle": {
+    "v": 1,
+    "encrypt": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAsZWfHVb6FmI/QdEc4gF6\nH3dOJaMBmVeCoOMbZRA28V5nBtf68b+8CpZkSdM4PmBRpGZMhlzu94kgZbYRIuq7\n/ml5FCuNnZza7Li7IiuZ7j217f1MvVhq6+ZFWfZu5xEpwZNbejuxb1ADmYjwsav/\nIdzzeizwvpNUrzHdA83/crLFBwydDVo/Ot+Kcqx40bS1ItyxopH9AfEUkboK79Rh\nkzYN1rQYz95qGMKWM7/sf5slq7oa9+w7csP/vCc763wurls/nm04Gola7I2JAsb2\n/n9I+vDIkzO9dRgG1s9JHw4jiRs3HEQ4Cz7qFBc6Pz1eaniM+G+BZHRcrl8z7tE3\nqoGEpCHKZTEgaGcyaQsGJCX15At/u7eCZC95nEVN9OUvTdxtyNobajnklPeDuCnQ\nrzVIDGmzjj4jsDCV83ky4tDWcwALB910uLlb3ifFC3kERLqN7IfV3+3TTpJ8M+G8\nmKvzIfuisCl38i/66QsHNaJ/52vi/Rt5nX0NJ0z6OSj2Zmt6bLBTLrb+ZxWJyc1j\nPulMq8S5kV9f1NZ6pk535kZ+nUClW1gz+ADsCRURhnyaOygjcHU5+gK7f4kPYkzO\nCtutYu5pfjaEQnQd14rnT6lChW26t6l0D3tPy6zTQ63o0zqP0j1TK6RZM4v/fsoG\n1FNgMrIvoGddCXgCCI1AVcMCAwEAAQ==\n-----END PUBLIC KEY-----\n",
+    "sign": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE56/zt8+zfktWmp6bZfJuq9PDk2ob\nTXAHiHgGqyOcvBoEiMzCJsgvpXZoappH09pH3VQZ1C8eFEj+Fz31BA9DWQ==\n-----END PUBLIC KEY-----\n",
+    "label": "billing.aws.a@SovereignWebsite.dinis",
+    "fingerprint": "sha256:4d25179604ce68d4",
+    "signing_fingerprint": "sha256:6a98bf62998f26ff"
+  },
+  "ssh_signing": {
+    "from": "bundle.sign",
+    "note": "build/check-signatures.mjs derives the OpenSSH form from bundle.sign and verifies each commit with git verify-commit."
+  }
+}
