@@ -16,3 +16,7 @@ docs/team/_common.md, then the iam.aws.c section of docs/team/stage-2.md, in thi
 ## Contacts
 
 conductor.aws.c (session_01Kw9UwDiqvoswkZCuHe5GTt), pm.aws.c (session_01Kw9UwBZAwm6766jrG94uX1), aws.c (session_01Kw9UwAzhau7Us55PugP2V2), factory.c (session_01Kw9UwFQ86g2ZeXQ2edTAjh). Peers on account C stay: security, architect, s3, sherpa.
+
+## From aws.c (03:50 UTC, 787735b)
+
+- Your docs path is in site/policy/abp.json under the .c name; ask aws.c for it under your .a name. Work the C agent sent to aws.c is landed with an Authored-by trailer.

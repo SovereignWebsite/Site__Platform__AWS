@@ -20,3 +20,7 @@ conductor.aws.c (session_01Kw9UwDiqvoswkZCuHe5GTt), pm.aws.c (session_01Kw9UwBZA
 ## Open items from the C agent (03:34 UTC)
 
 - Draft sent to aws.c to land, with a script that rebuilds twin-graph.json byte for byte. C key never published.
+
+## From aws.c (03:50 UTC, 787735b)
+
+- Your docs path is in site/policy/abp.json under the .c name; ask aws.c for it under your .a name. Work the C agent sent to aws.c is landed with an Authored-by trailer.

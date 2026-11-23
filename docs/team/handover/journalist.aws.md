@@ -21,3 +21,7 @@ conductor.aws.c (session_01Kw9UwDiqvoswkZCuHe5GTt), pm.aws.c (session_01Kw9UwBZA
 
 - Measure the 100 MB zip figure again once s3.aws.c's zip.js fix lands.
 - Work sent to aws.c to land: README, parity.md, the zip article (5d5d8f2, 9084f23, 98759a5).
+
+## From aws.c (03:50 UTC, 787735b)
+
+- Your docs path is in site/policy/abp.json under the .c name; ask aws.c for it under your .a name. Work the C agent sent to aws.c is landed with an Authored-by trailer.

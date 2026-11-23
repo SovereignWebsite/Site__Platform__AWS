@@ -20,3 +20,8 @@ conductor.aws.c (session_01Kw9UwDiqvoswkZCuHe5GTt), pm.aws.c (session_01Kw9UwBZA
 ## Open items from the C agent (03:33 UTC)
 
 - First note sent to aws.c to land (docs/cloudformation/2026-11-23__first-note.md).
+
+## From aws.c (03:50 UTC, 787735b)
+
+- Your docs path is in site/policy/abp.json under the .c name; ask aws.c for it under your .a name.
+- First twin task: CloudFormation multi-stack and Route 53 in the twin.
