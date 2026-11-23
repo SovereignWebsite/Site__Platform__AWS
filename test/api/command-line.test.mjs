@@ -103,8 +103,75 @@ for (const row of table.commands) {
   ok(first.status === 206 && first.bytes.length === 1, "run: --bytes 0-0 (a start of 0) still sends a Range header");
 }
 
+// ---- design 09's alias table (ux.aws.a): every alias expands to rows that exist, and the steps run ----
+{
+  const E = (line, c) => JSON.parse(JSON.stringify(C.expand(line, table, c)));
+  const commands = new Set(table.commands.map((r) => r.command)), aliases = C.ALIASES.map((a) => a.alias);
+  ok(C.ALIASES.every((a) => a.expands.every((x) => commands.has(x))), "every alias's rows exist in commands.json");
+  ok(["help", "ls", "cat", "open", "who", "roles", "stacks", "stack", "events", "fns", "streams", "cdn", "logs", "files", "map", "timeline", "desk"].every((a) => aliases.includes(a)), "design 09's aliases, all present");
+  ok(table.commands.every((r) => r.role === "read"), "every row an alias can reach is a read");
+  const ctx1 = { region: "eu-west-2", bucketRegions: { bkt: "eu-west-1", "my.bucket": "eu-west-2" } };
+  const cases = [
+    ["ls", [["s3", "listBuckets"]]],
+    ["ls bkt", [["s3", "listObjects", "bkt", "eu-west-1", "--delimiter", "/"]]],
+    ["ls bkt/", [["s3", "listObjects", "bkt", "eu-west-1", "--delimiter", "/"]]],
+    ["ls bkt/logs/2026/", [["s3", "listObjects", "bkt", "eu-west-1", "--prefix", "logs/2026/", "--delimiter", "/"]]],
+    ['cat "bkt/a key with spaces.txt"', [["s3", "getObject", "bkt", "eu-west-1", "a key with spaces.txt"]]],
+    ["who sws-aws-platform-read", [["iam", "role", "sws-aws-platform-read"], ["iam", "attached", "sws-aws-platform-read"]]],
+    ["roles", [["iam", "roles"]]], ["cdn", [["cloudfront", "distributions"]]],
+    ["stacks", [["cfn", "stacks", "eu-west-2"]]], ["stack demo-site", [["cfn", "stack", "eu-west-2", "demo-site"]]], ["events demo-site", [["cfn", "events", "eu-west-2", "demo-site"]]],
+    ["fns", [["lambda", "functions", "eu-west-2"]]], ["streams", [["firehose", "streams", "eu-west-2"]]],
+    ["logs /aws/lambda/x", [["logs", "events", "eu-west-2", "/aws/lambda/x", "--newest"]]],
+    ["logs /aws/lambda/x --pattern ERROR --max 5", [["logs", "events", "eu-west-2", "/aws/lambda/x", "--newest", "--pattern", "ERROR", "--max", "5"]]],
+    ["logs /aws/lambda/x --newest", [["logs", "events", "eu-west-2", "/aws/lambda/x", "--newest"]]]
+  ];
+  for (const [line, want] of cases) {
+    const x = E(line, ctx1);
+    ok(x.ok && x.kind === "commands" && JSON.stringify(x.steps.map((s) => s.words)) === JSON.stringify(want), line + " -> " + JSON.stringify(want) + " (got " + JSON.stringify(x) + ")");
+    ok(x.ok && x.steps.every((s) => { const p = C.parseWords(s.words, table); return p.ok && commands.has(p.row.command); }), line + ": every step parses to an existing row");
+  }
+  ok(E("cat bkt/k", ctx1).steps && C.parseWords(E("cat bkt/k", ctx1).steps[0].words, table).call.args[3].join() === "0," + (256 * 1024 - 1), "cat keeps the 256 KiB cap");
+  // Regions: the bucket's own, never the crumb's; the crumb for regional rows; otherwise asked, never guessed.
+  const nb = E("ls other/x", ctx1);
+  ok(!nb.ok && nb.code === "needs-bucket-region" && nb.bucket === "other" && nb.lookup.words.join(" ") === "s3 getBucket other", "a bucket with no known region: look it up with s3 getBucket, not the crumb");
+  ok(E("cat other/k", ctx1).code === "needs-bucket-region", "cat too");
+  for (const l of ["stacks", "stack s", "fns", "streams", "logs /g", "events s"]) ok(E(l, {}).code === "needs-region" && E(l, { region: "../evil" }).code === "needs-region", l + ": no crumb region (or a bad one) asks Which region?");
+  ok(E("ls bkt", { bucketRegions: { bkt: "x/../y" } }).code === "needs-bucket-region", "a bucket region that is not a region is not used");
+  ok(E("ls constructor", { bucketRegions: {} }).code === "needs-bucket-region" && E("ls hasownproperty", { bucketRegions: {} }).code === "needs-bucket-region", "bucket names are looked up as own keys only");
+  // A command wins over an alias; switches, help and plan; usage errors.
+  ok(E("logs groups eu-west-2", ctx1).steps[0].words.join(" ") === "logs groups eu-west-2" && E("logs events eu-west-2 /g", ctx1).steps[0].words.join(" ") === "logs events eu-west-2 /g", "a line that is a command stays that command");
+  ok(JSON.stringify(E("open bkt/a/b", ctx1)) === JSON.stringify({ ok: true, kind: "switch", console: "files", bucket: "bkt", path: "a/b" }) && E("map").console === "map" && E("desk").kind === "switch", "open and the console names switch, with no AWS call");
+  ok(E("help").kind === "help" && E("help").command === null && E("help s3 listObjects").command === "s3 listObjects", "help, and help <command>");
+  ok(E("plan cors b").kind === "plan" && /No plan for that yet/.test(E("plan cors b").message), "plan never runs: Desk holds plans");
+  for (const l of ["ls a b", "cat bkt", "cat bkt/", "cat /k", "who", "who a b", "roles x", "cdn x", "stacks x", "stack", "logs", "logs --newest", "map x", "open", "open /x"]) ok(E(l, ctx1).code === "arity", l + ": usage");
+  for (const l of ["rm bkt/k", "ls *", "s3 deleteBucket bkt", ""]) ok(!E(l, ctx1).ok, JSON.stringify(l) + " refused");
+  for (const l of ["ls *", "ls b*", "cat */k", "open ../x", "ls __proto__", "ls B", "ls a"]) ok(E(l, ctx1).code === "arity", l + ": not a bucket name, so no lookup is built");
+  ok(C.completeAlias("st").map((a) => a.alias).join() === "stacks,stack,streams", "alias completion");
+  // The steps run on the real API over the twin (a parsed line that never runs proves nothing).
+  const t2 = await (await ctx.AwsTransport.fetch("https://sts.amazonaws.com/", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ Action: "AssumeRoleWithWebIdentity", RoleArn: "arn:aws:iam::" + A + ":role/sws-aws-platform-read", RoleSessionName: "t", WebIdentityToken: "twin", Version: "2011-06-15" }).toString() })).text();
+  const g2 = (k) => (new RegExp("<" + k + ">([^<]*)</" + k + ">").exec(t2) || [])[1], cr = { accessKeyId: g2("AccessKeyId"), secretAccessKey: g2("SecretAccessKey"), sessionToken: g2("SessionToken") };
+  const send2 = async (req) => ctx.AwsTransport.fetch(req.url, { method: req.method, headers: await ctx.SigV4.sign({ method: req.method, url: req.url, headers: req.headers, body: req.body }, cr, req.region, req.service), body: req.body });
+  const runWords = (w) => { const x = C.parseWords(w, table); if (!x.ok) throw new Error(x.message); return ctx[x.call.global](send2, { account: A })[x.call.method](...x.call.args); };
+  // The twin answers S3 reads as a browser sees them: only buckets with CORS (as the getObject case above).
+  const s3b = ctx.S3Api(send2), regions = {};
+  let site = null;
+  for (const name of await s3b.listBuckets()) if (!site && (await s3b.getBucket(name)).cors) site = name;
+  let r = E("ls " + site, { region: "eu-west-2", bucketRegions: regions });
+  ok(r.code === "needs-bucket-region", "ls over the twin: first the bucket's region");
+  regions[site] = (await runWords(r.lookup.words)).region;
+  r = E("ls " + site, { region: "eu-west-2", bucketRegions: regions });
+  const listed = await runWords(r.steps[0].words);
+  ok(listed.files.length + listed.folders.length > 0, "ls <bucket> runs on S3Api over the twin, in the bucket's own region " + regions[site]);
+  const firstFile = listed.files[0];
+  if (firstFile) { const got = await runWords(E("cat " + site + "/" + firstFile.key, { bucketRegions: regions }).steps[0].words); ok(got.status === 200 || got.status === 206, "cat runs getObject over the twin"); }
+  const who = await Promise.all(E("who sws-aws-platform-read").steps.map((s) => runWords(s.words)));
+  ok(who[0].arn === "arn:aws:iam::" + A + ":role/sws-aws-platform-read" && Array.isArray(who[1].items), "who runs iam role and iam attached over the twin");
+  ok((await runWords(E("stacks", { region: "eu-west-2" }).steps[0].words)).items.some((s) => s.name === "demo-site"), "stacks runs cfn stacks in the crumb's region over the twin");
+}
+
 const src = readFileSync(new URL("../../site/api/command-line.js", import.meta.url), "utf8");
 ok(!/\beval\(|new Function|innerHTML|setTimeout|setInterval|fetch\(|localStorage/.test(src.replace(/^\s*\/\/.*$/gm, "")), "no eval, HTML, timers, requests or storage in the parser");
 
 if (failures) { console.error(failures + " failed, " + passed + " passed"); process.exit(1); }
-console.log("OK (command-line: " + passed + " checks; grammar, options, --bytes cap, completion, every row, runs over the twin)");
+console.log("OK (command-line: " + passed + " checks; grammar, options, --bytes cap, completion, every row, aliases, runs over the twin)");
