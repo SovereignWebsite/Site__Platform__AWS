@@ -1,6 +1,6 @@
 # EC2 design 03: the Vault cost kill switch
 
-Written by ec2.aws.a@SovereignWebsite.dinis, 23 November 2026 ~18:20 UTC. Status: **first draft, proposed, twin only**. Owner of the design: ec2.aws.a (conductor.aws.a, 18:01 UTC); iam.aws.a owns its narrow role, cloudformation.aws.a wires it into the templates. Nothing here runs outside the twin until Dinis has answered V5 and approved the automatic part as its own decision (section 7). No agent calls AWS.
+Written by ec2.aws.a@SovereignWebsite.dinis, 23 November 2026 ~18:20 UTC. Status: **reviewed by security.aws.a** (docs/security/reviews/2026-11-23__ec2-design-03-kill-switch.md on work/security.aws.a: sound, fit for pm.aws.a with its points, all folded in below), **twin only**. Owner of the design: ec2.aws.a (conductor.aws.a, 18:01 UTC); iam.aws.a owns its narrow role, cloudformation.aws.a wires it into the templates. Nothing here runs outside the twin until Dinis has answered V5 and approved the automatic part as its own decision (section 7). No agent calls AWS.
 
 ## 0. Why, and the inputs
 
@@ -31,18 +31,23 @@ Lever 1 first because it is instant and cheap to undo; lever 2 because it is the
 
 - **Where:** in the alarm stack `sws-vault-<id>-alarm`, us-east-1, so it is made by the customer's own identity like the alarm (R-027), and nothing new is asked of the deploy role in either mode.
 - **What:** `sws-vault-<id>-killswitch`, a Lambda with its code inline in the template (short, reviewable, pinned by the template version; no package to fetch). It is custom code in the customer's account, which cloudformation.aws.a flagged; it is opt-in (section 7).
-- **How it is triggered:** the alarm's action. Two ways, for boto3.aws.a to settle: (a) CloudWatch alarms can invoke a Lambda directly as an alarm action (*check*), which needs no topic; (b) through the topic `sws-vault-<id>-cost`, which then exists whenever the kill switch is on, not only with an email. Either way the function's resource policy allows invoke only from that one alarm (`aws:SourceArn`) or that one topic, so nothing else in the account can fire it.
-- **What it may do** (for iam.aws.a's role, `sws-vault-<id>-killswitch`):
+- **How it is triggered:** the alarm's action. Two ways, for boto3.aws.a to settle: (a) CloudWatch alarms can invoke a Lambda directly as an alarm action (*check*), which needs no topic; (b) through the topic `sws-vault-<id>-cost`, which then exists whenever the kill switch is on, not only with an email. Either way the function's resource policy allows invoke only by the principal `lambda.alarms.cloudwatch.amazonaws.com` with `aws:SourceArn` = the alarm's ARN, or `sns.amazonaws.com` with `aws:SourceArn` = the topic's ARN, so nothing else in the account can fire it. Its reserved concurrency is 1, so it never runs twice at once (security.aws.a).
+- **What it may do** (for iam.aws.a's role, `sws-vault-<id>-killswitch`, trusting `lambda.amazonaws.com` with `aws:SourceAccount` = the customer's account):
   - `cloudfront:GetDistributionConfig` and `cloudfront:UpdateDistribution` on the Vault's one distribution ARN;
   - `lambda:PutFunctionConcurrency` on `function:sws-vault-<id>-api` in the Vault's region (a cross-region call from us-east-1);
+  - `cloudfront:TagResource` on that distribution and `lambda:TagResource` on that function, for the pause tag only (section 4);
   - its own logs.
+  - Nothing else: exactly these rights.
   - **Never:** any delete, `lambda:DeleteFunctionConcurrency` (that is restore), any IAM, S3 or Secrets Manager action.
+- **The code is the guard:** IAM cannot limit `UpdateDistribution` to the `Enabled` field: the role can change anything in that distribution's config. So the inline code is pinned by the template version, kept tiny (read config, set `Enabled: false`, write it back with `IfMatch`; nothing else), and reviewed as security-relevant (security.aws.a).
 - **What it checks before acting:** the alarm named in the event is `sws-vault-<id>-requests` and its state is ALARM; the distribution's id matches the one the stack was given. Anything else: log and do nothing.
+- **It tells the customer:** each pause sends an email through the topic `sws-vault-<id>-cost` (when the customer gave an address), saying which Vault, when, which levers, and how to restore (security.aws.a).
 - **What it records:** one log line per lever with the alarm's time and the before and after state, so plan step 9's audit view (cloudtrail.aws.a) can show "paused by the cost alarm at T". CloudTrail records the two API calls with the function's role as the actor.
 
 ## 4. Restoring: deliberate, never automatic
 
 - The alarm going back to OK does **not** restore. A flood that pauses for five minutes would otherwise toggle the Vault on and off, and every toggle is a CloudFront deployment.
+- **A pause must survive a stack update** (security.aws.a): any later update of `sws-vault-<id>` puts reserved concurrency 10 and `Enabled: true` back and would silently undo a pause. So the function tags the function and the distribution `sws-vault-paused=<ISO time>` when it pauses, and the update path (the deploy page's update link, and our own plans) checks for the tag and refuses, or warns and asks for an explicit "restore and update", while it is there. Restore removes the tag.
 - Restore is two calls, the levers reversed: delete the function's reserved-concurrency setting (back to the template's value through a stack update, not by hand), and re-enable the distribution. On the deploy page (no credential in the customer's account, D3) it is a link: a pre-filled stack update, or the console page of the distribution (cloudformation.aws.a's option (c)).
 - For our own deployments, restore is a plan Dinis approves.
 
@@ -65,13 +70,14 @@ Built on what the twin has: the CloudWatch twin (monitoring host, work/dev.2.aws
   4. The alarm returns to OK: nothing is restored.
   5. Nothing is deleted: the stack, bucket, secret and function all remain.
   6. A publish to the topic from anything but the alarm, or an invoke from anything but the alarm or topic, is refused and recorded as refused.
-  7. Restore by the explicit two calls brings the Vault back; `/health` answers again.
+  7. Restore by the explicit two calls brings the Vault back, removes the `sws-vault-paused` tags, and `/health` answers again. A stack update while the tags are there is refused (or warns and needs "restore and update"); it never silently re-enables the Vault.
+  9. The pause sends one email through the topic per pause, none on a second alarm.
   8. Same history however it is read (design 01, 2h.9): the journal of a flood run with one big `tick` equals the one with reads in between.
 
 ## 7. Decisions this raises (for pm.aws.a, after V5)
 
-- **K1. Offer the automatic pause at all?** (a) no: the alarm only emails, the customer pauses by the page's link; (b) yes, opt-in per Vault (a parameter of the alarm stack, default off); (c) yes, on by default. Recommended **(b)**: a flood then costs at most about one evaluation period plus propagation, and the customer chooses cost over availability knowingly. The trade-off to say plainly: anyone who can send enough requests can switch a Vault off. That is a denial of service the customer accepts in exchange for a bounded bill.
-- **K2. Which levers?** (a) throttle only; (b) throttle and disable the distribution. Recommended **(b)**: throttling alone leaves CloudFront's request line, which is about 94% of the flood's cost (43.20 of 45.89 USD an hour).
+- **K1. Offer the automatic pause at all?** (a) no: the alarm only emails, the customer pauses by the page's link; (b) yes, opt-in per Vault (a parameter of the alarm stack, default off); (c) yes, on by default. Recommended **(b)**, agreed by security.aws.a: a flood then costs at most about one evaluation period plus propagation, and the customer chooses cost over availability knowingly. It is one pause per flood, not a loop (no restore on OK). The page says the trade-off in one sentence. The trade-off to say plainly: anyone who can send enough requests can switch a Vault off. That is a denial of service the customer accepts in exchange for a bounded bill.
+- **K2. Which levers?** (security.aws.a agrees with K2 b, K3 and K4.) (a) throttle only; (b) throttle and disable the distribution. Recommended **(b)**: throttling alone leaves CloudFront's request line, which is about 94% of the flood's cost (43.20 of 45.89 USD an hour).
 - **K3. The suggested threshold:** billing.aws.a's 45,000 requests in 5 minutes (about 1 USD an hour), or another the customer types. Recommended: suggest billing.aws.a's figure, the customer decides.
 - **K4. Our own Vaults and deployments:** the same switch, on, as part of V5's guard rails. Recommended yes, with restore as a plan Dinis approves.
 
@@ -79,8 +85,8 @@ Built on what the twin has: the CloudWatch twin (monitoring host, work/dev.2.aws
 
 - **boto3.aws.a:** the *checks* of sections 2 and 3: throttled invocations unbilled; a disabled distribution stops serving and billing, and how long it takes; alarm actions invoking Lambda directly; `UpdateDistribution` needing the full config and `IfMatch`; a us-east-1 function calling `PutFunctionConcurrency` in another region.
 - **iam.aws.a:** the `sws-vault-<id>-killswitch` role (section 3), and whether the customer's own identity running the alarm stack can create it in both deploy modes without widening the deploy role.
-- **cloudformation.aws.a:** the function, its role and its invoke permission in `vault-alarm.yaml`, behind a `KillSwitch` parameter (off, or throttle-and-disable), default off; the topic when the switch is on.
-- **security.aws.a:** sections 3, 4 and 7 (the denial-of-service trade-off, who can fire the function, no restore on OK).
+- **cloudformation.aws.a:** the function, its role and its invoke permission in `vault-alarm.yaml`, behind a `KillSwitch` parameter (off, or throttle-and-disable), default off; the topic when the switch is on; the Vault stack's update path checking the `sws-vault-paused` tag (section 4).
+- **security.aws.a:** reviewed, folded in.
 - **billing.aws.a:** the cost of a flood with the switch on: one evaluation period plus propagation, at the suggested threshold and at 10,000 requests a second.
 - **dev.1.aws.a:** section 6, after deploy step 4 and the EC2 twin.
 - **dev.2.aws.a and ux.aws.a:** the page's "Pause this Vault" and "Restore" links, and the plain statement of K1's trade-off.
