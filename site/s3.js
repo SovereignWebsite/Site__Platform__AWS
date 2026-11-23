@@ -359,11 +359,17 @@
   }
   function summarise(b, region, prefix, btn) {
     var my = ++state.file, box = $("s3-file"), st = $("s3-status"), objs = [], sizes = noProto();
+    // The account is taken once, at the click: every read is signed with its read role, and the summary stops if
+    // another account is chosen meanwhile (security.aws.a: the other account's role against this account's bucket).
+    var acct = state.acct;
+    function readAs() { return P.assume(acct, "sws-aws-platform-read"); }
+    function sameAcct() { return !!state.acct && !!acct && state.acct.id === acct.id; }
+    function same() { return my === state.file && sameAcct(); }
     box.textContent = ""; state.key = ""; go(b, prefix);
     var head = P.el("h4", { text: "Summary of " + b + "/" + prefix }), out = P.el("div", {});
     box.appendChild(head); box.appendChild(out); land(head);
     btn.disabled = true; P.say(st, "Listing every log file under " + prefix + "...");
-    read().then(function (c) {
+    readAs().then(function (c) {
       function page(token) {
         var q = "?list-type=2&max-keys=1000&prefix=" + encodeURIComponent(prefix) + (token ? "&continuation-token=" + encodeURIComponent(token) : "");
         return s3get(c, bucketUrl(b, region, q), region).then(function (r) {
@@ -375,13 +381,13 @@
               objs.push({ Key: k, Size: z }); sizes[k] = z;
             });
             var nt = d.getElementsByTagName("NextContinuationToken")[0];
-            if (nt && objs.length <= SUM_MAX && my === state.file) return page(nt.textContent);
+            if (nt && objs.length <= SUM_MAX && same()) return page(nt.textContent);
           });
         });
       }
       return page(null);
     }).then(function () {
-      if (my !== state.file) return;
+      if (!same()) return;
       var total = objs.reduce(function (a, o) { return a + (o.Size <= SUM_FILE ? o.Size : 0); }, 0), fetched = 0;
       var many = objs.length + " file" + (objs.length === 1 ? "" : "s");
       if (total > SUM_TOTAL) return P.say(st, prefix + ": " + many + ", " + human(total) + " in all, more than " + human(SUM_TOTAL) + " for one summary; open a smaller folder (a day or an hour).", "bad");
@@ -392,10 +398,11 @@
         open: function (ref) { if (ref && ref.bucket && ref.key) location.hash = route(String(ref.bucket), String(ref.key)); } };
       return LogView.run(out, objs, function (key) {
         if (my !== state.file) return Promise.reject(new Error("stopped: another place was opened"));
+        if (!sameAcct()) return Promise.reject(new Error("stopped: another account was chosen"));
         if (!(sizes[key] <= SUM_FILE)) return Promise.reject(new Error("larger than " + human(SUM_FILE) + "; not read"));
         if (fetched + sizes[key] > SUM_TOTAL) return Promise.reject(new Error("past " + human(SUM_TOTAL) + " read in all; not read"));
         fetched += sizes[key];
-        return read().then(function (c) { return s3get(c, bucketUrl(b, region, "", key), region); }).then(function (r) {
+        return readAs().then(function (c) { return s3get(c, bucketUrl(b, region, "", key), region); }).then(function (r) {
           if (!r.ok) throw new Error("S3 answered " + r.status);
           return r.arrayBuffer();
         }).then(function (ab) { return new Uint8Array(ab); });
