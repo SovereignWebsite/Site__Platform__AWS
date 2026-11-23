@@ -381,7 +381,7 @@
     }
    ],
    "recommendation": "a",
-   "why": "Cleared on paper by security.aws.a (ba0afa0). Before any apply, iam.aws.a finishes its check on iam:UpdateRole. The first apply is your own act in the console."
+   "why": "Cleared on paper by security.aws.a (ba0afa0), with no open condition left. The first apply is your own act in the console; one harmless tag change set on the read role right after confirms the UpdateRole Deny, with you watching the stack events."
   },
   {
    "id": "7",

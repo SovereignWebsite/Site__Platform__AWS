@@ -194,10 +194,10 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
        [0,"Even after v2.1, a script in the page could make the change role admin through a change set, in about four calls.","A chain draws left to right: script in the page, change role, create change set, execute change set, admin."],
        [8,"And the change role can rewrite the DNS role's trust. That role can repoint the site's name, so it is a second way out.","A second red chain drops from the change role to the DNS role's trust and on to the site's name."],
        [15,"iam.aws.a's v2.5 adds permissions boundaries that keep each role to today's scopes, and makes the DNS role's trust console only.","A boundary ring closes round the change role; both red chains are cut."],
-       [23,"security.aws.a cleared v2.5 on paper. Before any apply: iam.aws.a's last check, then your own apply in the console.","A three-line checklist appears: two checks, your console apply, two DNS plans retired."],
+       [23,"security.aws.a cleared v2.5 on paper. Your own apply in the console, then one harmless tag change set to confirm it.","A three-line checklist appears: two checks, your console apply, two DNS plans retired."],
        [30,"Recommended: a, with v2.5, cleared by security. One thing to weigh: the read role can then read Lambda environment variables, so keep secrets elsewhere.","The a option chip lights as recommended; a note on Lambda environment variables."]],
      "panel":{"asks":"iam.aws.a (P-IAM-001), through conductor.aws.a; cleared by security.aws.a","what":"Even after v2.1, a script in the page can make the change role admin through a change set (R-008). iam.aws.a's draft v2.5 adds permissions boundaries that mirror today's scopes, with a custom read boundary, and makes the DNS role's trust console only. security.aws.a cleared v2.5 on paper (ba0afa0). v2.5 itself is ee7f7b9 on work/iam.aws.a.",
-       "before":"v2.5 (ee7f7b9) adds the 13 reads dev.2.aws.a's API layer needs; security.aws.a cleared it (ba0afa0). iam.aws.a finishes its check on iam:UpdateRole. The first apply is your own act in the console. aws.c retires the two DNS-trust plans in site/plans/ in the same release. To weigh: the read role can then read Lambda environment variables; keep secrets in Secrets Manager or SSM.",
+       "before":"v2.5 (ee7f7b9) adds the 13 reads dev.2.aws.a's API layer needs; security.aws.a cleared it (ba0afa0). The first apply is your own act in the console; v2.5 keeps its Deny on iam:UpdateRole, and one harmless tag change set on the read role right after confirms it, with you watching the stack events. aws.c retires the two DNS-trust plans in site/plans/ in the same release. To weigh: the read role can then read Lambda environment variables; keep secrets in Secrets Manager or SSM.",
        "options":[["a","One console apply of v2.5: both boundaries, and console-only trust for sovereignwebsite-factory-dns."],["b","As a, but keep DNS trust edits from the page. Not recommended by iam.aws.a or security.aws.a: whoever controls that role's trust controls the site's name.","no"],["c","v2.1 through the page now (decision 4), boundaries later."],["d","No boundary; rely on splitting off the change page (R-002)."]],"rec":"a","blocks":"R-008 closing. A change to AWS, so yours."}},
     {"id":"d7","eyebrow":"Decision 7 · Access","title":"The account A names in the site's policy","dur":22,
      "beats":[
@@ -367,7 +367,7 @@ d6(){
   s += cross(386,y,16.5) + cross(290,214,18.5);
   s += cue(19, txt(300,236,'console only','t-s t-ok','start'));
   s += cue(23, box(700,250,240,120,'bx',10) + txt(716,276,'Before any apply','t-s t-mute','start')
-     + txt(716,300,'1  iam.aws.a\'s last check','t-s','start') + txt(716,324,'2  your apply, in the console','t-s','start') + txt(716,348,'3  aws.c retires two DNS plans','t-s','start'));
+     + txt(716,300,'1  your apply, in the console','t-s','start') + txt(716,324,'2  a tag change set confirms it','t-s','start') + txt(716,348,'3  aws.c retires two DNS plans','t-s','start'));
   s += cue(24, txt(40,400,'cleared on paper by security.aws.a (ba0afa0)','t-s t-ok','start'));
   s += optionRow(['a','b','c','d'],'a',29,30.5,['b']);
   s += cue(31, box(330,404,300,30,'bx-acc',15) + txt(480,424,'v2.5: Lambda environment variables readable','t-s t-acc'), 'pop');
