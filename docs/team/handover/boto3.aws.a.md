@@ -43,7 +43,8 @@ On dev already: 01 S3 map (boto3.aws.c's), 02 Cloud Control AWS::S3::Bucket hand
 5. **Action-name check**: the narrowed S3 read policy in note 02 names recent actions (s3:GetBucketAbac, s3:GetBucketDefaultStorageClass, s3:GetBucketMetadataTableConfiguration); check them against the Service Authorization Reference for S3 before it becomes a plan.
 6. **lambda.aws.a**: Duration Average over periods above one hour should be weighted by invocation count (sent 12:45); confirm it was taken.
 7. **Next areas in Dinis's order**: CloudFormation (cloudformation.aws.a has a twin patch 01 on dev c87dc92 for review), Route 53, CloudFront, IAM (done for design 04's reads), CloudTrail, CloudWatch (done for GetMetricData).
-8. Board item BO-1 (docs/board/tasks.json) is ours: S3, Lambda, Firehose, IAM reads and CloudWatch reads are checked; say so to pm.aws.a when landing.
+8. **vaults.aws.a's deploy design** (14:51): check every *check* claim in docs/vaults/2026-11-23__04-vault-deploy-design.md (work/vaults.aws.a a0c53a4) against AWS's documentation: CloudFront certificates from us-east-1 only; one stack, one region; no custom domain on a Lambda Function URL; GenerateSecretString in CloudFormation; ACM DNS validation automatic with a hosted zone in the account; Lambda container images from ECR in the same region; the CloudFormation quick-create link format. Answer in docs/boto3/ and message vaults.aws.a (session_018yvwtPEp1ze9LonhajhRdg). It is deploy plan step 1, from conductor.aws.a with architect.aws.a.
+9. Board item BO-1 (docs/board/tasks.json) is ours: S3, Lambda, Firehose, IAM reads and CloudWatch reads are checked; say so to pm.aws.a when landing.
 
 ## Who waits on whom
 
