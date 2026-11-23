@@ -104,3 +104,6 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - Still open: the bucket policy without the outside-account Deny; O7, where my position is Retain for the bucket and log group, not Delete as their note says; reserved concurrency; the cache-policy test; the DomainName pattern.
   - New: AccessTokenSecretArn would push the deploy role towards GetSecretValue on any secret. Drop it for v1, or pin it to sws-vault-<id>-*.
   - O4 accepted for v1 on conditions (a)-(e); (b) is met by the /health design.
+- 23 Nov 2026, 16:20, security.aws.a: Vault stack 0.3.0 (cloudformation.aws.a e92ee88).
+  - Closed: points 3, 4 (outside-account Deny), 5 (Retain on the bucket and log group), 7 (a template test pinning CachingDisabled, names, digest, Retain, boundary) and 8.
+  - Left open: ReservedConcurrency has no default (condition c wants a small default), and AccessTokenSecretArn is unchanged (point 22, the message crossed).

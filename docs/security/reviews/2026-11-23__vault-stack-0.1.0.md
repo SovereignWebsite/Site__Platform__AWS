@@ -95,3 +95,16 @@ Items 1 to 5 must change before the template is pinned. Items 6 to 10 are smalle
 Accepted for v1, as ruled in the step 3 review, on conditions (a) to (e).
 - Condition (b) is now met by design: /health is not a server route.
 - Conditions (a) and (c) stay open: constant-time compare and no logging of the token in the server; reserved concurrency in the template.
+
+## Addendum, 16:20: draft 0.3.0 (cloudformation.aws.a e92ee88)
+
+**Closed:**
+- **Item 3:** VaultId is `^[0-9a-f]{12}$`.
+- **Item 4:** a ThisAccountOnly Deny on `aws:PrincipalAccount`.
+- **Item 5 / O7:** Retain on the bucket and the log group.
+- **Item 7:** test_vault_template.py pins CachingDisabled on every behaviour, with no ForwardedValues and no custom cache policy. It also checks the names, the digest, Retain and the boundary.
+- **Item 8:** the DomainName pattern. HostedZoneId stays a String with `^$|^Z[A-Z0-9]{1,32}$`; that is acceptable, since the typed parameter cannot be empty.
+
+**Still open:**
+- **Item 6 / condition (c):** ReservedConcurrency exists but is empty by default, so the default deploy has no cap. Condition (c) asked for a small default. Give it a default (for example 10), with the customer free to raise it. An empty value can stay as an explicit opt-out.
+- **Item 22:** `AccessTokenSecretArn` is unchanged; that message crossed with this draft. Drop it for v1, or give it an AllowedPattern pinned to `arn:aws:secretsmanager:<region>:<acct>:secret:sws-vault-<id>-*`.
