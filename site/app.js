@@ -294,7 +294,7 @@
     assume(acct, plan.role).then(function (c) {
       return getRole(c, plan.target_role).then(function (before) {
         var r = Plans.apply(before, plan);
-        if (r.unchanged) return say(st, "Nothing to do: " + plan.target_role + " already trusts " + plan.add.join(", ") + ".", "ok");
+        if (r.unchanged) return say(st, "Nothing to do: " + plan.target_role + " already " + (plan.add ? "trusts " + plan.add.join(", ") : "no longer trusts " + plan.remove.join(", ")) + ".", "ok");
         out.appendChild(el("h4", { text: "Now" })); out.appendChild(el("pre", { text: JSON.stringify(before, null, 2) }));
         out.appendChild(el("h4", { text: "After you approve" })); out.appendChild(el("pre", { text: JSON.stringify(r.after, null, 2) }));
         var go = el("button", { type: "button", class: "approve", text: "Approve and apply to " + plan.target_role });
@@ -306,8 +306,9 @@
             return queryCall(c, "iam.amazonaws.com", "iam", { Action: "UpdateAssumeRolePolicy", Version: "2010-05-08",
               RoleName: plan.target_role, PolicyDocument: JSON.stringify(r.after) });
           }).then(function () { return getRole(c, plan.target_role); }).then(function (now) {
-            var ok = r.added.every(function (s) { return JSON.stringify(now).indexOf(JSON.stringify(s)) >= 0; });
-            say(st, ok ? "Applied and checked: " + plan.target_role + " now trusts " + r.added.join(", ") + "." : "Applied, but the check did not find the new subject. Read the role again.", ok ? "ok" : "bad");
+            // Checked by reading the role back: it must hold exactly the planned policy.
+            var ok = Plans.same(now, r.after);
+            say(st, ok ? "Applied and checked: " + plan.target_role + (r.added ? " now trusts " + r.added.join(", ") : " no longer trusts " + r.removed.join(", ")) + "." : "Applied, but the role read back differs from the plan. Read it again.", ok ? "ok" : "bad");
           }).catch(function (e) { go.disabled = false; say(st, e.message, "bad"); });
         };
         out.appendChild(go);

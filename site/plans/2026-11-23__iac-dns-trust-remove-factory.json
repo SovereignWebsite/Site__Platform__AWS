@@ -1,0 +1,14 @@
+{
+  "id": "2026-11-23__iac-dns-trust-remove-factory",
+  "title": "The IaC rename, last step: the DNS role stops trusting the old name",
+  "why": "SovereignWebsite__Factory is SovereignWebsite__IaC since about 01:05 UTC on 23 Nov 2026. DNS apply ran under the new name at 01:12 UTC (run 45093227626, by factory.c: GitHub sent the IaC subject, the role was assumed, all four zones updated), so the Factory subject is no longer needed. Step 5 of factory.c's rename plan.",
+  "summary": "Removes: repo:SovereignWebsite@358722364/SovereignWebsite__Factory@1464324035:environment:apply. Keeps the IaC subject. Never touches the audience, the principal or the role's permissions.",
+  "role": "sws-aws-platform-change",
+  "action": "iam.remove_oidc_subjects",
+  "target_role": "sovereignwebsite-factory-dns",
+  "condition_key": "token.actions.githubusercontent.com:sub",
+  "remove": [
+    "repo:SovereignWebsite@358722364/SovereignWebsite__Factory@1464324035:environment:apply",
+    "repo:SovereignWebsite/SovereignWebsite__Factory:environment:apply"
+  ]
+}

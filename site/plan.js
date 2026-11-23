@@ -27,8 +27,28 @@
     return { after: after, added: added, unchanged: false };
   }
 
+  // iam.remove_oidc_subjects: remove subjects from that same statement. Refuses to remove the last one,
+  // and changes nothing else.
+  function removeOidcSubjects(policy, plan) {
+    var after = clone(policy), found = [];
+    asList(after.Statement).forEach(function (st) {
+      Object.keys(st.Condition || {}).forEach(function (op) {
+        if (Object.prototype.hasOwnProperty.call(st.Condition[op], plan.condition_key)) found.push({ st: st, op: op });
+      });
+    });
+    if (found.length !== 1) throw new Error("expected one condition on " + plan.condition_key + ", found " + found.length);
+    var f = found[0], subs = asList(f.st.Condition[f.op][plan.condition_key]);
+    var removed = subs.filter(function (s) { return plan.remove.indexOf(s) >= 0; });
+    if (!removed.length) return { after: after, removed: [], unchanged: true };
+    var kept = subs.filter(function (s) { return plan.remove.indexOf(s) < 0; });
+    if (!kept.length) throw new Error("refused: that would leave the role trusting no subject at all");
+    f.st.Condition[f.op][plan.condition_key] = kept.length === 1 ? kept[0] : kept;
+    return { after: after, removed: removed, unchanged: false };
+  }
+
   function apply(policy, plan) {
     if (plan.action === "iam.add_oidc_subjects") return addOidcSubjects(policy, plan);
+    if (plan.action === "iam.remove_oidc_subjects") return removeOidcSubjects(policy, plan);
     throw new Error("unknown plan action " + plan.action);
   }
 
