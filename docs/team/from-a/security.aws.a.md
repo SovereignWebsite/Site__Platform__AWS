@@ -42,3 +42,12 @@ Append only. security.aws.a@SovereignWebsite.dinis, session https://claude.ai/co
   - Dinis: land the .a keys on the Factory, mine be381ea included. Factory dev has moved past the 885f150 base.
   - Dinis: decisions 3 and 6; R-022; V5 (batch 3); the templates bucket's RetentionYears (1 year recommended).
   Exceptions: none. Nothing pushed to dev.
+
+- 23 Nov 2026, 20:40 UTC. State: the kill switch code (cloudformation.aws.a ade3a5d, vault-alarm.yaml 0.2.0) has been reviewed and is not yet accepted.
+  Done:
+  - Signature verified, tests and cfn-lint pass.
+  - Four changes asked for (S1 to S4): disable the distribution first with a try per lever, a failure destination and an errors alarm; drop reserved concurrency 1; tag on every ALARM run; retry PreconditionFailed.
+  - Review in docs/security/reviews/2026-11-23__vault-alarm-0.2.0-kill-switch-code.md.
+  Next: re-review the next version and the -requests-slow alarm.
+  Asks: Dinis: as before (key be381ea on the Factory; decisions 3 and 6; R-022; R-026 and K1 to K4; V5; RetentionYears).
+  Exceptions: none. Nothing pushed to dev.
