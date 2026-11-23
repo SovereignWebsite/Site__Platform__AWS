@@ -91,6 +91,7 @@ From your word at ~14:55 UTC (maestro.a's session); plan and owners in docs/team
 - **Asks:** conductor.aws.a (plan D5); security.aws.a: nothing real on a schedule before this
 - **Options:** (a) set the numbers now (maximum lifetime, regions allowed, cost cap, kill switch); (b) ec2.aws.a and billing.aws.a propose the numbers from the twin, and you approve them on a decision page before anything real runs.
 - **Recommended:** (b): nobody has proposed numbers yet, and none would be grounded.
+- **First input (billing.aws.a, docs/billing/flood.mjs, 7bf1c03):** a request flood on one Vault's public address is bounded by the function's reserved concurrency: one hour at the cap, arm64, eu-west-2, list prices, Lambda requests and duration only, comes to about $0.05 to $0.17 at 2, $0.25 to $0.84 at 10, $1.24 to $4.20 at 50. Not yet counted: CloudWatch Logs ingestion (can be the largest line), data transfer out, any Function URL charge. Rerun once the stack sets memory, duration and the concurrency default.
 - **Blocks:** anything ephemeral outside the twin (step 11). cloudformation.aws.a adds: something must empty a bucket before delete, a scheduler role that can delete only stacks it tagged (O5).
 
 ### V6. Start a new agent, ec2.aws.a
