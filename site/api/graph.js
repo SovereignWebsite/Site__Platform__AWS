@@ -331,11 +331,13 @@
     }
     // A stack's AWS::Route53::RecordSet comes with its name only (ListStackResources' physical id): it is made_by on every
     // record of that name (all types and set ids) in a zone the same stack made; failing that, in the only zone holding
-    // that name; otherwise no record is chosen and it stays its own node (architect.aws.a, design 03 refinement 3).
+    // that name; otherwise no record is chosen and it stays its own node (architect.aws.a, design 03 refinement 3). One
+    // record set: api; several (an A and AAAA pair): each naming (claimed), since the stack names the name only and
+    // which is which is not guessed (ontology.aws.a). The record sets stay verified through "in" their zone.
     function recordsMadeBy(m, stackZones) {
       var name = String(m.physicalId || "").toLowerCase().replace(/\.$/, ""), byZone = Object.create(null), zs = [];
       if (!name) return [];
-      nodes.forEach(function (n) { if (n.type === "record" && n.record_name === name) { if (!byZone[n.zone_id]) { byZone[n.zone_id] = []; zs.push(n.zone_id); } byZone[n.zone_id].push(n.id); } });
+      nodes.forEach(function (n) { if (n.type === "record" && n.name === name && n.zone_id) { if (!byZone[n.zone_id]) { byZone[n.zone_id] = []; zs.push(n.zone_id); } byZone[n.zone_id].push(n.id); } });
       var own = zs.filter(function (z) { return stackZones[m.stack + "\u0000" + z]; });
       if (own.length) return own.reduce(function (a, z) { return a.concat(byZone[z]); }, []);
       return zs.length === 1 ? byZone[zs[0]] : [];
@@ -347,7 +349,9 @@
         var id = m.id;
         if (m.type === "AWS::Route53::RecordSet") {
           var recs = recordsMadeBy(m, stackZones);
-          if (recs.length) return recs.forEach(function (r) { edge(r, "made_by", m.stack, "api", "CloudFormation ListStackResources (" + m.logicalId + ", record set " + m.physicalId + ")"); });
+          var nm = String(m.physicalId).toLowerCase().replace(/\.$/, "");
+          if (recs.length === 1) return edge(recs[0], "made_by", m.stack, "api", "CloudFormation ListStackResources (" + m.logicalId + ", AWS::Route53::RecordSet) and Route 53: one record set named " + nm);
+          if (recs.length) return recs.forEach(function (r) { edge(r, "made_by", m.stack, "naming", "CloudFormation ListStackResources (" + m.logicalId + ") names " + nm + " only; " + recs.length + " record sets have that name"); });
         }
         if (m.derived && !nodes.has(id)) {
           var same = []; nodes.forEach(function (n) { if (n.cfn_type === m.type && n.label === m.physicalId) same.push(n.id); });
@@ -417,7 +421,7 @@
         if (!r || typeof r.id !== "string" || !/^Z[A-Z0-9]{1,32}$/.test(r.zoneId || "")) return;
         var rm = /^urn:sws:route53-record:(Z[A-Z0-9]{1,32})\/([a-z0-9*_.-]{1,253})\/([A-Z]{1,10})(\/[^\s]{1,128})?$/.exec(r.id);
         if (!rm || rm[1] !== r.zoneId) return;
-        vouch(node(r.id, "record", "A2", rm[2] + " " + rm[3], { cfn_type: "AWS::Route53::RecordSet", record_name: rm[2], record_type: rm[3], zone_id: rm[1],
+        vouch(node(r.id, "record", "A2", rm[2] + " " + rm[3], { cfn_type: "AWS::Route53::RecordSet", name: rm[2], record_type: rm[3], zone_id: rm[1],
           set_identifier: r.setIdentifier || undefined }));
         edge(r.id, "in", "arn:aws:route53:::hostedzone/" + r.zoneId, "api", "Route 53 ListResourceRecordSets");
         if (r.alias && typeof r.alias.dnsName === "string") recordTargets.push({ id: r.id, host: r.alias.dnsName, how: "alias" });

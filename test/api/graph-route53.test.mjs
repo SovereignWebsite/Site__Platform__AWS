@@ -65,7 +65,7 @@ const node = (id) => j.nodes.find((n) => n.id === id), edge = (f, r, to) => j.ed
 ok(node(ZONE).type === "zone" && node(ZONE).label === "example.com" && node(ZONE).trust === "verified" && edge(ZONE, "in", "urn:sws:account:" + A).evidence === "api", "the zone: its ARN, type zone, verified, in the account");
 ok(edge(ZONE, "made_by", dns.arn) && j.nodes.filter((n) => n.id === ZONE).length === 1, "one zone node: the stack's zone and Route 53's are the same");
 const RID = (n, t) => "urn:sws:route53-record:Z0DEMOTWIN0001/" + n + "/" + t, W = RID("www.example.com", "A"), OLD = RID("old.example.com", "CNAME"), NSR = RID("example.com", "NS"), SOA = RID("example.com", "SOA");
-ok(node(W).type === "record" && node(W).label === "www.example.com A" && edge(W, "in", ZONE) && edge(W, "made_by", dns.arn), "the www record: in its zone, made_by demo-dns (its WwwAlias joined by name in the stack's own zone)");
+ok(node(W).type === "record" && node(W).label === "www.example.com A" && node(W).name === "www.example.com" && node(W).record_type === "A" && edge(W, "in", ZONE) && edge(W, "made_by", dns.arn).evidence === "api" && /one record set named www\.example\.com/.test(edge(W, "made_by", dns.arn).source), "the www record: in its zone, made_by demo-dns (its WwwAlias joined by name in the stack's own zone)");
 ok(!j.nodes.some((n) => n.id.startsWith("urn:sws:cfn-resource:")), "no separate node for the stack's record set once it is joined");
 ok(node(NSR) && node(SOA) && NSR !== SOA && edge(NSR, "in", ZONE) && edge(SOA, "in", ZONE) && !edge(NSR, "made_by", dns.arn), "the apex's NS and SOA: two nodes (design 03 refinement 3), not made by the stack");
 const toDist = edge(W, "refers_to", DIST);
@@ -103,6 +103,8 @@ ok(!lj.edges.some((x) => x.to === DIST) && lj.edges.some((x) => x.to === "arn:aw
   ok(VA !== VAAAA && v.nodes.filter((n) => n.type === "record").length === 2, "a Vault's A and AAAA on one name: two nodes");
   ok(ve(VA, "refers_to", VD).evidence === "api" && ve(VAAAA, "refers_to", VD).evidence === "api", "both refer_to the same distribution (api)");
   ok(ve(VA, "made_by", st.arn) && ve(VAAAA, "made_by", st.arn) && !v.nodes.some((n) => n.id.startsWith("urn:sws:cfn-resource:")), "both made_by the Vault stack: the only zone holding the name (the stack did not make the zone)");
+ok(["naming"].includes(ve(VA, "made_by", st.arn).evidence) && ve(VA, "made_by", st.arn).trust === "claimed" && /names vault\.example\.com only; 2 record sets have that name/.test(ve(VA, "made_by", st.arn).source), "two record sets for the name: each made_by is naming and claimed, which is which not guessed");
+ok(v.nodes.find((n) => n.id === VA).trust === "verified" && ve(VA, "in", "arn:aws:route53:::hostedzone/" + ZV).evidence === "api", "the record sets themselves stay verified through their zone");
   // A name in two zones (public and private): the stack's own zone wins; with neither its own, no record is chosen.
   const two = (madeZone) => {
     const h = Graph({ account: C, backend: "twin" });
