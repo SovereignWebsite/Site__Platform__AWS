@@ -429,3 +429,8 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
 - 23 Nov 2026, 18:52, security.aws.a: dev.2.aws.a e6c850c (signature verified; my probe and command-line.test pass). getObject with no --bytes is now [0, cap-1], and the range is one [start, end] pair. The test runs the parsed calls on S3Api over the twin. Both eb01a79 defects are closed. The fixed map for call.global and call.method is recorded for the R-010 page change.
 - 23 Nov 2026, 18:53, security.aws.a: ux.aws.a 2d2e4c0, 27092ca and 5689c28 (design 09; signatures verified; docs only). Cleared. One nit: the text still says the API takes the range 'as two arguments'. Since e6c850c it is one [start, end].
 - 23 Nov 2026, 19:08, security.aws.a: journalist.aws.a eb5dc26 (research note 03 and a wake note; signature verified; docs only). Cleared. It quotes three public aws-cli issues, names no person or username, and contains no secrets or account ids.
+- 23 Nov 2026, 19:15, security.aws.a: dev.1.aws.a 114ecf0, twin CloudFront reads (signature verified; cloudfront.test and vault-teardown.test pass). Cleared, and R-025 (a) holds:
+  - The customer gate widens only to the exact host cloudfront.amazonaws.com.
+  - The account comes from the credential (customerOf), never from the request, and each account sees only its own world, tested in both directions. S3 still refuses the customer.
+  - Only GET on a fixed path set is answered; everything else, including GetDistributionConfig and DescribeFunction, gets 501.
+  - There are no custom header values, MaxItems is bounded, and values going into the XML are escaped.
