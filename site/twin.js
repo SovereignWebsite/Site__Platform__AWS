@@ -896,11 +896,12 @@
       // Teardown (cloudformation.aws.a's stack notes): resources in reverse creation order, so the DNS records go before
       // the distribution and nothing goes while something that refers to it remains; Retain and RetainExceptOnCreate
       // resources are DELETE_SKIPPED (the bucket, its policy, the log group stay with the customer); then
-      // DELETE_COMPLETE. AWS answers a DeleteStack for a missing or already-deleting stack with success, and so does the
+      // DELETE_COMPLETE. AWS answers a DeleteStack for a missing, already-deleting or deleted stack with success, and so does the
       // twin. The twin's own choice: a stack still being created or rolled back refuses the delete until it settles.
       var sd = find(form.get("StackName"));
       var ok = xml("<DeleteStackResponse" + NS + "><ResponseMetadata><RequestId>twin</RequestId></ResponseMetadata></DeleteStackResponse>");
-      if (!sd || sd.status === "DELETE_IN_PROGRESS") return ok;
+      // A stack already deleted (found by its id) deletes quietly too, and stays DELETE_COMPLETE (security.aws.a, 5dc4519).
+      if (!sd || sd.status === "DELETE_IN_PROGRESS" || sd.status === "DELETE_COMPLETE") return ok;
       if (/_IN_PROGRESS$/.test(sd.status)) return cfnErr("ValidationError", "Stack [" + sd.name + "] is in " + sd.status + " state and can not be deleted until it settles (the twin's rule).");
       var t0 = nowIso(), at = Date.parse(t0) + 1000, sched = [], base = { account: account, region: region, name: sd.name };
       var ev = function (ms, logical, type, status, extra) { sched.push({ at: new Date(ms).toISOString(), op: "cloudformation.stackEvent", target: sd.stackId,

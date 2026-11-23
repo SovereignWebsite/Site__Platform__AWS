@@ -52,6 +52,13 @@ assert.ok(!/sws-vault-/.test((await cfn(twin, { Action: "DescribeStacks" })).tex
 assert.deepEqual(tag((await cfn(twin, { Action: "ListStacks", "StackStatusFilter.member.1": "DELETE_COMPLETE" })).text, "StackName"), [V], "ListStacks keeps it, filtered");
 const kept = (await cfn(twin, { Action: "ListStackResources", StackName: stackId })).text;
 assert.deepEqual(tag(kept, "ResourceStatus").filter((x) => x === "DELETE_SKIPPED").length, 3, "the three kept resources say so");
+// A DeleteStack by id on the deleted stack is a no-op (security.aws.a, 5dc4519): no new event, still gone by name.
+const nEv = tag((await cfn(twin, { Action: "DescribeStackEvents", StackName: stackId })).text, "ResourceStatus").length;
+assert.equal((await cfn(twin, { Action: "DeleteStack", StackName: stackId })).status, 200, "deleting a deleted stack by id succeeds");
+assert.equal(tag((await cfn(twin, { Action: "DescribeStackEvents", StackName: stackId })).text, "ResourceStatus").length, nEv, "and adds no event");
+assert.equal(tag((await cfn(twin, { Action: "DescribeStacks", StackName: stackId })).text, "StackStatus")[0], "DELETE_COMPLETE", "it stays DELETE_COMPLETE");
+assert.match((await cfn(twin, { Action: "DescribeStacks", StackName: V })).text, /does not exist/, "and by name it is still gone");
+checks += 4;
 assert.equal((await create(twin, V, { VaultId: ID })).status, 200, "the name can be used again");
 assert.notEqual(tag((await cfn(twin, { Action: "DescribeStacks", StackName: V })).text, "StackId")[0], stackId, "with a new stack id");
 assert.equal((await cfn(twin, { Action: "DeleteStack", StackName: V })).status, 400, "a stack still being created refuses the delete (the twin's rule)");
