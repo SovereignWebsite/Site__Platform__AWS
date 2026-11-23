@@ -1,8 +1,8 @@
 // Graph (site/api/graph.js) over the twin, built as a page would: S3Api for buckets and objects (after the CORS fix
 // a user's Approve would make), Activity.fromBytes for the trail files, then the golden test of design 03,
 // refinement 7: against ontology.aws.a's twin-graph.json, compare node id, type, altitude and edge from, rel, to,
-// evidence, on the part of the graph the adapters built so far cover (S3, CloudTrail files, what files say). The rest of the golden
-// graph (IAM, CloudFormation, Lambda, Firehose, zip contents, serves_from, curated) waits for its adapters and is counted.
+// evidence, on the part of the graph the adapters built so far cover (S3, CloudTrail files, what files say, Lambda, Firehose). The rest of the golden
+// graph (IAM, CloudFormation, zip contents, serves_from, curated) waits for its adapters and is counted.
 // Node 22, no network. Run: node test/api/graph.test.mjs
 import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -31,7 +31,7 @@ const ctx = {
 };
 ctx.window = ctx; ctx.globalThis = ctx;
 vm.createContext(ctx);
-for (const f of ["sigv4.js", "twin.js", "transport.js", "api/s3-api.js", "api/decode.js", "api/activity.js", "api/graph.js"])
+for (const f of ["sigv4.js", "twin.js", "transport.js", "api/all.js", "api/s3-api.js", "api/lambda-api.js", "api/firehose-api.js", "api/decode.js", "api/activity.js", "api/graph.js"])
   vm.runInContext(readFileSync(new URL("../../site/" + f, import.meta.url), "utf8"), ctx, { filename: f });
 const here = (p) => new URL(p, import.meta.url);
 // Pinned copies (golden/README.md): dev's docs/ontology/ still has the older twin: ids until bb9cac9 lands.
@@ -84,6 +84,12 @@ for (const b of buckets) for (const o of b.objects) {
   files.push({ bucket: b.name, key: o.key, text: D.text(bytes) });
 }
 g.add.content(files, { site: { name: "demo", label: "Demo site", bucket: ctx.AwsTwin.buckets.site } });
+// Lambda and Firehose, in the twin's region, every page through ApiAll.
+const readSend = sender(await assume("sws-aws-platform-read"));
+const lam = ctx.LambdaApi(readSend), fh = ctx.FirehoseApi(readSend, { account: A }), R = "eu-west-2";
+g.add.lambda((await ctx.LambdaApi.all((next) => lam.functions(R, { next }))).items);
+const names = (await ctx.FirehoseApi.all((next) => fh.streams(R, { next }))).items;
+g.add.firehose(await Promise.all(names.map((s) => fh.stream(R, s.name))));
 const mine = JSON.parse(JSON.stringify(g.toJSON()));
 
 // ---- schema: enums, required fields, id form, every edge end a node, counts ----
@@ -105,6 +111,10 @@ const covered = (e, typeOf) => {
   if (e.rel === "logs_to" && e.evidence === "naming" && ft === "trail") return true;
   if ((e.rel === "in" || e.rel === "records") && e.evidence === "content" && e.from.startsWith(trailBucket)) return true;
   if (["acted_as", "signed_in_via", "acted_on"].includes(e.rel) && ft === "event") return true;
+  // Lambda and Firehose adapters
+  if (e.rel === "in" && e.evidence === "api" && (ft === "function" || ft === "stream")) return true;
+  if (["runs_as", "writes_to", "transforms_with"].includes(e.rel) && e.evidence === "api") return true;
+  if (e.rel === "logs_to" && e.evidence === "naming" && ft === "distribution") return true;
   // content adapter
   if (e.rel === "refers_to" && e.evidence === "content") return true;
   if ((e.rel === "in" || e.rel === "part_of") && e.evidence === "content" && ft === "vault") return true;
@@ -169,4 +179,4 @@ ok(!/\beval\s*\(|new Function|innerHTML|document\.|localStorage|fetch\(/.test(re
 const uncovered = golden.edges.length - gs.edges.size - golden.edges.filter((e) => e.evidence === "curated" || e.evidence === "comment").length;
 if (failures) { console.error(failures + " failed, " + passed + " passed"); process.exit(1); }
 if (ctx.AwsTwin.pack() !== PACK) { console.error("FAIL the twin loaded pack " + ctx.AwsTwin.pack() + ", not " + PACK); process.exit(1); }
-console.log("OK (graph, pack " + PACK + ": " + passed + " checks; " + mine.nodes.length + " nodes, " + mine.edges.length + " edges; golden slice " + gs.nodes.size + " nodes and " + gs.edges.size + " edges equal; " + uncovered + " golden edges wait for the IAM, CloudFormation, Lambda and Firehose adapters, zip contents and serves_from)");
+console.log("OK (graph, pack " + PACK + ": " + passed + " checks; " + mine.nodes.length + " nodes, " + mine.edges.length + " edges; golden slice " + gs.nodes.size + " nodes and " + gs.edges.size + " edges equal; " + uncovered + " golden edges wait for the IAM and CloudFormation adapters, zip contents and serves_from)");

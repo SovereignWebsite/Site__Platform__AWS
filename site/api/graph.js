@@ -9,6 +9,8 @@
 //   g.add.activity(read, { bucket, key })    one trail file: Activity.read / fromBytes result, and where it came from
 //   g.add.content(files, { site })           what files say: [{ bucket, key, text }] already decoded (Decode), and
 //                                            optionally which bucket serves a site: { name, bucket }
+//   g.add.lambda(functions)                  LambdaApi functions (items of functions(), or function())
+//   g.add.firehose(streams)                  FirehoseApi stream() results
 //   g.toJSON()                               -> { about, evidence_levels, counts, nodes, edges } (schema shape)
 //
 // Ids: the ARN where AWS defines one, otherwise urn:sws:<kind>:<name>. An edge seen twice keeps the stronger
@@ -191,6 +193,55 @@
       });
     }
 
+    function role(arn, source, from) {
+      var m = /^arn:aws:iam::\d{12}:role\/(.+)$/.exec(arn || "");
+      if (!m) return;
+      node(arn, "role", "A4", m[1].split("/").pop(), { cfn_type: "AWS::IAM::Role" });
+      edge(from, "runs_as", arn, "api", source);
+    }
+    // Lambda: each function, its region, and the role it runs as.
+    function lambda(functions) {
+      functions.forEach(function (f) {
+        if (!f || !f.arn) return;
+        node(f.arn, "function", "A2", f.name, { cfn_type: "AWS::Lambda::Function", runtime: f.runtime, handler: f.handler, memory: f.memory, timeout: f.timeout,
+          code_bytes: f.codeSize, code_sha256: f.codeSha256, modified: f.modified, description: f.description });
+        if (f.region) edge(f.arn, "in", region(f.region, "api", "Lambda ListFunctions (FunctionArn)"), "api", "Lambda ListFunctions (FunctionArn)");
+        role(f.role, "Lambda ListFunctions (Role)", f.arn);
+      });
+    }
+    // Firehose: each stream, its region, the bucket it writes to, its role and the function that transforms its
+    // records. Which distribution logs through it is decided in toJSON, once every adapter has run.
+    var streamDests = [];
+    function firehose(streams) {
+      streams.forEach(function (st) {
+        if (!st || !st.arn) return;
+        node(st.arn, "stream", "A2", st.name, { cfn_type: "AWS::KinesisFirehose::DeliveryStream", status: st.status, stream_type: st.type });
+        if (st.region) edge(st.arn, "in", region(st.region, "api", "Firehose DescribeDeliveryStream (ARN)"), "api", "Firehose DescribeDeliveryStream (ARN)");
+        (st.destinations || []).forEach(function (d) {
+          if (d.kind !== "s3" || !d.bucket) return;
+          var n = nodes.get(st.arn); n.s3_prefix = d.prefix; n.compression = d.compression; n.buffer_seconds = d.bufferSeconds;
+          edge(st.arn, "writes_to", ids.bucket(d.bucket), "api", "Firehose DescribeDeliveryStream (BucketARN)");
+          role(d.roleArn, "Firehose DescribeDeliveryStream (RoleARN)", st.arn);
+          (d.processors || []).forEach(function (p) {
+            var m = /^(arn:aws:lambda:[a-z0-9-]+:\d{12}:function:[^:]+)(:.+)?$/.exec(p.lambdaArn || "");
+            if (m) edge(st.arn, "transforms_with", m[1], "api", "Firehose DescribeDeliveryStream (ProcessingConfiguration)");
+          });
+          streamDests.push({ stream: st.arn, bucket: d.bucket, prefix: d.prefix || "" });
+        });
+      });
+    }
+    // A distribution whose log files sit under a stream's prefix in that stream's bucket logs through that stream.
+    function logsThroughStreams() {
+      var dists = Array.from(nodes.values()).filter(function (n) { return n.type === "distribution"; });
+      streamDests.forEach(function (sd) {
+        var under = ids.bucket(sd.bucket) + "/" + sd.prefix;
+        dists.forEach(function (d) {
+          var hit = Array.from(nodes.keys()).some(function (id) { return id.indexOf(under) === 0 && id.indexOf("/" + d.label + "-") > 0; });
+          if (hit) edge(d.id, "logs_to", sd.stream, "naming", "log files named after " + d.label + " sit under the stream's prefix " + (sd.prefix || "(none)"));
+        });
+      });
+    }
+
     // An object names its bucket already: a bucket target with an object target in it is not a second edge.
     function actedOn(targets) {
       return targets.filter(function (t) {
@@ -199,6 +250,7 @@
     }
 
     function toJSON() {
+      logsThroughStreams();
       var nodeList = Array.from(nodes.values()).map(function (n) { return Object.assign({}, n); });
       var edgeList = Array.from(edges.values()).map(function (e) { return Object.assign({}, e); });
       var have = new Set(nodeList.map(function (n) { return n.id; }));
@@ -215,7 +267,7 @@
         evidence_levels: EVIDENCE.slice(), counts: { nodes: nodeList.length, edges: edgeList.length, by_evidence: by }, nodes: nodeList, edges: edgeList };
     }
 
-    return { add: { s3: s3, activity: activity, content: content }, toJSON: toJSON, ids: ids };
+    return { add: { s3: s3, activity: activity, content: content, lambda: lambda, firehose: firehose }, toJSON: toJSON, ids: ids };
   }
 
   root.Graph = Graph;
