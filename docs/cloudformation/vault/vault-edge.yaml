@@ -4,16 +4,16 @@ Description: >-
   only, so this stack runs there, whatever region the Vault is in. With the domain's hosted zone in this account, ACM
   validates by DNS on its own; with DNS elsewhere, the stack waits until the customer creates the validation record
   that CloudFormation shows in the stack's events. Its output goes into the Vault stack's CertificateArn.
-  DRAFT 0.2.0 by cloudformation.aws.a, 23 Nov 2026.
+  DRAFT 0.3.0 by cloudformation.aws.a, 23 Nov 2026.
 
 Metadata:
   SovereignWebsite:
-    TemplateVersion: 0.2.0-draft
+    TemplateVersion: 0.3.0-draft
 
 Parameters:
   VaultId:
     Type: String
-    AllowedPattern: "^[a-z0-9]{4,12}$"
+    AllowedPattern: "^[0-9a-f]{12}$"
   DomainName:
     Type: String
     AllowedPattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
@@ -21,7 +21,10 @@ Parameters:
   HostedZoneId:
     Type: String
     Default: ""
-    Description: The Route 53 hosted zone holding DomainName, if it is in this account. Empty means DNS is elsewhere.
+    AllowedPattern: "^$|^Z[A-Z0-9]{1,32}$"
+    Description: >-
+      The Route 53 hosted zone holding DomainName, if it is in this account. Empty means DNS is elsewhere. ACM's
+      validation record (a CNAME) stays in the zone after this stack is deleted; remove it by hand if wanted.
 
 Conditions:
   HasZone: !Not [!Equals [!Ref HostedZoneId, ""]]
