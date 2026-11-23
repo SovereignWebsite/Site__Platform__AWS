@@ -10,7 +10,7 @@ Read, in order: CLAUDE.md, docs/team/_common.md (wake loop), the billing.aws.c s
 
 The old session's private key lived only in its container (~/.sg-send, ~/.ssh-sign) and is not carried over; private keys are never copied or printed. A fresh session cannot sign as sha256:cd5b29f632b02d3a.
 - Make a new key (sgit pki keygen, as _common.md says), write a new public bundle to docs/team/keys/billing.aws.a.json, and prepare a new Factory commit on Factory dev per docs/team/keys/README.md (new .iac-commit.txt and .iac-entry.json), replacing the old ones.
-- Tell factory.c (through conductor.aws.a / your from-a note) that the old entry (Factory commit a997bd7, key sha256:cd5b29f632b02d3a) should NOT be landed, or should be landed as retired, because its private half is gone with the old container.
+- The old entry (Factory commit a997bd7, key sha256:cd5b29f632b02d3a) was kept in the landing set (conductor.aws.a, 14:28 UTC) so the old session could push before restart. Once your key is live, ask factory.c to mark the old entry retired (status "retired", retired, retired_note).
 - When signing on the Factory clone, set gpg.ssh.program=ssh-keygen locally: the container's global git config points at another signer, and the first attempt was signed by the wrong key because of it.
 
 ## State (23 Nov ~14:30 UTC)
@@ -36,6 +36,19 @@ Not pushed to dev on purpose: .github/ci/signers.mjs checks dev commits against 
 - factory.c: lands .a keys at Dinis's word (see the key section: old entry should not land).
 - aws.c (keeper of site/twin.js): asked (from-a note) to add TimePeriod and Estimated to the twin's GetCostAndUsage answer, and later a twin bill derived from twin traffic.
 - vaults.aws.a: asked at ~07:40 UTC for six fields on cost-reading records (docs/vaults/2026-11-23__03-lane-records.md section 3.5): start/end and basis on estimates, compare after-free-tier totals, prices.json version, region, service names as given, Estimated on bills.
+
+## New work: Vault deploy, step 8 (from conductor.aws.a, 14:49 UTC)
+
+Dinis asked (14:55 UTC) for Vault deploys into customers' AWS accounts and for ephemeral deployments; plan in docs/team/plan-vault-deploy.md on work/conductor.aws.a (ea9f61d). This role owns step 8: the cost of one Vault per region and per ephemeral hour, which feeds D5's cost cap (guard rails before anything runs outside the twin). Also a helper on step 11 (ephemeral deployments and the daily region move).
+- Wait for step 1's resource list (vaults.aws.a: S3, Lambda, API, CloudFront, Route 53) and step 2's template (cloudformation.aws.a) before pricing; price from those, not from a guess at the design.
+- Gaps in the price book for this: API Gateway, EC2 (the second deploy path), and anything else step 1 names; add each from AWS's public price data with exact labels, or list it under not_priced_yet.
+- Mind the fixed monthly items in an hourly figure: route53.hosted_zone.first25 is $0.50 per zone per month and the Route 53 page says it is not prorated, so a two-hour ephemeral Vault still pays a whole month for a new zone. Show fixed and per-use costs apart, per region (eu-west-2, eu-west-1 first).
+- viz.aws.a storyboard 02 "watch a Vault deploy" (work/viz.aws.a 4ca25a3) wants an hourly "cost so far" during a deployment: give the script a per-hour series (fixed costs at the hour they are incurred, per-use costs accruing) that viz can read.
+- Output: a script beside forecast.mjs (for example docs/billing/vault-cost.mjs) with tests, giving cost per region per hour and per month, idle and under a stated traffic, as JSON for D5's decision page.
+
+- Denial-of-wallet flood (pm.aws.a for iam.aws.a, 14:58 UTC): docs/billing/flood.mjs gives one hour at the reserved-concurrency cap. Next: price CloudWatch Logs ingestion (at millions of short requests it can be the largest line) and data transfer out, confirm on the Lambda page that throttled requests are not billed, then rerun with the stack's real memory, duration and concurrency default.
+
+- EC2 rows for ec2.aws.a (design 01 section 8, work/ec2.aws.a f33a6b3): t4g nano to medium on-demand and public IPv4 per hour are in prices.json (from AWS's EC2 and VPC price data); EBS gp3 per GB-month is still missing (not in those files: read the EBS pricing page), and t4g unlimited CPU credits.
 
 ## Next steps
 
