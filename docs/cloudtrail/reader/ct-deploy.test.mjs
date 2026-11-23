@@ -104,5 +104,19 @@ check(ds[0].counts.outOfBand, 0, "kill switch not counted out of band");
 const ksRole = { type: "AssumedRole", sessionContext: { sessionIssuer: { type: "Role", userName: "sws-vault-" + V + "-killswitch", arn: "arn:aws:iam::" + A + ":role/sws-vault-" + V + "-killswitch" } } };
 check(rules(D.alarms(add({ userIdentity: ksRole, eventSource: "lambda.amazonaws.com", eventName: "DeleteFunction20150331", requestParameters: { functionName: "sws-vault-" + V + "-api" }, errorCode: "AccessDeniedException" }))), ["vault-direct-change-refused"], "kill switch refused outside its job");
 check(rules(D.alarms(add({ userIdentity: customerId, eventSource: "monitoring.amazonaws.com", eventName: "DisableAlarmActions", requestParameters: { alarmNames: ["sws-vault-" + V + "-requests"] } }))), ["vault-out-of-band-change"], "the customer disabling the cost alarm by hand");
+// security.aws.a's review of ea31fc5. L1: a mention of an alarm-stack name elsewhere does not make a call the alarm stack's
+const viaCfnCustomer = Object.assign({}, customerId, { invokedBy: "cloudformation.amazonaws.com" });
+check(rules(D.alarms(add({ userIdentity: viaCfnCustomer, sourceIPAddress: "cloudformation.amazonaws.com", eventSource: "lambda.amazonaws.com", eventName: "UpdateFunctionConfiguration20150331v2",
+  requestParameters: { functionName: "sws-vault-" + V + "-api", description: "see sws-vault-" + V + "-killswitch" } }))), ["vault-out-of-band-change"], "L1: a mention in a description is not the alarm stack's");
+check(rules(D.alarms(add({ userIdentity: viaCfnCustomer, sourceIPAddress: "cloudformation.amazonaws.com", eventSource: "monitoring.amazonaws.com", eventName: "PutMetricAlarm",
+  requestParameters: { alarmName: "sws-vault-" + V + "-requests-slow" } }))), [], "L1: the alarm stack's own named alarm");
+// L2: only a pause is a pause
+const ks = (name, params, src) => add({ userIdentity: ksRole, sourceIPAddress: "lambda.amazonaws.com", eventSource: src || "lambda.amazonaws.com", eventName: name, requestParameters: params });
+check(rules(D.alarms(ks("PutFunctionConcurrency20171031", { functionName: "sws-vault-" + V + "-api", reservedConcurrentExecutions: 5 }))), ["vault-out-of-band-change"], "L2: concurrency above 0 is not a pause");
+check(rules(D.alarms(ks("DeleteFunctionConcurrency20171031", { functionName: "sws-vault-" + V + "-api" }))), ["vault-out-of-band-change"], "L2: removing the throttle is not a pause");
+check(rules(D.alarms(ks("UpdateDistribution", { id: "E2EXAMPLEVAULT", distributionConfig: { comment: "sws-vault-" + V, enabled: true } }, "cloudfront.amazonaws.com"))), ["vault-out-of-band-change"], "L2: enabling a distribution is not a pause");
+check(rules(D.alarms(ks("UpdateDistribution", { id: "E2EXAMPLEVAULT", distributionConfig: { comment: "sws-vault-" + V } }, "cloudfront.amazonaws.com"))), ["vault-out-of-band-change"], "L2: no enabled field, not counted as a pause");
+check(rules(D.alarms(ks("TagResource20170331v2", { resource: "arn:aws:lambda:eu-west-2:" + A + ":function:sws-vault-" + V + "-api", tags: { "sws-vault-paused": "true" } }))), [], "L2: the paused tag alone");
+check(rules(D.alarms(ks("TagResource20170331v2", { resource: "arn:aws:lambda:eu-west-2:" + A + ":function:sws-vault-" + V + "-api", tags: { "sws-vault-paused": "true", owner: "x" } }))), ["vault-out-of-band-change"], "L2: any other tag is a direct change");
 check(D.rules.length, 9, "nine rules");
 console.log("ok ct-deploy: 9 rules, " + cases + " cases over the vault-deploy scenario (clean, out of band, refused, teardown, approvals, two Vaults, security review)");

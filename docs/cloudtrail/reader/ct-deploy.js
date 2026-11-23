@@ -40,10 +40,33 @@
   // the deploy role. Stated limit: in one-stack mode another stack touching this Vault's resources looks the same.
   // The alarm stack's resources (vault-alarm.yaml 0.4.3): its cost topic, alarms, kill switch role, function and log
   // group. That stack is always run with the customer's own identity, never the deploy role (R-027).
-  function alarmStackResource(e, id) { var p = e.raw && e.raw.requestParameters; return !!p && new RegExp("sws-vault-" + id + "-(cost|requests|killswitch)(?![0-9a-z])").test(JSON.stringify(p)); }
+  function alarmStackResource(e, id) {
+    // Named fields only, checked against the stack's own names (security.aws.a, L1): a mention elsewhere, e.g. in a
+    // description, tag or policy, does not make a call the alarm stack's.
+    var p = (e.raw && e.raw.requestParameters) || {}, v = "sws-vault-" + id;
+    var alarms = set([v + "-requests", v + "-requests-slow", v + "-killswitch-errors"]);
+    var names = Array.isArray(p.alarmNames) ? p.alarmNames : [];
+    return p.name === v + "-cost" || (typeof p.topicArn === "string" && p.topicArn.slice(-(v.length + 6)) === ":" + v + "-cost")
+      || alarms[p.alarmName] === 1 || (names.length > 0 && names.every(function (n) { return alarms[n] === 1; }))
+      || p.roleName === v + "-killswitch" || p.functionName === v + "-killswitch" || p.logGroupName === "/aws/lambda/" + v + "-killswitch";
+  }
   function byCloudFormation(e, id, access) { return viaCfn(e) && (!access || isDeployRole(e, id) || accessStackResource(e, id) || alarmStackResource(e, id)); }
-  // The kill switch doing its one job: throttle the function to 0, disable the distribution, tag both sws-vault-paused.
-  function killSwitch(e, id) { return e.who.name === "sws-vault-" + id + "-killswitch" && !e.failed && /^(PutFunctionConcurrency|UpdateDistribution|TagResource)/.test(e.action || ""); }
+  // The kill switch doing its one job, and only that (security.aws.a, L2): concurrency set to 0, a distribution
+  // disabled, or the sws-vault-paused tag. An unpause, or any other value, stays a direct change.
+  function pausedTagOnly(p) {
+    var keys = [];
+    if (p.tags && Array.isArray(p.tags.items)) keys = p.tags.items.map(function (t) { return t && (t.key || t.Key); }); // CloudFront
+    else if (p.tags && typeof p.tags === "object") keys = Object.keys(p.tags); // Lambda
+    return keys.length > 0 && keys.every(function (k) { return k === "sws-vault-paused"; });
+  }
+  function killSwitch(e, id) {
+    if (e.who.name !== "sws-vault-" + id + "-killswitch" || e.failed) return false;
+    var p = (e.raw && e.raw.requestParameters) || {}, a = e.action || "";
+    if (/^PutFunctionConcurrency/.test(a)) return Number(p.reservedConcurrentExecutions) === 0 && p.reservedConcurrentExecutions !== null && p.reservedConcurrentExecutions !== "";
+    if (/^UpdateDistribution/.test(a)) return !!p.distributionConfig && (p.distributionConfig.enabled === false || p.distributionConfig.enabled === "false");
+    if (/^TagResource/.test(a)) return pausedTagOnly(p);
+    return false;
+  }
   function isControl(e) { return e.service === "cloudformation" && CONTROL[e.action] === 1 && !!stackOf(e); }
   // A management change to the Vault's resources made by someone, not by CloudFormation. The Vault's own API role
   // writing its data is the Vault working, not a change to it; data events are left out for the same reason.

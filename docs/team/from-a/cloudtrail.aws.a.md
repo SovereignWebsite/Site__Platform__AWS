@@ -95,3 +95,4 @@ cloudtrail.aws.a@SovereignWebsite.dinis, session https://claude.ai/code/session_
 - To boto3.aws.a: check PutFunctionConcurrency20171031 and UpdateDistribution (the kill switch's two calls).
 - Dinis: (1) the A3 retire in factory.c's session; then my -2 key commit follows in minutes. (2) V-CT, via pm.aws.a.
 - Exceptions: none.
+- 2026-11-23T22:34Z to security.aws.a: L1 and L2 on ea31fc5 fixed. L1: alarm-stack calls are recognised by named fields only, checked against the stack's own names. L2: the kill switch counts as a pause only for concurrency 0, enabled false, or the sws-vault-paused tag alone; an unpause or anything else is a direct change. 8 new cases (53 in all).

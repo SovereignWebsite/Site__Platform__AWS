@@ -37,7 +37,12 @@ The four rules after the first four come from security.aws.a's review of 7eda626
 
 **What counts as CloudFormation:** a call with CloudFormation's sign (`invokedBy`, or `sourceIPAddress` cloudformation.amazonaws.com). The deploy role's name alone is not enough. In access-stack mode (the Vault stack was given the deploy role), the Vault stack's calls must also run as that role; only the access stack's own two resources (the deploy role and its boundary) may be made as the customer.
 
-**The alarm stack.** sws-vault-<id>-alarm (vault-alarm.yaml, in us-east-1) is always run with the customer's own identity, never the deploy role (R-027). So in access-stack mode, CloudFormation's calls made as the customer are still the Vault's own when they name the alarm stack's resources: sws-vault-<id>-cost, -requests*, -killswitch. A hand change to those, such as DisableAlarmActions on the cost alarm, is out of band.
+**The alarm stack.** sws-vault-<id>-alarm (vault-alarm.yaml, in us-east-1) is always run with the customer's own identity, never the deploy role (R-027). So in access-stack mode, CloudFormation's calls made as the customer are still the Vault's own when a named field holds one of the alarm stack's own names (security.aws.a, L1):
+- the topic name or ARN, sws-vault-<id>-cost;
+- alarmName or alarmNames: -requests, -requests-slow or -killswitch-errors;
+- roleName or functionName -killswitch, or logGroupName /aws/lambda/sws-vault-<id>-killswitch.
+
+A mention anywhere else, such as a description, a tag or a policy, does not count. A hand change to those, such as DisableAlarmActions on the cost alarm, is out of band.
 
 **Stated limit:** in one-stack mode, a call that another stack makes on this Vault's resources looks the same as one by the Vault's own stack. The trail does not carry the stack's name on those calls.
 
@@ -47,7 +52,7 @@ The platform alarms (ct-alarms.js) still run on the same events. Example: a chan
 
 - `docs/cloudtrail/reader/ct-deploy.js`: `group(events)` and `alarms(deployments, { approvals })` over the reader's events.
 - `docs/cloudtrail/scenarios/vault-deploy.js`: the twin-first scenario. It gives the records one access-stack deployment leaves, with options for out of band, refused and teardown. dev.1.aws.a uses it as the expected output: the twin derives its customer account's trail from its journal, and a test compares the two (step 4).
-- `docs/cloudtrail/reader/ct-deploy.test.mjs`: 45 cases (run: `node docs/cloudtrail/reader/ct-deploy.test.mjs`).
+- `docs/cloudtrail/reader/ct-deploy.test.mjs`: 53 cases (run: `node docs/cloudtrail/reader/ct-deploy.test.mjs`).
 
 ## Checked by boto3.aws.a (note 09 addendum, work/boto3.aws.a b2a8e2c; AWS's pages, 23 Nov 2026)
 
@@ -60,7 +65,7 @@ The platform alarms (ct-alarms.js) still run on the same events. Example: a chan
 - The kill switch's calls (boto3.aws.a, note 17 addendum):
   - PutFunctionConcurrency20171031: confirmed.
   - UpdateDistribution: unsuffixed. Disabling is the same call.
-  - Whether CloudTrail keeps `Enabled` in requestParameters is not shown, so vault-paused does not match on it.
+  - Whether CloudTrail keeps `Enabled` in requestParameters is not shown. After security.aws.a's L2, vault-paused fires only for `reservedConcurrentExecutions` 0 or `distributionConfig.enabled` false. So if a real trail drops `enabled`, a genuine distribution pause shows as a high out-of-band change, the safe side. Confirm on the first real trail.
   - CreateFunctionUrlConfig: no suffix; corrected in the scenario.
   - CloudFront: CreateDistributionWithTags when tags are passed, as vault.yaml does, in us-east-1; to confirm. Corrected in the scenario. CloudFront, like IAM, is global, so it does not count as a deployment's region.
 
