@@ -1,0 +1,40 @@
+diff --git a/site/twin.js b/site/twin.js
+index 05f4d43..fc3a492 100644
+--- a/site/twin.js
++++ b/site/twin.js
+@@ -235,7 +235,10 @@
+     if (!signed(init)) return xml("<Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>", 403);
+     if (!key) {
+       // ListObjectsV2: keys and common prefixes in key order, max-keys of them (default 1000) a page.
+-      var q = u.searchParams, prefix = q.get("prefix") || "", delim = q.get("delimiter"), max = Math.min(+(q.get("max-keys") || 1000), 1000);
++      var q = u.searchParams, prefix = q.get("prefix") || "", delim = q.get("delimiter"), mk = q.get("max-keys");
++      // max-keys must be a whole number of 0 or more (S3 answers InvalidArgument otherwise); 0 gives an empty page.
++      if (mk !== null && !/^\d+$/.test(mk)) return xml("<Error><Code>InvalidArgument</Code><Message>Provided max-keys not an integer or within integer range</Message><ArgumentName>max-keys</ArgumentName><ArgumentValue>" + esc(mk) + "</ArgumentValue></Error>", 400);
++      var max = Math.min(mk === null ? 1000 : +mk, 1000);
+       var after = q.get("continuation-token") ? fromToken(q.get("continuation-token")) : q.get("start-after") || "";
+       var all = Object.keys(s.objects[bucket]).sort().filter(function (k) { return k.indexOf(prefix) === 0; }), items = [], seen = {};
+       all.forEach(function (k) {
+@@ -253,7 +256,7 @@
+         var last = pageItems.length ? pageItems[pageItems.length - 1] : null;
+         return xml("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ListBucketResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\"><Name>" + esc(bucket) + "</Name><Prefix>" + esc(prefix) + "</Prefix>" +
+           (q.get("continuation-token") ? "<ContinuationToken>" + esc(q.get("continuation-token")) + "</ContinuationToken>" : "") +
+-          (more ? "<NextContinuationToken>" + esc(toToken(last.key || last.prefix)) + "</NextContinuationToken>" : "") +
++          (more && last ? "<NextContinuationToken>" + esc(toToken(last.key || last.prefix)) + "</NextContinuationToken>" : "") +
+           "<KeyCount>" + pageItems.length + "</KeyCount><MaxKeys>" + max + "</MaxKeys>" + (delim ? "<Delimiter>" + esc(delim) + "</Delimiter>" : "") +
+           "<IsTruncated>" + more + "</IsTruncated>" + parts.join("") + "</ListBucketResult>");
+       });
+diff --git a/test/twin/s3-fidelity.test.mjs b/test/twin/s3-fidelity.test.mjs
+index 093b8c2..0cbd28e 100644
+--- a/test/twin/s3-fidelity.test.mjs
++++ b/test/twin/s3-fidelity.test.mjs
+@@ -72,4 +72,9 @@ const gz = new Uint8Array(await (await get("https://" + T.buckets.trail + ".s3.e
+ const rec = JSON.parse(await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream("gzip"))).text()).Records[0];
+ if (rec.requestParameters.roleName !== "sovereignwebsite-factory-dns" || rec.awsRegion !== "us-east-1" || !rec.eventID || rec.readOnly !== false) fail("trail record");
+ 
+-console.log("OK (twin S3: paging 1000 + 203, ranges a-b, a-, -n and 416, ETag, dotted bucket, trail per region, data independent of call order)");
++// max-keys edge cases (boto3.aws.a): 0 is an empty page, not an exception; a non-integer or negative value is refused
++let mk = await get(site("?list-type=2&max-keys=0")); x = await mk.text();
++if (mk.status !== 200 || tag(x, "KeyCount") !== "0" || tag(x, "MaxKeys") !== "0" || count(x, "Contents") !== 0 || tag(x, "NextContinuationToken")) fail("max-keys=0");
++for (const v of ["abc", "-1", "1.5"]) { mk = await get(site("?list-type=2&max-keys=" + v)); if (mk.status !== 400 || tag(await mk.text(), "Code") !== "InvalidArgument") fail("max-keys=" + v); }
++
++console.log("OK (twin S3: paging 1000 + 203, max-keys 0 and invalid, ranges a-b, a-, -n and 416, ETag, dotted bucket, trail per region, data independent of call order)");
