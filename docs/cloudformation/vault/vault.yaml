@@ -4,12 +4,12 @@ Description: >-
   vault store, the server as a Lambda behind a Function URL, CloudFront in front (with /health for the deploy page),
   and optionally the customer's own domain. Two modes (DeployMode): access-stack, run with RoleARN = the deploy
   role of stack sws-vault-<id>-access (iam.aws.a, step 3); or one-stack, run as the customer's own console
-  identity with the boundary in this stack. Dinis decides which the page offers. DRAFT 0.4.7 by cloudformation.aws.a, 23 Nov 2026. Not for use on a real account: see
+  identity with the boundary in this stack. Dinis decides which the page offers. DRAFT 0.5.0 by cloudformation.aws.a, 23 Nov 2026. Not for use on a real account: see
   docs/cloudformation/2026-11-23__vault-stack-03.md.
 
 Metadata:
   SovereignWebsite:
-    TemplateVersion: 0.4.7-draft
+    TemplateVersion: 0.5.0-draft
     Pinning: served only as an immutable, versioned object whose sha256 the deploy page shows next to the button.
     CreatesNoRoleForUs: true
   AWS::CloudFormation::Interface:
@@ -18,6 +18,8 @@ Metadata:
         Parameters: [VaultId, DeployMode, ImageUri, DeployPageOrigin]
       - Label: { default: "Your own domain (optional, add it later)" }
         Parameters: [DomainName, HostedZoneId, CertificateArn]
+      - Label: { default: "Rate limit (optional, from vault-edge.yaml in us-east-1)" }
+        Parameters: [WebAclArn]
       - Label: { default: "Advanced" }
         Parameters: [Architecture, ReservedConcurrency]
 
@@ -69,6 +71,14 @@ Parameters:
     Type: String
     Default: ""
     Description: The certificate from vault-edge.yaml (us-east-1). Needed with DomainName.
+  WebAclArn:
+    Type: String
+    MaxLength: 512
+    Default: ""
+    AllowedPattern: "^$|^arn:aws:wafv2:us-east-1:[0-9]{12}:global/webacl/sws-vault-[0-9a-f]{12}-waf/[0-9a-f-]{36}$"
+    Description: >-
+      Optional. The WAF web ACL from vault-edge.yaml (us-east-1), output WebAclArn: a per-address rate limit in front of
+      CloudFront (R-026). Empty means none. CHECK the ARN form against AWS WAF's documentation.
   Architecture:
     Type: String
     Default: arm64
@@ -88,6 +98,7 @@ Conditions:
   HasZone: !And [!Condition HasDomain, !Not [!Equals [!Ref HostedZoneId, ""]]]
   DnsElsewhere: !And [!Condition HasDomain, !Equals [!Ref HostedZoneId, ""]]
   HasConcurrencyCap: !Not [!Equals [!Ref ReservedConcurrency, ""]]
+  HasWebAcl: !Not [!Equals [!Ref WebAclArn, ""]]
 
 Rules:
   DomainNeedsCertificate:
@@ -301,7 +312,7 @@ Resources:
           if (event.request.method === "OPTIONS") return { statusCode: 204, statusDescription: "No Content", headers: h };
           if (event.request.method !== "GET") return { statusCode: 405, statusDescription: "Method Not Allowed", headers: h };
           return { statusCode: 200, statusDescription: "OK", headers: h,
-            body: { encoding: "text", data: JSON.stringify({ vault_id: "${VaultId}", template_version: "0.4.7-draft" }) } };
+            body: { encoding: "text", data: JSON.stringify({ vault_id: "${VaultId}", template_version: "0.5.0-draft" }) } };
         }
 
   # ---- CloudFront in front, from phase 1 ----
@@ -311,6 +322,7 @@ Resources:
       DistributionConfig:
         Enabled: true
         Comment: !Sub "sws-vault-${VaultId}"
+        WebACLId: !If [HasWebAcl, !Ref WebAclArn, !Ref AWS::NoValue]
         HttpVersion: http2and3
         PriceClass: PriceClass_100
         Aliases: !If [HasDomain, [!Ref DomainName], !Ref AWS::NoValue]
@@ -397,4 +409,4 @@ Outputs:
   DeployMode:
     Value: !Ref DeployMode
   TemplateVersion:
-    Value: 0.4.7-draft
+    Value: 0.5.0-draft

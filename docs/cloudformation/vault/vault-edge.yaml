@@ -1,14 +1,15 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  Stack sws-vault-<id>-edge: the certificate for a Vault's own domain. CloudFront takes certificates from us-east-1
-  only, so this stack runs there, whatever region the Vault is in. With the domain's hosted zone in this account, ACM
-  validates by DNS on its own; with DNS elsewhere, the stack waits until the customer creates the validation record
-  that CloudFormation shows in the stack's events. Its output goes into the Vault stack's CertificateArn.
-  DRAFT 0.3.0 by cloudformation.aws.a, 23 Nov 2026.
+  Stack sws-vault-<id>-edge, always in us-east-1: what CloudFront takes only from us-east-1. (1) The certificate for
+  a Vault's own domain (optional): with the domain's hosted zone in this account ACM validates by DNS on its own;
+  with DNS elsewhere the stack waits for the validation record that CloudFormation shows in the stack's events.
+  (2) An optional WAF web ACL with a per-address rate limit, against the flood cost of R-026 (off by default until
+  Dinis decides). Its outputs go into the Vault stack's CertificateArn and WebAclArn.
+  DRAFT 0.4.0 by cloudformation.aws.a, 23 Nov 2026.
 
 Metadata:
   SovereignWebsite:
-    TemplateVersion: 0.3.0-draft
+    TemplateVersion: 0.4.0-draft
 
 Parameters:
   VaultId:
@@ -18,8 +19,9 @@ Parameters:
   DomainName:
     Type: String
     MaxLength: 253
-    AllowedPattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
-    Description: The Vault's own domain, for example vault.example.com.
+    Default: ""
+    AllowedPattern: "^$|^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
+    Description: Optional. The Vault's own domain, for example vault.example.com. Empty means no certificate.
   HostedZoneId:
     Type: String
     MaxLength: 32
@@ -28,19 +30,33 @@ Parameters:
     Description: >-
       The Route 53 hosted zone holding DomainName, if it is in this account. Empty means DNS is elsewhere. ACM's
       validation record (a CNAME) stays in the zone after this stack is deleted; remove it by hand if wanted.
+  EnableRateLimit:
+    Type: String
+    Default: "false"
+    AllowedValues: ["false", "true"]
+    Description: Create a WAF web ACL that blocks any one address above RateLimit requests per 5 minutes (R-026; Dinis decides).
+  RateLimit:
+    Type: Number
+    Default: 1000
+    MinValue: 100
+    MaxValue: 2000000000
+    Description: Requests per address per 5-minute window before WAF blocks it. CHECK the minimum against AWS WAF's documentation.
 
 Conditions:
-  HasZone: !Not [!Equals [!Ref HostedZoneId, ""]]
+  HasDomain: !Not [!Equals [!Ref DomainName, ""]]
+  HasZone: !And [!Condition HasDomain, !Not [!Equals [!Ref HostedZoneId, ""]]]
+  RateLimitOn: !Equals [!Ref EnableRateLimit, "true"]
 
 Rules:
   OnlyInUsEast1:
     Assertions:
       - Assert: !Equals [!Ref AWS::Region, us-east-1]
-        AssertDescription: CloudFront uses certificates from us-east-1 only. Run this stack in us-east-1.
+        AssertDescription: CloudFront takes certificates and web ACLs from us-east-1 only. Run this stack in us-east-1.
 
 Resources:
   VaultCertificate:
     Type: AWS::CertificateManager::Certificate
+    Condition: HasDomain
     Properties:
       DomainName: !Ref DomainName
       ValidationMethod: DNS
@@ -52,6 +68,38 @@ Resources:
       Tags:
         - { Key: sws-vault, Value: !Ref VaultId }
 
+  # A per-address rate limit. It caps one source, not a flood spread over many addresses; billing.aws.a prices it
+  # (WAF has its own charges) and boto3.aws.a checks whether blocked requests still carry CloudFront's request charge.
+  VaultWebAcl:
+    Type: AWS::WAFv2::WebACL
+    Condition: RateLimitOn
+    Properties:
+      Name: !Sub "sws-vault-${VaultId}-waf"
+      Scope: CLOUDFRONT
+      DefaultAction: { Allow: {} }
+      VisibilityConfig:
+        SampledRequestsEnabled: true
+        CloudWatchMetricsEnabled: true
+        MetricName: !Sub "sws-vault-${VaultId}-waf"
+      Rules:
+        - Name: per-address-rate-limit
+          Priority: 0
+          Action: { Block: {} }
+          Statement:
+            RateBasedStatement:
+              Limit: !Ref RateLimit
+              AggregateKeyType: IP
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: !Sub "sws-vault-${VaultId}-rate"
+      Tags:
+        - { Key: sws-vault, Value: !Ref VaultId }
+
 Outputs:
   CertificateArn:
+    Condition: HasDomain
     Value: !Ref VaultCertificate
+  WebAclArn:
+    Condition: RateLimitOn
+    Value: !GetAtt VaultWebAcl.Arn
