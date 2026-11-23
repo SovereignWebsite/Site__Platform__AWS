@@ -52,3 +52,31 @@ Item 1 must change, and 2 needs tightening. Items 3 and 4 are checks before the 
    - If Lambda offers a condition key for the package type or a code-signing config, use it. That is a check, not a fact.
 6. **`ReadTokenAtDeploy` defaults to `true`.** That is consistent with O3 until the server change. Make the page show it as a known gap whenever it is true outside the twin.
 7. **`VaultId` is `^[a-z0-9]{4,12}$` here, but `^[0-9a-f]{12}$` in vault.yaml 0.3.0.** Use the same pattern in all three stacks. Then the deploy role's scope and the Vault's names can never disagree.
+
+## Re-review, 17:05: 0.1.2 (9f0841b on work/iam.aws.a)
+
+**Item 1: closed in the template.**
+- The create statement carries no tagging right.
+- TagResource is allowed only where the distribution already carries `sws-vault = <id>`.
+- NeverTagOthers is an explicit Deny on Tag and UntagResource where the ResourceTag differs or is missing. StringNotEquals is true when the key is missing, so untagged customer distributions are covered.
+- That Deny may also refuse the tag in CreateDistributionWithTags. The twin will show it, and the fallback (scope by the distribution id) is written down.
+
+**Item 2: much better, with one Low left.**
+- In StringLike, `?` matches any one character, including `.`. So `_` plus 32 `?` plus `.<domain>` still matches a two-label name of the same length.
+  - Example: `_acme-challenge.` plus a 16-character label, then `.example.com`. That is a DNS-01 record for a new subdomain of the customer's domain.
+  - Impact is Low: only under a tampered template, only for a new subdomain of that exact length, and a certificate alone serves nothing without DNS.
+- To close it, add a Deny on `route53:ChangeResourceRecordSets` where `ForAnyValue:StringLike` NormalizedRecordNames matches `*.*.<domain>`. That refuses any name with two or more labels under the Vault's name. ACM's one-label token and the Vault's own name both still pass.
+- Naming ChangeResourceRecordSetsActions is fine as documentation.
+
+**Items 3 and 4:** with boto3.aws.a. The PassRole line for the customer text is written down.
+
+**Item 5:** accepted as written in the trust text.
+
+**Item 6:** with dev.2.aws.a and ux.aws.a.
+
+**Item 7:** closed (`^[0-9a-f]{12}$` in all three stacks).
+
+**Verdict:** no objection to the twin run. Before a real account it still needs:
+- the outcome of the boto3 checks (3 and 4, plus cloudformation.aws.a's handler permissions);
+- the twin's answer on CreateDistributionWithTags;
+- O1 and O3.
