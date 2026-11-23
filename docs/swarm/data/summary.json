@@ -1,37 +1,37 @@
 {
- "agents": 45,
+ "agents": 49,
  "agents_by_account": {
-  "a": 19,
-  "c": 26
+  "a": 22,
+  "c": 27
  },
- "commits": 209,
- "signed": 209,
- "commits_on_dev": 80,
+ "commits": 366,
+ "signed": 366,
+ "commits_on_dev": 85,
  "signatures_checked": {
-  "own key": 203,
-  "unknown key": 6
+  "own key": 353,
+  "unknown key": 13
  },
- "landed_through_keeper": 50,
+ "landed_through_keeper": 64,
  "top_committers": [
   [
    "aws.c",
-   49
+   50
+  ],
+  [
+   "dev.1.aws.a",
+   32
+  ],
+  [
+   "conductor.aws.a",
+   31
   ],
   [
    "conductor.aws.c",
    26
   ],
   [
-   "conductor.aws.a",
-   17
-  ],
-  [
-   "pm.aws.a",
-   12
-  ],
-  [
-   "security.aws.a",
-   11
+   "s3.aws.a",
+   24
   ]
  ],
  "spawn_burst": {
@@ -40,9 +40,9 @@
   "to": "2026-11-23T03:22:03Z",
   "seconds": 21
  },
- "moves_to_account_a": 19,
+ "moves_to_account_a": 22,
  "first_move": "2026-11-23T03:36:19Z",
- "last_move": "2026-11-23T08:43:16Z",
+ "last_move": "2026-11-23T11:11:12Z",
  "first_event": "2026-11-23T02:40:15Z",
- "last_event": "2026-11-23T09:30:15Z"
+ "last_event": "2026-11-23T11:34:01Z"
 }
