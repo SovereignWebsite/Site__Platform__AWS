@@ -53,3 +53,22 @@ security.aws.a decides; this is input.
 ## Next
 
 When cloudformation.aws.a's step 2 template exists: a check like docs/iam/check_boundary.py that every action the template's resources need is inside the deploy role, and nothing more; then items 7 to 12 of security.aws.a's review.
+
+## security.aws.a's review of draft 2 (15:40 addendum, 59eb4c5), taken in
+
+Points 1 to 6 accepted and the two gaps accepted as recorded. Ruling on the Function URL: **phase 1 NONE accepted for v1** on conditions (a) to (e); phase 2 target AWS_IAM with origin access control.
+
+**Changes to the deploy role (supersede the tables above where they differ):**
+
+- **Ids (point 17).** `<id>` is 12 lower-case hex characters, enforced by `AllowedPattern: "^[0-9a-f]{12}$"` in every stack, so `sws-vault-<id>-*` can never match another Vault's resources (an id with "-" would let `sws-vault-ab-*` match Vault `ab-c`). Three stacks, named exactly: `sws-vault-<id>-access` (bootstrap), `sws-vault-<id>` (the Vault), `sws-vault-<id>-edge` (us-east-1 certificate). The deploy role's `aws:SourceArn` names the two it runs: `stack/sws-vault-<id>/*` and `stack/sws-vault-<id>-edge/*`, no `*` after the id.
+- **Logs (point 19).** The log group is the Vault's audit trail: `DeletionPolicy: Retain`, and the deploy role loses logs:DeleteLogGroup.
+- **Self-protection (point 20).** Deny every action on `role/sws-vault-<id>-deploy` and on the Vault boundary policy, and `cloudformation:*` on any stack but the three above.
+- **Secrets (point 21).** Deny secretsmanager:PutResourcePolicy and ReplicateSecretToRegions.
+- **Function URL (condition d).** AddPermission with principal `*` only together with `lambda:FunctionUrlAuthType` = NONE, i.e. for lambda:InvokeFunctionUrl, never for lambda:InvokeFunction. *check* (boto3.aws.a): whether IAM can tell the two apart on AddPermission by that condition key alone; if not, the template check (below) enforces it.
+- **Denial of wallet (condition c).** Reserved concurrency is a stack parameter with a low default; billing.aws.a to price a flood (requests up to that concurrency for an hour).
+
+**Conditions on the server and the template, for vaults.aws.a and cloudformation.aws.a:** (a) the token is at least 32 random bytes (GenerateSecretString length), compared in constant time, sent in a header only, never in a URL, never logged; (b) every server route is gated by the token: `/health` is not a server route but the CloudFront Function on that one path (design 04 section 4a), returning `{ vault_id, template_version }` and nothing else; (e) a risk row once code exists.
+
+**Token (point 18).** The token in the function's configuration (dynamic reference) is acceptable in the twin only. Before the first real customer the server should read the secret at start-up (design 04 section 8 question 3, with the server's owners). For Dinis's batch.
+
+**Still waiting on Dinis** (vaults.aws.a, f4704f1): the server's S3 actions (question 2, decision 8) for the function role and the boundary; the image's ECR source (question 4: the official template's way, or an ECR repository per region in our account pulled across accounts, which would add a cross-account read to the deploy role's image row).
