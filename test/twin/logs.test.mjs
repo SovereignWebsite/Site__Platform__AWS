@@ -86,7 +86,22 @@ const bad = [
   [{ logGroupName: "constructor" }, 400, "ResourceNotFoundException"],
   [{ logGroupName: "/aws/lambda/__proto__" }, 400, "ResourceNotFoundException"]];
 for (const [q, st, type] of bad) { const r = await call(T, "FilterLogEvents", q); if (r.status !== st || r.j.__type !== type) fail(JSON.stringify(q) + " -> " + r.status + " " + JSON.stringify(r.j)); }
-if ((await call(T, "PutLogEvents", {})).j.__type !== "UnknownOperationException") fail("write call answered");
+{ const w = await call(T, "PutLogEvents", {}); if (w.j.__type !== "UnknownOperationException" || w.status !== 404) fail("write call answered " + w.status); } // 404 per the Logs CommonErrors page
+// boto3.aws.a's note 11: ?terms combined with other terms are ignored; startFromHead false is newest first;
+// searchedLogStreams comes back empty; a missing group parameter is a parameter error; 56-digit event ids
+if ((await ok(T, "FilterLogEvents", Object.assign({ logGroupName: "/aws/lambda/demo-handler", filterPattern: "?START ?END REPORT" }, day("21")))).events.length !== rep.length) fail("?terms not ignored beside a plain term");
+const newest = await ok(T, "FilterLogEvents", Object.assign({ logGroupName: "/aws/lambda/demo-handler", startFromHead: false, limit: 3 }, day("21")));
+if (newest.events.map((e) => e.eventId).join() !== all.slice(-3).reverse().map((e) => e.eventId).join()) fail("startFromHead false not newest first");
+if (!Array.isArray(newest.searchedLogStreams) || newest.searchedLogStreams.length) fail("searchedLogStreams");
+if (!all.every((e) => /^\d{56}$/.test(e.eventId))) fail("event id form " + all[0].eventId);
+{ const m = await call(T, "FilterLogEvents", {}); if (m.j.__type !== "InvalidParameterException") fail("missing group " + JSON.stringify(m.j)); }
+// DescribeLogGroups: pattern (three fields only), prefix and pattern exclusive, empty prefix refused, limit and paging
+const pg = (await ok(T, "DescribeLogGroups", { logGroupNamePattern: "log-enr" })).logGroups;
+if (pg.length !== 1 || Object.keys(pg[0]).sort().join() !== "arn,creationTime,logGroupName") fail("pattern " + JSON.stringify(pg));
+for (const q of [{ logGroupNamePrefix: "/aws", logGroupNamePattern: "x" }, { logGroupNamePrefix: "" }, { limit: 51 }, { nextToken: "x" }])
+  if ((await call(T, "DescribeLogGroups", q)).j.__type !== "InvalidParameterException") fail("DescribeLogGroups accepted " + JSON.stringify(q));
+const p1 = await ok(T, "DescribeLogGroups", { limit: 2 }), p2 = await ok(T, "DescribeLogGroups", { limit: 2, nextToken: p1.nextToken });
+if (p1.logGroups.length !== 2 || !p1.nextToken || p2.logGroups.length !== 1 || p2.nextToken) fail("DescribeLogGroups paging");
 if ((await call(T, "FilterLogEvents", { logGroupName: "/aws/lambda/demo-handler" }, {})).status !== 403) fail("unsigned call answered");
 if ((await call(T, "DescribeLogGroups", {})).type !== "application/x-amz-json-1.1") fail("content type");
 // the attack pack: [ERROR] lines on 22 Nov equal the metric's Errors

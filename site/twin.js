@@ -933,11 +933,13 @@
       });
     });
     ev.sort(function (a, b) { return a.timestamp - b.timestamp; });
-    ev.forEach(function (e, i) { e.eventId = String(e.timestamp) + pad(i, 10); }); // unique and ordered; AWS's ids are longer, opaque digit strings
+    ev.forEach(function (e, i) { e.eventId = String(e.timestamp) + pad(i, 43); }); // 56 digits like AWS's sample; unique and ordered here, opaque in AWS
     return (s._lambdaLogs[fn] = ev);
   }
-  // A filter pattern for unstructured events, as CloudWatch Logs reads one: every plain term must appear, no -term may,
-  // and if there are ?terms at least one must; "quoted phrases" match whole; matching is case-sensitive. JSON ({...}),
+  // A filter pattern for unstructured events, as CloudWatch Logs reads one: every plain term must appear, no -term may;
+  // ?terms alone mean at least one must, but combined with other terms they are ignored (AWS's filter pattern page, via
+  // boto3.aws.a's note 11); "quoted phrases" match whole; matching is case-sensitive. Terms match as substrings here:
+  // whether AWS matches whole words is not documented (note 11, to confirm). JSON ({...}),
   // space-delimited ([...]) and regex (%...%) patterns are not in the twin yet.
   function logFilter(p) {
     p = String(p || "").trim();
@@ -950,7 +952,7 @@
     });
     return function (m) {
       return all.every(function (w) { return m.indexOf(w) >= 0; }) && !none.some(function (w) { return m.indexOf(w) >= 0; }) &&
-        (!any.length || any.some(function (w) { return m.indexOf(w) >= 0; }));
+        (!any.length || all.length || none.length || any.some(function (w) { return m.indexOf(w) >= 0; }));
     };
   }
   function logs(target, body, init) {
@@ -959,14 +961,28 @@
     if (!q || typeof q !== "object") return logsErr("SerializationException", "Body is not a JSON object");
     var groups = Object.keys(FN).sort().map(logGroupOf), arnOf = function (g) { return "arn:aws:logs:" + REGION + ":" + ACCOUNT + ":log-group:" + g; };
     if (target === "DescribeLogGroups") {
-      var pre = typeof q.logGroupNamePrefix === "string" ? q.logGroupNamePrefix : "";
-      return logsJson({ logGroups: groups.filter(function (g) { return g.indexOf(pre) === 0; }).map(function (g) {
-        var fn = g.slice(12), bytes = lambdaLogEvents(fn).reduce(function (a, e) { return a + e.message.length; }, 0);
-        return { logGroupName: g, creationTime: Date.parse(FN[fn].LastModified.replace("+0000", "Z")), retentionInDays: LOG_RETENTION, metricFilterCount: 0,
+      // logGroupNamePrefix (at least 1 character) or logGroupNamePattern (a case-sensitive substring), not both; with a
+      // pattern AWS returns only arn, creationTime and logGroupName (note 11). limit 1 to 50, then nextToken.
+      if (q.logGroupNamePrefix !== undefined && q.logGroupNamePattern !== undefined) return logsErr("InvalidParameterException", "LogGroup name prefix and LogGroup name pattern are mutually exclusive parameters.");
+      if (q.logGroupNamePrefix !== undefined && !(typeof q.logGroupNamePrefix === "string" && q.logGroupNamePrefix.length >= 1)) return logsErr("InvalidParameterException", "1 validation error detected: Value at 'logGroupNamePrefix' failed to satisfy constraint: Member must have length greater than or equal to 1");
+      var dl = q.limit === undefined ? 50 : q.limit;
+      if (!(dl >= 1 && dl <= 50 && dl === Math.floor(dl))) return logsErr("InvalidParameterException", "1 validation error detected: Value at 'limit' failed to satisfy constraint: Member must have value between 1 and 50");
+      var dfrom = 0;
+      if (q.nextToken !== undefined) { var dt = /^twin-(\d+)$/.exec(String(q.nextToken)); if (!dt) return logsErr("InvalidParameterException", "The specified nextToken is invalid."); dfrom = +dt[1]; }
+      var pre = typeof q.logGroupNamePrefix === "string" ? q.logGroupNamePrefix : "", pat = typeof q.logGroupNamePattern === "string" ? q.logGroupNamePattern : null;
+      var sel = groups.filter(function (g) { return pat !== null ? g.indexOf(pat) >= 0 : g.indexOf(pre) === 0; });
+      var dout = { logGroups: sel.slice(dfrom, dfrom + dl).map(function (g) {
+        var fn = g.slice(12), created = Date.parse(FN[fn].LastModified.replace("+0000", "Z"));
+        if (pat !== null) return { logGroupName: g, creationTime: created, arn: arnOf(g) + ":*" };
+        var bytes = lambdaLogEvents(fn).reduce(function (a, e) { return a + e.message.length; }, 0);
+        return { logGroupName: g, creationTime: created, retentionInDays: LOG_RETENTION, metricFilterCount: 0,
           arn: arnOf(g) + ":*", storedBytes: bytes, logGroupClass: "STANDARD", logGroupArn: arnOf(g) };
-      }) });
+      }) };
+      if (dfrom + dl < sel.length) dout.nextToken = "twin-" + (dfrom + dl);
+      return logsJson(dout);
     }
-    if (target !== "FilterLogEvents") return logsErr("UnknownOperationException", "Not in the twin yet: logs " + target);
+    if (target !== "FilterLogEvents") return logsErr("UnknownOperationException", "Not in the twin yet: logs " + target, 404); // 404 per the Logs CommonErrors page (note 11)
+    if (!q.logGroupName && !q.logGroupIdentifier) return logsErr("InvalidParameterException", "Should provide either logGroupName or logGroupIdentifier."); // message not documented
     if (q.logGroupName && q.logGroupIdentifier) return logsErr("InvalidParameterException", "LogGroup name and LogGroup ARN are mutually exclusive parameters.");
     var g = String(q.logGroupIdentifier || q.logGroupName || "").replace(/^arn:aws:logs:[a-z0-9-]+:\d{12}:log-group:/, "").replace(/:\*$/, "");
     if (groups.indexOf(g) < 0) return logsErr("ResourceNotFoundException", "The specified log group does not exist.");
@@ -982,7 +998,9 @@
       return (q.startTime === undefined || e.timestamp >= q.startTime) && (q.endTime === undefined || e.timestamp <= q.endTime) &&
         (!names || names.indexOf(e.logStreamName) >= 0) && (prefix === null || e.logStreamName.indexOf(prefix) === 0) && match(e.message);
     });
-    var page = hit.slice(from, from + limit), out = { events: page.map(function (e) { return Object.assign({}, e); }) };
+    // startFromHead false: newest first (AWS supports it for startTime on or after 1 Jan 2024, note 11); the recent invocations list uses it.
+    if (q.startFromHead === false) hit.reverse();
+    var page = hit.slice(from, from + limit), out = { events: page.map(function (e) { return Object.assign({}, e); }), searchedLogStreams: [] };
     if (from + limit < hit.length) out.nextToken = "twin-" + (from + limit);
     return logsJson(out);
   }
