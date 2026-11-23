@@ -126,6 +126,15 @@ const change = await assume("sws-aws-platform-change");
   ok(JSON.stringify(tag(one(r.text, "PolicyNames"), "member")) === JSON.stringify(["logs-write"]), "details survive a trust update");
 }
 
+// The hub's stack ARN in self-update names the region the page calls CloudFormation in (${AWS::Region} of that
+// stack), not the twin's resource region (cloudformation.aws.a's note on 461d422).
+{
+  const appRegion = /CFN = "cloudformation\.([a-z0-9-]+)\.amazonaws\.com"/.exec(readFileSync(new URL("../../site/app.js", import.meta.url), "utf8"))[1];
+  const su = JSON.parse(decodeURIComponent(one((await iam({ Action: "GetRolePolicy", RoleName: "sws-aws-platform-change", PolicyName: "self-update" })).text, "PolicyDocument")));
+  const res = su.Statement.find((x) => x.Sid === "ThisStackOnly").Resource;
+  ok(res === "arn:aws:cloudformation:" + appRegion + ":" + A + ":stack/sws-aws-platform/*", "ThisStackOnly in the page's CloudFormation region (" + appRegion + "): " + res);
+}
+
 // Drift: the platform roles' policies are bootstrap.yaml's.
 const yaml = readFileSync(new URL("../../site/cloudformation/bootstrap.yaml", import.meta.url), "utf8");
 for (const [logical, role] of [["PlatformRead", "sws-aws-platform-read"], ["PlatformChange", "sws-aws-platform-change"]]) {
