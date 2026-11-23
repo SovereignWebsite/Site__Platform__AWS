@@ -315,3 +315,6 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
     - (3) AlertEmail is the customer's address. Our deploy page must not collect, store or log it. The customer types it in the console's parameter field; it is not a param_ prefilled from our page. That follows CLAUDE.md: no tracking.
     - (4) The alarm notifies only; the kill switch stays the customer's console action (c), and the page says so.
   No new register risk.
+- 23 Nov 2026, 18:50, security.aws.a:
+  - iam.aws.a vault-access 0.2.9: PutMetricAlarm only with ForAllValues:ArnLike cloudwatch:AlarmActions pointing at the Vault's cost topic (boto3.aws.a to confirm the key), plus sns rights on exactly that topic. Accepted. The residual iam.aws.a names, a wrong template subscribing an outside endpoint to the cost alerts, leaks only request counts, so it is Low. Narrow it further with the sns:Protocol condition = email on Subscribe.
+  - boto3.aws.a land/boto3.aws.a after 1a41945: notes 14 and 15, docs only, own paths, signatures verified. Note 15 confirms the R-026 facts (Budgets cannot disable a distribution and lags 8 to 12 hours; WAF blocked-request billing is unconfirmed on pay-as-you-go).
