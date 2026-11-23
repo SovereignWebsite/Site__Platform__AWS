@@ -6,4 +6,4 @@ Everything here is a reading of files in this repository. No AWS call was made; 
 
 - [roles.md](roles.md): the hub's two roles as written in site/cloudformation/bootstrap.yaml v2.1, what each may do, and what is wider than it needs.
 - [usage.md](usage.md): every AWS call the site makes, by role and IAM action, and the grants no call uses.
-- [proposals/P-IAM-001-boundary.md](proposals/P-IAM-001-boundary.md): a permissions boundary on both roles, an IAM-side answer to R-008.
+- [proposals/P-IAM-001-boundary.md](proposals/P-IAM-001-boundary.md): a permissions boundary on both roles, an IAM-side answer to R-008, with a draft v2.2 template and check_boundary.py.

@@ -1,0 +1,175 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  SovereignWebsite AWS platform v2.2 DRAFT (iam.aws.a, P-IAM-001; not for apply until reviewed), bootstrap (the last console log-in). Two roles that
+  the account owner's own Google sign-in, in their browser on aws.platform.sovereignweb.site, may
+  assume through STS AssumeRoleWithWebIdentity for at most one hour. No IAM user, no
+  access key, nothing stored. Written by aws.c@SovereignWebsite.dinis, 22 Nov 2026; the site fills in both parameters.
+
+Parameters:
+  GoogleClientId:
+    Type: String
+    Description: The OAuth client ID (Web) of the AWS platform site, ending .apps.googleusercontent.com
+    AllowedPattern: "^[0-9A-Za-z-]+\\.apps\\.googleusercontent\\.com$"
+  GoogleSub:
+    Type: String
+    Description: The owner's Google account subject (the numeric "sub" the site shows after sign-in; not a secret)
+    AllowedPattern: "^[0-9]{5,40}$"
+
+Resources:
+  # v2.2 DRAFT, P-IAM-001: the most each role may ever do. Raising a boundary is a console act by the owner:
+  # the change role holds no action that creates, edits, swaps or removes a policy object or a boundary.
+  ChangeBoundary:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: sws-aws-platform-change-boundary
+      Description: The most sws-aws-platform-change may do, whatever its own policies say (P-IAM-001)
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: TodaysChangeRoleActions
+            Effect: Allow
+            Action: [iam:GetRole, iam:GetRolePolicy, iam:ListRolePolicies, iam:ListAttachedRolePolicies, iam:ListRoleTags,
+              iam:UpdateRoleDescription, iam:PutRolePolicy, iam:DeleteRolePolicy, iam:DetachRolePolicy, iam:AttachRolePolicy,
+              iam:UpdateAssumeRolePolicy, iam:TagRole, iam:UntagRole,
+              "s3:Get*", "s3:List*", s3:PutBucketCORS,
+              cloudformation:GetResource, cloudformation:ListResources, cloudformation:UpdateResource, cloudformation:GetResourceRequestStatus,
+              cloudformation:DescribeStacks, cloudformation:DescribeStackEvents, cloudformation:GetTemplate, cloudformation:GetTemplateSummary,
+              cloudformation:CreateChangeSet, cloudformation:DescribeChangeSet, cloudformation:ExecuteChangeSet, cloudformation:DeleteChangeSet,
+              cloudformation:ValidateTemplate]
+            Resource: "*"
+          - Sid: NeverTheCapItselfNorNewPrincipals
+            Effect: Deny
+            Action: [iam:PutRolePermissionsBoundary, iam:DeleteRolePermissionsBoundary, iam:CreatePolicy, iam:CreatePolicyVersion,
+              iam:SetDefaultPolicyVersion, iam:DeletePolicy, iam:DeletePolicyVersion, iam:CreateRole, iam:DeleteRole, iam:PassRole,
+              iam:CreateUser, iam:CreateAccessKey, iam:CreateLoginProfile, iam:UpdateRole]
+            Resource: "*"
+          - Sid: NeverThePlatformRolesTrust
+            Effect: Deny
+            Action: iam:UpdateAssumeRolePolicy
+            Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/sws-aws-platform-*
+          - Sid: NeverObjects
+            Effect: Deny
+            Action: ["s3:GetObject*"]
+            Resource: "*"
+
+  PlatformRead:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: sws-aws-platform-read
+      # v2.2 DRAFT: AWS's ReadOnlyAccess as the cap. Read actions only, whatever a change set adds inline.
+      PermissionsBoundary: arn:aws:iam::aws:policy/ReadOnlyAccess
+      Description: Read-only view of this account from the AWS platform site, the owner's Google sign-in only
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Federated: accounts.google.com }
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                accounts.google.com:aud: !Ref GoogleClientId
+                accounts.google.com:sub: !Ref GoogleSub
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+        - arn:aws:iam::aws:policy/SecurityAudit
+      Policies:
+        - PolicyName: costs-read
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: BudgetsAndCostExplorerRead
+                Effect: Allow
+                Action: [budgets:ViewBudget, budgets:DescribeBudgetAction, budgets:DescribeBudgetActionsForAccount, ce:GetCostAndUsage, ce:GetCostForecast, ce:GetDimensionValues]
+                Resource: "*"
+        # v2, 23 Nov 2026: the S3 browser. Dinis: the read role should "also open file[s]".
+        - PolicyName: s3-browse
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: S3ListAndOpen
+                Effect: Allow
+                Action: ["s3:Get*", "s3:List*"]
+                Resource: "*"
+              - Sid: CloudControlListBuckets
+                Effect: Allow
+                Action: [cloudformation:ListResources, cloudformation:GetResource]
+                Resource: "*"
+
+  PlatformChange:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: sws-aws-platform-change
+      PermissionsBoundary: !Ref ChangeBoundary
+      Description: The changes the owner approves on the AWS platform site; grows only by a reviewed change to this template
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Federated: accounts.google.com }
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                accounts.google.com:aud: !Ref GoogleClientId
+                accounts.google.com:sub: !Ref GoogleSub
+      Policies:
+        - PolicyName: dns-role-trust-only
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: TheDnsRoleTrustPolicy
+                Effect: Allow
+                Action: [iam:GetRole, iam:UpdateAssumeRolePolicy]
+                Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/sovereignwebsite-factory-dns
+        # v2, 23 Nov 2026: let a bucket answer this site (a CORS rule, added through Cloud Control).
+        - PolicyName: s3-cors
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: BucketCorsThroughCloudControl
+                Effect: Allow
+                Action: ["s3:Get*", "s3:List*", s3:PutBucketCORS, cloudformation:GetResource, cloudformation:ListResources, cloudformation:UpdateResource, cloudformation:GetResourceRequestStatus]
+                Resource: "*"
+        # v2, 23 Nov 2026: this stack updates itself from the site, as a plan the owner approves, so no more
+        # console visits. Dinis: "for now [allow] a lot of updates on [the] CloudFormation stack. We'll tighten
+        # that a bit later." Broad on purpose: any IAM action on roles named sws-aws-platform-*.
+        - PolicyName: self-update
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ThisStackOnly
+                Effect: Allow
+                Action: [cloudformation:DescribeStacks, cloudformation:DescribeStackEvents, cloudformation:GetTemplate, cloudformation:GetTemplateSummary, cloudformation:CreateChangeSet, cloudformation:DescribeChangeSet, cloudformation:ExecuteChangeSet, cloudformation:DeleteChangeSet]
+                Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/sws-aws-platform/*
+              - Sid: ValidateTemplates
+                Effect: Allow
+                Action: cloudformation:ValidateTemplate
+                Resource: "*"
+              # v2.1, 23 Nov 2026: security.aws.c's R-001 (Critical): iam:* let this role make itself account admin
+              # directly. Now: only the actions CloudFormation needs to update these two roles, only when the call
+              # comes through CloudFormation (a change set the owner approved), no CreateRole, DeleteRole or
+              # PassRole, and only AWS's ViewOnlyAccess and SecurityAudit policies may be attached.
+              - Sid: ThePlatformRolesThroughCloudFormationOnly
+                Effect: Allow
+                Action: [iam:GetRole, iam:GetRolePolicy, iam:ListRolePolicies, iam:ListAttachedRolePolicies, iam:ListRoleTags,
+                  iam:UpdateRole, iam:UpdateRoleDescription, iam:PutRolePolicy, iam:DeleteRolePolicy, iam:DetachRolePolicy,
+                  iam:UpdateAssumeRolePolicy, iam:TagRole, iam:UntagRole]
+                Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/sws-aws-platform-*
+                Condition:
+                  ForAnyValue:StringEquals:
+                    aws:CalledVia: cloudformation.amazonaws.com
+              - Sid: AttachOnlyTheseManagedPolicies
+                Effect: Allow
+                Action: iam:AttachRolePolicy
+                Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/sws-aws-platform-*
+                Condition:
+                  ForAnyValue:StringEquals:
+                    aws:CalledVia: cloudformation.amazonaws.com
+                  ArnEquals:
+                    iam:PolicyARN: [arn:aws:iam::aws:policy/job-function/ViewOnlyAccess, arn:aws:iam::aws:policy/SecurityAudit]
+
+Outputs:
+  ReadRoleArn: { Value: !GetAtt PlatformRead.Arn }
+  ChangeRoleArn: { Value: !GetAtt PlatformChange.Arn }
+  ChangeBoundaryArn: { Value: !Ref ChangeBoundary }

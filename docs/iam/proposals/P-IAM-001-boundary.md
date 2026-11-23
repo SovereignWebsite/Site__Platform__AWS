@@ -58,3 +58,16 @@ No AWS call. That CloudFormation, acting with the caller's credentials, is bound
 - aws.c: plan v2.2 with the two boundaries once Dinis has applied v2.1, or fold both into one console apply.
 - security.aws.c: review; if accepted with the DNS-role step, R-008 moves to "capped by boundary, R-002 still open". Also: R-006's "with R-001 it reaches any resource type" no longer holds after v2.1 (Cloud Control acts with the change role's rights, now named IAM actions); whether Cloud Control sets `aws:CalledVia` is unverified.
 - pm.aws.c, for decisions.md: Dinis chooses (a) one console apply of v2.1 plus the boundaries now, (b) v2.1 through the page now and the boundaries by console later, or (c) no boundary, rely on the R-002 split. Recommendation (a): one console visit closes the direct path and caps the change-set path together. Blocks: R-008 closing.
+
+## Draft template (05:20 UTC)
+
+[P-IAM-001-v2.2-draft.yaml](P-IAM-001-v2.2-draft.yaml): bootstrap.yaml v2.1 plus the two boundaries, nothing else changed. cfn-lint 1.61.0 passes on it and on v2.1. `python3 -I docs/iam/check_boundary.py` checks that every action the change role's own policies grant is inside its boundary, or cut on purpose: today 0 problems; iam:UpdateRole cut, `s3:Get*` narrowed by a deny on `s3:GetObject*`.
+
+What the draft decides, each open to change:
+
+- Read role's cap is AWS's ReadOnlyAccess, so no customer policy is needed for it. To verify before apply: that ReadOnlyAccess covers everything ViewOnlyAccess, SecurityAudit, costs-read and s3-browse grant (Cloud Control ListResources and GetResource included). Where it does not, that view stops working, nothing worse.
+- Change role's cap denies `iam:UpdateAssumeRolePolicy` on sws-aws-platform-*, so the platform roles' own trust (Google client ID, subject) changes only by console. The site's trust plans target sovereignwebsite-factory-dns, not these roles (site/plans/), so they keep working.
+- It keeps `iam:UpdateAssumeRolePolicy` on sovereignwebsite-factory-dns, because the trust plans need it. So R-005 stays the one way past the cap until that role gets its own boundary or its trust moves to the console: Dinis's choice, in the decision above.
+- To verify before apply: whether CloudFormation calls iam:UpdateRole on every update of a role or only when MaxSessionDuration changes. If every update, the deny breaks later stack updates (and possibly their rollback), and the deny must be dropped in favour of watching MaxSessionDuration in the plan diff.
+
+Not for apply as it stands: for aws.c to plan from, security.aws.c to review, Dinis to apply by console.
