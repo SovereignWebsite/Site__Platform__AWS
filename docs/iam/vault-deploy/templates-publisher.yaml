@@ -1,0 +1,108 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Stack sws-vault-publisher, in OUR account, DRAFT 0.1.1 (iam.aws.a, for cloudformation.aws.a's templates bucket
+  7eb0f1d; for review by security.aws.a and aws.c; a plan for Dinis, applied by console since the hub's change role
+  may not create roles). One role: the only writer of published Vault templates. Assumed only by one GitHub Actions
+  environment of one repository; may add new files under templates/ and nothing else.
+
+Parameters:
+  GitHubOidcProviderArn:
+    Type: String
+    AllowedPattern: "^arn:aws:iam::[0-9]{12}:oidc-provider/token\\.actions\\.githubusercontent\\.com$"
+    Description: The account's existing GitHub OIDC provider (the DNS role already trusts one).
+  GitHubRepository:
+    Type: String
+    AllowedPattern: "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    Description: owner/name of the repository whose release workflow publishes templates.
+  GitHubEnvironment:
+    Type: String
+    Default: vault-release
+    AllowedPattern: "^[A-Za-z0-9_.-]{1,64}$"
+    Description: >-
+      The GitHub environment the release job runs in. Give it a required reviewer (Dinis) and limit it to protected
+      tags, so every publication is approved by a person before AWS will hand out credentials.
+
+  GitHubRepositoryId:
+    Type: String
+    Default: ""
+    AllowedPattern: "^$|^[0-9]{1,20}$"
+    Description: Optional. The repository's numeric id (immutable, unlike its name); pinned when given.
+  ReleaseWorkflowRef:
+    Type: String
+    Default: ""
+    AllowedPattern: "^$|^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/\\.github/workflows/[A-Za-z0-9_.-]+\\.ya?ml@[A-Za-z0-9_./*-]+$"
+    Description: >-
+      Optional. The job_workflow_ref allowed to publish, for example owner/name/.github/workflows/release.yml@refs/tags/*
+      (StringLike). Empty until the first run shows the claim's value for this workflow (security.aws.a, optional).
+
+Conditions:
+  PinRepositoryId: !Not [!Equals [!Ref GitHubRepositoryId, ""]]
+  PinWorkflow: !Not [!Equals [!Ref ReleaseWorkflowRef, ""]]
+
+Resources:
+  PublisherRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: sws-vault-templates-publisher
+      Description: The only writer of published Vault templates; one GitHub environment of one repository
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Federated: !Ref GitHubOidcProviderArn }
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals: !If
+                - PinRepositoryId
+                - "token.actions.githubusercontent.com:aud": sts.amazonaws.com
+                  # An environment subject, exact: not a branch wildcard, not a pull request.
+                  "token.actions.githubusercontent.com:sub": !Sub "repo:${GitHubRepository}:environment:${GitHubEnvironment}"
+                  "token.actions.githubusercontent.com:repository_id": !Ref GitHubRepositoryId
+                - "token.actions.githubusercontent.com:aud": sts.amazonaws.com
+                  "token.actions.githubusercontent.com:sub": !Sub "repo:${GitHubRepository}:environment:${GitHubEnvironment}"
+              # job_workflow_ref is an IAM condition key for GitHub tokens (IAM condition keys page, GitHub tab;
+              # trust policy only). Pinned when given, so no other workflow in the same environment can publish.
+              StringLike: !If
+                - PinWorkflow
+                - "token.actions.githubusercontent.com:job_workflow_ref": !Ref ReleaseWorkflowRef
+                - !Ref AWS::NoValue
+      Policies:
+        - PolicyName: publish-new-templates-only
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # New files only. The bucket is versioned with Object Lock (compliance), so an existing version can
+              # never change, but a second PutObject to the same key would become the current version and a
+              # quick-create link naming only the key would serve it. So: only with If-None-Match "*" (the write
+              # fails if the key exists). The condition key s3:if-none-match is to be confirmed by boto3.aws.a; if
+              # it is absent, this condition fails closed and nothing can be published, visibly.
+              - Sid: AddNewTemplateFilesOnly
+                Effect: Allow
+                Action: s3:PutObject
+                Resource: !Sub "arn:aws:s3:::sws-vault-templates-${AWS::AccountId}-*/templates/*"
+                Condition:
+                  StringEquals: { "s3:if-none-match": "*" }
+              - Sid: ReadBackWhatWasPublished
+                Effect: Allow
+                Action: [s3:GetObject, s3:GetObjectVersion]
+                Resource: !Sub "arn:aws:s3:::sws-vault-templates-${AWS::AccountId}-*/templates/*"
+              - Sid: NeverChangeOrRemove
+                Effect: Deny
+                Action: [s3:DeleteObject, s3:DeleteObjectVersion, s3:PutObjectAcl, s3:PutObjectVersionAcl,
+                  s3:PutObjectRetention, s3:PutObjectLegalHold, s3:BypassGovernanceRetention, s3:PutObjectTagging,
+                  s3:DeleteObjectTagging, s3:DeleteBucket, s3:DeleteBucketPolicy, s3:PutBucketPolicy,
+                  s3:PutBucketVersioning, s3:PutBucketObjectLockConfiguration, s3:PutBucketPublicAccessBlock,
+                  s3:PutLifecycleConfiguration]
+                Resource: "*"
+              - Sid: NothingOutsideTemplates
+                Effect: Deny
+                Action: s3:PutObject
+                NotResource: !Sub "arn:aws:s3:::sws-vault-templates-${AWS::AccountId}-*/templates/*"
+      Tags:
+        - { Key: sws-vault, Value: templates }
+
+Outputs:
+  PublisherRoleArn:
+    Description: Pass as PublisherRoleArn to stack sws-vault-templates-<region>
+    Value: !GetAtt PublisherRole.Arn

@@ -60,6 +60,7 @@ const fail = (m) => { throw new Error(m); };
   await pg.evaluate(() => { window.__err = { match: "list-type=2", status: 503, code: "SlowDown", times: 1 }; });
   await pg.click("#s3-objects button:has-text('Refresh')");
   await pg.waitForSelector("#s3-status >> text=busy or failed for a moment");
+  if ((await st()).split(/\bRetry\b/).length - 1 !== 1) fail("Retry said more than once: " + await st());
   await pg.click("#s3-status button.s3-retry");
   await pg.waitForSelector("#s3-list button:has-text('" + zip + "')");
 
@@ -85,6 +86,14 @@ const fail = (m) => { throw new Error(m); };
   await pg.evaluate(() => window.__keptRetry.click());
   await pg.waitForSelector("#s3-status >> text=That Retry was for");
   if (asked.length) fail("a stale Retry asked S3: " + asked.join(" "));
+
+  // 6. An expired session: in the twin (no sign-in) the message does not ask the user to sign in.
+  await pg.evaluate(() => { window.__err = { match: "list-type=2", status: 400, code: "ExpiredToken", times: 1 }; });
+  await pg.click("#s3-status button.s3-retry").catch(() => {});
+  await pg.evaluate((b) => { location.hash = "#/s3/" + b + "/"; }, deps);
+  await pg.click("#s3-objects button:has-text('Refresh')").catch(() => {});
+  await pg.waitForSelector("#s3-status >> text=The session ran out");
+  if (/Sign in/.test(await st())) fail("twin asked to sign in: " + await st());
 
   if (errors.length) fail("page errors: " + errors.join(" | "));
   console.log("OK (s3 errors: NoSuchKey, AccessDenied, SlowDown and Failed to fetch told apart with AWS's code kept; Retry repeats the step, only in the bucket it failed in)");

@@ -70,3 +70,19 @@ Proposal, for architect.aws.c and aws.c:
 
 1. The read API shape (`CfnApi`, `Route53Api`) as plain objects. This needs a code path from aws.c and architect.aws.c, and until then it lives here as a sketch.
 2. A twin seed as JSON for the stacks and zone in the first note, sent to architect.aws.c.
+
+## Route 53 CORS, mostly settled (23 Nov, 22:45 UTC, boto3.aws.a: docs/boto3/2026-11-23__20-route53-reads.md)
+
+- **The AWS SDK for JavaScript v2's `SERVICES.md`** marks Amazon Route 53 (API 2013-04-01) as "Allows CORS"; Route 53 Resolver is not. That is AWS's own published metadata, so it is no longer an absence of evidence. It still falls short of a documented guarantee. One real browser call confirms it, as for EC2 and CloudFront, and only Dinis can make that call.
+- **Shapes (botocore):**
+  - rest-xml, global endpoint `route53.amazonaws.com`, signed `us-east-1`;
+  - `ListHostedZones` pages by `Marker`/`NextMarker`;
+  - `GetHostedZone` returns the zone with its `DelegationSet` name servers;
+  - `ListResourceRecordSets` pages by `StartRecordName`/`StartRecordType`/`StartRecordIdentifier`, not by a marker. This matches the opaque `next` agreed in design 03.
+- **IAM:** `ListHostedZones` takes `Resource "*"`; the other two can be scoped to hosted-zone ARNs. All three are in the read role already, by `route53:List*` and `route53:Get*` (section above).
+- **Decision, mine with architect.aws.a:** the twin may stop answering 501 for these three reads and answer from `seed/route53.json`. The seed has:
+  - the `example.com` zone, made by `demo-dns`;
+  - the `www` alias to the demo distribution;
+  - the dangling `old.example.com`.
+
+  Each answer is marked "CORS per SDK v2 metadata, to confirm with one real call". Every other Route 53 call keeps answering 501.

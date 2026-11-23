@@ -2,7 +2,8 @@
 // The pragmatic engine (moving, jumping, follow the packet) is viz.aws.c's; this view
 // owns only the data mapping and plugs into that engine once it exists.
 // Every string from the data reaches the page as text (textContent), never as HTML.
-import { warp as warpGap } from "../steps.mjs";
+import { warp as warpGap, stepsFrom } from "../steps.mjs";
+import { createPlayer } from "../../viz/player.mjs";     // viz.aws.a's player: motion and clock; this file only draws
 (() => {
   const DATA = "../data/replay.json";
   const LIFE = 1.4;                        // replay seconds a flow or flash stays visible
@@ -13,7 +14,7 @@ import { warp as warpGap } from "../steps.mjs";
   const hhmmss = (m) => new Date(m).toISOString().slice(11, 19) + " UTC";
 
   let maxDepth = 1;
-  let agents = new Map(), events = [], R = 0, playing = false, speed = 2, last = 0, picked = null;
+  let agents = new Map(), events = [], R = 0, picked = null, player = null;
 
   // Time warp: long waits shrink, bursts (sixteen spawns in 21 s) spread out so each is seen.
   function warp(evs) {
@@ -114,11 +115,12 @@ import { warp as warpGap } from "../steps.mjs";
   }
 
   let total = 1, rows = [];
-  function frame(t) {
-    if (playing) { R = Math.min(total, R + ((t - last) / 1000) * speed); if (R >= total) { playing = false; $("play").textContent = "Replay"; } }
-    last = t; update();
-    if (playing) requestAnimationFrame(frame);
+  function frame() {
+    R = player.frame().t; update();
+    if (player.playing) requestAnimationFrame(frame);
+    else $("play").textContent = R >= total ? "Replay" : "Play";
   }
+  function jump(fn) { fn(); R = player.frame().t; update(); }
 
   function cell(tr, text) { const td = document.createElement("td"); td.textContent = text || ""; tr.appendChild(td); }
 
@@ -128,6 +130,10 @@ import { warp as warpGap } from "../steps.mjs";
     events = data.events.map((e) => ({ ...e, ms: ms(e.t) })).filter((e) => e.ms >= since).sort((x, y) => x.ms - y.ms);
     for (const e of events) for (const id of [e.agent, e.from, e.to]) if (id && !agents.has(id)) agents.set(id, { id, parent: null, appear: null, commitsAt: [], account: (id.match(/\.([a-z])$/) || [])[1] });
     total = warp(events);
+    player = createPlayer(stepsFrom(data), { now: () => performance.now() / 1000, tail: LIFE });
+    if (player.steps.length !== events.length || Math.abs(player.duration - total) > 1e-6)   // the same warp on both sides
+      console.warn("swarm view: steps and events disagree", player.steps.length, events.length, player.duration, total);
+    total = player.duration;
     for (const e of events) {
       if ((e.type === "spawn" || e.type === "move") && agents.get(e.to).appear === null) agents.get(e.to).appear = e.r;
       if (e.type === "move") agents.get(e.to).parent = e.from;        // account A body hangs off the C role it replaces
@@ -160,9 +166,14 @@ import { warp as warpGap } from "../steps.mjs";
     update();
   }
 
-  $("play").addEventListener("click", () => { if (R >= total) R = 0; playing = !playing; $("play").textContent = playing ? "Pause" : "Play"; if (playing) { last = performance.now(); requestAnimationFrame(frame); } });
-  $("scrub").addEventListener("input", (e) => { R = (Number(e.target.value) / 1000) * total; update(); });
-  $("speed").addEventListener("change", (e) => { speed = Number(e.target.value); });
+  $("play").addEventListener("click", () => {
+    if (player.playing) { player.pause(); $("play").textContent = "Play"; return; }
+    player.play(); $("play").textContent = "Pause"; requestAnimationFrame(frame);
+  });
+  $("scrub").addEventListener("input", (e) => jump(() => player.seek((Number(e.target.value) / 1000) * total)));
+  $("speed").addEventListener("change", (e) => player.setSpeed(Number(e.target.value)));
+  $("prev").addEventListener("click", () => jump(() => player.prev()));
+  $("next").addEventListener("click", () => jump(() => player.next()));
   sky.addEventListener("click", pick);
 
   fetch(DATA).then((r) => r.json()).then(load).catch(() => { $("caption").textContent = "Could not load ../data/replay.json. Serve the repository over HTTP (python3 -m http.server) and open docs/swarm/view/."; });

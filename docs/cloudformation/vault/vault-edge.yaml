@@ -5,11 +5,11 @@ Description: >-
   with DNS elsewhere the stack waits for the validation record that CloudFormation shows in the stack's events.
   (2) An optional WAF web ACL with a per-address rate limit (off by
   default: billing.aws.a finds it adds cost rather than capping it). Its outputs go into the Vault stack's CertificateArn and WebAclArn.
-  DRAFT 0.6.0 by cloudformation.aws.a, 23 Nov 2026.
+  DRAFT 0.6.1 by cloudformation.aws.a, 23 Nov 2026.
 
 Metadata:
   SovereignWebsite:
-    TemplateVersion: 0.6.0-draft
+    TemplateVersion: 0.6.1-draft
 
 Parameters:
   VaultId:
@@ -53,6 +53,12 @@ Conditions:
   RateLimitOn: !Equals [!Ref EnableRateLimit, "true"]
 
 Rules:
+  # Refused here with our own message rather than relying on what CloudFormation says about a stack whose every
+  # resource is switched off (not documented as far as we know).
+  SomethingToMake:
+    Assertions:
+      - Assert: !Or [!Not [!Equals [!Ref DomainName, ""]], !Equals [!Ref EnableRateLimit, "true"]]
+        AssertDescription: Nothing to create. Give a DomainName (for a certificate) or set EnableRateLimit to true.
   OnlyInUsEast1:
     Assertions:
       - Assert: !Equals [!Ref AWS::Region, us-east-1]
