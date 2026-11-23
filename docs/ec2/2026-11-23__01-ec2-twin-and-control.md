@@ -92,6 +92,7 @@ The twin enforces the same rules the real path would, so a test proves the page 
 4. A public SSH rule (port 22 from 0.0.0.0/0 or ::/0) in a security group made through the twin fails.
 5. `MetadataOptions.HttpTokens` other than `required` fails (IMDSv2 only).
 6. Start, Stop and Terminate on an instance without `sws:managed=true` fail `UnauthorizedOperation` (an `ec2:ResourceTag` condition, *check*).
+7. (from 6e) `CreditSpecification.CpuCredits=unlimited` on a t4g instance fails.
 
 ### 2g. Seed data (pack baseline)
 
@@ -164,6 +165,21 @@ customer's account, chosen region (stack sws-vault-<id>, "ec2" variant)
 
 Per vaults design 04 section 7, servers do not replicate, so a move is: create the deployment in the new region; `sgit push` each vault to it from a client holding the vault keys (data is encrypted client-side, so the server never sees plaintext); switch DNS; let the old deployment expire through 6b. Order matters: the old one is deleted only after the new one passes `/health` and the vault check. In the twin this is a test that runs a whole day in `tick` steps and checks that at every moment exactly one deployment answers DNS.
 
+### 6e. What one deployment costs, first figures
+
+From billing.aws.a's rows (docs/billing/prices.json on work/billing.aws.a, retrieved 23 Nov 2026, AWS's public EC2 and VPC price data; list prices, on-demand Linux, USD), worked here by multiplication only:
+
+| eu-west-2 (London) | per hour | 2 hours | 24 hours | 730 hours (a month) |
+|---|---|---|---|---|
+| t4g.nano + one public IPv4 (0.0047 + 0.005) | 0.0097 | 0.0194 | 0.2328 | 7.08 |
+| t4g.small + one public IPv4 (0.0188 + 0.005) | 0.0238 | 0.0476 | 0.5712 | 17.37 |
+| t4g.medium + one public IPv4 (0.0376 + 0.005) | 0.0426 | 0.0852 | 1.0224 | 31.10 |
+
+eu-west-1 is a little lower for the instance (0.0046, 0.0184, 0.0368) and the same for the address. **Not counted:** the root volume (EBS gp3 is in billing.aws.a's not_priced_yet), CloudFront, S3, Secrets Manager, logs, data transfer, and t4g CPU credits above baseline. Two design points follow:
+
+1. **CPU credits:** t4g instances start in "unlimited" credit mode by default, which bills credits above baseline (*check*). Ephemeral instances should launch in "standard" mode (`CreditSpecification`), so an instance pinned at full CPU (a bug, or a flood) is slowed, not billed more. The twin refuses `unlimited` as a seventh rule in 2f.
+2. **The public address:** an instance behind CloudFront as a custom origin needs a public name, and so a public IPv4 billed by the hour, whether used or not (*check* whether CloudFront's VPC origins remove the need, which would also take the instance off the internet entirely). Counted above.
+
 ### 6d. Guard rails for V5, to propose with numbers from the twin
 
 | Guard rail | Proposal | Grounded in |
@@ -190,7 +206,7 @@ No number is set here: V5 (b) says ec2.aws.a and billing.aws.a propose them from
 - **architect.aws.a:** the world shape (2c) and the lazy settle (2d) against design 02.
 - **boto3.aws.a:** every *check* above, most of all 2a, 2d, 2f and 6b.
 - **iam.aws.a:** whether `ViewOnlyAccess` covers the Describe actions of 3; the condition keys of 2f and 4 for RunInstances, Start, Stop, Terminate.
-- **billing.aws.a:** EC2 rows for prices.json (on-demand per hour for the small arm64 types, EBS gp3 per GB-month, public IPv4 per hour) in eu-west-2 and eu-west-1.
+- **billing.aws.a:** done for t4g and public IPv4 (15:05 UTC, section 6e); still open: EBS gp3 per GB-month.
 - **security.aws.a:** sections 4, 6b and 7.
 - **cloudformation.aws.a:** the EC2 variant of the Vault stack (5) when V4 allows; the self-deleting schedule (6b lock 1).
 - **pm.aws.a:** nothing new for Dinis yet; V4 and V5 already cover this. The sweeper's home (6b: a, b or c) joins V5 when the decision page is drafted.
