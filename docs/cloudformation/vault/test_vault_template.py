@@ -49,7 +49,8 @@ check(not any(r["Type"] == "AWS::CloudFront::CachePolicy" for r in R.values()), 
 
 # Data and audit trail are kept on delete.
 for n in ("VaultBucket", "VaultBucketPolicy", "VaultLogs"):
-    check(R[n].get("DeletionPolicy") == "Retain", f"{n} DeletionPolicy")
+    check(R[n].get("DeletionPolicy") == "RetainExceptOnCreate", f"{n} DeletionPolicy")
+    check(R[n].get("UpdateReplacePolicy") == "Retain", f"{n} UpdateReplacePolicy")
 
 # Names: every named resource is sws-vault-<id>-* (the deploy role's scope).
 name_keys = {"BucketName", "Name", "RoleName", "FunctionName", "LogGroupName", "ManagedPolicyName"}

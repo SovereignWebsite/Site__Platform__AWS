@@ -4,12 +4,12 @@ Description: >-
   vault store, the server as a Lambda behind a Function URL, CloudFront in front (with /health for the deploy page),
   and optionally the customer's own domain. Two modes (DeployMode): access-stack, run with RoleARN = the deploy
   role of stack sws-vault-<id>-access (iam.aws.a, step 3); or one-stack, run as the customer's own console
-  identity with the boundary in this stack. Dinis decides which the page offers. DRAFT 0.4.4 by cloudformation.aws.a, 23 Nov 2026. Not for use on a real account: see
+  identity with the boundary in this stack. Dinis decides which the page offers. DRAFT 0.4.5 by cloudformation.aws.a, 23 Nov 2026. Not for use on a real account: see
   docs/cloudformation/2026-11-23__vault-stack-03.md.
 
 Metadata:
   SovereignWebsite:
-    TemplateVersion: 0.4.4-draft
+    TemplateVersion: 0.4.5-draft
     Pinning: served only as an immutable, versioned object whose sha256 the deploy page shows next to the button.
     CreatesNoRoleForUs: true
   AWS::CloudFormation::Interface:
@@ -102,7 +102,9 @@ Resources:
     Type: AWS::S3::Bucket
     # Retain (vaults.aws.a, iam.aws.a, security.aws.a): deleting the stack never deletes a Vault's data, and the
     # deploy role holds no s3:DeleteBucket. Removing the data is a separate, explicit step for the customer.
-    DeletionPolicy: Retain
+    # RetainExceptOnCreate: kept on every delete, but removed if the deploy that created it rolls back, so a failed
+    # first deploy leaves nothing behind and a retry does not collide on the name (boto3.aws.a note 13).
+    DeletionPolicy: RetainExceptOnCreate
     UpdateReplacePolicy: Retain
     Properties:
       BucketName: !Sub "sws-vault-${VaultId}-data-${AWS::AccountId}-${AWS::Region}"
@@ -124,7 +126,9 @@ Resources:
     Type: AWS::S3::BucketPolicy
     # Retain with the bucket: the kept bucket stays TLS-only and this-account-only, and the deploy role holds no
     # s3:DeleteBucketPolicy (iam.aws.a's vault-access.yaml), so Delete would fail the stack's deletion.
-    DeletionPolicy: Retain
+    # RetainExceptOnCreate: kept on every delete, but removed if the deploy that created it rolls back, so a failed
+    # first deploy leaves nothing behind and a retry does not collide on the name (boto3.aws.a note 13).
+    DeletionPolicy: RetainExceptOnCreate
     UpdateReplacePolicy: Retain
     Properties:
       Bucket: !Ref VaultBucket
@@ -215,7 +219,9 @@ Resources:
   VaultLogs:
     Type: AWS::Logs::LogGroup
     # Retain: the server's logs are the Vault's audit trail (security.aws.a); the deploy role holds no DeleteLogGroup.
-    DeletionPolicy: Retain
+    # RetainExceptOnCreate: kept on every delete, but removed if the deploy that created it rolls back, so a failed
+    # first deploy leaves nothing behind and a retry does not collide on the name (boto3.aws.a note 13).
+    DeletionPolicy: RetainExceptOnCreate
     UpdateReplacePolicy: Retain
     Properties:
       LogGroupName: !Sub "/aws/lambda/sws-vault-${VaultId}-api"
@@ -294,7 +300,7 @@ Resources:
           if (event.request.method === "OPTIONS") return { statusCode: 204, statusDescription: "No Content", headers: h };
           if (event.request.method !== "GET") return { statusCode: 405, statusDescription: "Method Not Allowed", headers: h };
           return { statusCode: 200, statusDescription: "OK", headers: h,
-            body: { encoding: "text", data: JSON.stringify({ vault_id: "${VaultId}", template_version: "0.4.4-draft" }) } };
+            body: { encoding: "text", data: JSON.stringify({ vault_id: "${VaultId}", template_version: "0.4.5-draft" }) } };
         }
 
   # ---- CloudFront in front, from phase 1 ----
@@ -390,4 +396,4 @@ Outputs:
   DeployMode:
     Value: !Ref DeployMode
   TemplateVersion:
-    Value: 0.4.4-draft
+    Value: 0.4.5-draft
