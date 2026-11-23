@@ -24,8 +24,8 @@
     if (bucket.indexOf(".") >= 0) return "https://s3." + region + ".amazonaws.com/" + encodeURIComponent(bucket) + path + (query || "");
     return "https://" + bucket + ".s3." + region + ".amazonaws.com" + path + (query || "");
   }
-  function s3get(c, url, region) {
-    return SigV4.sign({ method: "GET", url: url, headers: {}, body: "" }, c, region, "s3").then(function (h) { return fetch(url, { headers: h }); });
+  function s3get(c, url, region, extra) {
+    return SigV4.sign({ method: "GET", url: url, headers: extra || {}, body: "" }, c, region, "s3").then(function (h) { return fetch(url, { headers: h }); });
   }
   function read() { return P.assume(state.acct, "sws-aws-platform-read"); }
 
@@ -150,29 +150,107 @@
 
   // ---- a file ----
   var TEXT = /\.(txt|md|csv|tsv|log|yaml|yml|xml|html|htm|css|js|mjs|ts|py|sh|toml|ini|cfg|conf|sql|svg)$/i;
+  var IMAGE = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp" };
+  function isGzip(u8) { return u8.length > 2 && u8[0] === 0x1f && u8[1] === 0x8b; }
+  function gunzip(u8) {
+    return new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer().then(function (b) { return new Uint8Array(b); });
+  }
+  function downloadLink(name, blob) { return P.el("a", { class: "button", href: URL.createObjectURL(blob), download: name, text: "Download" }); }
+
+  // Show bytes as JSON (formatted), JSON Lines, text, an image, or "use Download". Never runs anything.
+  function show(box, name, type, u8, st) {
+    var ext = (name.split(".").pop() || "").toLowerCase();
+    var img = /^image\//.test(type) && type !== "image/svg+xml" ? type : IMAGE[ext];
+    if (img) { box.appendChild(P.el("img", { src: URL.createObjectURL(new Blob([u8], { type: img })), alt: name, class: "s3-img" })); return P.say(st, name, "ok"); }
+    if (u8.length > MAX_SHOW) return P.say(st, name + ": too large to show here (" + human(u8.length) + "); use Download.", "ok");
+    var text = new TextDecoder("utf-8").decode(u8), json;
+    if (/json/.test(type) || /\.(json|geojson|ipynb)$/i.test(name) || /^\s*[\[{]/.test(text)) {
+      try { json = JSON.parse(text); box.appendChild(jsonView(json)); return P.say(st, name + ": JSON, formatted.", "ok"); } catch (e) { /* not one JSON value */ }
+    }
+    if (/\.(jsonl|ndjson)$/i.test(name) || /^\s*\{/.test(text)) {
+      try {
+        var rows = text.split("\n").filter(function (l) { return l.trim(); }).map(function (l) { return JSON.parse(l); });
+        if (rows.length) { box.appendChild(jsonView(rows)); return P.say(st, name + ": JSON Lines (" + rows.length + "), formatted.", "ok"); }
+      } catch (e) { /* not JSON Lines */ }
+    }
+    if (/^text\/|xml|javascript|yaml/.test(type) || TEXT.test(name) || !/[\x00-\x08\x0E-\x1F]/.test(text.slice(0, 4096))) {
+      var coloured = window.Highlight && Highlight.highlight(name, text, document);
+      box.appendChild(coloured || P.el("pre", { text: text })); return P.say(st, name, "ok");
+    }
+    P.say(st, name + ": not text; use Download.", "ok");
+  }
+
   function openFile(key, size) {
     var box = $("s3-file"), st = $("s3-status"); box.textContent = "";
     var name = key.split("/").pop();
     box.appendChild(P.el("h4", { text: key }));
+    if (window.Zip && Zip.isZip(key) && size > 22) return openZip(key, size, name, box, st);
     P.say(st, "Opening " + key + " (" + human(size) + ")...");
     read().then(function (c) { return s3get(c, bucketUrl(state.bucket, state.bucketRegion, "", key), state.bucketRegion); }).then(function (r) {
       if (!r.ok) return r.text().then(function (t) { throw P.awsError(new DOMParser().parseFromString(t, "text/xml"), r.status); });
       var type = (r.headers.get("content-type") || "").split(";")[0];
-      return r.blob().then(function (blob) {
-        var url = URL.createObjectURL(blob);
-        box.appendChild(P.el("p", { class: "row" }, [P.el("a", { class: "button", href: url, download: name, text: "Download" }), P.el("span", { class: "small", text: type + ", " + human(blob.size) })]));
-        if (/^image\//.test(type) && type !== "image/svg+xml") { box.appendChild(P.el("img", { src: url, alt: key, class: "s3-img" })); return P.say(st, key, "ok"); }
-        if (blob.size > MAX_SHOW) return P.say(st, key + ": too large to show here; use Download.", "ok");
-        return blob.text().then(function (text) {
-          var json = null;
-          if (/json/.test(type) || /\.(json|jsonl|geojson|ipynb)$/i.test(key) || /^\s*[\[{]/.test(text)) { try { json = JSON.parse(text); } catch (e) { json = null; } }
-          if (json !== null) { box.appendChild(jsonView(json)); return P.say(st, key + ": JSON, formatted.", "ok"); }
-          if (/^text\/|xml|javascript|yaml/.test(type) || TEXT.test(key) || !/[\x00-\x08\x0E-\x1F]/.test(text.slice(0, 4096))) {
-            box.appendChild(P.el("pre", { text: text })); return P.say(st, key, "ok");
-          }
-          P.say(st, key + ": not text; use Download.", "ok");
-        });
+      return r.arrayBuffer().then(function (ab) {
+        var u8 = new Uint8Array(ab);
+        box.appendChild(P.el("p", { class: "row" }, [downloadLink(name, new Blob([u8], { type: type })), P.el("span", { class: "small", text: type + ", " + human(u8.length) })]));
+        // .gz (or gzip bytes): unzip in the browser and show what is inside. If S3 already sent it
+        // unzipped (Content-Encoding: gzip), the bytes are not gzip and are shown as they are.
+        if (isGzip(u8)) {
+          var inner = name.replace(/\.gz$/i, "");
+          return gunzip(u8).then(function (out) {
+            box.appendChild(P.el("p", { class: "small", text: "gzip: " + human(u8.length) + " unzipped to " + human(out.length) + " in this browser." }));
+            show(box, inner, "", out, st);
+          });
+        }
+        show(box, name, type, u8, st);
       });
+    }).catch(function (e) { P.say(st, e.message, "bad"); });
+  }
+
+  // ---- inside a zip, by byte ranges (zip.js) ----
+  function openZip(key, size, name, box, st) {
+    var url = bucketUrl(state.bucket, state.bucketRegion, "", key), region = state.bucketRegion, got = 0;
+    function fetchRange(a, b) {
+      got += b - a + 1;
+      return read().then(function (c) { return s3get(c, url, region, { Range: "bytes=" + a + "-" + b }); }).then(function (r) {
+        if (r.status !== 206 && r.status !== 200) return r.text().then(function (t) { throw P.awsError(new DOMParser().parseFromString(t, "text/xml"), r.status); });
+        return r.arrayBuffer();
+      });
+    }
+    var dl = P.el("button", { type: "button", text: "Download the zip (" + human(size) + ")" });
+    dl.onclick = function () {
+      dl.disabled = true; P.say(st, "Downloading " + name + "...");
+      read().then(function (c) { return s3get(c, url, region); }).then(function (r) { return r.blob(); }).then(function (b) {
+        var a = downloadLink(name, b); document.body.appendChild(a); a.click(); a.remove(); dl.disabled = false; P.say(st, name + " downloaded.", "ok");
+      }).catch(function (e) { dl.disabled = false; P.say(st, e.message, "bad"); });
+    };
+    box.appendChild(P.el("p", { class: "row" }, [dl]));
+    P.say(st, "Reading the index at the end of " + name + "...");
+    Zip.list(fetchRange, size).then(function (entries) {
+      var files = entries.filter(function (e) { return !e.dir; });
+      box.appendChild(P.el("p", { class: "small", text: files.length + " files inside; listed by reading " + human(got) + " of " + human(size) + "." }));
+      var filter = P.el("input", { type: "search", class: "filter", placeholder: "Filter the files inside", "aria-label": "Filter the files inside" });
+      var tbody = P.el("tbody", {});
+      var viewer = P.el("div", { class: "viewer" });
+      filter.oninput = function () { var q = filter.value.toLowerCase(); Array.prototype.forEach.call(tbody.rows, function (tr) { tr.hidden = q && tr.textContent.toLowerCase().indexOf(q) < 0; }); };
+      files.forEach(function (e) {
+        var b = P.el("button", { type: "button", class: "linkish", text: e.name });
+        b.onclick = function () {
+          viewer.textContent = ""; viewer.appendChild(P.el("h4", { text: e.name }));
+          var before = got; P.say(st, "Opening " + e.name + " from inside " + name + "...");
+          Zip.read(fetchRange, e).then(function (u8) {
+            var inner = e.name.split("/").pop();
+            viewer.appendChild(P.el("p", { class: "row" }, [downloadLink(inner, new Blob([u8])), P.el("span", { class: "small", text: human(u8.length) + ", fetched " + human(got - before) + " of the zip" })]));
+            show(viewer, inner, "", u8, st);
+            viewer.scrollIntoView({ block: "nearest" });
+          }).catch(function (err) { P.say(st, err.message, "bad"); });
+        };
+        tbody.appendChild(P.el("tr", { class: "file" }, [P.el("td", {}, [b]), P.el("td", { class: "n", text: human(e.size) }), P.el("td", { class: "n", text: e.modified })]));
+      });
+      var table = P.el("table", { class: "s3-table" }, [P.el("thead", {}, [P.el("tr", {}, [P.el("th", { text: "Inside " + name }), P.el("th", { text: "Size" }), P.el("th", { text: "Modified" })])]), tbody]);
+      box.appendChild(P.el("div", { class: "toolbar" }, [filter]));
+      box.appendChild(P.el("div", { class: "s3-wrap" }, [table]));
+      box.appendChild(viewer);
+      P.say(st, name + ": " + files.length + " files inside.", "ok");
     }).catch(function (e) { P.say(st, e.message, "bad"); });
   }
 

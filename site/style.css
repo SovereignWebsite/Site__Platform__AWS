@@ -100,3 +100,10 @@ pre.json .j-key { color: var(--accent); } pre.json .j-str { color: var(--ok); } 
 
 .explain li { margin-bottom: .5rem; }
 footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); margin-top: 3rem; padding-top: 1rem; }
+
+/* colour coding of known text files (highlight.js) */
+pre.code .t-key, pre.code .t-tag { color: var(--accent); } pre.code .t-str { color: var(--ok); }
+pre.code .t-num, pre.code .t-lit { color: var(--warn); } pre.code .t-com { color: var(--muted); font-style: italic; }
+pre.code .t-kw { color: #8a3ffc; font-weight: 600; } pre.code .t-fn, pre.code .t-var { color: #0f7b8a; }
+pre.code .t-bad { color: var(--bad); } pre.code .t-warn { color: var(--warn); font-weight: 600; } pre.code .t-punc { color: var(--muted); }
+@media (prefers-color-scheme: dark) { pre.code .t-kw { color: #c7a6ff; } pre.code .t-fn, pre.code .t-var { color: #6fd3e0; } }
