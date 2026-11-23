@@ -9,7 +9,9 @@
 (function () {
   "use strict";
   var P = window.Platform, $ = function (id) { return document.getElementById(id); };
-  var MAX_SHOW = 5 * 1024 * 1024;
+  // show: files up to this size are fetched whole and shown; larger ones are previewed from their first `preview`
+  // bytes (one Range request), and the whole file is fetched only when the user asks for it with Download.
+  var LIMITS = { show: 5 * 1024 * 1024, preview: 256 * 1024 };
   var state = { acct: null, region: "us-east-1", bucket: null, prefix: "", view: 0, file: 0, sizes: {}, key: "" };
   // Quick clicks: each new view (buckets, a bucket, a folder) and each file opened takes a number; an answer that
   // comes back after a newer click is dropped, so a slow, older answer never lands under the newer one.
@@ -221,7 +223,7 @@
     var ext = (name.split(".").pop() || "").toLowerCase();
     var img = /^image\//.test(type) && type !== "image/svg+xml" ? type : IMAGE[ext];
     if (img) { box.appendChild(P.el("img", { src: URL.createObjectURL(new Blob([u8], { type: img })), alt: name, class: "s3-img" })); return P.say(st, name, "ok"); }
-    if (u8.length > MAX_SHOW) return P.say(st, name + ": too large to show here (" + human(u8.length) + "); use Download.", "ok");
+    if (u8.length > LIMITS.show) return P.say(st, name + ": too large to show here (" + human(u8.length) + "); use Download.", "ok");
     var text = new TextDecoder("utf-8").decode(u8), json;
     if (/json/.test(type) || /\.(json|geojson|ipynb)$/i.test(name) || /^\s*[\[{]/.test(text)) {
       try { json = JSON.parse(text); box.appendChild(jsonView(json)); return P.say(st, name + ": JSON, formatted.", "ok"); } catch (e) { /* not one JSON value */ }
@@ -246,6 +248,7 @@
     state.key = key; go(state.bucket, key);
     box.appendChild(P.el("h4", { text: key }));
     if (window.Zip && Zip.isZip(key) && size > 22) return openZip(key, size, name, box, st, current);
+    if (size > LIMITS.show) return openPreview(key, size, name, box, st, current);
     P.say(st, "Opening " + key + (size >= 0 ? " (" + human(size) + ")" : "") + "...");
     read().then(function (c) { return s3get(c, bucketUrl(state.bucket, state.bucketRegion, "", key), state.bucketRegion); }).then(function (r) {
       if (!current()) return;
@@ -266,6 +269,84 @@
           });
         }
         show(box, name, type, u8, st);
+      });
+    }).catch(function (e) { if (current()) P.say(st, e.message, "bad"); });
+  }
+
+  // ---- a large file: the first part by one Range request, never the whole file unless asked ----
+  // Read at most n bytes of a response, then stop it (a server that ignores Range must not send us 2 GB).
+  function firstBytes(r, n) {
+    var reader = r.body.getReader(), parts = [], got = 0;
+    function next() {
+      return reader.read().then(function (x) {
+        if (x.done) return;
+        parts.push(x.value); got += x.value.length;
+        if (got >= n) return reader.cancel().catch(function () {});
+        return next();
+      });
+    }
+    return next().then(function () { return join(parts).subarray(0, n); });
+  }
+  function join(parts) {
+    var len = parts.reduce(function (a, p) { return a + p.length; }, 0), out = new Uint8Array(len), at = 0;
+    parts.forEach(function (p) { out.set(p, at); at += p.length; });
+    return out;
+  }
+  // Unzip the start of a gzip stream: keep what comes out until the input runs short (it was cut on purpose) or
+  // `max` bytes are out. Several gzip members back to back are read in turn, as DecompressionStream does.
+  function gunzipStart(u8, max) {
+    var reader = new Blob([u8]).stream().pipeThrough(new DecompressionStream("gzip")).getReader(), parts = [], got = 0;
+    function next() {
+      return reader.read().then(function (x) {
+        if (x.done) return;
+        parts.push(x.value); got += x.value.length;
+        if (got >= max) return reader.cancel().catch(function () {});
+        return next();
+      }, function () { /* the cut end of the input: keep what came out before it */ });
+    }
+    return next().then(function () { return join(parts).subarray(0, max); });
+  }
+  // A preview ends at the last whole line, so JSON Lines and logs parse and no character is cut in half.
+  function wholeLines(u8) {
+    for (var i = u8.length - 1; i >= 0; i--) if (u8[i] === 10) return u8.subarray(0, i + 1);
+    return u8;
+  }
+  function downloadWhole(url, region, name, size, st) {
+    var dl = P.el("button", { type: "button", text: "Download (" + human(size) + ")" });
+    dl.onclick = function () {
+      dl.disabled = true; P.say(st, "Downloading " + name + " (" + human(size) + ")...");
+      read().then(function (c) { return s3get(c, url, region); }).then(function (r) {
+        if (!r.ok) return r.text().then(function (t) { throw P.awsError(new DOMParser().parseFromString(t, "text/xml"), r.status); });
+        return r.blob();
+      }).then(function (b) {
+        var a = downloadLink(name, b); document.body.appendChild(a); a.click(); a.remove(); dl.disabled = false; P.say(st, name + " downloaded.", "ok");
+      }).catch(function (e) { dl.disabled = false; P.say(st, e.message, "bad"); });
+    };
+    return dl;
+  }
+  function openPreview(key, size, name, box, st, current) {
+    var url = bucketUrl(state.bucket, state.bucketRegion, "", key), region = state.bucketRegion;
+    var ext = (name.split(".").pop() || "").toLowerCase(), n = Math.min(size, LIMITS.preview);
+    box.appendChild(P.el("p", { class: "row" }, [downloadWhole(url, region, name, size, st), P.el("span", { class: "small", text: human(size) })]));
+    if (IMAGE[ext]) return P.say(st, name + ": too large to show here (" + human(size) + "); use Download.", "ok");
+    P.say(st, "Reading the first " + human(n) + " of " + name + " (" + human(size) + ")...");
+    read().then(function (c) { return s3get(c, url, region, { Range: "bytes=0-" + (n - 1) }); }).then(function (r) {
+      if (!current()) return;
+      if (r.status !== 206 && r.status !== 200) return r.text().then(function (t) { throw P.awsError(new DOMParser().parseFromString(t, "text/xml"), r.status); });
+      var type = (r.headers.get("content-type") || "").split(";")[0];
+      return firstBytes(r, n).then(function (u8) {
+        if (!current()) return;
+        if (isGzip(u8)) {
+          return gunzipStart(u8, LIMITS.show).then(function (out) {
+            if (!current()) return;
+            var lines = wholeLines(out);
+            box.appendChild(P.el("p", { class: "small preview", text: "Preview: the first " + human(u8.length) + " of " + human(size) + " (gzip), unzipped in this browser to " + human(lines.length) + ". Download fetches the whole file." }));
+            show(box, name.replace(/\.gz$/i, ""), "", lines, st);
+          });
+        }
+        var lines = wholeLines(u8);
+        box.appendChild(P.el("p", { class: "small preview", text: "Preview: the first " + human(lines.length) + " of " + human(size) + ". Download fetches the whole file." }));
+        show(box, name, type, lines, st);
       });
     }).catch(function (e) { if (current()) P.say(st, e.message, "bad"); });
   }
@@ -365,6 +446,6 @@
   }
   // Open a bucket at a folder (the twin's "See it in" links): through the address, so Back and reload work too.
   function openAt(bucket, prefix) { var h = route(bucket, prefix || ""); if (location.hash !== h) location.hash = h; else apply(parse(h)); }
-  window.S3Browser = { render: render, jsonView: jsonView, openAt: openAt };
+  window.S3Browser = { render: render, jsonView: jsonView, openAt: openAt, limits: LIMITS };
   init();
 })();
