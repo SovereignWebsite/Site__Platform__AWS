@@ -1,0 +1,96 @@
+{
+  "about": "Synthetic CloudFormation seed for the twin, account 111122223333. Proposal for site/twin/data/cloudformation.json (design 01, point 3). Everything is made up; names are demo- or example.com.",
+  "account": "111122223333",
+  "stacks": [
+    {
+      "StackName": "sws-aws-platform",
+      "Region": "us-east-1",
+      "StackStatus": "UPDATE_COMPLETE",
+      "CreationTime": "2026-11-20T09:12:00Z",
+      "LastUpdatedTime": "2026-11-22T10:04:00Z",
+      "Description": "The hub's own stack: the read and change roles (site/cloudformation/bootstrap.yaml).",
+      "Parameters": [
+        { "ParameterKey": "GoogleClientId", "ParameterValue": "twin-client-id.apps.googleusercontent.com" },
+        { "ParameterKey": "GoogleSub", "ParameterValue": "000000000000000000000" }
+      ],
+      "Outputs": [
+        { "OutputKey": "ReadRoleArn", "OutputValue": "arn:aws:iam::111122223333:role/sws-aws-platform-read" },
+        { "OutputKey": "ChangeRoleArn", "OutputValue": "arn:aws:iam::111122223333:role/sws-aws-platform-change" }
+      ],
+      "Resources": [
+        { "LogicalResourceId": "PlatformRead", "PhysicalResourceId": "sws-aws-platform-read", "ResourceType": "AWS::IAM::Role", "ResourceStatus": "UPDATE_COMPLETE" },
+        { "LogicalResourceId": "PlatformChange", "PhysicalResourceId": "sws-aws-platform-change", "ResourceType": "AWS::IAM::Role", "ResourceStatus": "UPDATE_COMPLETE" }
+      ],
+      "Events": [
+        { "Timestamp": "2026-11-22T10:04:00Z", "LogicalResourceId": "sws-aws-platform", "ResourceType": "AWS::CloudFormation::Stack", "ResourceStatus": "UPDATE_COMPLETE" },
+        { "Timestamp": "2026-11-22T10:03:40Z", "LogicalResourceId": "PlatformChange", "ResourceType": "AWS::IAM::Role", "ResourceStatus": "UPDATE_COMPLETE" },
+        { "Timestamp": "2026-11-22T10:03:20Z", "LogicalResourceId": "PlatformRead", "ResourceType": "AWS::IAM::Role", "ResourceStatus": "UPDATE_COMPLETE" },
+        { "Timestamp": "2026-11-22T10:03:00Z", "LogicalResourceId": "sws-aws-platform", "ResourceType": "AWS::CloudFormation::Stack", "ResourceStatus": "UPDATE_IN_PROGRESS", "ResourceStatusReason": "User Initiated" }
+      ]
+    },
+    {
+      "StackName": "demo-site",
+      "Region": "eu-west-2",
+      "StackStatus": "CREATE_COMPLETE",
+      "CreationTime": "2026-11-18T14:00:00Z",
+      "Description": "The demo site: its bucket, a CloudFront distribution in front of it, and the distribution's logs bucket.",
+      "Parameters": [],
+      "Outputs": [
+        { "OutputKey": "DistributionDomain", "OutputValue": "d111111abcdef8.cloudfront.net", "ExportName": "demo-site-distribution-domain" }
+      ],
+      "Resources": [
+        { "LogicalResourceId": "SiteBucket", "PhysicalResourceId": "111122223333--demo-site--eu-west-2", "ResourceType": "AWS::S3::Bucket", "ResourceStatus": "CREATE_COMPLETE" },
+        { "LogicalResourceId": "LogsBucket", "PhysicalResourceId": "111122223333--demo-cloudfront-logs--eu-west-2", "ResourceType": "AWS::S3::Bucket", "ResourceStatus": "CREATE_COMPLETE" },
+        { "LogicalResourceId": "Distribution", "PhysicalResourceId": "EDEMOTWIN00001", "ResourceType": "AWS::CloudFront::Distribution", "ResourceStatus": "CREATE_COMPLETE" }
+      ],
+      "Events": [
+        { "Timestamp": "2026-11-18T14:21:00Z", "LogicalResourceId": "demo-site", "ResourceType": "AWS::CloudFormation::Stack", "ResourceStatus": "CREATE_COMPLETE" },
+        { "Timestamp": "2026-11-18T14:20:30Z", "LogicalResourceId": "Distribution", "ResourceType": "AWS::CloudFront::Distribution", "ResourceStatus": "CREATE_COMPLETE" },
+        { "Timestamp": "2026-11-18T14:00:00Z", "LogicalResourceId": "demo-site", "ResourceType": "AWS::CloudFormation::Stack", "ResourceStatus": "CREATE_IN_PROGRESS", "ResourceStatusReason": "User Initiated" }
+      ]
+    },
+    {
+      "StackName": "demo-dns",
+      "Region": "us-east-1",
+      "StackStatus": "CREATE_COMPLETE",
+      "CreationTime": "2026-11-18T15:00:00Z",
+      "Description": "The demo zone and its www alias to the demo site's distribution (imported from demo-site).",
+      "Parameters": [],
+      "Outputs": [],
+      "Imports": [ "demo-site-distribution-domain" ],
+      "Resources": [
+        { "LogicalResourceId": "Zone", "PhysicalResourceId": "Z0DEMOTWIN0001", "ResourceType": "AWS::Route53::HostedZone", "ResourceStatus": "CREATE_COMPLETE" },
+        { "LogicalResourceId": "WwwAlias", "PhysicalResourceId": "www.example.com", "ResourceType": "AWS::Route53::RecordSet", "ResourceStatus": "CREATE_COMPLETE" }
+      ],
+      "Events": [
+        { "Timestamp": "2026-11-18T15:02:00Z", "LogicalResourceId": "demo-dns", "ResourceType": "AWS::CloudFormation::Stack", "ResourceStatus": "CREATE_COMPLETE" },
+        { "Timestamp": "2026-11-18T15:00:00Z", "LogicalResourceId": "demo-dns", "ResourceType": "AWS::CloudFormation::Stack", "ResourceStatus": "CREATE_IN_PROGRESS", "ResourceStatusReason": "User Initiated" }
+      ]
+    },
+    {
+      "StackName": "demo-lambda",
+      "Region": "eu-west-2",
+      "StackStatus": "UPDATE_ROLLBACK_COMPLETE",
+      "CreationTime": "2026-11-19T11:00:00Z",
+      "LastUpdatedTime": "2026-11-21T16:40:00Z",
+      "Description": "One function, its role and its dependencies bucket. The last update failed and rolled back, so the landing page has a stack to put first.",
+      "Parameters": [ { "ParameterKey": "HandlerVersion", "ParameterValue": "v1.0.0" } ],
+      "Outputs": [],
+      "Resources": [
+        { "LogicalResourceId": "Handler", "PhysicalResourceId": "demo-handler", "ResourceType": "AWS::Lambda::Function", "ResourceStatus": "UPDATE_COMPLETE" },
+        { "LogicalResourceId": "HandlerRole", "PhysicalResourceId": "demo-handler-role", "ResourceType": "AWS::IAM::Role", "ResourceStatus": "CREATE_COMPLETE" },
+        { "LogicalResourceId": "DepsBucket", "PhysicalResourceId": "111122223333--demo-lambda-deps--eu-west-2", "ResourceType": "AWS::S3::Bucket", "ResourceStatus": "CREATE_COMPLETE" }
+      ],
+      "Events": [
+        { "Timestamp": "2026-11-21T16:40:00Z", "LogicalResourceId": "demo-lambda", "ResourceType": "AWS::CloudFormation::Stack", "ResourceStatus": "UPDATE_ROLLBACK_COMPLETE" },
+        { "Timestamp": "2026-11-21T16:38:10Z", "LogicalResourceId": "Handler", "ResourceType": "AWS::Lambda::Function", "ResourceStatus": "UPDATE_FAILED", "ResourceStatusReason": "(twin) The dependencies zip for v1.1.0 is not in the bucket." },
+        { "Timestamp": "2026-11-21T16:38:00Z", "LogicalResourceId": "demo-lambda", "ResourceType": "AWS::CloudFormation::Stack", "ResourceStatus": "UPDATE_IN_PROGRESS", "ResourceStatusReason": "User Initiated" }
+      ]
+    }
+  ],
+  "not_in_any_stack": [
+    { "type": "AWS::S3::Bucket", "id": "aws-cloudtrail-logs-111122223333-demo", "why": "Made by hand: the map shows it as made by no stack." },
+    { "type": "AWS::S3::Bucket", "id": "demo.static.example", "why": "Made by hand." },
+    { "type": "AWS::IAM::Role", "id": "sovereignwebsite-factory-dns", "why": "Already in the twin's IAM; made outside CloudFormation." }
+  ]
+}

@@ -59,8 +59,8 @@
   }
 
   // ---- a bucket: check its CORS rule, offer the plan, then list ----
-  function openBucket(name) {
-    state.bucket = name; state.prefix = "";
+  function openBucket(name, prefix) {
+    state.bucket = name; state.prefix = prefix || "";
     var my = newView(true), st = $("s3-status"), box = $("s3-objects"); box.textContent = ""; $("s3-file").textContent = "";
     P.say(st, "Reading " + name + "'s settings...");
     read().then(function (c) { return cc(c, "GetResource", { TypeName: "AWS::S3::Bucket", Identifier: name }); }).then(function (j) {
@@ -311,6 +311,8 @@
     };
     render();
   }
-  window.S3Browser = { render: render, jsonView: jsonView };
+  // Open a bucket at a folder (the twin's "See it in" links), with the first account.
+  function openAt(bucket, prefix) { state.acct = P.accounts()[0]; state.region = "us-east-1"; if (state.acct) openBucket(bucket, prefix); }
+  window.S3Browser = { render: render, jsonView: jsonView, openAt: openAt };
   init();
 })();

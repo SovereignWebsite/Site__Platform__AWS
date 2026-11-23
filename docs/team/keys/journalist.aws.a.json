@@ -1,0 +1,8 @@
+{
+  "v": 1,
+  "encrypt": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAl4L3UrLjZiqCvfroD1L3\nF+/2cZUOWX8FEFqi5Vk+BBQuARpURMQR/7vyhk0/9NMs+J2KI5KvHIErX4f8kxB0\nEME1iDtyuNZr8979a/ZRGuy3qUdKtsC/PaGHTQY0Ickmpr8Z+gQv+6UpqxjEP6kQ\nZ9cb4Q8ZwHkKN5/eUxkEq+jr1rPgKJnMrfg7ZVzBvoNUIDkBVu+JZ70J79n/9Ppe\n6OVU54/lmMSsBWoroiDitqYqnp1acTbda+qmQ5RPXLOx83KXj/20G+yS8RhwdNwY\ngsSLsIh7iNO780s1Wrn3Tjb1UiR7moXdd95E1AwAFtkiHfzugA2I8+US7SJlQe+H\ngmVl8hhibSq6nFusz9fhOVUmLfNHMRrl7PcrOtqwcuataoxMZ+Xe1KM/5NjXhrbl\nFSef0Wt8Wth9NunTJYlDFZkBgXqptCOqWhpGuM1ufr+KgGdZW6tPeKSkbLQ7DUby\ngI2iJcY3OUj2/5SmHdbykmluxV0yl5EpqIdprgcZ9J3nu71AtmPo+ByuwQ0OtRnO\ndjCrTUhGWKPLpgPDRf/67GcPGGSK1uVGoLuY4bo2WrTor/edEbxtcH2aIpRKDhga\n5etVHoA9y9rcTgdOERUxw+Yz7+4Eu70BB4qgF8LYMQEG/KQg4foYCNZaijSbVOp6\nYMSbSLWAq6YIrM8PtG4/WCMCAwEAAQ==\n-----END PUBLIC KEY-----\n",
+  "sign": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEhhlNvwIxhefF+a9IpQHtm3o0Gkd+\nW5cieEqKIJact/8SnEd1nbkDdHBIvzp9NYiTlG25s8J3E4iBxN4O/NHmLA==\n-----END PUBLIC KEY-----\n",
+  "label": "journalist.aws.a@SovereignWebsite.dinis",
+  "fingerprint": "sha256:60542c9ed74aff5e",
+  "signing_fingerprint": "sha256:0efe7049a27f2086"
+}
