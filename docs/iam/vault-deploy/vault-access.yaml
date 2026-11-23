@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.1.3 (iam.aws.a, deploy plan step 3; for review by
+  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.1.4 (iam.aws.a, deploy plan step 3; for review by
   security.aws.a and cloudformation.aws.a; not for any real account). Run first, by the customer, from their own
   console. Makes two things only: the deploy role that stacks sws-vault-<id> and sws-vault-<id>-edge run with, and
   the boundary that caps the Vault's own role. Nothing here can reach outside this one Vault's resources.
@@ -272,6 +272,19 @@ Resources:
                 Resource: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/*"
                 Condition:
                   StringNotEquals: { "aws:ResourceTag/sws-vault": !Ref VaultId }
+              # security.aws.a re-review 0.1.2 (2): "?" also matches ".", so the 32-character validation pattern could
+              # match a two-label name of that length (_acme-challenge.<16 chars>.<domain>: DNS-01 for a new subdomain).
+              # Refuse any name two or more labels under the domain; the Vault's name and ACM's one-label token pass.
+              - !If
+                - HasZone
+                - Sid: NeverDeeperNames
+                  Effect: Deny
+                  Action: route53:ChangeResourceRecordSets
+                  Resource: "*"
+                  Condition:
+                    ForAnyValue:StringLike:
+                      "route53:ChangeResourceRecordSetsNormalizedRecordNames": !Sub "*.*.${DomainName}"
+                - !Ref AWS::NoValue
               - Sid: NeverAnotherStack
                 Effect: Deny
                 Action: "cloudformation:*"
