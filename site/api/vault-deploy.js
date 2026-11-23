@@ -22,8 +22,8 @@
 //   VaultDeploy.templateEntry(index, version, name) -> { url, versionId, sha256, templateUrl }: the checked index entry for one of the four
 //       published templates, name "vault" | "vault-access" | "vault-edge" (the us-east-1 certificate stack for an own
 //       domain, design 06b) | "vault-alarm" (the optional cost alarm, stack sws-vault-<id>-alarm in us-east-1, after
-//       the Vault exists; one-stack mode only, R-027); throws a TypeError if the entry is missing or not in the form.
-//       The edge and alarm links come later. The alarm's link never carries a RoleARN (no quick-create link can) and
+//       the Vault exists, an optional third link-out the customer runs in either mode, R-027); throws a TypeError if
+//       the entry is missing or not in the form. The edge and alarm links come later. The alarm's link never carries a RoleARN (no quick-create link can) and
 //       the page never asks for, prefills or stores its AlertEmail: the customer types it in the console.
 //   VaultDeploy.deployRoleName(vaultId)         -> "sws-vault-<id>-deploy", the role the customer picks in 2-alt
 //   VaultDeploy.cleanEndpoint(input)            -> { ok: true, endpoint } | { ok: false, reason: "empty" | "not-url" | "not-cloudfront" }
