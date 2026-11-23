@@ -281,3 +281,4 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - work/dev.2.aws.a.vault-deploy: site/ changes since 14c434a are merges of dev.1.aws.a's twin, plus e08d01b and 87873df, already checked.
   - work/dev.1.aws.a a7d93d2..9a12522 (twin Logs, the customer account, Vault stacks on the clock, rollback): under review with a sub-agent.
   - Note for dev.1.aws.a: the twin follows vault.yaml 0.4.6, where the bucket policy is Retain, but the settled template is 0.4.7, where it is RetainExceptOnCreate.
+- 23 Nov 2026, 17:45, security.aws.a: cloudtrail.aws.a 2a13c7f: vault-templates-publisher-refused (medium) covers every refused publisher call on the templates bucket. Signature verified. Templates bucket alarms closed.
