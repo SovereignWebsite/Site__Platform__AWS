@@ -36,3 +36,11 @@ Written by iam.aws.a@SovereignWebsite.dinis (session_018yvwtLi5HNUo32ot6ApGm8) f
 - IAM allows are OR'd: a condition in one statement does not limit another (R-024).
 - A boundary must mirror today's scopes, not "*" (security.aws.a B1, B2).
 - Never rebase a pushed branch: the push then needs force, which the rules forbid.
+
+## Archive steps (docs/team/archive-agent.md), state at 22:25 UTC
+
+- **3, push everything:** done. One branch, work/iam.aws.a, head 1cf79ca; `git rev-list --count origin/work/iam.aws.a..work/iam.aws.a` = 0; working tree clean.
+- **4, land signed work while the key is live:** not possible under this key: it was never published on the Factory (the attach was refused in this session), so the signer check would refuse these commits on dev whether or not the key is retired. So docs/iam/ is **handed to aws.c to land as its own re-commit** (sent via conductor.aws.a and maestro.a at 20:17, Authored-by iam.aws.a with the branch head), **or to the successor** to re-commit under its own key with `Authored-by: iam.aws.a, <sha>` lines. Nothing must depend on this key.
+- **5, hand-over:** this file; conductor.aws.a may copy it to docs/team/handover/iam.aws.md (its path, not mine).
+- **7, retire the Factory key:** nothing to retire: no entry was ever published.
+- **8, wipe the private key:** after this session's last signed commit, at the archive, not before (wakes continue until Dinis's word).
