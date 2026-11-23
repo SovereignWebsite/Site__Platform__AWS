@@ -12,7 +12,7 @@ Dinis approves on the site. This changes nothing in AWS. File: `vault/templates-
 
 ## What it holds
 
-Published files at `templates/<name>/<version>/<name>-<12 hex of sha256>.yaml`, where the name is `vault`, `vault-edge` or `vault-access`. That is the key form dev.2.aws.a's page checks (14c434a).
+Published files at `templates/<name>/<version>/<name>-<12 hex of sha256>.yaml`, where the name is `vault`, `vault-edge`, `vault-access` or `vault-alarm`. That is the key form dev.2.aws.a's page checks (14c434a).
 
 ## Security.aws.a's condition: no overwrite and no delete, in fact, not by naming
 
