@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.1.5 (iam.aws.a, deploy plan step 3; for review by
+  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.1.6 (iam.aws.a, deploy plan step 3; for review by
   security.aws.a and cloudformation.aws.a; not for any real account). Run first, by the customer, from their own
   console. Makes two things only: the deploy role that stacks sws-vault-<id> and sws-vault-<id>-edge run with, and
   the boundary that caps the Vault's own role. Nothing here can reach outside this one Vault's resources.
@@ -147,10 +147,17 @@ Resources:
                   lambda:GetRuntimeManagementConfig, lambda:GetFunctionRecursionConfig]
                 Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:sws-vault-${VaultId}-api"
               # security.aws.a ruling (d): a public principal only for a Function URL with auth NONE.
-              # OPEN (boto3.aws.a 08): new Function URLs need lambda:InvokeFunction in the resource policy as well as
-              # InvokeFunctionUrl. That second AddPermission must be limited to calls through the URL by Lambda's own
-              # condition key (name to be confirmed by boto3.aws.a); until then it is not granted, and the twin run
-              # will show the URL refusing calls. Never a public InvokeFunction without that limit.
+              # New Function URLs also need lambda:InvokeFunction in the resource policy (boto3.aws.a 08). Allowed only
+              # with lambda:InvokedViaFunctionUrl = true (Lambda guide, urls-auth) and principal "*", for this function.
+              # The Service Authorization Reference contradicts itself on whether the key is present at AddPermission;
+              # without IfExists the Bool fails closed (AccessDenied at deploy), never open. Twin and first run will show.
+              - Sid: InvokeOnlyThroughTheUrl
+                Effect: Allow
+                Action: lambda:AddPermission
+                Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:sws-vault-${VaultId}-api"
+                Condition:
+                  Bool: { "lambda:InvokedViaFunctionUrl": "true" }
+                  StringEquals: { "lambda:Principal": "*" }
               - Sid: FunctionUrlNoneOnly
                 Effect: Allow
                 Action: [lambda:CreateFunctionUrlConfig, lambda:AddPermission]
