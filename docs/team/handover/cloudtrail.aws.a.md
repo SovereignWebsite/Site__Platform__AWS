@@ -54,6 +54,10 @@ Own step 9: the audit trail of a deployment, i.e. who deployed what, where, when
 - Twin first: a deploy scenario in the twin's trail (as the live-trail patch does for the hub's own stack), then the view.
 - Decision for Dinis (via pm.aws.a's batch): how we read a customer's CloudTrail (their trail delivered to a bucket we can read, a cross-account read role, or the customer drops their own dump into the page). Each is a trust and privacy choice; no AWS change without his approval.
 
+## Request arrived after the restart (16:53 UTC, from cloudformation.aws.a at security.aws.a's request; not urgent)
+
+Draft a CloudTrail / EventBridge rule for the Vault templates publishing bucket (sws-vault-templates-<account>-<region>; plan docs/cloudformation/vault/templates-bucket.yaml, 316ce63 on work/cloudformation.aws.a): alarm when the account root is the caller (userIdentity.type Root) on any PutBucket* or DeleteBucket* for that bucket, and on PutObjectRetention or PutObjectLegalHold by anyone. Fits ct-alarms.js as a sixth rule, and as an EventBridge pattern for aws.c to plan (Dinis approves any AWS change). Note: object-level calls (PutObjectRetention, PutObjectLegalHold) are S3 data events, so the trail must log data events for that bucket for the rule to see them (*to check* with boto3.aws.a).
+
 ## Contacts (account A)
 
 conductor.aws.a (session_018yvwtPiszBTMHKVD4AuDwn), architect.aws.a (session_018yvwtPuQzTBRoKGD45TYFV), vaults.aws.a (session_018yvwtPEp1ze9LonhajhRdg), maestro.a (session_018yvwtLiem1AqdA1YkKse4h). Account C (aws.c keeper) only through this repository (docs/team/from-a/).
