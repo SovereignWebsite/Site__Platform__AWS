@@ -68,6 +68,7 @@
   // the "v0" stream with v0's seed, so step 1 gives byte-for-byte v0's output; latency has its own, as before, so the
   // data never depends on how many calls came first.
   var streams = {};
+  var DELETED_KEEP = 50; // deleted stacks kept per account once their name is used again (see cloudformation.createStack)
   function rng(name, seed) {
     if (streams[name]) return streams[name];
     var s = seed;
@@ -160,7 +161,12 @@
     "cloudformation.createStack": function (w, e) {
       var d = e.data, a = w.accounts[d.account] || (w.accounts[d.account] = { stacks: map() }), key = d.region + "/" + d.name, was = a.stacks[key];
       // A name used again after a delete: the deleted stack stays, found by its stack id (and in ListStacks), as AWS keeps it.
-      if (was && was.status === "DELETE_COMPLETE") (a.deleted || (a.deleted = map()))[was.stackId] = was;
+      // Only the last DELETED_KEEP of them per account, so create, delete and reuse cycles cannot grow the world without
+      // end (security.aws.a's nit on 5591cad; the twin's bound, AWS keeps deleted stacks for 90 days).
+      if (was && was.status === "DELETE_COMPLETE") {
+        var gone = a.deleted || (a.deleted = map()); gone[was.stackId] = was;
+        var ks = Object.keys(gone); for (var q = 0; q < ks.length - DELETED_KEEP; q++) delete gone[ks[q]];
+      }
       a.stacks[key] = { name: d.name, kind: d.kind, mode: d.mode || null, region: d.region, account: d.account, stackId: d.stackId, roleArn: d.roleArn || null,
         params: d.params, created: e.t, status: "CREATE_IN_PROGRESS", resources: map(), outputs: [], ids: d.ids,
         events: [{ id: d.stackId.split("/").pop() + "-" + e.seq, t: e.t, logical: d.name, physical: d.stackId, type: "AWS::CloudFormation::Stack", status: "CREATE_IN_PROGRESS", reason: "User Initiated" }] };

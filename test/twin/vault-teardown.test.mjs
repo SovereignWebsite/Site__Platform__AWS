@@ -71,6 +71,19 @@ assert.ok(tag((await cfn(twin, { Action: "DescribeStackEvents", StackName: stack
 assert.equal((await cfn(twin, { Action: "DeleteStack", StackName: stackId })).status, 200, "a DeleteStack by the old id is a quiet success");
 assert.equal(tag((await cfn(twin, { Action: "DescribeStacks", StackName: V })).text, "StackStatus")[0], "CREATE_IN_PROGRESS", "and leaves the new stack alone");
 checks += 6;
+// The kept deleted stacks are bounded (security.aws.a's nit on 5591cad): 55 create, delete and reuse cycles of one name,
+// folded from a journal, keep the last 50 deleted stacks, the newest among them.
+{
+  const t = fresh(), acct = ACCT, e = [];
+  for (let i = 0; i < 56; i++) {
+    e.push({ seq: e.length + 1, t: START, op: "cloudformation.createStack", target: "s" + i, data: { account: acct, region: R, name: V, kind: "vault", mode: "one-stack", stackId: "stack-" + i, params: { VaultId: ID }, ids: {} } });
+    if (i < 55) e.push({ seq: e.length + 1, t: START, op: "cloudformation.stackEvent", target: "s" + i, data: { account: acct, region: R, name: V, logical: V, type: "AWS::CloudFormation::Stack", status: "DELETE_COMPLETE" } });
+  }
+  const kept = Object.keys(t.fold(e).accounts[acct].deleted);
+  assert.equal(kept.length, 50, "50 deleted stacks kept, not 55");
+  assert.ok(kept.includes("stack-54") && !kept.includes("stack-4") && kept.includes("stack-5"), "the newest 50");
+  checks += 2;
+}
 assert.equal((await cfn(twin, { Action: "DeleteStack", StackName: V })).status, 400, "a stack still being created refuses the delete (the twin's rule)");
 assert.equal((await cfn(twin, { Action: "DeleteStack", StackName: "sws-vault-ffffffffffff" })).status, 200, "a missing stack deletes quietly, as AWS answers");
 checks += 9;
