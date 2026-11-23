@@ -102,21 +102,20 @@
   },
   {
    "id": "b7",
-   "narration": "Six. A change set or the DNS role's trust can still make the change role admin. Not ready yet: security asked for v2.5 first.",
+   "narration": "Six. A change set or the DNS role's trust can still make the change role admin. Recommended: iam's v2.5 boundaries, cleared by security, applied by you.",
    "visual": {
     "kind": "svg",
     "src": "d6",
     "caption": "Decision 6: security R-008 (High), an AWS change",
     "at": 0,
-    "play": 10.2,
-    "end": 9.6
+    "play": 11,
+    "end": 10.4
    },
    "facts": [
     "s-decisions",
     "s-risks",
-    "s-sec-v24",
-    "s-iam-v24",
-    "s-sec-v25"
+    "s-sec-v25",
+    "s-iam-v25"
    ]
   },
   {
@@ -137,14 +136,14 @@
   },
   {
    "id": "b8",
-   "narration": "All recommended answers are a, except three, which is c. Six waits on v2.5. Answer in pm.aws.a's session.",
+   "narration": "All recommended answers are a, except three, which is c. Answer in pm.aws.a's session; the trade-offs follow.",
    "visual": {
     "kind": "svg",
     "src": "outro",
-    "caption": "Recommended: 1 a, 2 a, 3 c, 4 a, 5 a, 7 a. Decision 6 waits on v2.5.",
+    "caption": "Recommended: 1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a. Answer in pm.aws.a's session.",
     "at": 0,
-    "play": 7.8,
-    "end": 7.2
+    "play": 7.4,
+    "end": 6.8
    },
    "facts": [
     "s-decisions"
@@ -326,17 +325,18 @@
   },
   {
    "id": "6",
-   "question": "6. R-008 (High): which permissions boundary goes on the change role? (waiting on v2.5, not ready to answer)",
+   "question": "6. R-008 (High): which permissions boundary goes on the change role?",
    "options": [
     {
      "id": "a",
-     "label": "a. One console apply of v2.4: both boundaries, and the DNS role's trust by console only",
+     "label": "a. One console apply of v2.5: both boundaries, and the DNS role's trust by console only",
      "good": [
       "Closes R-008 and R-005 together",
       "Cleared on paper by security.aws.a"
      ],
      "bad": [
-      "The site's two DNS-trust plans stop working; aws.c retires them in the same release"
+      "The site's two DNS-trust plans stop working; aws.c retires them in the same release",
+      "The read role can read Lambda environment variables: keep secrets in Secrets Manager or SSM"
      ],
      "blocks": []
     },
@@ -381,7 +381,7 @@
     }
    ],
    "recommendation": "a",
-   "why": "Not ready: v2.4's read boundary misses 13 IAM, Lambda and Firehose reads the new API layer needs (security.aws.a, 14433ff). iam.aws.a makes v2.5, security re-clears, then two checks and your console apply."
+   "why": "Cleared on paper by security.aws.a (ba0afa0). Before any apply, iam.aws.a finishes its check on iam:UpdateRole. The first apply is your own act in the console."
   },
   {
    "id": "7",
@@ -447,18 +447,6 @@
    "read": "2026-11-23"
   },
   {
-   "id": "s-sec-v24",
-   "title": "security.aws.a: P-IAM-001 cleared on paper, v2.4 (risks.md at 0cfa69f)",
-   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/0cfa69f4f4a2f376d7558ef1b18e6aaf93c0b923/docs/security/risks.md",
-   "read": "2026-11-23"
-  },
-  {
-   "id": "s-iam-v24",
-   "title": "iam.aws.a: P-IAM-001 proposal, v2.4 (2107fe5)",
-   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/2107fe533d28ef81b54a469ad219f4bf522113cf/docs/iam/proposals/P-IAM-001-boundary.md",
-   "read": "2026-11-23"
-  },
-  {
    "id": "s-keys",
    "title": "factory.c: publishing an .aws.a key on the Factory (docs/team/keys/README.md at 518b114)",
    "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/518b114b4eaef1fd1d0c08814a3fa3d36a86de2c/docs/team/keys/README.md",
@@ -472,8 +460,14 @@
   },
   {
    "id": "s-sec-v25",
-   "title": "security.aws.a: v2.4 read boundary gap, v2.5 asked (14433ff)",
-   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/14433ff/docs/security/risks.md",
+   "title": "security.aws.a: P-IAM-001 v2.5 cleared on paper (ba0afa0)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/ba0afa0/docs/security/risks.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-iam-v25",
+   "title": "iam.aws.a: P-IAM-001 proposal, v2.5 (ee7f7b9)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/ee7f7b9/docs/iam/proposals/P-IAM-001-boundary.md",
    "read": "2026-11-23"
   }
  ],
