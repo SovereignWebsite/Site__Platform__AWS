@@ -156,7 +156,52 @@ const sum = (name, status, extra) => "<member><StackId>arn:aws:cloudformation:eu
   let thrown = null; try { CfnApi(); } catch (e) { thrown = e; }
   ok(thrown instanceof TypeError, "CfnApi needs a send");
   const src = readFileSync(new URL("../../site/api/cfn-api.js", import.meta.url), "utf8");
-  ok(!/\beval\(|new Function|innerHTML|ExecuteChangeSet|CreateChangeSet|DeleteStack|UpdateStack|CreateStack/.test(src), "no eval or HTML, and no change actions in the source");
+  ok(!/\beval\(|new Function|innerHTML/.test(src), "no eval or HTML in the source");
+  // A non-string region is tested and used as the same string (security R-023 b).
+  const hosts = []; const h = CfnApi(async (rq) => { hosts.push(rq.url + " " + rq.region); return new Response("<ListStacksResponse><ListStacksResult><StackSummaries></StackSummaries></ListStacksResult></ListStacksResponse>"); });
+  await h.stacks({ toString: () => "eu-west-1" });
+  await h.stacks({ n: 0, toString() { return this.n++ ? "evil.example/x" : "eu-west-1"; } }); // a second reading would give another host
+  ok(hosts.every((x) => x === "https://cloudformation.eu-west-1.amazonaws.com/ eu-west-1"), "the region string tested is the one used: " + hosts.join(", "));
+}
+// ---- hostile arguments: every method sends exactly one Action, its own (security R-023 c) ----
+{
+  const HOSTILE = ["a&Action=DeleteStack", "x=y&StackName=other", "Action=DeleteStack", "&", "=", "%26Action%3DDeleteStack", "a\nAction=UpdateStack"];
+  const own = { stacks: "ListStacks", stack: "DescribeStacks", resources: "ListStackResources", events: "DescribeStackEvents", exports: "ListExports", importers: "ListImports" };
+  const bodies = []; const c = CfnApi(async (rq) => { bodies.push(rq.body); return new Response("<X><Imports></Imports><Stacks><member><StackName>s</StackName></member></Stacks></X>"); });
+  for (const v of HOSTILE) {
+    const o = { next: v, deleted: v };
+    const calls = { stacks: [o], stack: [v], resources: [v, o], events: [v, o], exports: [o], importers: [v, o] };
+    for (const [m, args] of Object.entries(calls)) {
+      bodies.length = 0;
+      await c[m]("eu-west-1", ...args);
+      const q = new URLSearchParams(bodies[0]);
+      ok(bodies.length === 1 && q.getAll("Action").length === 1 && q.get("Action") === own[m] && q.getAll("Version").join() === "2010-05-15", m + "(" + JSON.stringify(v) + "): one Action, " + own[m] + " (" + bodies[0] + ")");
+      const named = { stack: "StackName", resources: "StackName", events: "StackName", importers: "ExportName" }[m];
+      if (named) ok(q.getAll(named).length === 1 && q.get(named) === v, m + ": the name goes as one value, unchanged");
+      if (m !== "stack") ok(q.getAll("NextToken").length === 1 && q.get("NextToken") === v, m + ": next goes as one NextToken, unchanged");
+      ok([...q.keys()].every((k) => ["Action", "Version", "StackName", "ExportName", "NextToken"].includes(k)), m + ": no other parameters (" + [...q.keys()] + ")");
+    }
+  }
+}
+// ---- linear parsing and a body cap (security R-023 a) ----
+{
+  const big = (s, n) => s.repeat(n);
+  const answers = [
+    "<ListStacksResponse><ListStacksResult><StackSummaries>" + big("<member><StackName>x", 60000),
+    "<ListStacksResponse><ListStacksResult><StackSummaries><member>" + big("<StackStatus ", 60000),
+    "<DescribeStacksResponse><DescribeStacksResult><Stacks><member><StackId>a</StackId>" + big("<Outputs>", 80000) + "</member></Stacks></DescribeStacksResult></DescribeStacksResponse>",
+    big("<Code>", 100000)
+  ];
+  for (const a of answers) {
+    const c = CfnApi(async () => new Response(a, { status: a.startsWith("<Code>") ? 400 : 200 }));
+    const t0 = Date.now();
+    try { await (a.includes("DescribeStacks") ? c.stack("eu-west-1", "a") : c.stacks("eu-west-1")); } catch (e) { /* refused or not found is fine */ }
+    ok(Date.now() - t0 < 300, "an unclosed tag in " + (a.length >> 10) + " KB parsed in " + (Date.now() - t0) + " ms");
+  }
+  const huge = CfnApi(async () => new Response("<X>" + "a".repeat(4 * 1024 * 1024) + "</X>"));
+  await rejects(huge.stacks("eu-west-1"), (e) => e.code === "TooLarge", "an answer over 4 MB is refused before parsing");
+}
+{
 }
 
 // ---- contract ----

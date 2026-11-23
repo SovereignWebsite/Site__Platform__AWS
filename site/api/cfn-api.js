@@ -35,22 +35,49 @@
       return { amp: "&", lt: "<", gt: ">", quot: "\"", apos: "'" }[e];
     });
   }
-  function blocks(xml, tag) {
-    var out = [], re = new RegExp("<" + tag + "(?:\\s[^>]*)?>([\\s\\S]*?)</" + tag + ">", "g"), m;
-    while ((m = re.exec(xml))) out.push(m[1]);
+  var MAX_BODY = 4 * 1024 * 1024; // an answer larger than this is refused before parsing (security R-023)
+  // Scanners with indexOf only: linear, so an unclosed or hostile tag cannot stall the page (security R-023).
+  // open(xml, tag, from) -> { start, end } of the next <tag> or <tag attrs>, or null.
+  function open(xml, tag, from) {
+    var p = from || 0, lt = "<" + tag;
+    while ((p = xml.indexOf(lt, p)) >= 0) {
+      var c = xml.charAt(p + lt.length);
+      if (c === ">") return { start: p, end: p + lt.length + 1 };
+      if (c === " " || c === "\t" || c === "\n" || c === "\r") { var gt = xml.indexOf(">", p); return gt < 0 ? null : { start: p, end: gt + 1 }; }
+      p += lt.length;
+    }
+    return null;
+  }
+  // The bodies of <tag> elements in order (an element does not nest inside one of its own name in these answers).
+  function blocks(xml, tag, first) {
+    var out = [], p = 0, close = "</" + tag + ">", o, c;
+    while ((o = open(xml, tag, p))) {
+      if ((c = xml.indexOf(close, o.end)) < 0) break; // unclosed: stop, nothing after it can be whole
+      out.push(xml.slice(o.end, c));
+      if (first) break;
+      p = c + close.length;
+    }
     return out;
   }
+  // xml with the named elements removed.
+  function without(xml, tags) {
+    tags.forEach(function (tag) {
+      var p = 0, close = "</" + tag + ">", o, c, kept = "";
+      while ((o = open(xml, tag, p)) && (c = xml.indexOf(close, o.end)) >= 0) { kept += xml.slice(p, o.start); p = c + close.length; }
+      xml = kept + xml.slice(p);
+    });
+    return xml;
+  }
   // Text of the first element; null when absent or empty (CloudFormation leaves optional fields out).
-  function text(xml, tag) { var b = blocks(xml, tag)[0]; return b === undefined || b === "" ? null : unescape(b); }
+  function text(xml, tag) { var b = blocks(xml, tag, true)[0]; return b === undefined || b === "" ? null : unescape(b); }
   // The <member> elements directly inside the first <tag>. Members nest (DescribeStacks: a stack's Parameters and
   // Outputs are members inside the stack's member), so this counts depth instead of matching the nearest close.
   function members(xml, tag) {
-    var open = new RegExp("<" + tag + "(?:\\s[^>]*)?>").exec(xml);
-    if (!open) return [];
-    // The first </tag> after the open one ends it (no element in these answers nests inside one of its own name).
-    var out = [], depth = 0, start = -1, re = /<(\/?)member>/g, m, end = xml.indexOf("</" + tag + ">", open.index);
+    var o = open(xml, tag, 0);
+    if (!o) return [];
+    var out = [], depth = 0, start = -1, re = /<(\/?)member>/g, m, end = xml.indexOf("</" + tag + ">", o.end);
     if (end < 0) return [];
-    re.lastIndex = open.index + open[0].length;
+    re.lastIndex = o.end;
     while ((m = re.exec(xml))) {
       if (m.index > end) break;
       if (!m[1]) { if (depth++ === 0) start = re.lastIndex; }
@@ -72,12 +99,14 @@
     if (typeof send !== "function") throw new TypeError("CfnApi needs a send function");
     var account = opts && opts.account;
     function call(region, action, params) {
-      if (!REGION_RE.test(String(region))) return Promise.reject(new TypeError("not an AWS region: " + region)); // it goes into a signed host name
+      region = String(region); // tested and used as the same string
+      if (!REGION_RE.test(region)) return Promise.reject(new TypeError("not an AWS region: " + region)); // it goes into a signed host name
       var body = new URLSearchParams({ Action: action, Version: VERSION });
       Object.keys(params || {}).forEach(function (k) { if (params[k] !== undefined && params[k] !== null && params[k] !== "") body.set(k, params[k]); });
       return send({ service: "cloudformation", region: region, method: "POST", url: "https://cloudformation." + region + ".amazonaws.com/",
         headers: { "content-type": "application/x-www-form-urlencoded" }, body: body.toString() }).then(function (r) {
         return r.text().then(function (t) {
+          if (t.length > MAX_BODY) throw fail("TooLarge", "the answer is over " + MAX_BODY + " characters; not read", r.status);
           if (r.ok) return t;
           throw fail(text(t, "Code") || "HTTP " + r.status, text(t, "Message") || "no message", r.status);
         });
@@ -86,7 +115,7 @@
     function need(v, what) { if (typeof v !== "string" || !v) throw new TypeError(what + " is required"); return v; }
     function stackOf(member, region) {
       // Top-level fields only: an output, tag or parameter has fields of the same names (Description) inside it.
-      var m = member.replace(/<(Parameters|Outputs|Tags|Capabilities|NotificationARNs|RollbackConfiguration|DriftInformation)>[\s\S]*?<\/\1>/g, "");
+      var m = without(member, ["Parameters", "Outputs", "Tags", "Capabilities", "NotificationARNs", "RollbackConfiguration", "DriftInformation"]);
       var arn = text(m, "StackId"), r = /^arn:aws[a-z-]*:cloudformation:([a-z0-9-]+):/.exec(arn || "");
       return { name: text(m, "StackName"), arn: arn, region: r ? r[1] : region, status: text(m, "StackStatus"), reason: text(m, "StackStatusReason"),
         created: text(m, "CreationTime"), updated: text(m, "LastUpdatedTime"), description: text(m, "TemplateDescription") || text(m, "Description") };

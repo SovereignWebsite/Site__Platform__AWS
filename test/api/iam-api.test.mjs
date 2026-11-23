@@ -101,6 +101,14 @@ await rejects(IamApi(async () => xml("<ErrorResponse><Error><Type>Sender</Type><
   (e) => e.code === "Throttling" && e.status === 400 && e.message === "Throttling: Rate exceeded", "Query error shape");
 await rejects(IamApi(async () => Promise.reject(new TypeError("Failed to fetch"))).roles(), (e) => e instanceof TypeError, "a CORS refusal passes through");
 
+// ---- linear parsing and a body cap (security R-023, as cfn-api.js) ----
+for (const a of ["<ListRolesResponse><ListRolesResult><Roles>" + "<member><RoleName>x".repeat(60000), "<Roles><member>" + "<Arn ".repeat(60000), "<Code>".repeat(100000)]) {
+  const t0 = Date.now();
+  try { await IamApi(async () => new Response(a, { status: a.startsWith("<Code>") ? 400 : 200 })).roles(); } catch (e) { /* refused is fine */ }
+  ok(Date.now() - t0 < 300, "an unclosed tag in " + (a.length >> 10) + " KB parsed in " + (Date.now() - t0) + " ms");
+}
+await rejects(IamApi(async () => new Response("<X>" + "a".repeat(4 * 1024 * 1024) + "</X>")).roles(), (e) => e.code === "TooLarge", "an answer over 4 MB is refused before parsing");
+
 // ---- contract ----
 const docj = JSON.parse(readFileSync(new URL("../../site/api/iam.openapi.json", import.meta.url), "utf8"));
 const ops = Object.values(docj.paths).flatMap((p) => Object.values(p));
