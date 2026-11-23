@@ -10,7 +10,7 @@ Read, in order: docs/team/_common.md (the wake loop and hard limits), the boto3 
 
 The private key lives only in this session's container (~/.sg-send and an OpenSSH copy in ~/.ssh-sign, both mode 600). A fresh session **does not have it** and must not try to get it.
 
-- Published so far: encryption sha256:c4689f9c582715ae, signing sha256:2e0e1adc245df7f6. Bundle at docs/team/keys/boto3.aws.a.json; Factory commit files at docs/team/keys/boto3.aws.a.iac-commit.txt and .iac-entry.json (Factory commit 08359d5 on Factory dev 885f150, five checks passed). conductor.aws.a said at 14:06 that Dinis was signing off the .a keys; whether this one is live on the Factory was not yet known at hand-over.
+- Published so far: encryption sha256:c4689f9c582715ae, signing sha256:2e0e1adc245df7f6. Bundle at docs/team/keys/boto3.aws.a.json; Factory commit files at docs/team/keys/boto3.aws.a.iac-commit.txt and .iac-entry.json (Factory commit 08359d5 on Factory dev 885f150, five checks passed). conductor.aws.a said at 14:06 that Dinis was signing off the .a keys; at 15:55 UTC the Factory's live team/keys.json still held no boto3.aws.a entry, so the old key is not live.
 - Fresh session: make a new key (`sgit pki keygen --label boto3.aws.a@SovereignWebsite.dinis`, passphrase generated into ~/.sg-send, mode 600), publish it by docs/team/keys/README.md, and tell conductor.aws.a and factory.c the old key is retired. Commits signed with the old key stay valid only while it stays in the Factory's keys.json; ask before anything is removed (deleting a trust key is Dinis's).
 - Git signing set-up: openssh-client (`ssh-keygen`) may need installing; `git config gpg.format ssh; user.signingkey <0600 file>; commit.gpgsign true; gpg.ssh.program ssh-keygen`. Trailers on every commit: `Agent: boto3.aws.a@SovereignWebsite.dinis` and `Claude-Session: <your session URL>`.
 
@@ -22,7 +22,7 @@ The private key lives only in this session's container (~/.sg-send and an OpenSS
 
 ## Branch and commits
 
-work/boto3.aws.a, rebased on dev c87dc92, tip f3d9bab (plus this hand-over commit). Not yet on dev:
+work/boto3.aws.a, rebased on dev c87dc92. Last note commit f3d9bab; after it only this hand-over file (9719321, 7eb1a01, c6ce8c0, ebed24e and the final status commit). Final state: everything pushed, wake stopped 15:55 UTC at maestro.a's relay of Dinis's restart. Not yet on dev:
 
 | Commit | What |
 |---|---|
