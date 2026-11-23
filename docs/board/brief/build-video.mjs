@@ -88,9 +88,9 @@ for (const b of sb.beats) {
   b.visual.at = 0; b.visual.play = +(s + 0.6).toFixed(1); b.visual.end = +s.toFixed(2);
 }
 const sbText = JSON.stringify(sb).replace(/</g, '\\u003c');
-const svgText = JSON.stringify(SVGS).replace(/<\//g, '<\\/');
+const svgText = JSON.stringify(SVGS).replace(/</g, '\\u003c');  // every '<' escaped, so nothing in the SVGs can end or confuse the script block
 let out = player
-  .replace(/<title>[^<]*<\/title>/, `<title>${sb.title}</title>`)
+  .replace(/<title>[^<]*<\/title>/, () => `<title>${sb.title.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</title>`)
   .replace(/<script id="sb" type="application\/json">[\s\S]*?<\/script>/, () => `<script id="sb" type="application/json">${sbText}</script>`)
   .replace(/<script id="svgs" type="application\/json">[\s\S]*?<\/script>/, () => `<script id="svgs" type="application/json">${svgText}</script>`);
 // First change to the studio's player: when paused, an SVG beat shows its final frame (v.end), not its first.
