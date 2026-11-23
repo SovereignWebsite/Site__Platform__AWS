@@ -1483,6 +1483,64 @@
       return answer(url, init, host);
     });
   }
+  // ---- Route 53: three reads (cloudformation.aws.a's seed, docs/cloudformation/seed/route53.json; boto3.aws.a note 20) ----
+  // ListHostedZones, GetHostedZone and ListResourceRecordSets for the platform account; every other Route 53 call is a
+  // 501. Global: route53.amazonaws.com, rest-xml. CORS on the real endpoint is per the SDK v2 metadata and is to be
+  // confirmed with one real call (aws.c, with Dinis's approval); each answer says so in an x-twin-note header. The
+  // twin's own choices, where AWS's documentation does not say: maxitems 1 to 100 for zones and 1 to 300 for records,
+  // a record start that must name an existing record, the error wording, and the seed's record order. The www alias's
+  // AliasTarget.HostedZoneId is left out, as in the seed (CloudFront's fixed alias zone id needs a source).
+  var R53_NS = " xmlns=\"https://route53.amazonaws.com/doc/2013-04-01/\"", R53_NOTE = "CORS per SDK v2 metadata, confirm with one real call";
+  var R53_ZONES = [{ id: "Z0DEMOTWIN0001", name: "example.com.", comment: "demo zone (made by stack demo-dns)", ns: ["ns-0000.awsdns-00.org", "ns-0001.awsdns-01.co.uk"],
+    records: [
+      { name: "example.com.", type: "NS", ttl: 172800, values: ["ns-0000.awsdns-00.org.", "ns-0001.awsdns-01.co.uk."] },
+      { name: "example.com.", type: "SOA", ttl: 900, values: ["ns-0000.awsdns-00.org. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400"] },
+      { name: "www.example.com.", type: "A", alias: { dns: "d111111abcdef8.cloudfront.net.", health: false } },
+      // Made by no stack, and points at an S3 website bucket that is not in the account: a dangling name (the seed's finding).
+      { name: "old.example.com.", type: "CNAME", ttl: 300, values: ["old.example.com.s3-website.eu-west-2.amazonaws.com"] }
+    ] }];
+  function r53(body, status) { var r = xml("<?xml version=\"1.0\"?>" + body, status); r.headers.set("x-twin-note", R53_NOTE); return r; }
+  function r53Err(code, msg, status) { return r53("<ErrorResponse" + R53_NS + "><Error><Type>Sender</Type><Code>" + code + "</Code><Message>" + esc(msg) + "</Message></Error><RequestId>twin</RequestId></ErrorResponse>", status || 400); }
+  function r53Max(q, top) { var v = q.has("maxitems") ? q.get("maxitems") : String(top); return /^[0-9]{1,3}$/.test(v) && +v >= 1 && +v <= top ? +v : null; }
+  function r53Zone(z) {
+    return "<HostedZone><Id>/hostedzone/" + z.id + "</Id><Name>" + esc(z.name) + "</Name><CallerReference>twin-" + z.id + "</CallerReference><Config><Comment>" + esc(z.comment) +
+      "</Comment><PrivateZone>false</PrivateZone></Config><ResourceRecordSetCount>" + z.records.length + "</ResourceRecordSetCount></HostedZone>";
+  }
+  function r53Record(r) {
+    return "<ResourceRecordSet><Name>" + esc(r.name) + "</Name><Type>" + r.type + "</Type>" + (r.alias
+      ? "<AliasTarget><DNSName>" + esc(r.alias.dns) + "</DNSName><EvaluateTargetHealth>" + r.alias.health + "</EvaluateTargetHealth></AliasTarget>"
+      : "<TTL>" + r.ttl + "</TTL><ResourceRecords>" + r.values.map(function (v) { return "<ResourceRecord><Value>" + esc(v) + "</Value></ResourceRecord>"; }).join("") + "</ResourceRecords>") + "</ResourceRecordSet>";
+  }
+  function route53(url, init) {
+    var u = new URL(url), q = u.searchParams, m = /^\/2013-04-01\/hostedzone(?:\/([^\/]+)(\/rrset)?)?$/.exec(u.pathname);
+    if (!m || (init.method || "GET").toUpperCase() !== "GET")
+      return r53Err("NotImplemented", "The twin answers three Route 53 reads only: ListHostedZones, GetHostedZone and ListResourceRecordSets. Twin mode never calls real AWS.", 501);
+    if (m[1] === undefined) {
+      var zmax = r53Max(q, 100);
+      if (zmax === null) return r53Err("InvalidInput", "maxitems must be a whole number from 1 to 100 (the twin's bound).");
+      var zfrom = 0, mk = q.get("marker");
+      if (mk) { zfrom = R53_ZONES.map(function (z) { return z.id; }).indexOf(mk); if (zfrom < 0) return r53Err("InvalidInput", "The marker is not valid."); }
+      var zp = R53_ZONES.slice(zfrom, zfrom + zmax), zmore = zfrom + zmax < R53_ZONES.length;
+      return r53("<ListHostedZonesResponse" + R53_NS + "><HostedZones>" + zp.map(r53Zone).join("") + "</HostedZones><Marker>" + esc(mk || "") + "</Marker><IsTruncated>" + zmore + "</IsTruncated>" +
+        (zmore ? "<NextMarker>" + R53_ZONES[zfrom + zmax].id + "</NextMarker>" : "") + "<MaxItems>" + zmax + "</MaxItems></ListHostedZonesResponse>");
+    }
+    if (!/^Z[A-Z0-9]{1,32}$/.test(m[1])) return r53Err("InvalidInput", "The hosted zone id is not valid.");
+    var zone = R53_ZONES.filter(function (z) { return z.id === m[1]; })[0];
+    if (!zone) return r53Err("NoSuchHostedZone", "No hosted zone found with ID: " + m[1], 404);
+    if (!m[2]) return r53("<GetHostedZoneResponse" + R53_NS + ">" + r53Zone(zone) + "<DelegationSet><NameServers>" + zone.ns.map(function (n) { return "<NameServer>" + n + "</NameServer>"; }).join("") +
+      "</NameServers></DelegationSet></GetHostedZoneResponse>");
+    var rmax = r53Max(q, 300);
+    if (rmax === null) return r53Err("InvalidInput", "maxitems must be a whole number from 1 to 300 (the twin's bound).");
+    var rs = zone.records, rfrom = 0;
+    if (q.has("name")) {
+      rfrom = -1;
+      for (var i = 0; i < rs.length; i++) if (rs[i].name === q.get("name") && (!q.has("type") || rs[i].type === q.get("type")) && !q.has("identifier")) { rfrom = i; break; }
+      if (rfrom < 0) return r53Err("InvalidInput", "The start record is not in the zone (the twin's bound).");
+    } else if (q.has("type") || q.has("identifier")) return r53Err("InvalidInput", "type and identifier need a name.");
+    var rp = rs.slice(rfrom, rfrom + rmax), rnext = rs[rfrom + rmax];
+    return r53("<ListResourceRecordSetsResponse" + R53_NS + "><ResourceRecordSets>" + rp.map(r53Record).join("") + "</ResourceRecordSets><IsTruncated>" + !!rnext + "</IsTruncated>" +
+      (rnext ? "<NextRecordName>" + esc(rnext.name) + "</NextRecordName><NextRecordType>" + rnext.type + "</NextRecordType>" : "") + "<MaxItems>" + rmax + "</MaxItems></ListResourceRecordSetsResponse>");
+  }
   function answer(url, init, host) {
     var body = typeof init.body === "string" ? init.body : "";
     // The customer's account has only its CloudFormation stacks and, from them, its CloudFront distributions and functions
@@ -1503,6 +1561,7 @@
       else if (/^firehose\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = firehose((hdr(init, "x-amz-target") || "").split(".")[1], body, init);
       else if (/\.?s3\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = s3(url, init);
       else if (host === "cloudfront.amazonaws.com") p = cloudfront(url, init, customerOf(init) || ACCOUNT);
+      else if (host === "route53.amazonaws.com") p = route53(url, init);
       else p = xmlErr("NotImplemented", "The twin does not answer " + host + " yet. Twin mode never calls real AWS.", 501);
     } catch (e) { p = xmlErr("InternalFailure", e.message, 500); }
     return Promise.resolve(p).then(function (r) { return new Promise(function (res) { setTimeout(function () { res(r); }, 60 + lag() * 120); }); });
