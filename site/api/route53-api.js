@@ -15,9 +15,9 @@
 //
 // A zone's id is the bare Z... (Route 53 answers "/hostedzone/Z...", and takes the bare id in request paths: note 20);
 // its arn is arn:aws:route53:::hostedzone/<id>, the same id CfnApi derives for AWS::Route53::HostedZone, so the graph
-// has one node per zone. Records have no ARN in AWS; id is urn:sws:record:<name>, the name normalised (lower case, no
-// trailing dot), plus /<setIdentifier> when there is one (as agreed with cloudformation.aws.a and ontology.aws.a), so a
-// name's A and AAAA are one node and CfnApi derives the same id for AWS::Route53::RecordSet from its physical id.
+// has one node per zone. Records have no ARN in AWS; id is urn:sws:route53-record:<zoneId>/<name>/<type>[/<setIdentifier>]
+// (design 03 refinement 3): the name normalised (lower case, no trailing dot, octal escapes decoded), the set identifier
+// when there is one, so NS and SOA on a name, an A and AAAA pair, and one name in two zones are distinct records.
 // Record paging is not a marker but the triple (StartRecordName, StartRecordType, StartRecordIdentifier); next is that
 // triple, opaque to callers. Names keep Route 53's trailing dot; its \ddd octal escapes (such as \052 for *) are decoded.
 // Comments, names and values are the owner's text: render as text. Errors: an Error "Code: Message" with .code and
@@ -72,7 +72,10 @@
       comment: txt(cfg, "Comment") || "", recordCount: count === null ? null : Number(count), callerReference: txt(z, "CallerReference") };
   }
   function normName(n) { return String(n === null || n === undefined ? "" : n).toLowerCase().replace(/\.$/, ""); }
-  function recordId(name, setIdentifier) { var n = normName(name); return n ? "urn:sws:record:" + n + (setIdentifier ? "/" + setIdentifier : "") : null; }
+  function recordId(zone, name, type, setIdentifier) {
+    var z = zoneId(zone), n = normName(name), t = String(type === null || type === undefined ? "" : type);
+    return z && n && /^[A-Z]{1,10}$/.test(t) ? "urn:sws:route53-record:" + z + "/" + n + "/" + t + (setIdentifier ? "/" + setIdentifier : "") : null;
+  }
   function maxOf(o) { return o && o.max ? String(Math.min(Math.max(1, o.max | 0), 300)) : null; }
 
   function Route53Api(send, opts) {
@@ -129,7 +132,7 @@
         var items = kids(kid(res, "ResourceRecordSets"), "ResourceRecordSet").map(function (r) {
           var at = kid(r, "AliasTarget"), ttl = txt(r, "TTL");
           var nm = dnsName(txt(r, "Name")), sid = txt(r, "SetIdentifier");
-          return { id: recordId(nm, sid), zoneId: z, name: nm, type: txt(r, "Type"), setIdentifier: sid, ttl: ttl === null ? null : Number(ttl),
+          return { id: recordId(z, nm, txt(r, "Type"), sid), zoneId: z, name: nm, type: txt(r, "Type"), setIdentifier: sid, ttl: ttl === null ? null : Number(ttl),
             values: kids(kid(r, "ResourceRecords"), "ResourceRecord").map(function (v) { return txt(v, "Value"); }),
             alias: at ? { dnsName: dnsName(txt(at, "DNSName")), hostedZoneId: txt(at, "HostedZoneId"), evaluateTargetHealth: txt(at, "EvaluateTargetHealth") === "true" } : null };
         });

@@ -329,9 +329,26 @@
         });
       });
     }
+    // A stack's AWS::Route53::RecordSet comes with its name only (ListStackResources' physical id): it is made_by on every
+    // record of that name (all types and set ids) in a zone the same stack made; failing that, in the only zone holding
+    // that name; otherwise no record is chosen and it stays its own node (architect.aws.a, design 03 refinement 3).
+    function recordsMadeBy(m, stackZones) {
+      var name = String(m.physicalId || "").toLowerCase().replace(/\.$/, ""), byZone = Object.create(null), zs = [];
+      if (!name) return [];
+      nodes.forEach(function (n) { if (n.type === "record" && n.record_name === name) { if (!byZone[n.zone_id]) { byZone[n.zone_id] = []; zs.push(n.zone_id); } byZone[n.zone_id].push(n.id); } });
+      var own = zs.filter(function (z) { return stackZones[m.stack + "\u0000" + z]; });
+      if (own.length) return own.reduce(function (a, z) { return a.concat(byZone[z]); }, []);
+      return zs.length === 1 ? byZone[zs[0]] : [];
+    }
     function cfnResolve() {
+      var stackZones = Object.create(null);
+      cfnMade.forEach(function (m) { if (m.type === "AWS::Route53::HostedZone" && m.physicalId) stackZones[m.stack + "\u0000" + m.physicalId] = true; });
       cfnMade.splice(0).forEach(function (m) {
         var id = m.id;
+        if (m.type === "AWS::Route53::RecordSet") {
+          var recs = recordsMadeBy(m, stackZones);
+          if (recs.length) return recs.forEach(function (r) { edge(r, "made_by", m.stack, "api", "CloudFormation ListStackResources (" + m.logicalId + ", record set " + m.physicalId + ")"); });
+        }
         if (m.derived && !nodes.has(id)) {
           var same = []; nodes.forEach(function (n) { if (n.cfn_type === m.type && n.label === m.physicalId) same.push(n.id); });
           if (same.length === 1) id = same[0];
@@ -382,7 +399,7 @@
       });
     }
     // Route 53 (design 03 part 1; architect.aws.a's note): a node per zone (its ARN, type zone, in the account) and per
-    // record (urn:sws:record:<name>[/<setIdentifier>], type record, in its zone). A record's alias or CNAME target joins
+    // record (urn:sws:route53-record:<zoneId>/<name>/<type>[/<setIdentifier>], design 03 refinement 3; type record, in its zone). A record's alias or CNAME target joins
     // at toJSON: a distribution's domain or alias is that distribution's ARN node (api, both are API answers); an S3
     // endpoint names its bucket (naming: the bucket is read from the host), which stays dangling when no adapter
     // describes it; anything else makes no edge and stays an attribute, never a guess.
@@ -397,10 +414,11 @@
         if (a) edge(z.arn, "in", a, "api", "Route 53 ListHostedZones");
       });
       (Array.isArray(o.records) ? o.records : []).forEach(function (r) {
-        if (!r || typeof r.id !== "string" || !/^urn:sws:record:[a-z0-9*_.-]+(\/[^\s]{1,128})?$/.test(r.id) || !/^Z[A-Z0-9]{1,32}$/.test(r.zoneId || "")) return;
-        vouch(node(r.id, "record", "A2", r.id.slice("urn:sws:record:".length).split("/")[0], { cfn_type: "AWS::Route53::RecordSet", set_identifier: r.setIdentifier || undefined }));
-        var types = nodes.get(r.id).record_types || [];
-        if (typeof r.type === "string" && types.indexOf(r.type) < 0) { types = types.concat([r.type]).sort(); nodes.get(r.id).record_types = types; }
+        if (!r || typeof r.id !== "string" || !/^Z[A-Z0-9]{1,32}$/.test(r.zoneId || "")) return;
+        var rm = /^urn:sws:route53-record:(Z[A-Z0-9]{1,32})\/([a-z0-9*_.-]{1,253})\/([A-Z]{1,10})(\/[^\s]{1,128})?$/.exec(r.id);
+        if (!rm || rm[1] !== r.zoneId) return;
+        vouch(node(r.id, "record", "A2", rm[2] + " " + rm[3], { cfn_type: "AWS::Route53::RecordSet", record_name: rm[2], record_type: rm[3], zone_id: rm[1],
+          set_identifier: r.setIdentifier || undefined }));
         edge(r.id, "in", "arn:aws:route53:::hostedzone/" + r.zoneId, "api", "Route 53 ListResourceRecordSets");
         if (r.alias && typeof r.alias.dnsName === "string") recordTargets.push({ id: r.id, host: r.alias.dnsName, how: "alias" });
         if (r.type === "CNAME" && Array.isArray(r.values)) r.values.forEach(function (v) { if (typeof v === "string") recordTargets.push({ id: r.id, host: v, how: "CNAME" }); });

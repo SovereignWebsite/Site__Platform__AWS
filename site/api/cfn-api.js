@@ -90,8 +90,6 @@
   var DERIVE = {
     "AWS::S3::Bucket": function (id) { return "arn:aws:s3:::" + id; },
     "AWS::Route53::HostedZone": function (id) { return "arn:aws:route53:::hostedzone/" + id; },
-    // A record set's physical id is its name: the id Route53Api gives a record with no set identifier.
-    "AWS::Route53::RecordSet": function (id) { var n = String(id).toLowerCase().replace(/\.$/, ""); return n ? "urn:sws:record:" + n : null; },
     "AWS::IAM::Role": function (id, region, account) { return account && "arn:aws:iam::" + account + ":role/" + id; },
     "AWS::CloudFront::Distribution": function (id, region, account) { return account && "arn:aws:cloudfront::" + account + ":distribution/" + id; },
     "AWS::Lambda::Function": function (id, region, account) { return account && "arn:aws:lambda:" + region + ":" + account + ":function:" + id; }

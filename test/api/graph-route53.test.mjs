@@ -1,7 +1,7 @@
 // Route53Api and Graph.add.route53 over the twin's Route 53 reads (1520020; cloudformation.aws.a's seed), with
 // CloudFrontApi and CfnApi over the twin: a zone node (its ARN, type zone, in the account) that is the same node as the
-// demo-dns stack's zone; record nodes urn:sws:record:<name> in their zone, the www record the same node as the stack's
-// record set; the www alias refers_to the demo distribution's ARN node (api); old.example.com's CNAME names a bucket
+// demo-dns stack's zone; record nodes urn:sws:route53-record:<zoneId>/<name>/<type>[/<setId>] (design 03 refinement 3) in
+// their zone, the stack's record set joined by name (its zone, else the only zone holding it, else none); the www alias refers_to the demo distribution's ARN node (api); old.example.com's CNAME names a bucket
 // that is not in the account, so it stays dangling and claimed (naming), never guessed to a target; NS and SOA values
 // make no edges; the same graph whichever adapter runs first. Node 22, no network. Run: node test/api/graph-route53.test.mjs
 import { readFileSync } from "node:fs";
@@ -40,7 +40,7 @@ let pages = 0;
 const records = plain((await Route53Api.all((next) => { pages++; return r53.records("Z0DEMOTWIN0001", { next, max: 1 }); })).items);
 ok(pages === 4 && records.map((r) => r.name + " " + r.type).join() === "example.com. NS,example.com. SOA,www.example.com. A,old.example.com. CNAME", "records over the twin, one a page on the name/type triple: the seed's four, in order");
 const www = records.find((r) => r.type === "A");
-ok(www.id === "urn:sws:record:www.example.com" && www.ttl === null && www.alias.dnsName === "d111111abcdef8.cloudfront.net." && www.alias.hostedZoneId === null, "the www alias: its target, no HostedZoneId (left out of the seed)");
+ok(www.id === "urn:sws:route53-record:Z0DEMOTWIN0001/www.example.com/A" && www.ttl === null && www.alias.dnsName === "d111111abcdef8.cloudfront.net." && www.alias.hostedZoneId === null, "the www alias: its target, no HostedZoneId (left out of the seed)");
 let e = null; try { await r53.zone("ZNOSUCHZONE1"); } catch (x) { e = x; }
 ok(e && e.code === "NoSuchHostedZone" && e.status === 404, "an unknown zone over the twin: NoSuchHostedZone, 404");
 
@@ -64,9 +64,10 @@ const j = build(["r53", "cf", "cfn"]);
 const node = (id) => j.nodes.find((n) => n.id === id), edge = (f, r, to) => j.edges.find((x) => x.from === f && x.rel === r && x.to === to);
 ok(node(ZONE).type === "zone" && node(ZONE).label === "example.com" && node(ZONE).trust === "verified" && edge(ZONE, "in", "urn:sws:account:" + A).evidence === "api", "the zone: its ARN, type zone, verified, in the account");
 ok(edge(ZONE, "made_by", dns.arn) && j.nodes.filter((n) => n.id === ZONE).length === 1, "one zone node: the stack's zone and Route 53's are the same");
-const W = "urn:sws:record:www.example.com", OLD = "urn:sws:record:old.example.com", APEX = "urn:sws:record:example.com";
-ok(node(W).type === "record" && edge(W, "in", ZONE) && edge(W, "made_by", dns.arn) && j.nodes.filter((n) => n.id === W).length === 1, "the www record: in its zone, and the same node as the stack's record set");
-ok(JSON.stringify(node(APEX).record_types) === '["NS","SOA"]' && edge(APEX, "in", ZONE), "the apex: one node for its NS and SOA");
+const RID = (n, t) => "urn:sws:route53-record:Z0DEMOTWIN0001/" + n + "/" + t, W = RID("www.example.com", "A"), OLD = RID("old.example.com", "CNAME"), NSR = RID("example.com", "NS"), SOA = RID("example.com", "SOA");
+ok(node(W).type === "record" && node(W).label === "www.example.com A" && edge(W, "in", ZONE) && edge(W, "made_by", dns.arn), "the www record: in its zone, made_by demo-dns (its WwwAlias joined by name in the stack's own zone)");
+ok(!j.nodes.some((n) => n.id.startsWith("urn:sws:cfn-resource:")), "no separate node for the stack's record set once it is joined");
+ok(node(NSR) && node(SOA) && NSR !== SOA && edge(NSR, "in", ZONE) && edge(SOA, "in", ZONE) && !edge(NSR, "made_by", dns.arn), "the apex's NS and SOA: two nodes (design 03 refinement 3), not made by the stack");
 const toDist = edge(W, "refers_to", DIST);
 ok(toDist && toDist.evidence === "api" && toDist.trust === "verified" && /alias target d111111abcdef8\.cloudfront\.net is the distribution's domain/.test(toDist.source), "the www alias refers_to the demo distribution's ARN node (api)");
 ok(!j.nodes.some((n) => n.id.startsWith("urn:sws:cloudfront-distribution:")) && j.nodes.filter((n) => n.type === "distribution").length === 1, "no second distribution node");
@@ -76,8 +77,8 @@ ok(node("arn:aws:s3:::old.example.com").dangling === true && node("arn:aws:s3:::
 ok(!edge(OLD, "made_by", dns.arn), "old.example.com was made by no stack (the seed's finding)");
 const rules = plain(Graph.rules(j)), rule = (id) => (Array.isArray(rules) ? rules : rules.items || []).find((r) => r.id === id);
 ok(rule("dangling-claimed") && rule("dangling-claimed").kind === "question" && rule("dangling-claimed").nodes.includes("arn:aws:s3:::old.example.com") && !(rule("dangling-confirmed") || { nodes: [] }).nodes.includes("arn:aws:s3:::old.example.com"), "Graph.rules: a question (dangling-claimed), not a finding");
-ok(!j.edges.some((x) => x.from === APEX && x.rel === "refers_to"), "NS and SOA values make no edges");
-ok(j.edges.filter((x) => x.rel === "refers_to" && x.from.startsWith("urn:sws:record:")).length === 2, "exactly two record targets: the alias and the CNAME");
+ok(!j.edges.some((x) => (x.from === NSR || x.from === SOA) && x.rel === "refers_to"), "NS and SOA values make no edges");
+ok(j.edges.filter((x) => x.rel === "refers_to" && x.from.startsWith("urn:sws:route53-record:")).length === 2, "exactly two record targets: the alias and the CNAME");
 for (const order of [["cf", "r53", "cfn"], ["cfn", "cf", "r53"], ["cfn", "r53", "cf"]]) {
   const k = build(order), key = (g) => g.edges.map((x) => [x.from, x.rel, x.to, x.evidence].join(" | ")).sort().join("\n");
   ok(key(k) === key(j) && k.nodes.length === j.nodes.length, "the same graph whatever order the adapters run: " + order);
@@ -85,8 +86,39 @@ for (const order of [["cf", "r53", "cfn"], ["cfn", "cf", "r53"], ["cfn", "r53", 
 const lone = Graph({ account: A, backend: "twin" }); lone.add.route53({ zones: [zone], records });
 const lj = plain(lone.toJSON());
 ok(!lj.edges.some((x) => x.to === DIST) && lj.edges.some((x) => x.to === "arn:aws:s3:::old.example.com"), "without CloudFront's answer the alias makes no edge (never a guess); the bucket name still comes from the host");
+// ---- by hand: a Vault's A and AAAA pair, and the stack join's three cases ----
+{
+  const C = "444455556666", VD = "arn:aws:cloudfront::" + C + ":distribution/EVAULTPAIR001", ZV = "ZVAULTZONE01", ZP = "ZPRIVATEZONE1";
+  const rec = (z, name, type, alias) => ({ id: Route53Api.recordId(z, name, type, null), zoneId: z, name, type, setIdentifier: null, ttl: alias ? null : 60, values: alias ? [] : ["10.0.0.1"], alias: alias ? { dnsName: alias, hostedZoneId: null, evaluateTargetHealth: false } : null });
+  const zoneOf = (id, name) => ({ id, arn: "arn:aws:route53:::hostedzone/" + id, name, private: id === ZP, comment: "", recordCount: 2 });
+  const vstack = (resources) => ({ arn: "arn:aws:cloudformation:eu-west-2:" + C + ":stack/sws-vault-v1/00000000-0000-4000-8000-0000000000v1", name: "sws-vault-v1", region: "eu-west-2", status: "CREATE_COMPLETE", resources });
+  const rs = (logical, name) => ({ logicalId: logical, physicalId: name, type: "AWS::Route53::RecordSet", arn: "urn:sws:cfn-resource:sws-vault-v1/" + logical, arnDerived: false, status: "CREATE_COMPLETE" });
+  const g = Graph({ account: C, backend: "twin" });
+  g.add.cloudfront({ distributions: [{ id: "EVAULTPAIR001", arn: VD, domain: "dvaultpair0001.cloudfront.net", aliases: ["vault.example.com"], origins: [], functions: [] }] });
+  g.add.route53({ zones: [zoneOf(ZV, "example.com.")], records: [rec(ZV, "vault.example.com.", "A", "dvaultpair0001.cloudfront.net."), rec(ZV, "vault.example.com.", "AAAA", "dvaultpair0001.cloudfront.net.")] });
+  const st = vstack([rs("VaultRecordA", "vault.example.com"), rs("VaultRecordAAAA", "vault.example.com")]);
+  g.add.cfn({ stacks: [st] });
+  const v = plain(g.toJSON()), VA = Route53Api.recordId(ZV, "vault.example.com.", "A"), VAAAA = Route53Api.recordId(ZV, "vault.example.com.", "AAAA");
+  const ve = (f, r, t) => v.edges.find((x) => x.from === f && x.rel === r && x.to === t);
+  ok(VA !== VAAAA && v.nodes.filter((n) => n.type === "record").length === 2, "a Vault's A and AAAA on one name: two nodes");
+  ok(ve(VA, "refers_to", VD).evidence === "api" && ve(VAAAA, "refers_to", VD).evidence === "api", "both refer_to the same distribution (api)");
+  ok(ve(VA, "made_by", st.arn) && ve(VAAAA, "made_by", st.arn) && !v.nodes.some((n) => n.id.startsWith("urn:sws:cfn-resource:")), "both made_by the Vault stack: the only zone holding the name (the stack did not make the zone)");
+  // A name in two zones (public and private): the stack's own zone wins; with neither its own, no record is chosen.
+  const two = (madeZone) => {
+    const h = Graph({ account: C, backend: "twin" });
+    h.add.route53({ zones: [zoneOf(ZV, "example.com."), zoneOf(ZP, "example.com.")], records: [rec(ZV, "app.example.com.", "A"), rec(ZP, "app.example.com.", "A")] });
+    const res = [rs("AppRecord", "app.example.com")];
+    if (madeZone) res.push({ logicalId: "PrivateZone", physicalId: ZP, type: "AWS::Route53::HostedZone", arn: "arn:aws:route53:::hostedzone/" + ZP, arnDerived: true, status: "CREATE_COMPLETE" });
+    h.add.cfn({ stacks: [vstack(res)] });
+    return plain(h.toJSON());
+  };
+  let k = two(true), made = (id) => k.edges.some((x) => x.from === id && x.rel === "made_by");
+  ok(Route53Api.recordId(ZV, "app.example.com.", "A") !== Route53Api.recordId(ZP, "app.example.com.", "A") && made(Route53Api.recordId(ZP, "app.example.com.", "A")) && !made(Route53Api.recordId(ZV, "app.example.com.", "A")), "one name in a public and a private zone: two nodes; the stack's own zone's record joins");
+  k = two(false);
+  ok(!made(Route53Api.recordId(ZP, "app.example.com.", "A")) && !made(Route53Api.recordId(ZV, "app.example.com.", "A")) && k.nodes.some((n) => n.id === "urn:sws:cfn-resource:" + vstack([]).arn + "/AppRecord"), "the name in two zones, neither the stack's: no record chosen, the stack's record set stays its own node");
+}
 const bad = Graph({ account: A, backend: "twin" });
-bad.add.route53({ zones: [null, {}, { arn: "arn:aws:route53:::hostedzone/../x" }], records: [null, { id: "urn:sws:record:a b", zoneId: "Z1" }, { id: "urn:sws:record:x.example.com", zoneId: "../Z" }, { id: "javascript:x", zoneId: "Z1" }] });
+bad.add.route53({ zones: [null, {}, { arn: "arn:aws:route53:::hostedzone/../x" }], records: [null, { id: "urn:sws:route53-record:Z1/a b/A", zoneId: "Z1" }, { id: "urn:sws:route53-record:Z1/x.example.com/A", zoneId: "Z2" }, { id: "urn:sws:route53-record:Z1/x.example.com/a", zoneId: "Z1" }, { id: "javascript:x", zoneId: "Z1" }] });
 bad.add.route53();
 ok(plain(bad.toJSON()).nodes.filter((n) => n.type === "zone" || n.type === "record").length === 0, "malformed zones and records are skipped");
 

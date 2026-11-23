@@ -75,13 +75,13 @@ ok(node(arnOf("demo-lambda")).status === "UPDATE_ROLLBACK_COMPLETE" && node(arnO
 const made = (name) => j.edges.filter((e) => e.rel === "made_by" && e.to === arnOf(name)).map((e) => e.from).sort();
 ok(made("sws-aws-platform").join() === ["change", "read"].map((x) => "arn:aws:iam::" + A + ":role/sws-aws-platform-" + x).join(), "the platform roles are made by sws-aws-platform (us-east-1)");
 ok(made("demo-site").join() === ["arn:aws:cloudfront::" + A + ":distribution/EDEMOTWIN00001", "arn:aws:s3:::" + AwsTwin.buckets.logs, "arn:aws:s3:::" + AwsTwin.buckets.site].sort().join(), "demo-site made its buckets and distribution");
-ok(made("demo-dns").join() === ["arn:aws:route53:::hostedzone/Z0DEMOTWIN0001", "urn:sws:record:www.example.com"].sort().join(), "demo-dns made its zone and a record set (the record id Route53Api gives www.example.com)");
+ok(made("demo-dns").join() === ["arn:aws:route53:::hostedzone/Z0DEMOTWIN0001", "urn:sws:cfn-resource:" + arnOf("demo-dns") + "/WwwAlias"].sort().join(), "demo-dns made its zone and a record set (urn from the stack ARN: no Route 53 answer to join)");
 ok(j.edges.filter((e) => e.rel === "made_by").every((e) => e.evidence === "api" && e.trust === "verified" && e.source === "CloudFormation ListStackResources"), "made_by: api evidence");
 ok(node("arn:aws:s3:::" + AwsTwin.buckets.site).type === "bucket" && node("arn:aws:iam::" + A + ":role/demo-handler-role").type === "role" && node("arn:aws:iam::" + A + ":role/demo-handler-role").altitude === "A4"
-  && node("arn:aws:lambda:eu-west-2:" + A + ":function:demo-handler").type === "function" && node("urn:sws:record:www.example.com").type === "record"
+  && node("arn:aws:lambda:eu-west-2:" + A + ":function:demo-handler").type === "function" && node("urn:sws:cfn-resource:" + arnOf("demo-dns") + "/WwwAlias").type === "record"
   && node("arn:aws:route53:::hostedzone/Z0DEMOTWIN0001").type === "unknown", "resources typed from their CloudFormation type where the schema has one");
 ok(node("arn:aws:s3:::" + AwsTwin.buckets.site).arn_derived === true && node("arn:aws:s3:::" + AwsTwin.buckets.site).logical_id === "SiteBucket", "a derived ARN says so");
-ok(node("arn:aws:s3:::" + AwsTwin.buckets.site).attribute_trust.id.trust === "claimed" && node(arnOf("demo-site")).attribute_trust.id === undefined && node("urn:sws:record:www.example.com").attribute_trust.id.trust === "claimed", "a node made only from a derived ARN or record id: its id is claimed");
+ok(node("arn:aws:s3:::" + AwsTwin.buckets.site).attribute_trust.id.trust === "claimed" && node(arnOf("demo-site")).attribute_trust.id === undefined && node("urn:sws:cfn-resource:" + arnOf("demo-dns") + "/WwwAlias").attribute_trust.id === undefined, "a node made only from a derived ARN: its id is claimed");
 
 // ---- refers_to (imports) ----
 ok(has(arnOf("demo-dns"), "refers_to", arnOf("demo-site")) && has(arnOf("demo-dns"), "refers_to", arnOf("demo-site")).evidence === "api" && /demo-site-distribution-domain/.test(has(arnOf("demo-dns"), "refers_to", arnOf("demo-site")).source), "demo-dns imports from demo-site");
