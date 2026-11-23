@@ -172,6 +172,10 @@ ok(!/urn:sws:actor-ip:|"src_ip"/.test(json) && !/\b(\d{1,3}\.){3}(?!0\/24)\d{1,3
 const cfActors = mine.edges.filter((e) => e.rel === "seen_in" || e.rel === "targeted");
 if (PACK === "attack") ok(cfActors.length > 0 && cfActors.every((e) => e.from === "urn:sws:actor-net:203.0.113.0/24"), "pack attack: the attacker's network, and only it, is singled out (" + cfActors.length + " edges)");
 else ok(!cfActors.length, "pack " + PACK + ": no CloudFront actor singled out");
+// The operator's network (192.0.2.0/24, CloudTrail's sourceIPAddress 192.0.2.7) holds only the operator: its node has
+// CloudTrail acted_on edges and no CloudFront edges, in every pack (architect.aws.a on b44f852).
+const opEdges = mine.edges.filter((e) => e.from === "urn:sws:actor-net:192.0.2.0/24");
+ok(opEdges.length > 0 && opEdges.every((e) => e.rel === "acted_on") && !cfActors.some((e) => e.from === "urn:sws:actor-net:192.0.2.0/24"), "pack " + PACK + ": the operator's network has only CloudTrail acted_on edges (" + opEdges.length + ")");
 
 // ---- hostile names stay data ----
 const h = ctx.Graph({ account: A, backend: "twin" });

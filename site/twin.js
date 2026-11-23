@@ -52,16 +52,14 @@
   try { var qp = new URLSearchParams(root.location.search).get("pack"); if (qp && own(PACKS, qp)) pack = qp; else { var sp = localStorage.getItem("sws-aws-twin-pack"); if (sp && own(PACKS, sp)) pack = sp; } } catch (e) { /* none */ }
   var enc = new TextEncoder();
   // Who is where (design 03's split, architect.aws.a 23 Nov): every address is in the RFC 5737 documentation ranges,
-  // and the three kinds of client never share a /24, so a filter on one network finds one kind of client.
-  //   visitors: 198.51.100.0/24 and 192.0.2.0/24, less 198.51.100.240/28 (kept for EC2 public addresses) and
-  //             192.0.2.7 (the operator); one rnd() per visitor picks from VISITOR_IPS
+  // one /24 per kind of client, so a filter on one network (or the graph's actor-net node) is one kind of client.
+  //   visitors: 198.51.100.1 to .239 (198.51.100.240/28 is kept for EC2 public addresses); one rnd() per visitor
   //   attacker: 203.0.113.0/24 (the probe's address is in the attack pack)
-  //   operator: 192.0.2.7 (the platform's own calls in CloudTrail)
+  //   operator: 192.0.2.0/24, its calls in CloudTrail from 192.0.2.7
   var OPERATOR_IP = "192.0.2.7", EC2_PUBLIC = "198.51.100.240/28";
   var VISITOR_IPS = (function () {
     var out = [], i;
     for (i = 1; i < 240; i++) out.push("198.51.100." + i);
-    for (i = 1; i < 255; i++) if ("192.0.2." + i !== OPERATOR_IP) out.push("192.0.2." + i);
     return out;
   })();
 
@@ -894,6 +892,6 @@
     ready: function () { return ready; }, loadError: function () { return loadError ? loadError.message : null; },
     fold: function (entries) { return fold(entries); },
     packs: PACKS, pack: function () { return pack; },
-    networks: { visitors: ["198.51.100.0/24", "192.0.2.0/24"], attacker: "203.0.113.0/24", operator: OPERATOR_IP, reserved: [EC2_PUBLIC, OPERATOR_IP + "/32"] },
+    networks: { visitors: ["198.51.100.0/24"], attacker: "203.0.113.0/24", operator: OPERATOR_IP, operatorNet: "192.0.2.0/24", reserved: [EC2_PUBLIC] },
     usePack: function (name) { if (!own(PACKS, name)) return; try { localStorage.setItem("sws-aws-twin-pack", name); } catch (e) { /* none */ } } };
 })(window);
