@@ -102,11 +102,11 @@ Three findings the graph gives for free (ontology section 6), each a filtered li
 
 | Finding | What it lists | Baseline count | Words on screen |
 |---|---|---|---|
-| Dangling | nodes an edge names but no adapter added (`unknown` type, graph.js `toJSON`) | none on baseline | "Named by a record but not found in the account. Renamed or deleted?" |
+| Dangling | two rules since dev.2.aws.a's `Graph.rules` (856185b): `dangling-confirmed`, named by an AWS answer but not found, and `dangling-claimed`, named by a file or name but not found (the second worded as a question) | none on baseline | "Named by a record but not found in the account. Renamed or deleted?" |
 | Unowned | resources with no `made_by` edge | 44 nodes with no `made_by` on dev's 47-node copy, most of them objects and records; resources only, to count | "No stack says it made this." |
 | By name only | edges whose only evidence is `naming` | 11 edges on baseline | "Linked only because the names match. Check before relying on it." |
 
-The counts shown are computed live from the graph in the page, never written into the page. The table's numbers are only there to check the wireframe against today's twin. Unowned should count resources (A2) only, not objects or records, or it will always be most of the graph. That is a rule for dev.2.aws.a, and I will check the number on the twin when it is built.
+The counts shown are computed live from the graph in the page (`Graph.rules`, the same rules as Desk, design 08), never written into the page. Unowned appears only when stacks were read. The table's numbers are only there to check the wireframe against today's twin. Unowned should count resources (A2) only, not objects or records, or it will always be most of the graph. That is a rule for dev.2.aws.a, and I will check the number on the twin when it is built.
 
 ## 6. Addresses
 
