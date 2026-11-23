@@ -6,7 +6,7 @@
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-const ctx = { URLSearchParams, URL, Response, Promise, Error, TypeError, JSON, Object, Array, String, Number, RegExp, Math };
+const ctx = { URLSearchParams, URL, Response, Headers, Promise, Error, TypeError, JSON, Object, Array, String, Number, RegExp, Math };
 ctx.window = ctx; ctx.globalThis = ctx;
 vm.createContext(ctx);
 for (const f of ["api/all.js", "api/cloudfront-api.js"]) vm.runInContext(readFileSync(new URL("../../site/" + f, import.meta.url), "utf8"), ctx, { filename: f });
@@ -121,6 +121,11 @@ const fake = (answer) => { const log = []; const send = async (req) => { log.pus
   await rejects(CloudFrontApi(() => Promise.reject(new TypeError("Failed to fetch"))).distributions(), (e) => e instanceof TypeError && e.message === "Failed to fetch", "a CORS TypeError passes through");
   await rejects(CloudFrontApi(fake(() => [503, "busy"]).send).distributions(), (e) => e.code === "HTTP 503" && e.status === 503, "a non-XML failure keeps its status");
   await rejects(CloudFrontApi(fake(() => [200, "<X>" + "a".repeat(4 * 1024 * 1024) + "</X>"]).send).distributions(), (e) => e.code === "TooLarge", "over 4 MB refused");
+  let read = false;
+  const declared = CloudFrontApi(async () => ({ ok: true, status: 200, headers: new Headers({ "content-length": String(5 * 1024 * 1024) }), text: async () => { read = true; return ""; } }));
+  await rejects(declared.distributions(), (e) => e.code === "TooLarge", "a declared length over 4 MB is refused");
+  ok(!read, "...before the body is read");
+  ok(CloudFrontApi.originKind("abc.s3.cn-north-1.amazonaws.com", "aws-cn").target === "arn:aws-cn:s3:::abc" && CloudFrontApi.originKind("abc.s3.amazonaws.com", "evil:x").target === "arn:aws:s3:::abc", "the bucket's ARN takes the distribution's partition; anything odd falls back to aws");
   const t0 = Date.now(); try { await CloudFrontApi(fake(() => [200, "<DistributionList><Items>" + "<DistributionSummary><Origins>".repeat(20000)]).send).distributions(); } catch (e) { /* fine */ }
   ok(Date.now() - t0 < 500, "deep unclosed nesting parsed in " + (Date.now() - t0) + " ms");
   let thrown = null; try { CloudFrontApi(); } catch (e) { thrown = e; } ok(thrown instanceof TypeError, "CloudFrontApi needs a send");
@@ -128,7 +133,8 @@ const fake = (answer) => { const log = []; const send = async (req) => { log.pus
 }
 // ---- origin kinds directly ----
 for (const [d, k, t] of [["bkt.s3.amazonaws.com", "s3", "arn:aws:s3:::bkt"], ["b.s3.amazonaws.com", "custom", null], ["abc.s3.us-east-1.amazonaws.com", "s3", "arn:aws:s3:::abc"], ["abc.s3-website.eu-west-2.amazonaws.com", "s3-website", "arn:aws:s3:::abc"],
-  ["abc.s3.eu-west-2.amazonaws.com.evil.example", "custom", null], ["s3.amazonaws.com", "custom", null], ["ABC.S3.AMAZONAWS.COM", "s3", "arn:aws:s3:::abc"], ["x.lambda-url.eu-west-2.on.aws.evil", "custom", null]]) {
+  ["abc.s3.eu-west-2.amazonaws.com.evil.example", "custom", null], ["old-bucket.s3-eu-west-1.amazonaws.com", "s3", "arn:aws:s3:::old-bucket"], ["abc.s3-website-eu-west-1.amazonaws.com", "s3-website", "arn:aws:s3:::abc"],
+  ["abc.s3.dualstack.eu-west-1.amazonaws.com", "custom", null], ["abc.s3-external-1.amazonaws.com", "custom", null], ["s3.amazonaws.com", "custom", null], ["ABC.S3.AMAZONAWS.COM", "s3", "arn:aws:s3:::abc"], ["x.lambda-url.eu-west-2.on.aws.evil", "custom", null]]) {
   const r = CloudFrontApi.originKind(d);
   ok(r.kind === k && r.target === t, "originKind(" + d + ") -> " + k + " " + t + " (got " + r.kind + " " + r.target + ")");
 }
