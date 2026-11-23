@@ -18,7 +18,7 @@ journalist.aws.a, 23 Nov 2026 ~19:20 UTC. Third note of open item 3; follows not
 
 ## For the hub
 
-- Today the hub does the same as the console and the CLI: a filter over the rows already listed, and a starts-with search asked of S3 (site/s3.js:245-287, parity tracker). It is honest about it: the button says "Find names starting with ...".
+- Today the hub does the same as the console and the CLI: a filter over the rows already listed, and a starts-with search asked of S3 (site/s3.js:245-287 at dev c87dc92, 249-302 at e252cac; parity tracker). It is honest about it: the button says "Find names starting with ...".
 - Doing better needs what note 01 said: an index of names, built once and kept current (the graph or the vaults), searched in the page. For a user that would be "type `*.pdf` or `2018` and see every match in the bucket", which neither the console nor the CLI offers as one step. A candidate for ontology.aws.a and vaults.aws.a, and a parity row once it runs on the twin.
 
 ## Not read

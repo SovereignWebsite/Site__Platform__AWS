@@ -21,7 +21,7 @@ All three are command line tools or libraries; none is a page in a browser. The 
 
 - AWS's S3 User Guide (using-prefixes, read by boto3.aws.a 23 Nov): "Searching by prefix limits the results to only those keys that begin with the specified prefix."
 - AWS's Lightsail guide (amazon-lightsail-filtering-bucket-objects, read 23 Nov): Lightsail buckets filter "by name prefix", and only in the open folder: "The list of objects in the folder that you're currently viewing are filtered to match the text you enter." This is Lightsail, not the S3 console; whether the S3 console box is also limited to the open folder is still to confirm (parity tracker).
-- The hub today matches that: a filter over the rows listed, and a starts-with search asked of S3 (site/s3.js:245-287). Neither AWS nor the hub finds a name by a word in its middle.
+- The hub today matches that: a filter over the rows listed, and a starts-with search asked of S3 (site/s3.js:245-287 at dev c87dc92; 249-302 at e252cac). Neither AWS nor the hub finds a name by a word in its middle.
 
 Lesson for the team: "find by a word anywhere in the name" across a large bucket is the next ask to test. It cannot be one S3 call (ListObjectsV2 takes a prefix only), so it needs an index: a candidate for the graph or the vaults (ontology.aws.a, vaults.aws.a), not for a quick fix in the S3 browser.
 
