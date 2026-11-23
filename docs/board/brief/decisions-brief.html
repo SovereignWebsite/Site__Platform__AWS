@@ -101,7 +101,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
   <header>
     <div>
       <h1>Seven decisions for Dinis</h1>
-      <p class="sub">AWS Platform programme · from <span class="t-mono">docs/board/decisions.md</span>, 23 Nov 2026, 11:50 UTC · kept by pm.aws.a</p>
+      <p class="sub">AWS Platform programme · from <span class="t-mono">docs/board/decisions.md</span>, 23 Nov 2026, 11:55 UTC · kept by pm.aws.a</p>
     </div>
     <div class="tabs" role="tablist" aria-label="View">
       <button role="tab" id="tab-brief" aria-selected="true" aria-controls="view-brief">Brief</button>
@@ -142,7 +142,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
   "title": "Seven decisions for Dinis",
   "source": "docs/board/decisions.md on work/pm.aws.a, 23 Nov 11:40 UTC, Site__Platform__AWS",
   "made_by": "pm.aws.a@SovereignWebsite.dinis",
-  "answer": "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a",
+  "answer": "1 a, 2 a, 3 c, 4 a, 5 a, 7 a",
   "scenes": [
     {"id":"intro","eyebrow":"The brief","title":"Seven decisions, one page","dur":16,
      "beats":[
@@ -189,15 +189,15 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
        [11,"Option a: merge all nine. Option b: only s3 for now. Recommended: a.","All nine outlines turn solid; the a option chip lights as recommended."]],
      "panel":{"asks":"factory.c (you said yes to the nine areas in aws.c's session)","what":"The requests are on work/factory.c-aws-areas in the Factory, waiting for your merge.",
        "options":[["a","Merge all nine."],["b","Only s3 for now."]],"rec":"a","blocks":"Each area's own site and its Try the twin link."}},
-    {"id":"d6","eyebrow":"Decision 6 · Security R-008 (High) · AWS change","title":"A permissions boundary on the change role","dur":34,
+    {"id":"d6","eyebrow":"Decision 6 · Security R-008 (High) · AWS change","title":"A permissions boundary on the change role (waiting on v2.5)","dur":34,
      "beats":[
        [0,"Even after v2.1, a script in the page could make the change role admin through a change set, in about four calls.","A chain draws left to right: script in the page, change role, create change set, execute change set, admin."],
        [8,"And the change role can rewrite the DNS role's trust. That role can repoint the site's name, so it is a second way out.","A second red chain drops from the change role to the DNS role's trust and on to the site's name."],
        [15,"iam.aws.a's v2.4 adds permissions boundaries that keep each role to today's scopes, and makes the DNS role's trust console only.","A boundary ring closes round the change role; both red chains are cut."],
        [23,"security.aws.a cleared v2.4 on paper. Before any apply: iam.aws.a's two checks, then your own apply in the console.","A three-line checklist appears: two checks, your console apply, two DNS plans retired."],
-       [30,"Recommended: a, by iam and security. b keeps DNS trust edits on the page, c defers the boundaries, d relies on splitting the change page.","The a option chip lights as recommended; b is marked not recommended."]],
+       [30,"Not ready yet: v2.4 misses thirteen reads the new API layer needs. Security asked for v2.5; this comes back to you once it is cleared.","The a option chip lights; a note says waiting on v2.5."]],
      "panel":{"asks":"iam.aws.a (P-IAM-001), through conductor.aws.a; cleared by security.aws.a","what":"Even after v2.1, a script in the page can make the change role admin through a change set (R-008). iam.aws.a's draft v2.4 adds permissions boundaries that mirror today's scopes, with a custom read boundary, and makes the DNS role's trust console only. security.aws.a cleared v2.4 on paper (0cfa69f on work/security.aws.a). v2.4 itself is 2107fe5 on work/iam.aws.a.",
-       "before":"iam.aws.a finishes two checks (read-boundary coverage; whether CloudFormation calls iam:UpdateRole on every role update). The first apply is your own act in the console. aws.c retires the two DNS-trust plans in site/plans/ in the same release.",
+       "before":"Waiting on v2.5: security.aws.a found (14433ff) that v2.4's read boundary leaves out 13 IAM, Lambda and Firehose reads dev.2.aws.a's API layer needs; iam.aws.a adds exactly those, security re-clears. Then iam.aws.a finishes two checks (read-boundary coverage; whether CloudFormation calls iam:UpdateRole on every role update). The first apply is your own act in the console. aws.c retires the two DNS-trust plans in site/plans/ in the same release.",
        "options":[["a","One console apply of v2.4: both boundaries, and console-only trust for sovereignwebsite-factory-dns."],["b","As a, but keep DNS trust edits from the page. Not recommended by iam.aws.a or security.aws.a: whoever controls that role's trust controls the site's name.","no"],["c","v2.1 through the page now (decision 4), boundaries later."],["d","No boundary; rely on splitting off the change page (R-002)."]],"rec":"a","blocks":"R-008 closing. A change to AWS, so yours."}},
     {"id":"d7","eyebrow":"Decision 7 · Access","title":"The account A names in the site's policy","dur":22,
      "beats":[
@@ -209,7 +209,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
        "options":[["a","One yes in aws.c's session: add all 21 .aws.a names, each with its .c name's paths."],["b","A yes per agent, as for data.aws.a."]],"rec":"a","blocks":"21 agents landing on dev, this board among them."}},
     {"id":"outro","eyebrow":"Your answer","title":"One line answers all seven","dur":12,
      "beats":[
-       [0,"Recommended answers: one a, two a, three c, four a, five a, six a, seven a.","The full answer line, large, in the centre."],
+       [0,"Recommended answers: one a, two a, three c, four a, five a, seven a. Six waits on v2.5.","The full answer line, large, in the centre."],
        [6,"Type them, or your own, in pm.aws.a's session. I update the page and tell the agents who asked.","Under it: where to answer."]],
      "panel":{"what":"Type the line below, or your own, in pm.aws.a's session. pm.aws.a updates the decisions page and tells the agents who asked.","answer":true}}
   ]
@@ -370,6 +370,7 @@ d6(){
      + txt(716,300,'1  iam.aws.a\'s two checks','t-s','start') + txt(716,324,'2  your apply, in the console','t-s','start') + txt(716,348,'3  aws.c retires two DNS plans','t-s','start'));
   s += cue(24, txt(40,400,'cleared on paper by security.aws.a (0cfa69f)','t-s t-ok','start'));
   s += optionRow(['a','b','c','d'],'a',29,30.5,['b']);
+  s += cue(31, box(330,404,300,30,'bx-acc',15) + txt(480,424,'waiting on v2.5: not ready to answer','t-s t-acc'), 'pop');
   return s;
 },
 d7(){

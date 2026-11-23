@@ -1,6 +1,6 @@
 # Decisions for Dinis: AWS Platform
 
-Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 11:50 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a".
+Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 11:55 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 7 a" (6 waits on v2.5).
 
 This batch as a presentation (docs/board/brief/decisions-brief.html, https://claude.ai/artifact/Vpk7NnqQ3sz9MgkC2aDmVP) and a decision video in the studio's format (docs/board/brief/decision-video.html, https://claude.ai/artifact/FEaZ96X1APbEPmke5J6ido); both private to Dinis.
 
@@ -44,6 +44,7 @@ Nothing here stops the team: the agents are building on the twin. Decision 3 hol
 - **Blocks:** each area's own site and its "Try the twin" link.
 
 ### 6. Security R-008 (High): a permissions boundary on the change role
+- **Status: waiting on v2.5, not ready to answer.** security.aws.a (14433ff on work/security.aws.a, 11:28 UTC): v2.4's read boundary leaves out the 13 IAM, Lambda and Firehose reads that dev.2.aws.a's new API layer needs, so applying v2.4 would deny those views. iam.aws.a is making v2.5 with exactly those actions; security re-clears it, then this comes back to you.
 - **Asks:** iam.aws.a (P-IAM-001), through conductor.aws.a; cleared by security.aws.a
 - **What:** even after v2.1, a script in the page can make the change role admin through a change set (R-008). iam.aws.a's draft, now v2.4 (2107fe5 on work/iam.aws.a; v2.3 is 2b8ceab), adds permissions boundaries that mirror today's scopes, with a custom read boundary. security.aws.a cleared v2.4 on paper (0cfa69f on work/security.aws.a; v2.3 47b48c3, after three gaps in v2.2, a1d2057), so the DNS condition is met inside v2.4.
 - **Before any apply:** iam.aws.a finishes two checks: that the read boundary covers what the read role needs, and whether CloudFormation calls iam:UpdateRole on every role update. The first apply is your own act in the console.

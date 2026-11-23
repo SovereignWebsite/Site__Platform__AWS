@@ -102,20 +102,21 @@
   },
   {
    "id": "b7",
-   "narration": "Six. A change set or the DNS role's trust can still make the change role admin. Recommended: iam's v2.4 boundaries, cleared by security, applied by you.",
+   "narration": "Six. A change set or the DNS role's trust can still make the change role admin. Not ready yet: security asked for v2.5 first.",
    "visual": {
     "kind": "svg",
     "src": "d6",
     "caption": "Decision 6: security R-008 (High), an AWS change",
     "at": 0,
-    "play": 11,
-    "end": 10.4
+    "play": 10.2,
+    "end": 9.6
    },
    "facts": [
     "s-decisions",
     "s-risks",
     "s-sec-v24",
-    "s-iam-v24"
+    "s-iam-v24",
+    "s-sec-v25"
    ]
   },
   {
@@ -136,14 +137,14 @@
   },
   {
    "id": "b8",
-   "narration": "All recommended answers are a, except three, which is c. Answer in pm.aws.a's session; the trade-offs follow.",
+   "narration": "All recommended answers are a, except three, which is c. Six waits on v2.5. Answer in pm.aws.a's session.",
    "visual": {
     "kind": "svg",
     "src": "outro",
-    "caption": "Recommended: 1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a. Answer in pm.aws.a's session.",
+    "caption": "Recommended: 1 a, 2 a, 3 c, 4 a, 5 a, 7 a. Decision 6 waits on v2.5.",
     "at": 0,
-    "play": 7.4,
-    "end": 6.8
+    "play": 7.8,
+    "end": 7.2
    },
    "facts": [
     "s-decisions"
@@ -325,7 +326,7 @@
   },
   {
    "id": "6",
-   "question": "6. R-008 (High): which permissions boundary goes on the change role?",
+   "question": "6. R-008 (High): which permissions boundary goes on the change role? (waiting on v2.5, not ready to answer)",
    "options": [
     {
      "id": "a",
@@ -380,7 +381,7 @@
     }
    ],
    "recommendation": "a",
-   "why": "Before any apply, iam.aws.a finishes two checks (read-boundary coverage; whether CloudFormation calls iam:UpdateRole). The first apply is your own act in the console."
+   "why": "Not ready: v2.4's read boundary misses 13 IAM, Lambda and Firehose reads the new API layer needs (security.aws.a, 14433ff). iam.aws.a makes v2.5, security re-clears, then two checks and your console apply."
   },
   {
    "id": "7",
@@ -467,6 +468,12 @@
    "id": "s-data",
    "title": "data.aws.a's own abp.json entry, landed at Dinis's word (518b114)",
    "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/commit/518b114b4eaef1fd1d0c08814a3fa3d36a86de2c",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-sec-v25",
+   "title": "security.aws.a: v2.4 read boundary gap, v2.5 asked (14433ff)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/14433ff/docs/security/risks.md",
    "read": "2026-11-23"
   }
  ],
