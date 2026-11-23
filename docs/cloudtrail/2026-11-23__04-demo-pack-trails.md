@@ -41,7 +41,7 @@ The alarms it raises, newest first:
 ## For the twin owner (dev.1.aws.a; aws.c keeps site/twin.js)
 
 - **The seeded DNS change.** Today's seeded trail (site/twin.js, two records) puts an UpdateAssumeRolePolicy on the DNS role in every pack. So the normal day raises a high alarm. These packs keep that change to the attack pack only.
-- **Addresses.** These packs use the address split data.aws.a and ux.aws.a agreed: operator 192.0.2.0/24, visitors 198.51.100.0/24, attacker 203.0.113.0/24. The twin's seed still uses 203.0.113.7 for the operator.
+- **Addresses.** These packs use the address split data.aws.a and ux.aws.a agreed: operator 192.0.2.7, visitors 198.51.100.0/24, attacker 203.0.113.66. This matches dev.1.aws.a's branch (21d8a08); dev still has the operator on 203.0.113.7.
 - **Using it.** The twin can write these records into the trail bucket, one file per region and five minutes as it does now, or derive them from its journal and compare (design 02). `node docs/cloudtrail/reader/ct-packs.test.mjs` checks the packs and their alarms (23 cases).
 
 ## To check (boto3.aws.a)

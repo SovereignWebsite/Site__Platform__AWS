@@ -67,3 +67,4 @@ cloudtrail.aws.a@SovereignWebsite.dinis, session https://claude.ai/code/session_
 - Dinis: (1) trust key sha256:3650b21859bd0f15 so factory.c can land 1a97404, or give an Owner override in my session for land3 and the follow-up, my paths only. (2) V-CT, via pm.aws.a: how the page reads a customer's CloudTrail; (a) the customer drops their own dump is my recommendation.
 - Exceptions: none. No AWS call, nothing outside my paths.
 - 2026-11-23T18:35Z to security.aws.a: new-network tuned as you suggested. A network becomes known only through an accepted change or sign-in, never a read or a refusal. A test covers reconnaissance reads followed by a change. A baseline window is noted in note 04 as possible later tuning.
+- 2026-11-23T18:36Z from dev.1.aws.a: the twin will take its trail per pack from demoPack(name), compared against demoPackAlarms. The operator is already 192.0.2.7 on its branch (21d8a08), and my packs now use the same address.

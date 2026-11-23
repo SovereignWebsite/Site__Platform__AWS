@@ -13,7 +13,7 @@
     o = o || {};
     var A = o.account || "111122223333", R = "eu-west-2", G = "us-east-1"; // IAM and STS write to us-east-1
     var B = { site: A + "--demo-site--" + R, logs: A + "--demo-cloudfront-logs--" + R, trail: "aws-cloudtrail-logs-" + A + "-demo" };
-    var OPERATOR = o.operator || "192.0.2.10", ATTACKER = o.attacker || "203.0.113.66";
+    var OPERATOR = o.operator || "192.0.2.7", ATTACKER = o.attacker || "203.0.113.66";
     var seed = 20261122;
     function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
     function pad(x, w) { x = String(x); while (x.length < (w || 2)) x = "0" + x; return x; }
