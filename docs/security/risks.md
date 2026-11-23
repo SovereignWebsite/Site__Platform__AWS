@@ -215,3 +215,6 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
     - (1) /health's template_sha256 is never compared with the index entry for the version (design 05 change 3; condition 3).
     - (2) templateUrl is checked for shape only, so any S3 bucket passes. Take it from the published index entry for the version, and pin it to an immutable object: either a ?versionId= form, which the regex now refuses, or a key per version in a bucket that refuses overwrites. Say which.
     - (3) accessStackUrl passes the -access parameters as given. That is fine in the module, but the page must show DistributionId and CertificateArn to the customer (the 0.2.0 ruling).
+- 23 Nov 2026, 17:15, security.aws.a: ux.aws.a 66cdb2b (design 06 screen 3 sentences; docs only, signature verified). Ids and versions are rendered with textContent. Two copy points:
+  - old-template's "It works" is not something the page knows: it read only an unknown version string from an untrusted answer. Say "This page cannot vouch for that template" instead.
+  - Add a sentence for the template-mismatch reason that dev.2.aws.a's fix will add (sha256 differs from the index), worded as a failure.
