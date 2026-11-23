@@ -100,8 +100,8 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
 <div class="wrap">
   <header>
     <div>
-      <h1>Eight decisions for Dinis</h1>
-      <p class="sub">AWS Platform programme · from <span class="t-mono">docs/board/decisions.md</span>, 23 Nov 2026, 13:45 UTC · kept by pm.aws.a</p>
+      <h1>Seven decisions for Dinis</h1>
+      <p class="sub">AWS Platform programme · from <span class="t-mono">docs/board/decisions.md</span>, 23 Nov 2026, 14:10 UTC · kept by pm.aws.a</p>
     </div>
     <div class="tabs" role="tablist" aria-label="View">
       <button role="tab" id="tab-brief" aria-selected="true" aria-controls="view-brief">Brief</button>
@@ -139,20 +139,20 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
 
 <script type="application/json" id="storyboard">
 {
-  "title": "Eight decisions for Dinis",
+  "title": "Seven decisions for Dinis",
   "source": "docs/board/decisions.md on work/pm.aws.a, 23 Nov 11:40 UTC, Site__Platform__AWS",
   "made_by": "pm.aws.a@SovereignWebsite.dinis",
-  "answer": "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a, 8 a",
+  "answer": "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 8 a",
   "scenes": [
-    {"id":"intro","eyebrow":"The brief","title":"Eight decisions, one page","dur":16,
+    {"id":"intro","eyebrow":"The brief","title":"Seven decisions, one page","dur":16,
      "beats":[
-       [0,"Eight decisions are waiting for you on the AWS programme's decisions page. This brief walks through each one.","Eight numbered tiles appear in a row, each with its short name."],
+       [0,"Seven decisions are waiting for you on the AWS programme's decisions page. This brief walks through each one.","Seven numbered tiles appear, numbered as on the decisions page in a row, each with its short name."],
        [5.5,"None of them stops the team. Every agent keeps building on the synthetic twin while you decide.","A banner under the tiles: nothing here stops the team."],
        [10.5,"Each scene shows the problem, the options and the recommendation. Answer by number in pm.aws.a's session.","The recommended answer line types in at the bottom."]],
      "panel":{"what":"Every open question for you from the AWS agents, most urgent first. Answer by number in pm.aws.a's session.","answer":true}},
     {"id":"d1","eyebrow":"Decision 1 · Access","title":"The agents publish their keys","dur":24,
      "beats":[
-       [0,"Every agent signs its commits with its own key. A key counts only once it is listed in the Factory's keys file.","Key chips, one per agent, on the left; the Factory's keys.json on the right."],
+       [0,"Every agent signs its commits with its own key. The deploy accepts a commit only once that key is live in the Factory's keys file.","Key chips, one per agent, on the left; the Factory's keys.json on the right."],
        [7,"Twenty account A agents have signed key commits ready. None has landed: factory.c's session asks your word for every push.","The chips slide up to a closed gate marked factory.c, waiting for your word."],
        [14,"Option a: one standing word, land every verified agent key commit. Option b: a word per landing, as now.","Option a is shown: the gate opens and the chips flow into keys.json."],
        [20,"Recommended: a. factory.c checks each commit before it lands; your word adds a wait, not a check.","The a option chip lights as recommended."]],
@@ -199,14 +199,6 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
      "panel":{"asks":"iam.aws.a (P-IAM-001), through conductor.aws.a; cleared by security.aws.a","what":"Even after v2.1, a script in the page can make the change role admin through a change set (R-008). iam.aws.a's draft v2.5 adds permissions boundaries that mirror today's scopes, with a custom read boundary, and makes the DNS role's trust console only. security.aws.a cleared v2.5 on paper (ba0afa0). v2.5 itself is ee7f7b9 on work/iam.aws.a.",
        "before":"v2.5 (ee7f7b9) adds the 13 reads dev.2.aws.a's API layer needs; security.aws.a cleared it (ba0afa0). The first apply is your own act in the console; v2.5 keeps its Deny on iam:UpdateRole, and one harmless tag change set on the read role right after confirms it, with you watching the stack events. aws.c retires the two DNS-trust plans in site/plans/ in the same release. To weigh: the read role can then read Lambda environment variables; keep secrets in Secrets Manager or SSM.",
        "options":[["a","One console apply of v2.5: both boundaries, and console-only trust for sovereignwebsite-factory-dns."],["b","As a, but keep DNS trust edits from the page. Not recommended by iam.aws.a or security.aws.a: whoever controls that role's trust controls the site's name.","no"],["c","v2.1 through the page now (decision 4), boundaries later."],["d","No boundary; rely on splitting off the change page (R-002)."]],"rec":"a","blocks":"R-008 closing. A change to AWS, so yours."}},
-    {"id":"d7","eyebrow":"Decision 7 · Access","title":"The account A names in the site's policy","dur":22,
-     "beats":[
-       [0,"An agent lands on dev only once its name is in the site's policy file, and that needs your yes.","Twenty-two agent name chips on the left; the policy file on the right with one name in it, data.aws.a."],
-       [6,"data.aws.a's name landed at your word. Twenty-one more wait, each with the same paths as its old .c name.","The waiting chips pulse; their work piles up on branches."],
-       [12,"Option a: one yes in aws.c's session adds all twenty-one. Option b: a yes per agent.","Option a: all twenty-one chips flow into the policy file."],
-       [18,"Recommended: a. You already said yes to these paths; only the names change.","The a option chip lights as recommended."]],
-     "panel":{"asks":"conductor.aws.a (and pm.aws.a, whose board waits on it)","what":"An agent can land on dev only once its name is in site/policy/abp.json, which needs your yes. data.aws.a's landed at your word in its session (518b114). The other 21 .aws.a names still wait, each with the same paths as its .c name (docs/team/schedule.json maps .c to .a).",
-       "options":[["a","One yes in aws.c's session: add all 21 .aws.a names, each with its .c name's paths."],["b","A yes per agent, as for data.aws.a."]],"rec":"a","blocks":"21 agents landing on dev, this board among them."}},
     {"id":"d8","eyebrow":"Decision 8 · Access","title":"vaults.aws.a reads the SG/Send vault library","dur":18,
      "beats":[
        [0,"The vault twin should answer batches exactly as SG/Send's browser vault library does.","The vault twin on the left, SG/Send's vault library on the right, a dashed line between them."],
@@ -214,9 +206,9 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
        [10,"Option a: attach it read-only, pinned to one commit. b: fetch the published files. c: no. Recommended: a.","Option a: the line turns solid, marked read-only at one commit; the a chip lights as recommended."]],
      "panel":{"asks":"vaults.aws.a (designs 01 to 03, 88588c6 on work/vaults.aws.a)","what":"The vault twin should answer batches exactly as SG/Send's browser vault library does (vault UI v0.2.3, in SGraph-AI__App__Send). vaults.aws.a's session refused attaching that repository (11:38 UTC).",
        "options":[["a","Yes in vaults.aws.a's session: attach SGraph-AI__App__Send read-only, pinned to one commit."],["b","Fetch the twelve published library files from dev.vault.sgraph.ai (unversioned)."],["c","No: design from sgit.ai's published description only."]],"rec":"a","blocks":"The per-operation result shape and batch-wide conflict rule in the vault twin (design 02 section 2); nothing else."}},
-    {"id":"outro","eyebrow":"Your answer","title":"One line answers all eight","dur":12,
+    {"id":"outro","eyebrow":"Your answer","title":"One line answers all seven","dur":12,
      "beats":[
-       [0,"Recommended answers: one a, two a, three c, four a, five a, six a, seven a, eight a.","The full answer line, large, in the centre."],
+       [0,"Recommended answers: one a, two a, three c, four a, five a, six a, eight a.","The full answer line, large, in the centre."],
        [6,"Type them, or your own, in pm.aws.a's session. I update the page and tell the agents who asked.","Under it: where to answer."]],
      "panel":{"what":"Type the line below, or your own, in pm.aws.a's session. pm.aws.a updates the decisions page and tells the agents who asked.","answer":true}}
   ]
@@ -259,13 +251,13 @@ function optionRow(opts, rec, tShow, tRec, notRec=[]) {
 /* ---------- the scenes, drawn ---------- */
 const VIS = {
 intro(){
-  const names = [['1','Keys','acc'],['2','Signer check','risk'],['3','Same origin','risk'],['4','Approve v2.1','acc'],['5','Area sites','acc'],['6','Boundary','risk'],['7','Policy names','acc'],['8','Vault library','acc']];
-  let s = txt(W/2,92,'Eight decisions','t-xl') + cue(0.2, txt(W/2,128,'AWS Platform programme · open on the decisions page','t-m t-mute'));
+  const names = [['1','Keys','acc'],['2','Signer check','risk'],['3','Same origin','risk'],['4','Approve v2.1','acc'],['5','Area sites','acc'],['6','Boundary','risk'],['8','Vault library','acc']];
+  let s = txt(W/2,92,'Seven decisions','t-xl') + cue(0.2, txt(W/2,128,'AWS Platform programme · open on the decisions page','t-m t-mute'));
   names.forEach((n,i) => {
-    const x = 24 + i*116, cls = n[2]==='risk'?'bx-risk':'bx-acc';
+    const x = 56 + i*124, cls = n[2]==='risk'?'bx-risk':'bx-acc';
     s += cue(1 + i*0.45, box(x,180,108,126,cls) + txt(x+54,236,n[0],'t-xl '+(n[2]==='risk'?'t-risk':'t-acc')) + txt(x+54,282,n[1],'t-s'), 'pop');
   });
-  s += cue(4.6, txt(24,334,'red: a security risk','t-s t-risk','start') + txt(218,334,'amber: access, approval or a merge','t-s t-acc','start'));
+  s += cue(4.6, txt(56,334,'red: a security risk','t-s t-risk','start') + txt(250,334,'amber: access, approval or a merge','t-s t-acc','start'));
   s += cue(6, box(180,358,600,44,'bx-ok',22) + txt(W/2,386,'Nothing here stops the team: the agents keep building on the twin','t-s t-ok'));
   s += cue(10.5, txt(W/2,452,'Recommended','t-s t-mute') + txt(W/2,486,SB.answer,'t-l'));
   return s;
@@ -511,7 +503,7 @@ function renderPanel(i){
 
 /* ---------- chapters, controls, keys ---------- */
 const chap = document.getElementById('chapters');
-chap.innerHTML = scenes.map((s,i) => `<button data-i="${i}" title="${esc(s.title)}">${i===0?'Intro':i===scenes.length-1?'Answer':i}</button>`).join('');
+chap.innerHTML = scenes.map((s,i) => `<button data-i="${i}" title="${esc(s.title)}">${i===0?'Intro':i===scenes.length-1?'Answer':s.id.replace('d','')}</button>`).join('');
 chap.onclick = e => { const b = e.target.closest('button'); if (b) goScene(+b.dataset.i, playing); };
 function markChapters(i){ [...chap.children].forEach((b,k) => b.classList.toggle('cur', k===i)); }
 document.getElementById('play').onclick = () => setPlaying(!playing);

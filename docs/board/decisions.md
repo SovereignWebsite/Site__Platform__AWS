@@ -1,6 +1,6 @@
 # Decisions for Dinis: AWS Platform
 
-Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 13:45 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a, 8 a".
+Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 14:10 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 8 a".
 
 This batch as a presentation (docs/board/brief/decisions-brief.html, https://claude.ai/artifact/Vpk7NnqQ3sz9MgkC2aDmVP) and a decision video in the studio's format (docs/board/brief/decision-video.html, https://claude.ai/artifact/FEaZ96X1APbEPmke5J6ido); both private to Dinis.
 
@@ -13,7 +13,7 @@ Nothing here stops the team: the agents are building on the twin. Decision 3 hol
 - **What:** 20 account A agents have each prepared a signed commit adding their key to the Factory's team/keys.json (all on Factory dev 885f150), as docs/team/keys/<role>.aws.a.iac-commit.txt on their work branches: architect, billing, boto3, cloudformation, cloudtrail, conductor, data, dev.1, dev.2, journalist, lambda, ontology, pm, s3, security, sherpa, swarm, ux, vaults, video. None has landed: Factory dev (02cab38) lists no .aws.a key, and factory.c's session asks your word for every push. Not yet prepared: iam.aws.a (needs the Factory attached in its session) and viz.aws.a (its session cannot make a signing key). The earlier eight .aws.c commits are moot: those roles moved to account A.
 - **Options:** (a) a standing word in factory.c's session (https://claude.ai/code/session_01Kw9UwFQ86g2ZeXQ2edTAjh): "land every verified agent key commit"; (b) a word per landing, as now.
 - **Recommended:** (a). factory.c rebuilds each commit byte for byte and runs the five checks before it lands; your word adds a wait, not a check.
-- **Blocks:** every account A agent's commits being checked as signed on dev.
+- **Blocks:** every account A agent pushing to dev: the names are in the policy now (6ab7233), but the deploy's signer check refuses a commit whose key is not live on the Factory, and stops the deploy for everyone.
 
 ### 2. Security R-009 (High): the deploy's signer check can be bypassed
 - **Asks:** security.aws.c (03:28 review), through conductor.aws.c
@@ -53,13 +53,6 @@ Nothing here stops the team: the agents are building on the twin. Decision 3 hol
 - **Recommended:** (a), by iam.aws.a and security.aws.a (4b7271d on work/security.aws.a): remove TheDnsRoleTrustPolicy from the change role and its boundary in the same apply. A boundary on the DNS role would not make (b) safe, since that role's own rights (the Factory's docs/aws-oidc.md) can repoint the site's CNAME. DNS-trust edits are rare. If (a) or (b), decision 4 folds into it. R-008 stays Open until applied.
 - **Blocks:** R-008 closing. A change to AWS, so yours.
 
-### 7. The account A names in the site's policy, in one word
-- **Asks:** conductor.aws.a (and pm.aws.a, whose board waits on it)
-- **What:** an agent can land on dev only once its name is in site/policy/abp.json, which needs your yes. data.aws.a's landed at your word in its session (518b114, with its own work). The other 21 .aws.a names still wait, each with the same paths as its .c name (docs/team/schedule.json maps .c to .a), so their work piles up on branches.
-- **Options:** (a) one yes in aws.c's session (https://claude.ai/code/session_01Kw9UwAzhau7Us55PugP2V2): "add all 21 .aws.a names, each with its .c name's paths"; (b) a yes per agent, as for data.aws.a.
-- **Recommended:** (a). The paths are the ones you already said yes to (c32279d); only the names change.
-- **Blocks:** 21 agents landing on dev, this board among them.
-
 ### 8. vaults.aws.a reads the SG/Send browser vault library
 - **Asks:** vaults.aws.a (designs 01 to 03, 88588c6 on work/vaults.aws.a)
 - **What:** the vault twin should answer batches exactly as SG/Send's browser vault library does (vault UI v0.2.3, in the SGraph-AI__App__Send repository). vaults.aws.a's session refused attaching that repository (11:38 UTC), so it cannot read the library.
@@ -78,6 +71,7 @@ Nothing here stops the team: the agents are building on the twin. Decision 3 hol
 - Secure Send S3 API: is it the SG/Send server in S3 mode, where its code and deployment live, which clients and regions first. Asked of maestro.c, no answer yet (vaults.aws.a, 13:37 UTC). Meanwhile vaults.aws.a assumes yes and designs against the documented API; confirmed before any plan. Blocks OP-3 and vaults design 01 section 6.
 
 ## Answered
+- The account A names in the site's policy (was 7): aws.c added all 22 .aws.a names at your yes (6ab7233 on dev). Agents still do not push to dev until their key is live on the Factory (decision 1): the deploy's signer check reads the Factory's live keys file, which lists no .aws.a key yet.
 - Three account A agents' pushes (was 7): yes in iam.aws.a's and dev.1.aws.a's sessions (both branches pushed, signed); viz.aws.a pushed work/viz.aws.a unsigned at your word in its session (7495e89), so aws.c lands docs/viz/ under its own signature (conductor.aws.a, ~11:12 UTC). Still open in iam.aws.a's session: the Factory repository attached, for its key commit.
 - The PM's wake (was 6): pm.aws.a's wake is every 6 h at :15, created by maestro.a at your word (~03:31 UTC, move to account A); no other schedule.
 - The team commits its own folders: "Yes, to the team paths. So you can commit to their folders" (you, in aws.c's session, ~04:20 UTC); five agents added (c32279d), the rest by aws.c as they come.

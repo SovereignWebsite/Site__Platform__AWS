@@ -15,7 +15,6 @@ Updated 2026-11-23 12:20 UTC. Two rules over everything: **twin first** (every f
 | SE-3 R-001 Critical: the change role can no longer make itself admin... | Decision 4 |
 | CT-1 Timeline and per-asset activity; anyone can drop in their own... | Decision 1 (its key); aws.c adding the agent's folder to the policy |
 | SE-5 R-008 High: permissions boundary on the change role (P-IAM-001 v2.5, iam.aws.a; cleared by security.aws.a) | Decision 6 |
-| PM-6 The 21 .aws.a names in site/policy/abp.json, so the team lands on dev | Decision 7 |
 | VA-2 The vault twin's batch results and conflict rule, as SG/Send's library has them | Decision 8 |
 
 ## In progress
@@ -64,9 +63,10 @@ Updated 2026-11-23 12:20 UTC. Two rules over everything: **twin first** (every f
 - AV-3 Newsroom brief: the last AWS console log-in (aws.c)
 
 ## The team
-22 roles, all on account A as <role>.aws.a since wave 2 (23 Nov ~07:30 UTC), at Dinis's word (~03:31 UTC); aws.c stays on account C as keeper of the hub. Wakes and sessions in docs/team/schedule.json. Names in site/policy/abp.json: data.aws.a only so far (decision 7).
+22 roles, all on account A as <role>.aws.a since wave 2 (23 Nov ~07:30 UTC), at Dinis's word (~03:31 UTC); aws.c stays on account C as keeper of the hub. Wakes and sessions in docs/team/schedule.json. All 22 .aws.a names are in site/policy/abp.json (6ab7233); pushes to dev wait for each key to be live on the Factory (decision 1).
 
 ## Changes, newest first
+- 23 Nov 14:10 UTC: decision 7 answered (all 22 .aws.a names in abp.json, 6ab7233); no .a pushes to dev until keys are live on the Factory.
 - 23 Nov 13:45 UTC: decision 8 (vaults.aws.a reads the SG/Send vault library); vaults' other three questions placed under being answered and not needed yet.
 - 23 Nov 12:20 UTC: board refreshed: every owner now its .aws.a name (aws.c stays keeper).
 - 23 Nov 12:00 UTC: decision 6 back with v2.5 (iam.aws.a ee7f7b9, cleared by security.aws.a ba0afa0); Lambda environment variables readable by the read role, for Dinis to weigh.
