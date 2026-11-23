@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.2.5 (iam.aws.a, deploy plan step 3; for review by
+  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.2.6 (iam.aws.a, deploy plan step 3; for review by
   security.aws.a and cloudformation.aws.a; not for any real account). Run first, by the customer, from their own
   console. Makes two things only: the deploy role that stacks sws-vault-<id> and sws-vault-<id>-edge run with, and
   the boundary that caps the Vault's own role. Nothing here can reach outside this one Vault's resources.
@@ -326,7 +326,7 @@ Resources:
                 Action: [iam:UpdateAssumeRolePolicy, iam:PutRolePermissionsBoundary, iam:DeleteRolePermissionsBoundary,
                   iam:CreatePolicy, iam:CreatePolicyVersion, iam:SetDefaultPolicyVersion, iam:DeletePolicy,
                   iam:CreateUser, iam:CreateAccessKey, iam:CreateLoginProfile, iam:AttachRolePolicy,
-                  s3:DeleteBucketPolicy, secretsmanager:PutResourcePolicy, secretsmanager:ReplicateSecretToRegions,
+                  secretsmanager:PutResourcePolicy, secretsmanager:ReplicateSecretToRegions,
                   lambda:InvokeFunction]
                 Resource: "*"
               # A tag is a label now, but never relabel another Vault's distribution.
@@ -350,14 +350,14 @@ Resources:
                     ForAnyValue:StringLike:
                       "route53:ChangeResourceRecordSetsNormalizedRecordNames": !Sub "*.*.${DomainName}"
                 - !Ref AWS::NoValue
-              # vault.yaml 0.4.5: bucket and log group are RetainExceptOnCreate (the bucket policy plain Retain: it goes with the bucket), so a failed first
+              # vault.yaml: bucket, bucket policy and log group are RetainExceptOnCreate (the documented rollback, boto3.aws.a), so a failed first
               # create rolls them back, as this role. Allowed on exactly these three; data stays: S3 refuses to delete a
               # non-empty bucket (versions included) and this role can never delete objects (NeverEmptyTheBucket).
               # Cost, recorded: a tampered template could delete the Vault's log group (its audit trail); held by the
               # pinned template hash, least-privilege mode only.
               - Sid: RollBackAFailedFirstCreate
                 Effect: Allow
-                Action: s3:DeleteBucket
+                Action: [s3:DeleteBucket, s3:DeleteBucketPolicy]
                 Resource: !Sub "arn:aws:s3:::sws-vault-${VaultId}-data-${AWS::AccountId}-${AWS::Region}"
               - Sid: RollBackAFailedFirstCreateLogs
                 Effect: Allow
