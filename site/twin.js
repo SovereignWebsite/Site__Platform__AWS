@@ -237,6 +237,14 @@
     if (!s.objects[bucket]) return xml("<Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist</Message></Error>", 404);
     if (!s.cors[bucket]) return Promise.reject(new TypeError("Failed to fetch")); // a real browser sees a CORS failure
     if (!signed(init)) return xml("<Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>", 403);
+    if (!key && u.searchParams.has("cors")) {
+      // GetBucketCors: the bucket's rules as S3 returns them (Cloud Control's CorsRules, in S3's XML names).
+      var tag = function (t, v) { return "<" + t + ">" + esc(String(v)) + "</" + t + ">"; }, many = function (t, a) { return (a || []).map(function (v) { return tag(t, v); }).join(""); };
+      return xml("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<CORSConfiguration xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" + s.cors[bucket].CorsRules.map(function (r) {
+        return "<CORSRule>" + (r.Id ? tag("ID", r.Id) : "") + many("AllowedHeader", r.AllowedHeaders) + many("AllowedMethod", r.AllowedMethods) + many("AllowedOrigin", r.AllowedOrigins) +
+          many("ExposeHeader", r.ExposedHeaders) + (r.MaxAge !== undefined ? tag("MaxAgeSeconds", r.MaxAge) : "") + "</CORSRule>";
+      }).join("") + "</CORSConfiguration>");
+    }
     if (!key) {
       // ListObjectsV2: keys and common prefixes in key order, max-keys of them (default 1000) a page.
       var q = u.searchParams, prefix = q.get("prefix") || "", delim = q.get("delimiter"), max = Math.min(+(q.get("max-keys") || 1000), 1000);

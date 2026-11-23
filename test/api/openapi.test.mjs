@@ -62,9 +62,9 @@ test("S3Api only reads: every operation has role read and no write action", () =
 
 const service = { cloudcontrolapi: "cloudformation", s3: "s3" };
 const target = { ListResources: "cloudformation:ListResources", GetResource: "cloudformation:GetResource" };
-const s3op = (req) => req.headers.range !== undefined || !/list-type=2/.test(req.url) ? "s3:GetObject" : "s3:ListBucket";
+const s3op = (req) => /\?cors$/.test(req.url) ? "s3:GetBucketCORS" : /list-type=2/.test(req.url) ? "s3:ListBucket" : "s3:GetObject";
 const sample = { listBuckets: [], getBucket: ["example-site-logs"], listObjects: ["example-site-logs", "eu-west-1", {}],
-  getObject: ["example-site-logs", "eu-west-1", "a/b.txt", [0, 9]] };
+  getObject: ["example-site-logs", "eu-west-1", "a/b.txt", [0, 9]], getBucketCors: ["example-site-logs", "eu-west-1"] };
 const checkCalls = async () => {
   for (const [m, args] of Object.entries(sample)) {
     calls.length = 0;
@@ -90,9 +90,14 @@ test("Cloud Control operations list their handler actions, with a source and the
 
 test("least-privilege union for S3Api: its calls and the handlers behind them", () => {
   const calls = [...new Set(ops.flatMap(o => o["x-aws-actions"]))].sort();
-  assert.deepEqual(calls, ["cloudformation:GetResource", "cloudformation:ListResources", "s3:GetObject", "s3:ListBucket"]);
+  assert.deepEqual(calls, ["cloudformation:GetResource", "cloudformation:ListResources", "s3:GetBucketCORS", "s3:GetObject", "s3:ListBucket"]);
   const all = new Set(ops.flatMap(o => [...o["x-aws-actions"], ...(o["x-aws-handler-actions"] || [])]));
-  assert.equal(all.size, 4 + 1 + 22 - 1); // s3:ListBucket is in both lists
+  assert.equal(all.size, 5 + 1 + 22 - 2); // s3:ListBucket and s3:GetBucketCORS are also read-handler actions: still 26
+});
+
+test("getBucket records the rejected S3-only read, and why", () => {
+  const alt = byId.getBucket["x-alternatives"];
+  assert.ok(alt && alt[0].status.startsWith("rejected") && /CORS/.test(alt[0].why));
 });
 
 test("getObject documents 206 for a range and 416 InvalidRange past the end", () => {
