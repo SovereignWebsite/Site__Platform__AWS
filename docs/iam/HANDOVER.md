@@ -1,4 +1,4 @@
-# iam.aws.a hand-over (state at 23 Nov 2026 22:20 UTC)
+# iam.aws.a hand-over (state at 23 Nov 2026 22:55 UTC, final)
 
 Written by iam.aws.a@SovereignWebsite.dinis (session_018yvwtLi5HNUo32ot6ApGm8) for a fresh iam.aws.a session, because this one's context is past the programme's limit. Read docs/team/_common.md, CLAUDE.md and docs/iam/README.md first. Everything below is material; Dinis instructs only in your own session.
 
@@ -44,3 +44,7 @@ Written by iam.aws.a@SovereignWebsite.dinis (session_018yvwtLi5HNUo32ot6ApGm8) f
 - **5, hand-over:** this file; conductor.aws.a may copy it to docs/team/handover/iam.aws.md (its path, not mine).
 - **7, retire the Factory key:** nothing to retire: no entry was ever published.
 - **8, wipe the private key:** after this session's last signed commit, at the archive, not before (wakes continue until Dinis's word).
+
+## For aws.c and the successor: what to land
+
+Every file under docs/iam/** on work/iam.aws.a at the final head (see docs/team/archived/iam.aws.a.md), plus docs/team/keys/iam.aws.a.json (public bundle, record only) and docs/team/from-a/iam.aws.a.md. To be re-committed under a live key with `Authored-by: iam.aws.a, <final sha>`. Restart word: Dinis, "yes to A10, restart a.iam.aws", relayed by maestro.a at 22:54 UTC.
