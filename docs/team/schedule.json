@@ -222,6 +222,15 @@
       "paths": [
         "docs/sherpa/**"
       ]
+    },
+    {
+      "name": "swarm.aws.c@SovereignWebsite.dinis",
+      "session": null,
+      "cron": "34 * * * *",
+      "every": "1 h",
+      "paths": [
+        "docs/swarm/**"
+      ]
     }
   ],
   "back_off": "an agent with nothing to do asks conductor.aws.c to double its interval, up to 8 h",
