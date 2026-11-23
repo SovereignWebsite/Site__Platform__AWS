@@ -8,7 +8,7 @@ import cfnlint
 from cfnlint.decode.cfn_yaml import load
 
 DATA = os.path.join(os.path.dirname(cfnlint.__file__), "data", "schemas")
-ACCESS = "docs/iam/vault-deploy/vault-access.yaml"
+ACCESS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vault-access.yaml")
 
 def lst(x): return [x] if isinstance(x, str) else list(x)
 
