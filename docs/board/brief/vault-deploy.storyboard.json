@@ -23,17 +23,18 @@
   },
   {
    "id": "b2",
-   "narration": "V1. The deploy page holds nothing secret. Recommended: its own site, off the hub's origin.",
+   "narration": "V1. Checking the customer's Vault needs a wide CSP. Recommended: its own site, off the hub's origin.",
    "visual": {
     "kind": "svg",
     "src": "v1",
     "caption": "V1: where the page lives",
     "at": 0,
-    "play": 6.6,
-    "end": 6
+    "play": 7.4,
+    "end": 6.8
    },
    "facts": [
     "s-plan",
+    "s-iam",
     "s-risks"
    ]
   },
@@ -225,7 +226,7 @@
     }
    ],
    "recommendation": "a",
-   "why": "pm.aws.a's view: with V3 a the page needs no sign-in and holds nothing secret."
+   "why": "Recommended by security.aws.a and iam.aws.a: checking the Vault's /health needs a CSP open to any https host, which on this hub would weaken the guard on your sealed session (R-010)."
   },
   {
    "id": "V2",

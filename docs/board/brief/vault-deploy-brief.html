@@ -184,7 +184,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
     ],
     [
      6,
-     "With the console sign-in, the page holds nothing secret, and keeping it off the hub avoids widening R-010.",
+     "Checking the customer's Vault needs a wide CSP, which on this hub would weaken the guard on your session.",
      "A red dashed line from a tab to your session is crossed out."
     ],
     [
@@ -207,7 +207,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
      ]
     ],
     "rec": "a",
-    "blocks": "The page's address and the IaC request. Recommendation is pm.aws.a's: no sign-in on the page (V3 a), and off the hub's origin (R-010, decision 3)."
+    "blocks": "The page's address and the IaC request. Recommended by security.aws.a and iam.aws.a: checking https://<domain>/health needs the CSP to allow any https host, which on this hub would undo the limit on where an injected script could send your session (R-010)."
    }
   },
   {
