@@ -23,10 +23,18 @@
   function setTab(name) {
     currentTab = name;
     try { localStorage.setItem("sws-aws-tab", name); } catch (e) { /* none */ }
-    Array.prototype.forEach.call(document.querySelectorAll("[data-tab]"), function (b) { b.setAttribute("aria-selected", b.getAttribute("data-tab") === name ? "true" : "false"); });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-tab]"), function (b) { var on = b.getAttribute("data-tab") === name; b.setAttribute("aria-selected", on ? "true" : "false"); b.tabIndex = on ? 0 : -1; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-panel]"), function (p) { p.classList.toggle("off", !!mem.idToken && p.getAttribute("data-panel") !== name); });
   }
   Array.prototype.forEach.call(document.querySelectorAll("[data-tab]"), function (b) { b.onclick = function () { setTab(b.getAttribute("data-tab")); }; });
+  // Arrow keys move between tabs (WAI-ARIA tabs pattern); only the selected tab is in the Tab order.
+  $("tabs").addEventListener("keydown", function (ev) {
+    var all = Array.prototype.slice.call(document.querySelectorAll("[data-tab]")), i = all.indexOf(document.activeElement);
+    if (i < 0) return;
+    var j = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: all.length - 1 }[ev.key];
+    if (j === undefined) return;
+    ev.preventDefault(); j = (j + all.length) % all.length; all[j].focus(); setTab(all[j].getAttribute("data-tab"));
+  });
 
   // ---- Twin mode: a synthetic AWS (twin.js) behind the same calls; its own identity and accounts ----
   var TWIN = window.AwsTransport && AwsTransport.isTwin();
@@ -54,7 +62,8 @@
     return SealedStore.open(rec("session")).then(function (s) {
       if (!s) return;
       var now = Date.now();
-      Object.keys(s.creds || {}).forEach(function (k) { if (s.creds[k].expiration - now > 60 * 1000) mem.creds[k] = s.creds[k]; });
+      // Change-role credentials are never restored, even from a record an older build sealed (security R-013 a).
+      Object.keys(s.creds || {}).forEach(function (k) { if (!/\/sws-aws-platform-change$/.test(k) && s.creds[k].expiration - now > 60 * 1000) mem.creds[k] = s.creds[k]; });
       if (s.idToken && decodeJwt(s.idToken).exp * 1000 - now > 60 * 1000) showSignedIn(s.idToken, true);
       else if (Object.keys(mem.creds).length) { $("who").textContent = "Your Google sign-in has expired; AWS credentials still valid are kept until they end. Sign in again for new ones."; $("step1-done").hidden = false; renderAccounts(); }
     }).catch(function () {});
@@ -113,7 +122,7 @@
     if (window.SealedStore && SealedStore.available()) return SealedStore.seal("accounts", a, Date.now() + TEN_YEARS).catch(function () {});
   }
   function loadAccounts() {
-    if (TWIN) { accounts = [{ id: AwsTwin.account, label: "Twin account (synthetic)" }]; return Promise.resolve(); }
+    if (TWIN) { accounts = [{ id: AwsTwin.account, label: "Twin account (synthetic)", ready: true, twin: true }]; return Promise.resolve(); }
     var old = null;
     try { old = JSON.parse(localStorage.getItem(STORE) || "null"); localStorage.removeItem(STORE); } catch (e) { /* none */ }
     if (!window.SealedStore || !SealedStore.available()) { accounts = old || []; return Promise.resolve(); }
@@ -147,12 +156,15 @@
       Action: "AssumeRoleWithWebIdentity", Version: "2011-06-15", RoleArn: roleArn(acct, role),
       RoleSessionName: "sws-aws-platform", WebIdentityToken: mem.idToken, DurationSeconds: "3600"
     }).toString();
+    var asked = mem.idToken;
     return AwsTransport.fetch("https://sts.amazonaws.com/", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: body })
       .then(function (r) { return r.text().then(function (t) { return { ok: r.ok, status: r.status, doc: new DOMParser().parseFromString(t, "text/xml") }; }); })
       .then(function (x) {
         if (!x.ok) throw awsError(x.doc, x.status);
         c = { accessKeyId: xmlText(x.doc, "AccessKeyId"), secretAccessKey: xmlText(x.doc, "SecretAccessKey"),
               sessionToken: xmlText(x.doc, "SessionToken"), expiration: Date.parse(xmlText(x.doc, "Expiration")) };
+        // Signed out (or signed in as someone else) while STS answered: drop them (security R-013 b).
+        if (mem.idToken !== asked) throw new Error("Signed out while AWS was answering; nothing kept.");
         mem.creds[key] = c;
         persist();
         return c;
@@ -218,7 +230,7 @@
     assume(acct, "sws-aws-platform-read").then(function (c) {
       return queryCall(c, "sts.amazonaws.com", "sts", { Action: "GetCallerIdentity", Version: "2011-06-15" }).then(function (d) {
         if (!acct.ready || acct.sub !== mem.claims.sub) { acct.ready = true; acct.sub = mem.claims.sub; saveAccounts(accounts); if (onReady) onReady(); }
-        var arn = xmlText(d, "Arn"), stats = el("div", { class: "stats" }, [stat("Role", (arn.split(":assumed-role/")[1] || arn).split("/")[0]), stat("Until", new Date(c.expiration).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))]);
+        var arn = xmlText(d, "Arn"), stats = el("div", { class: "stats" }, [stat("Role", (arn.split(":assumed-role/")[1] || arn).split("/")[0]), stat("Until", new Date(c.expiration).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZoneName: "short" }))]);
         out.textContent = ""; out.appendChild(stats);
         var line = el("p", { class: "small", text: "Signed in to AWS as " + arn + "." }); out.appendChild(line);
         var now = new Date(), start = now.toISOString().slice(0, 8) + "01", end = now.toISOString().slice(0, 10);
@@ -227,7 +239,7 @@
           { TimePeriod: { Start: start, End: end }, Granularity: "MONTHLY", Metrics: ["UnblendedCost"] })
           .then(function (j) {
             var t = j.ResultsByTime && j.ResultsByTime[0] && j.ResultsByTime[0].Total.UnblendedCost;
-            if (t) stats.appendChild(stat("Cost this month so far", Number(t.Amount).toFixed(2) + " " + t.Unit));
+            if (t) stats.appendChild(stat(TWIN ? "Cost this month so far (synthetic)" : "Cost this month so far", Number(t.Amount).toFixed(2) + " " + t.Unit));
           }, function (e) { stats.appendChild(stat("Cost this month", "not read (" + e.message + ")")); });
       });
     }).catch(function (e) {
@@ -250,19 +262,20 @@
       var read = el("button", { type: "button", text: "Read this account" });
       var rm = el("button", { type: "button", class: "quiet", text: "Forget" });
       rm.onclick = function () { accounts.splice(i, 1); saveAccounts(accounts); renderAccounts(); renderPlans(); };
-      var setup = setupLinks(acct);
-      if (acct.ready) setup = el("details", { class: "setup-again" }, [el("summary", { text: "Set up again (CloudFormation)" }), setup]);
+      var setup = acct.twin ? el("p", { class: "small", text: "A synthetic account: already set up, nothing to do in AWS. It is read for you below." }) : setupLinks(acct);
+      if (acct.ready && !acct.twin) setup = el("details", { class: "setup-again" }, [el("summary", { text: "Set up again (CloudFormation)" }), setup]);
       var badge = wrongGoogle(acct) ? el("span", { class: "badge warn", text: "other Google account" }) : acct.ready ? el("span", { class: "badge ok", text: "set up" }) : el("span", { class: "badge", text: "not set up yet" });
       read.onclick = function () {
         readAccount(acct, out, function () {
           badge.className = "badge ok"; badge.textContent = "set up";
-          if (setup.tagName !== "DETAILS") { var d = el("details", { class: "setup-again" }, [el("summary", { text: "Set up again (CloudFormation)" })]); setup.replaceWith(d); d.appendChild(setup); setup = d; }
+          if (setup.tagName !== "DETAILS" && !acct.twin) { var d = el("details", { class: "setup-again" }, [el("summary", { text: "Set up again (CloudFormation)" })]); setup.replaceWith(d); d.appendChild(setup); setup = d; }
           $("identity-warning").hidden = !accounts.filter(wrongGoogle).length;
         });
       };
       list.appendChild(el("li", {}, [el("div", { class: "card-head" }, [el("strong", { text: acct.label }), badge]),
         el("p", { class: "small" }, [document.createTextNode("Account ending "), el("span", { "data-mask": "", text: acct.id.slice(-4) })]),
-        el("div", { class: "row" }, [read, rm]), out, setup]));
+        el("div", { class: "row" }, acct.twin ? [read] : [read, rm]), out, setup]));
+      if (acct.twin && mem.idToken) read.onclick();
     });
     renderPlans();
     if (window.S3Browser) S3Browser.render();
@@ -348,9 +361,12 @@
     count();
   }
   // A diff: changed lines in colour with a few lines of context; long unchanged runs fold to "...".
-  function diffView(a, b) {
+  // norm: how two lines are compared. JSON diffs ignore a trailing comma; templates (YAML) compare lines exactly,
+  // because there a comma can change meaning (security R-012).
+  function jsonLine(l) { return l.replace(/,\s*$/, ""); }
+  function diffView(a, b, norm) {
     // a line that differs only by its trailing comma (JSON lists) counts as unchanged
-    var d = Plans.lineDiff(a, b, function (l) { return l.replace(/,\s*$/, ""); }), pre = el("pre", { class: "diff" }), CTX = 3;
+    var d = Plans.lineDiff(a, b, norm), pre = el("pre", { class: "diff" }), CTX = 3;
     var near = d.map(function () { return false; });
     d.forEach(function (x, i) { if (x.op !== " ") for (var k = Math.max(0, i - CTX); k <= Math.min(d.length - 1, i + CTX); k++) near[k] = true; });
     var skipped = 0;
@@ -371,7 +387,7 @@
         var r = Plans.apply(before, plan);
         if (r.unchanged) return say(st, "Nothing to do: " + plan.target_role + " already " + (plan.add ? "trusts " + plan.add.join(", ") : "no longer trusts " + plan.remove.join(", ")) + ".", "ok");
         out.appendChild(el("h4", { text: "What changes (- removed, + added)" }));
-        out.appendChild(diffView(JSON.stringify(before, null, 2), JSON.stringify(r.after, null, 2)));
+        out.appendChild(diffView(JSON.stringify(before, null, 2), JSON.stringify(r.after, null, 2), jsonLine));
         out.appendChild(el("details", { class: "full" }, [el("summary", { text: "The whole policy, now and after" }),
           el("h4", { text: "Now" }), el("pre", { text: JSON.stringify(before, null, 2) }),
           el("h4", { text: "After you approve" }), el("pre", { text: JSON.stringify(r.after, null, 2) })]));
@@ -396,7 +412,7 @@
           }).then(function (now) {
             var ok = Plans.same(now, r.after);
             if (ok && onApplied) setTimeout(onApplied, 1500);
-            say(st, ok ? "Applied and checked: " + plan.target_role + (r.added ? " now trusts " + r.added.join(", ") : " no longer trusts " + r.removed.join(", ")) + "." : "Applied, but the role read back differs from the plan. Read it again.", ok ? "ok" : "bad");
+            say(st, ok ? (TWIN ? "Applied and checked in the twin (synthetic, not your AWS): " : "Applied and checked: ") + plan.target_role + (r.added ? " now trusts " + r.added.join(", ") : " no longer trusts " + r.removed.join(", ")) + "." : "Applied, but the role read back differs from the plan. Read it again.", ok ? "ok" : "bad");
           }).catch(function (e) { go.disabled = false; say(st, e.message, "bad"); });
         };
         out.appendChild(go);
@@ -454,7 +470,7 @@
               run.disabled = true; say(st, "Executing...");
               cfn(c, { Action: "ExecuteChangeSet", StackName: plan.stack, ChangeSetName: name })
                 .then(function () { return pollStack(c, plan, st, 0); })
-                .then(function (status) { if (/_COMPLETE$/.test(status) && !/ROLLBACK/.test(status) && onApplied) setTimeout(onApplied, 1500); say(st, /_COMPLETE$/.test(status) && !/ROLLBACK/.test(status) ? "Applied and checked: " + plan.stack + " is " + status + "." : "Stack ended " + status + ": see its events in CloudFormation.", /ROLLBACK|FAILED/.test(status) ? "bad" : "ok"); })
+                .then(function (status) { if (/_COMPLETE$/.test(status) && !/ROLLBACK/.test(status) && onApplied) setTimeout(onApplied, 1500); say(st, /_COMPLETE$/.test(status) && !/ROLLBACK/.test(status) ? (TWIN ? "Applied and checked in the twin (synthetic, not your AWS): " : "Applied and checked: ") + plan.stack + " is " + status + "." : "Stack ended " + status + ": see its events in CloudFormation.", /ROLLBACK|FAILED/.test(status) ? "bad" : "ok"); })
                 .catch(function (e) { run.disabled = false; say(st, e.message, "bad"); });
             };
             out.appendChild(run);
@@ -486,6 +502,8 @@
   if ($("twin-enter")) $("twin-enter").onclick = function () { enterTwin(true); };
   if ($("twin-leave")) $("twin-leave").onclick = function () { enterTwin(false); };
   $("twin-bar").hidden = !TWIN;
+  // In the twin, Leave the twin is the way out; sign out and forget this device belong to real sign-in.
+  if (TWIN) { $("sign-out").hidden = true; $("forget-device").hidden = true; if ($("plans-twin-note")) $("plans-twin-note").hidden = false; }
   if (TWIN && window.AwsTwin) {
     var ps = $("twin-pack");
     Object.keys(AwsTwin.packs).forEach(function (k) { ps.appendChild(el("option", { value: k, text: AwsTwin.packs[k].title })); });
@@ -493,7 +511,7 @@
     // A pack is a whole world: loading one reloads the page on it.
     ps.onchange = function () { AwsTwin.usePack(ps.value); location.href = location.pathname + "?twin&pack=" + ps.value; };
   }
-  window.Platform = { diffView: diffView, assume: assume, jsonCall: jsonCall, xmlText: xmlText, awsError: awsError, el: el, say: say,
+  window.Platform = { diffView: diffView, jsonLine: jsonLine, assume: assume, jsonCall: jsonCall, xmlText: xmlText, awsError: awsError, el: el, say: say,
     accounts: function () { return accounts; }, signedIn: function () { return !!mem.idToken; } };
   initGoogle();
   loadAccounts().then(restore).then(renderAccounts).then(function () { return gisReady; }).then(autoSignIn);
