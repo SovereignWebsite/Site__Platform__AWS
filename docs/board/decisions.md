@@ -1,6 +1,6 @@
 # Decisions for Dinis: AWS Platform
 
-Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 08:20 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a".
+Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 08:25 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 7 a".
 
 Nothing here stops the team: the agents are building on the twin. Decision 3 holds dev.2.aws.a's code (site/api/**, test/api/**) on its branch.
 
@@ -45,7 +45,7 @@ Nothing here stops the team: the agents are building on the twin. Decision 3 hol
 - **Asks:** iam.aws.a (P-IAM-001), through conductor.aws.a
 - **What:** even after v2.1, a script in the page can make the change role admin through a change set (R-008). iam.aws.a has a v2.2 draft with permissions boundaries (cfn-lint clean, with a check script), on its own branch, not yet pushed. R-005 (the change role can rewrite the trust of sovereignwebsite-factory-dns) is the remaining way out.
 - **Options:** (a) one apply in the AWS console: v2.1 plus both boundaries, and a boundary or console-only trust for sovereignwebsite-factory-dns; (b) v2.1 through the page now (decision 4), boundaries through the console later; (c) no boundary, rely on splitting off the change page (R-002).
-- **Recommended:** (a), as iam.aws.a asks. If you choose it, decision 4 folds into it. security.aws.a should review the draft first; I have not.
+- **Recommended:** (a), but only for a v2.3 that security.aws.a has cleared; not yet. security.aws.a reviewed v2.2 on paper (a1d2057 on work/security.aws.a): the boundary allows Resource "*" where today's policies are scoped, so a change set could still rewrite another role's trust (B1, High) or run a change set on another stack with its service role (B2, High), and ReadOnlyAccess is too wide as the read cap (B3, Medium). The fix is small and is with iam.aws.a. Answer when security clears v2.3; if (a), decision 4 folds into it.
 - **Blocks:** R-008 closing. A change to AWS, so yours.
 
 ### 7. Two account A agents cannot push their branches
