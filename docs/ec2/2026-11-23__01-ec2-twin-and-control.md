@@ -51,30 +51,41 @@ Anything else answers `InvalidAction` (HTTP 400), so a page that strays from the
 
 ### 2c. The world and the journal
 
-The world gains one map per region (`Object.create(null)` maps, as the journal's `map()`):
+One world per account (architect.aws.a, agreed with vaults.aws.a for the vault deploy): `w.ec2[region]` lives inside each account's world, account 111122223333's seed is that account's alone, and a twin customer account starts with an empty EC2 world unless its stack creates instances. Maps are `Object.create(null)`, as the journal's `map()`:
 
 ```
 w.ec2[region] = { instances: map(), images: map(), groups: map(), keyPairs: map() }
 ```
 
-An instance: `{ id, type, image, state, launched, stateChanged, stateReason, tags, group, keyName|null, publicIp|null, privateIp, az, metadataOptions, rootVolume: { sizeGiB, encrypted } }`.
+An instance: `{ id, type, image, state, launched, stateChanged, stateReason, tags, groups: [id], profile: arn|null, vpc, subnet, keyName|null, publicIp|null, privateIp, az, metadataOptions, creditMode, rootVolume: { sizeGiB, encrypted } }`. `profile` is the instance profile's role, so the graph gets `instance runs_as role` as it does for Lambda and Firehose; v1 seeds one default VPC and subnet per region.
 
-New journal operations, one small function each (the OPS table), every write with the caller as actor (`actorOf(init)`), `why` `plan.approve`, `pack.seed` or `schedule.<name>`:
+New journal operations, one small function each (the OPS table). Writes made by a call have the caller as actor (`actorOf(init)`) and `why` `plan.approve`, `pack.seed` or `schedule.<name>`; settles (2d) have actor `aws:ec2` and why `clock.settle`:
 
 | op | target | data |
 |---|---|---|
-| `ec2.createSecurityGroup` | `arn:aws:ec2:<region>:<account>:security-group/<id>` | name, description, rules |
+| `ec2.createSecurityGroup` | `arn:aws:ec2:<region>:<account>:security-group/<id>` | name, description, vpc, rules |
 | `ec2.registerImage` | `...:image/<id>` | name, architecture, created |
 | `ec2.importKeyPairName` | `...:key-pair/<id>` | name, fingerprint, type (no material, ever) |
-| `ec2.runInstance` | `...:instance/<id>` | every field of the instance, state `pending` |
-| `ec2.setState` | `...:instance/<id>` | `{ from, to, reason }` |
-| `ec2.setTags`, `ec2.removeTags` | `...:instance/<id>` | tags |
+| `ec2.runInstance` | `...:instance/<id>` | every field of the instance, state `pending`, and its `settles` (2d) |
+| `ec2.setState` | `...:instance/<id>` | `{ from, to, reason, settles: { to, at } or none }` |
+| `ec2.forget` | `...:instance/<id>` | none: a terminated instance leaves the answers |
+| `ec2.setTags`, `ec2.removeTags` | any taggable ARN (instance, security group, image) | tags |
 
-Ids are deterministic (`i-` plus 17 hex digits from the journal's seq and a fixed salt), so golden tests stay stable.
+**Ids are made once, at write**, and stored in the entry's target ARN (and data); a fold only reads them, never derives them. They are drawn from a named stream (`rng("ec2.ids")`, design 02) so entries elsewhere do not shift them, and golden tests stay stable.
+
+**Addresses** (architect.aws.a, design 03): private addresses from 10.0.0.0/16; public IPv4 from 198.51.100.240/28, reserved from the visitor generator (dev.1.aws.a excludes it from its network split); IPv6 from 2001:db8:ec2::/48. None collide with the twin's client networks (visitors 198.51.100.0/24 and 192.0.2.0/24, attacker 203.0.113.0/24, operator 192.0.2.7).
 
 ### 2d. States and the twin's clock
 
-EC2's states: `pending` to `running`; `stopping` to `stopped`; `shutting-down` to `terminated`; a terminated instance stays visible for a while, then disappears (*check* the period). The twin settles each transitional state with a second `ec2.setState` entry. To keep tests deterministic and the data independent of wall time, the settle is **lazy**: the first Describe after a transition records the settled state with `t` set to the transition's `t` plus a fixed delay (proposed: running after 20 s, stopped after 30 s, terminated after 15 s; twin choices, not AWS figures). The twin's one clock (dev.1.aws.a's, shared with stack events) gives `now()` and `tick(ms)`; `tick` lets a test move it forward, which section 6's expiry tests need.
+EC2's states: `pending` to `running`; `stopping` to `stopped`; `shutting-down` to `terminated`; a terminated instance stays visible for a while, then disappears (*check* the period).
+
+**A read never writes** (architect.aws.a): the journal must not depend on whether or when someone looked, replay of an export must equal the live session, and design 02 step 3 needs every role-actor entry to match exactly one CloudTrail record. So settles are clock-driven, design 02's mechanism for timed steps:
+
+- The transition entry carries its settle: `ec2.setState { from: "running", to: "stopping", settles: { to: "stopped", at: t + 30000 } }` (RunInstances: `pending`, settles to `running`).
+- When the twin clock passes `at`, the twin emits `ec2.setState { from: "stopping", to: "stopped" }` with actor `aws:ec2` and why `clock.settle`. CloudTrail derives nothing from it (AWS logs no API call for a settle).
+- "Terminated stays visible, then goes" is a settle too: an `ec2.forget` entry at the end of the period.
+- The twin's one clock (dev.1.aws.a's, shared with stack events) gives `now()` and `tick(ms)`. When it is paused, as in tests, nothing settles until `tick`.
+- The delays (proposed: running after 20 s, stopped after 30 s, terminated after 15 s, forgotten after a period to *check*) are twin choices, not AWS figures, and live in the pack, not in code.
 
 Stopped instances keep their tags, private address and root volume, and lose a public address that was not an Elastic IP (*check*); the twin does the same so the read page shows what Dinis would see.
 
@@ -107,11 +118,11 @@ Synthetic and labelled as such, in account 111122223333 like the rest of the twi
 1. Signed calls only; an unsigned call is refused, as for the other services.
 2. DescribeRegions, then DescribeInstances in each region: the seed appears in eu-west-2 only.
 3. Paging: more instances than one page, every one returned once.
-4. RunInstances with the three tags: `pending`, then `running` after `tick`; the journal holds `ec2.runInstance` and `ec2.setState` with the caller as actor.
+4. RunInstances with the three tags: `pending`; `tick(20000)`; `running`. The journal holds `ec2.runInstance` with the caller as actor and one `ec2.setState` with actor `aws:ec2`, why `clock.settle`. A Describe with the clock paused adds no entry.
 5. Stop, Start, Terminate: the state lists match AWS's shape; a terminated instance disappears after its period.
 6. Each refusal in 2f, one test each; nothing is recorded in the journal when a call is refused.
 7. CreateKeyPair is refused; no answer from the twin ever contains `BEGIN` and `PRIVATE KEY`.
-8. Fold: `AwsTwin.fold(AwsTwin.journal())` gives the same EC2 world as the live one.
+8. Fold: `AwsTwin.fold(AwsTwin.journal())` gives the same EC2 world as the live one, with the same ids, whatever reads came between.
 9. Golden: the baseline pack's EC2 answers are fixed in test/fixtures/twin-golden/.
 
 ## 3. The read page for our own account
@@ -123,6 +134,8 @@ Synthetic and labelled as such, in account 111122223333 like the rest of the twi
 **Calls:** DescribeRegions in one region, then DescribeInstances (and DescribeSecurityGroups) in each enabled region, in parallel with a small limit, from the browser with the read role, through the one transport (twin or AWS, docs/architecture/2026-11-23__01-one-transport-two-back-ends.md). Two calls per region; with about 17 default regions, about 35 signed calls per refresh (*check* the count of default regions). No polling: refresh on demand.
 
 **CSP:** the page talks to `https://ec2.<region>.amazonaws.com`, already inside `connect-src https://*.amazonaws.com`. R-013 (c) suggests listing exact hosts; if the keeper does that, the EC2 hosts of the allowed regions join the list.
+
+**Read API (design 03, architect.aws.a):** `Ec2Api(send)` gives one page `{ items, next }` (NextToken as an opaque `next`), an `arn` on every item (built, marked `arnDerived`, as EC2 answers carry none), errors as `Code: Message` with `.code` and `.status`; `ec2.openapi.json` lists the Describe actions in `x-aws-actions` (writes are not in the read API); `Graph.add.ec2` adds instance `in` account, `uses` image, `has` security group, `runs_as` role, and a rule open to 0.0.0.0/0 or ::/0 as `allows_from` to `urn:sws:actor-net:0.0.0.0/0`, all evidence api.
 
 **Where it lives:** a view of the existing app, built by dev.2.aws.a with ux.aws.a, code reviewed by the keeper and security.aws.a (R-010: no agent adds a script under site/ outside review).
 
@@ -216,8 +229,8 @@ No number is set here: V5 (b) says ec2.aws.a and billing.aws.a propose them from
 
 ## 8. Asks
 
-- **dev.2.aws.a (dev.1.aws.a after its deploy step 4 if dev.2 has no room):** build section 2 as one twin patch with test/twin/ec2.test.mjs, on top of work/dev.1.aws.a (49db094 or later, which holds the journal branch and the packs loader); I review it against this design. The lazy settle (2d) uses the twin clock dev.1.aws.a brings forward for stack events (dev.1.aws.a, 15:04 UTC): it needs only `now()` and `tick(ms)`.
-- **architect.aws.a:** the world shape (2c) and the lazy settle (2d) against design 02.
+- **dev.1.aws.a** (took it, 15:04 UTC; after its privacy change and deploy step 4): build section 2 as one twin patch with test/twin/ec2.test.mjs, on top of work/dev.1.aws.a (49db094 or later); I review it against this design, architect.aws.a against design 02. The settle (2d) uses the twin clock dev.1.aws.a brings forward for stack events: `now()` and `tick(ms)`, clock-driven, never on read.
+- **architect.aws.a:** answered (15:06 UTC, docs/team/from-a/architect.aws.a.md); folded into 2c, 2d and 3. Later, not v1: a no-state `ec2.refused` entry so refused calls appear in the CloudTrail derivation.
 - **boto3.aws.a:** every *check* above, most of all 2a, 2d, 2f and 6b.
 - **iam.aws.a:** answered (docs/iam/ec2-01-answer.md); P-IAM-002 once V4 is decided.
 - **billing.aws.a:** done for t4g and public IPv4 (15:05 UTC, section 6d); still open: EBS gp3 per GB-month.
