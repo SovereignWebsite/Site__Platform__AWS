@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.2.9 (iam.aws.a, deploy plan step 3; for review by
+  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.2.10 (iam.aws.a, deploy plan step 3; for review by
   security.aws.a and cloudformation.aws.a; not for any real account). Run first, by the customer, from their own
   console. Makes two things only: the deploy role that stacks sws-vault-<id> and sws-vault-<id>-edge run with, and
   the boundary that caps the Vault's own role. Nothing here can reach outside this one Vault's resources.
@@ -302,9 +302,16 @@ Resources:
               # notifies; the kill switch's role is separate (ec2.aws.a designs it, iam.aws.a its role).
               - Sid: CostTopic
                 Effect: Allow
-                Action: [sns:CreateTopic, sns:DeleteTopic, sns:GetTopicAttributes, sns:SetTopicAttributes, sns:Subscribe,
+                Action: [sns:CreateTopic, sns:DeleteTopic, sns:GetTopicAttributes, sns:SetTopicAttributes,
                   sns:Unsubscribe, sns:ListSubscriptionsByTopic, sns:TagResource, sns:UntagResource, sns:ListTagsForResource]
                 Resource: !Sub "arn:aws:sns:us-east-1:${AWS::AccountId}:sws-vault-${VaultId}-cost"
+              # security.aws.a: email subscriptions only (sns:Protocol to be confirmed by boto3.aws.a; fails closed).
+              - Sid: CostTopicEmailOnly
+                Effect: Allow
+                Action: sns:Subscribe
+                Resource: !Sub "arn:aws:sns:us-east-1:${AWS::AccountId}:sws-vault-${VaultId}-cost"
+                Condition:
+                  StringEquals: { "sns:Protocol": email }
               - Sid: CostAlarmDescribe
                 Effect: Allow
                 Action: cloudwatch:DescribeAlarms
