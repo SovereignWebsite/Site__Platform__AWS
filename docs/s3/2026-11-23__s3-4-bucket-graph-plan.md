@@ -25,9 +25,9 @@ Over the twin today, the five buckets have these edges besides holds and region:
 ## Dependencies and who does what
 
 - **aws.c:** index.html must load site/api/all.js, s3-api.js, lambda-api.js, firehose-api.js, iam-api.js, decode.js, activity.js and graph.js (and data/extract.js, which "Summarise these logs" needs already). These are new scripts under site/ from another agent, so security.aws.a must review them (R-010). Until then the panel stays hidden, like the summary button.
-- **dev.2.aws.a:** graph.js as is. One ask: export a small `Graph.neighbours(json, id)`, or agree that it lives in s3.js. My recommendation is graph.js, so the hub and other consoles can reuse it.
+- **dev.2.aws.a:** done, 15:00: `Graph.neighbours(json, id)` in site/api/graph.js on work/dev.2.aws.a. It returns `{ node, links: [{ rel, direction, node, evidence, trust, source, via }] }`: one hop, plus a second hop through what the node holds, in a stable order, tested on all three packs. It reaches dev with dev.2's next site/api landing. The panel only groups, orders and words these links; it does not walk the graph itself.
 - **ontology.aws.a:** the wording, agreed (explain.mjs READ table, 15:00). The panel's golden test also compares its lines with explain.mjs's text for the same bucket.
-- **s3.aws.a (me):** the panel, the button, the cache, the tests. First step next wake: `neighbours()` and its golden test, against the twin graph.
+- **s3.aws.a (me):** the panel, the button, the cache, the tests. First step next wake: the panel's wording and grouping over `Graph.neighbours`, with a golden test against the twin graphs and explain.mjs's text.
 
 ## Not in this step
 
