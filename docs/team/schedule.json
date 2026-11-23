@@ -81,156 +81,190 @@
     },
     {
       "name": "journalist.aws.c@SovereignWebsite.dinis",
-      "session": null,
+      "session": "session_01Kw9UwFKRKfwjNjABzDxUhg",
       "cron": "06 * * * *",
       "every": "1 h",
       "paths": [
         "docs/journal/**"
-      ]
+      ],
+      "trigger": "trig_015y9Th3gbBMVp7jk6RMCJE9",
+      "started": "2026-11-23T03:22Z"
     },
     {
       "name": "dev.1.aws.c@SovereignWebsite.dinis",
-      "session": null,
+      "session": "session_01Kw9UwDM5jdQ2PcHFhrY69L",
       "cron": "09 * * * *",
       "every": "1 h",
       "paths": [
         "code as granted"
-      ]
+      ],
+      "trigger": "trig_015scXFcDn9r8wLDwxreycoE",
+      "started": "2026-11-23T03:22Z"
     },
     {
       "name": "ontology.aws.c@SovereignWebsite.dinis",
-      "session": null,
+      "session": "session_01Kw9UwE3CyWyiWSWZt54DGg",
       "cron": "11 */2 * * *",
       "every": "2 h even",
       "paths": [
         "docs/ontology/**"
-      ]
+      ],
+      "trigger": "trig_01ULLi1pABTi9FzT3Ezo5A3P",
+      "started": "2026-11-23T03:22Z"
     },
     {
       "name": "iam.aws.c@SovereignWebsite.dinis",
-      "session": null,
+      "session": "session_01Kw9UwCNBBjF4QFqtci6B6J",
       "cron": "16 * * * *",
       "every": "1 h",
       "paths": [
         "docs/iam/**"
-      ]
+      ],
+      "trigger": "trig_014Ef4TUgAt7cWVPhLAQYLjX",
+      "started": "2026-11-23T03:22Z"
     },
     {
       "name": "lambda.aws.c@SovereignWebsite.dinis",
-      "session": null,
+      "session": "session_01Kw9UwFBZ4H4hZJjPwVxwkG",
       "cron": "21 */2 * * *",
       "every": "2 h even",
       "paths": [
         "docs/lambda/**"
-      ]
+      ],
+      "trigger": "trig_013QWM6m8TdvGDVVrDXP7zZQ",
+      "started": "2026-11-23T03:22Z"
     },
     {
       "name": "cloudformation.aws.c@SovereignWebsite.dinis",
-      "session": null,
+      "session": "session_01Kw9UwBfr3eaLwdWsDzwpVT",
       "cron": "26 1-23/2 * * *",
       "every": "2 h odd",
       "paths": [
         "docs/cloudformation/**"
-      ]
+      ],
+      "trigger": "trig_016mZMnSxErhsF9aL36frkgh",
+      "started": "2026-11-23T03:22Z"
     },
     {
       "name": "cloudtrail.aws.c@SovereignWebsite.dinis",
-      "session": null,
+      "session": "session_01Kw9UwCr3jpB8Chr1HszjPD",
       "cron": "31 */2 * * *",
       "every": "2 h even",
       "paths": [
         "docs/cloudtrail/**"
-      ]
+      ],
+      "trigger": "trig_017pqjsdfaYBVsP3sM2FUEbz",
+      "started": "2026-11-23T03:22Z"
     },
     {
       "name": "vaults.aws.c@SovereignWebsite.dinis",
-      "session": null,
+      "session": "session_01Kw9UwCfsZCBz1rXEx4QmRP",
       "cron": "36 1-23/2 * * *",
       "every": "2 h odd",
       "paths": [
         "docs/vaults/**"
-      ]
+      ],
+      "trigger": "trig_01G68wukjPzuCoNaFvNXVaqk",
+      "started": "2026-11-23T03:22Z"
     },
     {
       "name": "dev.2.aws.c@SovereignWebsite.dinis",
-      "session": null,
+      "session": "session_01Kw9UwF2SsRwvdTFB77PyjW",
       "cron": "39 * * * *",
       "every": "1 h",
       "paths": [
         "code as granted"
-      ]
+      ],
+      "trigger": "trig_01Rauc1tGP2fMK6aSQTojvgz",
+      "started": "2026-11-23T03:22Z"
     },
     {
       "name": "boto3.aws.c@SovereignWebsite.dinis",
-      "session": null,
+      "session": "session_01Kw9UwF18EchMPCKP9cWeJY",
       "cron": "41 */2 * * *",
       "every": "2 h even",
       "paths": [
         "docs/boto3/**"
-      ]
+      ],
+      "trigger": "trig_016X17Vpvt7BLFxt9rJujX7J",
+      "started": "2026-11-23T03:22Z"
     },
     {
       "name": "ux.aws.c@SovereignWebsite.dinis",
-      "session": null,
+      "session": "session_01Kw9UwE6VR9TTCLmpmytWvG",
       "cron": "46 1-23/2 * * *",
       "every": "2 h odd",
       "paths": [
         "docs/design/**"
-      ]
+      ],
+      "trigger": "trig_01XgvBa2iX7okv5GJX7ttJ6K",
+      "started": "2026-11-23T03:22Z"
     },
     {
       "name": "data.aws.c@SovereignWebsite.dinis",
-      "session": null,
+      "session": "session_01Kw9UwDiMew98cTowNY73Xj",
       "cron": "51 */2 * * *",
       "every": "2 h even",
       "paths": [
         "docs/data/**"
-      ]
+      ],
+      "trigger": "trig_013qxgAKHANHxrf7qVhY4iVD",
+      "started": "2026-11-23T03:22Z"
     },
     {
       "name": "billing.aws.c@SovereignWebsite.dinis",
-      "session": null,
+      "session": "session_01Kw9UwEcR1KCF6y3dTPP5vr",
       "cron": "56 1-23/2 * * *",
       "every": "2 h odd",
       "paths": [
         "docs/billing/**"
-      ]
+      ],
+      "trigger": "trig_0135pLwJdbFY9xujxFnxf4fW",
+      "started": "2026-11-23T03:22Z"
     },
     {
       "name": "viz.aws.c@SovereignWebsite.dinis",
-      "session": null,
+      "session": "session_01Kw9UwDDKfdXVnkWK6uEL3v",
       "cron": "01 1-23/2 * * *",
       "every": "2 h odd",
       "paths": [
         "docs/viz/**"
-      ]
+      ],
+      "trigger": "trig_01Gp6SXcJ8voJLrvijwyNmEB",
+      "started": "2026-11-23T03:22Z"
     },
     {
       "name": "video.aws.c@SovereignWebsite.dinis",
-      "session": null,
+      "session": "session_01Kw9UwFgph7DemcF4Kh9ww8",
       "cron": "04 */4 * * *",
       "every": "4 h",
       "paths": [
         "docs/video/**"
-      ]
+      ],
+      "trigger": "trig_0148vSqNBtyFsR9wPDKA7NF7",
+      "started": "2026-11-23T03:22Z"
     },
     {
       "name": "sherpa.aws.c@SovereignWebsite.dinis",
-      "session": null,
+      "session": "session_01Kw9UwCF7nZyeKXUtFHiy7K",
       "cron": "19 * * * *",
       "every": "1 h",
       "paths": [
         "docs/sherpa/**"
-      ]
+      ],
+      "trigger": "trig_013ZxidEnyoQDrtU9wGBjpwv",
+      "started": "2026-11-23T03:22Z"
     },
     {
       "name": "swarm.aws.c@SovereignWebsite.dinis",
-      "session": null,
+      "session": "session_01Kw9UwCUzTn6tV616HZcjmz",
       "cron": "34 * * * *",
       "every": "1 h",
       "paths": [
         "docs/swarm/**"
-      ]
+      ],
+      "trigger": "trig_01UqRgi9ReYjdUcc2x21Kn7E",
+      "started": "2026-11-23T03:22Z"
     }
   ],
   "back_off": "an agent with nothing to do asks conductor.aws.c to double its interval, up to 8 h",
