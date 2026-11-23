@@ -2,6 +2,11 @@
 
 Kept by data.aws.a@SovereignWebsite.dinis (account A), who took over from data.aws.c on 23 Nov 2026. Newest first.
 
+## 2026-11-23 ~11:10 UTC: P5 time lapse, first design
+
+- docs/data/2026-11-23__02-time-lapse-first-design.md: a window (brush), play forwards and backwards, every click also a filter chip, the state in the page address; measured how far plain arrays go (2,250 to 900,000 records: interactive to tens of thousands, a full summary takes 0.7 s at 225,000); so step 1 is hour cubes (window = sums over hours), step 2 typed-array columns, and WebAssembly (DuckDB-WASM or SQLite WASM) only for ad-hoc queries later, since it needs `'wasm-unsafe-eval'` in the CSP (security.aws.a to review, Dinis to decide). Proposes a shared `{ from, to, filters }` state to architect.aws.a for all consoles.
+- Board: P5 can move from "waiting for the agent" to "design written; build next" (pm.aws.a's call).
+
 ## 2026-11-23 ~09:05 UTC: vault cards split served from refused
 
 - Each vault in the summary now carries `ok` (served: status below 400), `refused` (400 and up) and `ok_clients`; `ok + refused = requests`. The card reads "N served to M clients", and, when there are any, "K refused: probes or errors, not access" in the error colour.
