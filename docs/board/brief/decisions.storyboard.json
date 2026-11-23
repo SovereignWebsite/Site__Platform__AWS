@@ -4,7 +4,7 @@
  "title": "Seven AWS decisions for Dinis",
  "audience": "Dinis",
  "requested_by": "pm.aws.a@SovereignWebsite.dinis",
- "summary": "Seven open decisions on the AWS Platform programme's decisions page, 23 Nov 2026 14:10 UTC: agent keys, the deploy's signer check (R-009), team code on the hub's origin (R-010), template v2.1 (R-001), the nine area sites, a permissions boundary (R-008), and reading SG/Send's vault library. None stops the team; the agents build on the twin.",
+ "summary": "Seven open decisions on the AWS Platform programme's decisions page, 23 Nov 2026 14:20 UTC: agent keys, the deploy's signer check (R-009), team code on the hub's origin (R-010), template v2.1 (R-001), the nine area sites, a permissions boundary (R-008), and reading SG/Send's vault library. None stops the team; the agents build on the twin.",
  "beats": [
   {
    "id": "b1",
@@ -55,18 +55,18 @@
   },
   {
    "id": "b4",
-   "narration": "Three. Team pages on the hub's own origin share it with your session. Recommended: security reviews each change, and pages move to area sites.",
+   "narration": "Three. Team paths now reach scripts the hub loads beside your session. Recommended: a pipeline check that refuses files outside each signer's paths.",
    "visual": {
     "kind": "svg",
     "src": "d3",
-    "caption": "Decision 3: security R-010 (High)",
+    "caption": "Decision 3: security R-010 (High, widened)",
     "at": 0,
-    "play": 10.2,
-    "end": 9.6
+    "play": 9.8,
+    "end": 9.2
    },
    "facts": [
     "s-decisions",
-    "s-risks"
+    "s-sec-r010"
    ]
   },
   {
@@ -136,14 +136,14 @@
   },
   {
    "id": "b8",
-   "narration": "All recommended answers are a, except three, which is c. Answer in pm.aws.a's session.",
+   "narration": "Every recommended answer is a. Answer in pm.aws.a's session; the trade-offs follow.",
    "visual": {
     "kind": "svg",
     "src": "outro",
-    "caption": "Recommended: 1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 8 a. Answer in pm.aws.a's session.",
+    "caption": "Recommended: 1 a, 2 a, 3 a, 4 a, 5 a, 6 a, 8 a. Answer in pm.aws.a's session.",
     "at": 0,
-    "play": 6.2,
-    "end": 5.6
+    "play": 5.4,
+    "end": 4.8
    },
    "facts": [
     "s-decisions"
@@ -218,13 +218,25 @@
   },
   {
    "id": "3",
-   "question": "3. R-010 (High): how is team code on the hub's own origin kept safe?",
+   "question": "3. R-010 (High, widened): how are team code paths on the hub kept safe?",
    "options": [
     {
      "id": "a",
-     "label": "a. Keep the code paths; security reviews every site/ change before it deploys",
+     "label": "a. A CI step refuses a commit touching files outside its signer's paths in abp.json; until it lands, aws.c reviews every site/*.js change",
      "good": [
-      "Work carries on at once"
+      "Paths become a control, not a promise",
+      "Lands before the new keys go live"
+     ],
+     "bad": [
+      "Changes .github/**, which needs your yes"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. Keep the paths as a promise; rely on aws.c's review",
+     "good": [
+      "No pipeline change"
      ],
      "bad": [
       "Safety rests on every review being done"
@@ -232,32 +244,21 @@
      "blocks": []
     },
     {
-     "id": "b",
-     "label": "b. Move team pages off the hub's origin, to their own area sites",
+     "id": "c",
+     "label": "c. Narrow the code paths back to the keeper",
      "good": [
-      "A team page can no longer reach your session"
+      "Only aws.c changes loaded code"
      ],
      "bad": [
-      "Waits for the area sites (decision 5)"
+      "Every code change goes through aws.c"
      ],
      "blocks": [
-      "Team pages until the area sites exist"
+      "dev.1, dev.2 and s3 landing code themselves"
      ]
-    },
-    {
-     "id": "c",
-     "label": "c. Both: review now, move as the area sites arrive",
-     "good": [
-      "Safe now and safer later"
-     ],
-     "bad": [
-      "Two steps to track"
-     ],
-     "blocks": []
     }
    ],
-   "recommendation": "c",
-   "why": "Review covers today; separate origins remove the risk once the area sites exist. The API layer is on dev (461d422) but no page loads it yet."
+   "recommendation": "a",
+   "why": "security.aws.a (72f4cee): the deploy checks signers, not paths. Decision 2 also changes .github; the two can land together."
   },
   {
    "id": "4",
@@ -479,6 +480,12 @@
    "id": "s-vaults",
    "title": "vaults.aws.a: designs 01 to 03 (88588c6)",
    "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/88588c6/docs/vaults/2026-11-23__02-vault-twin-contract.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-sec-r010",
+   "title": "security.aws.a: R-010 widened by 6ab7233 (72f4cee)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/72f4cee/docs/security/risks.md",
    "read": "2026-11-23"
   }
  ],

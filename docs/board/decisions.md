@@ -1,6 +1,6 @@
 # Decisions for Dinis: AWS Platform
 
-Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 14:10 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 8 a".
+Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 14:20 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 a, 4 a, 5 a, 6 a, 8 a".
 
 This batch as a presentation (docs/board/brief/decisions-brief.html, https://claude.ai/artifact/Vpk7NnqQ3sz9MgkC2aDmVP) and a decision video in the studio's format (docs/board/brief/decision-video.html, https://claude.ai/artifact/FEaZ96X1APbEPmke5J6ido); both private to Dinis.
 
@@ -22,12 +22,12 @@ Nothing here stops the team: the agents are building on the twin. Decision 3 hol
 - **Recommended:** (a), first of the two.
 - **Blocks:** trust in what deploys from dev, with 22 agents now pushing.
 
-### 3. Security R-010 (High): team code on the hub's own origin
-- **Asks:** security.aws.c, through conductor.aws.c
-- **What:** the team's paths include pages on the hub's origin (pm: site/decisions/; architect: site/api/; s3: site/s3.js). A page there runs where the change role's session lives, so a bad change could reach it.
-- **Options:** (a) keep the code paths, and security.aws.c reviews every site/ change before it deploys; (b) move team pages off the hub's origin (their own area sites); (c) both: review now, move as the area sites arrive.
-- **Recommended:** (c).
-- **Blocks:** safe team code on the hub. Update 14:10 UTC: aws.c landed dev.2.aws.a's API layer (site/api/, 461d422) on dev; no page loads it yet, and security.aws.a reviewed it (R-019, R-020, both Medium, on work/security.aws.a). This decision settles what must happen before a page does load it, and for the decisions page under site/decisions/.
+### 3. Security R-010 (High, widened): team code on the hub's own origin
+- **Asks:** security.aws.a (72f4cee on work/security.aws.a, 14:08 UTC)
+- **What:** with the .aws.a names in the policy (6ab7233), agents other than the keeper hold paths to code the hub's page loads beside your sealed session: site/s3.js (dev.1.aws.a, s3.aws.a, and s3.aws.c) and site/twin*.js (dev.1.aws.a, dev.2.aws.a); site/api/** (architect, dev.2) and site/decisions/** (pm) are not loaded by any page yet. The deploy checks who signed a commit, not which paths it touches, so the paths in the policy are a promise, not a control.
+- **Options:** (a) add a CI step in .github/ci/ that refuses a commit touching files outside its signer's paths in abp.json, before the .aws.a keys go live on the Factory; until then aws.c reviews every site/*.js change before it lands; (b) keep the paths as a promise and rely on aws.c's review; (c) narrow the code paths back to the keeper. Moving team pages to their own area sites (decision 5) stays the longer-term fix.
+- **Recommended:** (a). It changes .github/**, which needs your yes, like decision 2; the two can land together.
+- **Blocks:** safe deploys by the account A agents once their keys are live.
 
 ### 4. Approve template v2.1 on the site
 - **Asks:** aws.c

@@ -101,7 +101,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
   <header>
     <div>
       <h1>Seven decisions for Dinis</h1>
-      <p class="sub">AWS Platform programme · from <span class="t-mono">docs/board/decisions.md</span>, 23 Nov 2026, 14:10 UTC · kept by pm.aws.a</p>
+      <p class="sub">AWS Platform programme · from <span class="t-mono">docs/board/decisions.md</span>, 23 Nov 2026, 14:20 UTC · kept by pm.aws.a</p>
     </div>
     <div class="tabs" role="tablist" aria-label="View">
       <button role="tab" id="tab-brief" aria-selected="true" aria-controls="view-brief">Brief</button>
@@ -142,7 +142,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
   "title": "Seven decisions for Dinis",
   "source": "docs/board/decisions.md on work/pm.aws.a, 23 Nov 11:40 UTC, Site__Platform__AWS",
   "made_by": "pm.aws.a@SovereignWebsite.dinis",
-  "answer": "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 8 a",
+  "answer": "1 a, 2 a, 3 a, 4 a, 5 a, 6 a, 8 a",
   "scenes": [
     {"id":"intro","eyebrow":"The brief","title":"Seven decisions, one page","dur":16,
      "beats":[
@@ -166,14 +166,14 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
        [22,"Recommended: a. It changes .github, which needs your yes.","The a option chip lights as recommended."]],
      "panel":{"asks":"security.aws.c (03:28 review), through conductor.aws.c","what":"Anyone who can push to dev can get past the check: an \"Owner override:\" line in a commit, GitHub-verified web commits, and the checker running from the very commit it checks. Fixing it changes .github/**, which is yours.",
        "options":[["a","Run the checker from main or a pinned commit, and drop the override line."],["b","Leave as is for now."]],"rec":"a","blocks":"Trust in what deploys from dev, with many agents now pushing."}},
-    {"id":"d3","eyebrow":"Decision 3 · Security R-010 (High)","title":"Team code on the hub's own origin","dur":26,
+    {"id":"d3","eyebrow":"Decision 3 · Security R-010 (High, widened)","title":"Team code on the hub's own origin","dur":26,
      "beats":[
-       [0,"Some team paths sit on the hub's own origin: the decisions page, the API layer and the S3 browser's script.","The hub's origin as a large frame holding the app, your sealed session and the change role."],
-       [7,"A page there shares the origin with your signed-in session, so a bad change could reach the change role.","A team page enters the frame; a red dashed line runs from it to the session and on to the change role."],
-       [14,"Options: a, security reviews every site change before it deploys; b, move team pages to their own area sites; c, both.","A review shield wraps the page, then the page moves out to its own area site."],
-       [21,"Recommended: c. Review now, move as the area sites arrive. The API layer is on dev, but no page loads it yet.","The c option chip lights as recommended."]],
-     "panel":{"asks":"security.aws.c, through conductor.aws.c","what":"The team's paths include pages on the hub's own origin (pm: site/decisions/; architect: site/api/; s3: site/s3.js). A page there runs where the change role's session lives, so a bad change could reach it.",
-       "options":[["a","Keep the code paths, and security reviews every site/ change before it deploys."],["b","Move team pages off the hub's origin, to their own area sites."],["c","Both: review now, move as the area sites arrive."]],"rec":"c","blocks":"Safe team code on the hub. aws.c landed dev.2.aws.a's API layer (site/api/, 461d422); no page loads it yet; security.aws.a reviewed it (R-019, R-020, Medium). This settles what happens before a page loads it."}},
+       [0,"Some team paths reach code the hub's page loads: the S3 browser's script and the twin's scripts, beside your signed-in session.","The hub's origin as a large frame holding the app, your sealed session and the change role."],
+       [7,"The deploy checks who signed a commit, not which files it touches, so a bad change there could reach the change role.","A team page enters the frame; a red dashed line runs from it to the session and on to the change role."],
+       [14,"Options: a, a check in the pipeline refuses files outside the signer's paths; b, rely on the keeper's review; c, take the code paths back.","A review shield wraps the page, then the page moves out to its own area site."],
+       [21,"Recommended: a, before the new keys go live. It changes .github, like decision two, so the two can land together.","The a option chip lights as recommended."]],
+     "panel":{"asks":"security.aws.a (72f4cee on work/security.aws.a, 14:08 UTC)","what":"With the .aws.a names in the policy (6ab7233), agents other than the keeper hold paths to code the hub's page loads beside your sealed session: site/s3.js (dev.1.aws.a, s3.aws.a, s3.aws.c) and site/twin*.js (dev.1.aws.a, dev.2.aws.a). The deploy checks who signed a commit, not which paths it touches.",
+       "options":[["a","A CI step in .github/ci/ refuses a commit touching files outside its signer's paths in abp.json, before the .aws.a keys go live; until then aws.c reviews every site/*.js change."],["b","Keep the paths as a promise and rely on aws.c's review."],["c","Narrow the code paths back to the keeper."]],"rec":"a","blocks":"Safe deploys by the account A agents once their keys are live. Moving team pages to area sites (decision 5) stays the longer-term fix."}},
     {"id":"d4","eyebrow":"Decision 4 · AWS change","title":"Approve template v2.1 on the site","dur":22,
      "beats":[
        [0,"Template v2.1 fixes R-001, the critical finding: today the change role can make itself account admin.","The change role with a red arrow to account admin, marked R-001 Critical."],
@@ -208,7 +208,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
        "options":[["a","Yes in vaults.aws.a's session: attach SGraph-AI__App__Send read-only, pinned to one commit."],["b","Fetch the twelve published library files from dev.vault.sgraph.ai (unversioned)."],["c","No: design from sgit.ai's published description only."]],"rec":"a","blocks":"The per-operation result shape and batch-wide conflict rule in the vault twin (design 02 section 2); nothing else."}},
     {"id":"outro","eyebrow":"Your answer","title":"One line answers all seven","dur":12,
      "beats":[
-       [0,"Recommended answers: one a, two a, three c, four a, five a, six a, eight a.","The full answer line, large, in the centre."],
+       [0,"Recommended answers: a for every decision.","The full answer line, large, in the centre."],
        [6,"Type them, or your own, in pm.aws.a's session. I update the page and tell the agents who asked.","Under it: where to answer."]],
      "panel":{"what":"Type the line below, or your own, in pm.aws.a's session. pm.aws.a updates the decisions page and tells the agents who asked.","answer":true}}
   ]
@@ -251,7 +251,7 @@ function optionRow(opts, rec, tShow, tRec, notRec=[]) {
 /* ---------- the scenes, drawn ---------- */
 const VIS = {
 intro(){
-  const names = [['1','Keys','acc'],['2','Signer check','risk'],['3','Same origin','risk'],['4','Approve v2.1','acc'],['5','Area sites','acc'],['6','Boundary','risk'],['8','Vault library','acc']];
+  const names = [['1','Keys','acc'],['2','Signer check','risk'],['3','Code paths','risk'],['4','Approve v2.1','acc'],['5','Area sites','acc'],['6','Boundary','risk'],['8','Vault library','acc']];
   let s = txt(W/2,92,'Seven decisions','t-xl') + cue(0.2, txt(W/2,128,'AWS Platform programme · open on the decisions page','t-m t-mute'));
   names.forEach((n,i) => {
     const x = 56 + i*124, cls = n[2]==='risk'?'bx-risk':'bx-acc';
@@ -311,11 +311,11 @@ d3(){
   s += path('p3a','M560 174 C520 200 470 230 457 240','ln-risk dash',9.4,10.6);
   s += path('p3b','M455 260 L513 260','ln-risk dash',10.6,11.6);
   s += cue(11.6, txt(485,310,'one origin: the page can open your session','t-s t-risk'));
-  s += cue(15, `<rect x="474" y="120" width="172" height="60" rx="14" fill="none" stroke="var(--ok)" stroke-width="3" stroke-dasharray="4 4"/>` + txt(560,112,'a: security review before deploy','t-s t-ok'), 'pop');
+  s += cue(15, `<rect x="474" y="120" width="172" height="60" rx="14" fill="none" stroke="var(--ok)" stroke-width="3" stroke-dasharray="4 4"/>` + txt(560,112,'a: the pipeline checks paths','t-s t-ok'), 'pop');
   s += cue(17.5, box(760,90,170,170,'bx-ghost',16) + txt(845,116,'area site','t-m') + txt(845,134,'its own origin','t-s t-mute'));
   s += cue(18.5, lbox(770,170,150,50,'team page','bx-hold','t-m'));
-  s += cue(19.5, txt(845,286,'b: moved off the hub','t-s t-ok'));
-  s += optionRow(['a','b','c'],'c',14,21);
+  s += cue(19.5, txt(845,286,'later: area sites (5)','t-s t-ok'));
+  s += optionRow(['a','b','c'],'a',14,21);
   return s;
 },
 d4(){
