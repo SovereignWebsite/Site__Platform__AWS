@@ -368,6 +368,15 @@
    ]
   },
   {
+   "id": "architect.aws.a",
+   "session": "session_018yvwtPuQzTBRoKGD45TYFV",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "architect.aws.c"
+  },
+  {
    "id": "billing.aws.a",
    "session": "session_018yvwtQWFVjgGwshqcKkxUF",
    "parent": null,
@@ -402,6 +411,15 @@
    "programme": "aws.c",
    "account": "a",
    "moved_from": "cloudtrail.aws.c"
+  },
+  {
+   "id": "conductor.aws.a",
+   "session": "session_018yvwtPiszBTMHKVD4AuDwn",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "conductor.aws.c"
   },
   {
    "id": "data.aws.a",
@@ -447,6 +465,42 @@
    "programme": "aws.c",
    "account": "a",
    "moved_from": "ontology.aws.c"
+  },
+  {
+   "id": "pm.aws.a",
+   "session": "session_018yvwtLfieUut6hSirZ6W9B",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "pm.aws.c"
+  },
+  {
+   "id": "s3.aws.a",
+   "session": "session_018yvwtQbTmpHQ839siWGBQP",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "s3.aws.c"
+  },
+  {
+   "id": "security.aws.a",
+   "session": "session_018yvwtNBPNd9zoeTUyhJ4YY",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "security.aws.c"
+  },
+  {
+   "id": "sherpa.aws.a",
+   "session": "session_018yvwtPct58bYVDGY6ZLM7S",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "sherpa.aws.c"
   },
   {
    "id": "swarm.aws.a",
@@ -2468,62 +2522,6 @@
    ]
   },
   {
-   "t": "2026-11-23T04:41:28Z",
-   "type": "commit",
-   "agent": "boto3.aws.a",
-   "sha": "b901743",
-   "branch": "work/boto3.aws.a",
-   "subject": "docs/team: boto3.aws.a key bundle and first note to account C",
-   "signed": true,
-   "files": [
-    "docs/team/from-a/boto3.aws.a.md",
-    "docs/team/keys/boto3.aws.a.json"
-   ],
-   "lanes_touched": [
-    "conductor.aws.c"
-   ]
-  },
-  {
-   "t": "2026-11-23T04:41:28Z",
-   "type": "move",
-   "from": "boto3.aws.c",
-   "to": "boto3.aws.a",
-   "source": "docs/team/handover/boto3.aws.md"
-  },
-  {
-   "t": "2026-11-23T04:41:29Z",
-   "type": "commit",
-   "agent": "boto3.aws.a",
-   "sha": "101fe19",
-   "branch": "work/boto3.aws.a",
-   "subject": "docs/team/from-a: boto3.aws.a correction, C work is on dev",
-   "signed": true,
-   "files": [
-    "docs/team/from-a/boto3.aws.a.md"
-   ],
-   "lanes_touched": [
-    "conductor.aws.c"
-   ]
-  },
-  {
-   "t": "2026-11-23T04:43:22Z",
-   "type": "commit",
-   "agent": "boto3.aws.a",
-   "sha": "d2f7932",
-   "branch": "work/boto3.aws.a",
-   "subject": "docs/boto3: Cloud Control AWS::S3::Bucket handler permissions; S3 map item 1 answered",
-   "signed": true,
-   "files": [
-    "docs/boto3/2026-11-23__01-s3-map.md",
-    "docs/boto3/2026-11-23__02-cloud-control-s3-handlers.md",
-    "docs/team/from-a/boto3.aws.a.md"
-   ],
-   "lanes_touched": [
-    "boto3.aws.c",
-    "conductor.aws.c"
-   ]
-  },
-  {
    "t": "2026-11-23T04:54:07Z",
    "type": "commit",
    "agent": "data.aws.a",
@@ -2580,19 +2578,1333 @@
     "cloudformation.aws.c",
     "conductor.aws.c"
    ]
+  },
+  {
+   "t": "2026-11-23T05:36:20Z",
+   "type": "commit",
+   "agent": "swarm.aws.a",
+   "sha": "85e5959",
+   "branch": "work/swarm.aws.a",
+   "subject": "docs/swarm: scene 8, the move to account A, from the work branches",
+   "signed": true,
+   "files": [
+    "docs/swarm/README.md",
+    "docs/swarm/data/replay.json",
+    "docs/swarm/events.jsonl",
+    "docs/swarm/extract.py",
+    "docs/swarm/view/view.js",
+    "docs/team/from-a/swarm.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "swarm.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T05:37:59Z",
+   "type": "commit",
+   "agent": "vaults.aws.a",
+   "sha": "3663054",
+   "branch": "work/vaults.aws.a",
+   "subject": "docs/vaults: design 02 settled against sgit.ai's authentication, errors and transfers pages",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/vaults.aws.a.md",
+    "docs/vaults/2026-11-23__02-vault-twin-contract.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "vaults.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T05:48:57Z",
+   "type": "commit",
+   "agent": "ux.aws.a",
+   "sha": "32e4ab1",
+   "branch": "work/ux.aws.a",
+   "subject": "docs/design: design 03, Files console wireframes on the twin",
+   "signed": true,
+   "files": [
+    "docs/design/2026-11-23__03-files-console-wireframes.md",
+    "docs/team/from-a/ux.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "ux.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T05:57:59Z",
+   "type": "commit",
+   "agent": "billing.aws.a",
+   "sha": "dca7489",
+   "branch": "work/billing.aws.a",
+   "subject": "docs/billing: internet data transfer out tiers for London and Ireland",
+   "signed": true,
+   "files": [
+    "docs/billing/README.md",
+    "docs/billing/prices.json",
+    "docs/team/from-a/billing.aws.a.md"
+   ],
+   "lanes_touched": [
+    "billing.aws.c",
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:13:44Z",
+   "type": "commit",
+   "agent": "ontology.aws.a",
+   "sha": "14b7c24",
+   "branch": "work/ontology.aws.a",
+   "subject": "docs/ontology: one graph per demo pack; actors from the log lines",
+   "signed": true,
+   "files": [
+    "docs/ontology/2026-11-23__01-resource-ontology.md",
+    "docs/ontology/build-twin-graph.mjs",
+    "docs/ontology/twin-graph.attack.json",
+    "docs/ontology/twin-graph.json",
+    "docs/ontology/twin-graph.surge.json",
+    "docs/team/from-a/ontology.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "ontology.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:23:03Z",
+   "type": "commit",
+   "agent": "lambda.aws.a",
+   "sha": "d435bc4",
+   "branch": "work/lambda.aws.a",
+   "subject": "docs/lambda: design 01, the Lambda and Firehose pages",
+   "signed": true,
+   "files": [
+    "docs/lambda/2026-11-23__01-page-design.md",
+    "docs/lambda/status.md",
+    "docs/team/from-a/lambda.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "lambda.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:27:57Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "bf77b7b",
+   "branch": "dev",
+   "subject": "docs/video: twin v0 captures, storyboard for studio.c, capture script (from video.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/video.aws.a.md",
+    "docs/team/keys/video.aws.a.json",
+    "docs/video/2026-11-23__twin-v0-narrative-plan.md",
+    "docs/video/README.md",
+    "docs/video/capture-twin-v0.js",
+    "docs/video/twin-v0.storyboard.json",
+    "docs/video/twin-v0/b1.png",
+    "docs/video/twin-v0/b2.png",
+    "docs/video/twin-v0/b3.png",
+    "docs/video/twin-v0/b4.png",
+    "docs/video/twin-v0/b5.png",
+    "docs/video/twin-v0/b6.png",
+    "docs/video/twin-v0/b7.png"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "video.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:27:57Z",
+   "type": "handoff",
+   "from": "video.aws.a",
+   "to": "aws.c",
+   "sha": "bf77b7b"
+  },
+  {
+   "t": "2026-11-23T06:27:57Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "b5f19be",
+   "branch": "dev",
+   "subject": "docs/vaults: design 02, the vault twin's contract (from vaults.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/vaults.aws.a.md",
+    "docs/team/keys/vaults.aws.a.json",
+    "docs/vaults/2026-11-23__02-vault-twin-contract.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "vaults.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:27:57Z",
+   "type": "handoff",
+   "from": "vaults.aws.a",
+   "to": "aws.c",
+   "sha": "b5f19be"
+  },
+  {
+   "t": "2026-11-23T06:28:00Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "c45b4cb",
+   "branch": "dev",
+   "subject": "S3Api's OpenAPI contract and its test (from dev.2.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/dev.2.aws.a.md",
+    "docs/team/keys/dev.2.aws.a.json",
+    "site/api/s3.openapi.json",
+    "test/api/openapi.test.mjs"
+   ],
+   "lanes_touched": [
+    "architect.aws.c",
+    "conductor.aws.c",
+    "keeper"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:28:00Z",
+   "type": "handoff",
+   "from": "dev.2.aws.a",
+   "to": "aws.c",
+   "sha": "c45b4cb"
+  },
+  {
+   "t": "2026-11-23T06:28:16Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "5d086db",
+   "branch": "dev",
+   "subject": "docs/team: wave 1 marked moved to account A; wave 2 hand-overs",
+   "signed": true,
+   "files": [
+    "docs/team/handover/architect.aws.md",
+    "docs/team/handover/conductor.aws.md",
+    "docs/team/handover/pm.aws.md",
+    "docs/team/handover/s3.aws.md",
+    "docs/team/handover/security.aws.md",
+    "docs/team/handover/sherpa.aws.md",
+    "docs/team/log.md",
+    "docs/team/schedule.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:28:47Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "33ca603",
+   "branch": "dev",
+   "subject": "docs/team/keys: how .aws.a agents publish their keys (from factory.c)",
+   "signed": true,
+   "files": [
+    "docs/team/keys/README.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:28:47Z",
+   "type": "handoff",
+   "from": "factory.c",
+   "to": "conductor.aws.c",
+   "sha": "33ca603"
+  },
+  {
+   "t": "2026-11-23T06:29:08Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "7ee0889",
+   "branch": "dev",
+   "subject": "docs/team/handover: security adds R-013 (c)",
+   "signed": true,
+   "files": [
+    "docs/team/handover/security.aws.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:29:23Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "6402d82",
+   "branch": "dev",
+   "subject": "docs/billing: monthly forecast with free tiers, and its test (from billing.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/billing/README.md",
+    "docs/billing/forecast.mjs",
+    "docs/billing/forecast.test.mjs",
+    "docs/billing/prices.json",
+    "docs/team/from-a/billing.aws.a.md",
+    "docs/team/keys/billing.aws.a.json"
+   ],
+   "lanes_touched": [
+    "billing.aws.c",
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:29:23Z",
+   "type": "handoff",
+   "from": "billing.aws.a",
+   "to": "aws.c",
+   "sha": "6402d82"
+  },
+  {
+   "t": "2026-11-23T06:29:23Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "e2a0f05",
+   "branch": "dev",
+   "subject": "docs/boto3: Cloud Control S3 handler permissions (from boto3.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/boto3/2026-11-23__01-s3-map.md",
+    "docs/boto3/2026-11-23__02-cloud-control-s3-handlers.md",
+    "docs/team/from-a/boto3.aws.a.md",
+    "docs/team/keys/boto3.aws.a.json"
+   ],
+   "lanes_touched": [
+    "boto3.aws.c",
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:29:23Z",
+   "type": "handoff",
+   "from": "boto3.aws.a",
+   "to": "aws.c",
+   "sha": "e2a0f05"
+  },
+  {
+   "t": "2026-11-23T06:29:23Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "de137fe",
+   "branch": "dev",
+   "subject": "docs/cloudformation: reads and CORS, twin seed and read API (from cloudformation.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/cloudformation/2026-11-23__reads-and-cors.md",
+    "docs/cloudformation/2026-11-23__seed-and-read-api.md",
+    "docs/cloudformation/seed/cloudformation.json",
+    "docs/cloudformation/seed/route53.json",
+    "docs/team/from-a/cloudformation.aws.a.md",
+    "docs/team/keys/cloudformation.aws.a.json"
+   ],
+   "lanes_touched": [
+    "cloudformation.aws.c",
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:29:23Z",
+   "type": "handoff",
+   "from": "cloudformation.aws.a",
+   "to": "aws.c",
+   "sha": "de137fe"
+  },
+  {
+   "t": "2026-11-23T06:29:23Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "3a039f0",
+   "branch": "dev",
+   "subject": "docs/cloudtrail: event shape, and a live-trail twin patch for review (from cloudtrail.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/cloudtrail/2026-11-23__02-event-shape.md",
+    "docs/cloudtrail/2026-11-23__first-note.md",
+    "docs/cloudtrail/patches/2026-11-23__01-live-trail.patch",
+    "docs/team/from-a/cloudtrail.aws.a.md",
+    "docs/team/keys/cloudtrail.aws.a.json"
+   ],
+   "lanes_touched": [
+    "cloudtrail.aws.c",
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:29:23Z",
+   "type": "handoff",
+   "from": "cloudtrail.aws.a",
+   "to": "aws.c",
+   "sha": "3a039f0"
+  },
+  {
+   "t": "2026-11-23T06:29:23Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "7e61bb2",
+   "branch": "dev",
+   "subject": "docs/journal: zip figures measured again after the one-request fix (from journalist.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/journal/README.md",
+    "docs/journal/articles/2026-11-23__look-inside-a-zip-without-downloading-it.md",
+    "docs/journal/parity.md",
+    "docs/team/from-a/journalist.aws.a.md",
+    "docs/team/keys/journalist.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "journalist.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:29:23Z",
+   "type": "handoff",
+   "from": "journalist.aws.a",
+   "to": "aws.c",
+   "sha": "7e61bb2"
+  },
+  {
+   "t": "2026-11-23T06:29:23Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "dcef4ed",
+   "branch": "dev",
+   "subject": "docs/ontology: graph builder and per-pack graphs (from ontology.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/ontology/2026-11-23__01-resource-ontology.md",
+    "docs/ontology/build-twin-graph.mjs",
+    "docs/ontology/twin-graph.attack.json",
+    "docs/ontology/twin-graph.json",
+    "docs/ontology/twin-graph.surge.json",
+    "docs/team/from-a/ontology.aws.a.md",
+    "docs/team/keys/ontology.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "ontology.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:29:23Z",
+   "type": "handoff",
+   "from": "ontology.aws.a",
+   "to": "aws.c",
+   "sha": "dcef4ed"
+  },
+  {
+   "t": "2026-11-23T06:29:23Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "4893ea8",
+   "branch": "dev",
+   "subject": "docs/swarm: extractor tests and a replay view kept in docs/ (from swarm.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/swarm/README.md",
+    "docs/swarm/data/replay.json",
+    "docs/swarm/events.jsonl",
+    "docs/swarm/extract.py",
+    "docs/swarm/test_extract.py",
+    "docs/swarm/view/index.html",
+    "docs/swarm/view/view.css",
+    "docs/swarm/view/view.js",
+    "docs/team/from-a/swarm.aws.a.md",
+    "docs/team/keys/swarm.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "swarm.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:29:23Z",
+   "type": "handoff",
+   "from": "swarm.aws.a",
+   "to": "aws.c",
+   "sha": "4893ea8"
+  },
+  {
+   "t": "2026-11-23T06:29:23Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "ae485c3",
+   "branch": "dev",
+   "subject": "docs/design: try-the-twin link pattern and Files console wireframes (from ux.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/design/2026-11-23__02-try-the-twin-link-pattern.md",
+    "docs/design/2026-11-23__03-files-console-wireframes.md",
+    "docs/team/from-a/ux.aws.a.md",
+    "docs/team/keys/ux.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "ux.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:29:23Z",
+   "type": "handoff",
+   "from": "ux.aws.a",
+   "to": "aws.c",
+   "sha": "ae485c3"
+  },
+  {
+   "t": "2026-11-23T06:29:23Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "d55d463",
+   "branch": "dev",
+   "subject": "Twin: Lambda and Firehose read calls; Lambda page design (from lambda.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/lambda/2026-11-23__01-page-design.md",
+    "docs/lambda/2026-11-23__first-note.md",
+    "docs/lambda/status.md",
+    "docs/team/from-a/lambda.aws.a.md",
+    "docs/team/keys/lambda.aws.a.json",
+    "site/twin.js",
+    "test/README.md",
+    "test/twin.e2e.cjs",
+    "test/twin/lambda-firehose.test.mjs"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "keeper",
+    "lambda.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:29:23Z",
+   "type": "handoff",
+   "from": "lambda.aws.a",
+   "to": "aws.c",
+   "sha": "d55d463"
+  },
+  {
+   "t": "2026-11-23T06:29:46Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "4bf562d",
+   "branch": "dev",
+   "subject": "docs/security: 06:28 review, no new risks (from security.aws.c)",
+   "signed": true,
+   "files": [
+    "docs/security/last-reviewed.txt",
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:29:46Z",
+   "type": "handoff",
+   "from": "security.aws.c",
+   "to": "aws.c",
+   "sha": "4bf562d"
+  },
+  {
+   "t": "2026-11-23T06:30:20Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "3608235",
+   "branch": "dev",
+   "subject": "Twin: IAM knows the platform's own two roles",
+   "signed": true,
+   "files": [
+    "site/twin.js"
+   ],
+   "lanes_touched": [
+    "keeper"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:33:12Z",
+   "type": "commit",
+   "agent": "cloudtrail.aws.a",
+   "sha": "3051a2d",
+   "branch": "work/cloudtrail.aws.a",
+   "subject": "docs/cloudtrail: patch rebased on today's twin; Factory key commit for factory.c",
+   "signed": true,
+   "files": [
+    "docs/cloudtrail/patches/2026-11-23__01-live-trail.patch",
+    "docs/team/from-a/cloudtrail.aws.a.md",
+    "docs/team/keys/cloudtrail.aws.a.iac-commit.txt",
+    "docs/team/keys/cloudtrail.aws.a.iac-entry.json"
+   ],
+   "lanes_touched": [
+    "cloudtrail.aws.c",
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:35:53Z",
+   "type": "commit",
+   "agent": "swarm.aws.a",
+   "sha": "b9973ae",
+   "branch": "work/swarm.aws.a",
+   "subject": "docs/team/keys: swarm.aws.a's Factory key commit and entry, for factory.c",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/swarm.aws.a.md",
+    "docs/team/keys/swarm.aws.a.iac-commit.txt",
+    "docs/team/keys/swarm.aws.a.iac-entry.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:40Z",
+   "type": "wake",
+   "agent": "conductor.aws.c:",
+   "note": "wave 1 (16 roles) running on account A since ~03:35 as .a; schedule.json marks them moved. Wave 2 hand-overs written (conductor, pm, security, architect, s3, sherpa) for maestro.a at Dinis's word. .a asks routed: names in abp.json to aws.c, keys to factory.c"
+  },
+  {
+   "t": "2026-11-23T06:41:54Z",
+   "type": "commit",
+   "agent": "dev.2.aws.a",
+   "sha": "a0e3d47",
+   "branch": "work/dev.2.aws.a",
+   "subject": "dev.2.aws.a: key commit for the Factory; S3 contract lists the Cloud Control handler actions",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/dev.2.aws.a.md",
+    "docs/team/keys/dev.2.aws.a.iac-commit.txt",
+    "docs/team/keys/dev.2.aws.a.iac-entry.json",
+    "site/api/s3.openapi.json",
+    "test/api/openapi.test.mjs"
+   ],
+   "lanes_touched": [
+    "architect.aws.c",
+    "conductor.aws.c",
+    "keeper"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:45:03Z",
+   "type": "commit",
+   "agent": "boto3.aws.a",
+   "sha": "9d1bae9",
+   "branch": "work/boto3.aws.a",
+   "subject": "docs/boto3: twin S3 recheck, max-keys patch for aws.c; Factory key commit files",
+   "signed": true,
+   "files": [
+    "docs/boto3/2026-11-23__03-twin-s3-recheck.md",
+    "docs/boto3/patches/2026-11-23__twin-max-keys.patch",
+    "docs/team/from-a/boto3.aws.a.md",
+    "docs/team/keys/boto3.aws.a.iac-commit.txt",
+    "docs/team/keys/boto3.aws.a.iac-entry.json"
+   ],
+   "lanes_touched": [
+    "boto3.aws.c",
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T06:45:03Z",
+   "type": "move",
+   "from": "boto3.aws.c",
+   "to": "boto3.aws.a",
+   "source": "docs/team/handover/boto3.aws.md"
+  },
+  {
+   "t": "2026-11-23T06:56:46Z",
+   "type": "commit",
+   "agent": "data.aws.a",
+   "sha": "48fcf31",
+   "branch": "work/data.aws.a",
+   "subject": "data: investigation mode (refers-to, pivots, trail, open) and the Factory key commit for data.aws.a",
+   "signed": true,
+   "files": [
+    "docs/data/status.md",
+    "docs/team/from-a/data.aws.a.md",
+    "docs/team/keys/data.aws.a.iac-commit.txt",
+    "docs/team/keys/data.aws.a.iac-entry.json",
+    "site/data/links.js",
+    "site/data/view.js",
+    "test/data/extract.test.mjs",
+    "test/data/view.e2e.cjs",
+    "test/data/view.fixture.html",
+    "test/data/view.fixture.js"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "data.aws.c",
+    "keeper"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:08:14Z",
+   "type": "commit",
+   "agent": "journalist.aws.a",
+   "sha": "26b66dc",
+   "branch": "work/journalist.aws.a",
+   "subject": "docs/team/keys: journalist.aws.a's own Factory key commit for factory.c",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/journalist.aws.a.md",
+    "docs/team/keys/journalist.aws.a.iac-commit.txt",
+    "docs/team/keys/journalist.aws.a.iac-entry.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:22:45Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "8dc815e",
+   "branch": "dev",
+   "subject": "Twin: opens on S3, packs link to where they show, no real account form",
+   "signed": true,
+   "files": [
+    "site/app.js",
+    "site/index.html",
+    "site/s3.js",
+    "site/twin.js",
+    "test/twin.e2e.cjs"
+   ],
+   "lanes_touched": [
+    "keeper",
+    "s3.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:23:24Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "1707886",
+   "branch": "dev",
+   "subject": "docs/sherpa: usability walks 1 and 2 (from sherpa.aws.c)",
+   "signed": true,
+   "files": [
+    "docs/sherpa/2026-11-23__walk-01.md",
+    "docs/sherpa/2026-11-23__walk-02.md"
+   ],
+   "lanes_touched": [
+    "sherpa.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:23:24Z",
+   "type": "handoff",
+   "from": "sherpa.aws.c",
+   "to": "aws.c",
+   "sha": "1707886"
+  },
+  {
+   "t": "2026-11-23T07:27:31Z",
+   "type": "commit",
+   "agent": "cloudformation.aws.a",
+   "sha": "93bdcc3",
+   "branch": "work/cloudformation.aws.a",
+   "subject": "docs/team/keys: cloudformation.aws.a's Factory key commit and entry, for factory.c",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/cloudformation.aws.a.md",
+    "docs/team/keys/cloudformation.aws.a.iac-commit.txt",
+    "docs/team/keys/cloudformation.aws.a.iac-entry.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:27:47Z",
+   "type": "commit",
+   "agent": "architect.aws.a",
+   "sha": "7365ea5",
+   "branch": "work/architect.aws.a",
+   "subject": "architect.aws.a: key commit for the Factory; take-over note for account C",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/architect.aws.a.md",
+    "docs/team/keys/architect.aws.a.iac-commit.txt",
+    "docs/team/keys/architect.aws.a.iac-entry.json",
+    "docs/team/keys/architect.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:27:47Z",
+   "type": "move",
+   "from": "architect.aws.c",
+   "to": "architect.aws.a",
+   "source": "docs/team/handover/architect.aws.md"
+  },
+  {
+   "t": "2026-11-23T07:27:58Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "e6c71be",
+   "branch": "work/conductor.aws.a",
+   "subject": "docs/team: conductor.aws.a up on account A; Factory key commit for factory.c",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/conductor.aws.a.md",
+    "docs/team/keys/conductor.aws.a.iac-commit.txt",
+    "docs/team/keys/conductor.aws.a.iac-entry.json",
+    "docs/team/keys/conductor.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:27:58Z",
+   "type": "move",
+   "from": "conductor.aws.c",
+   "to": "conductor.aws.a",
+   "source": "docs/team/handover/conductor.aws.md"
+  },
+  {
+   "t": "2026-11-23T07:28:01Z",
+   "type": "commit",
+   "agent": "s3.aws.a",
+   "sha": "f973941",
+   "branch": "work/s3.aws.a",
+   "subject": "s3.aws.a: key published for the Factory, paths asked, takes over from s3.aws.c",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/s3.aws.a.md",
+    "docs/team/keys/s3.aws.a.iac-commit.txt",
+    "docs/team/keys/s3.aws.a.iac-entry.json",
+    "docs/team/keys/s3.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:28:01Z",
+   "type": "move",
+   "from": "s3.aws.c",
+   "to": "s3.aws.a",
+   "source": "docs/team/handover/s3.aws.md"
+  },
+  {
+   "t": "2026-11-23T07:28:05Z",
+   "type": "commit",
+   "agent": "pm.aws.a",
+   "sha": "b962da6",
+   "branch": "work/pm.aws.a",
+   "subject": "pm.aws.a: key, Factory key commit for factory.c, board taken over",
+   "signed": true,
+   "files": [
+    "docs/board/README.md",
+    "docs/board/decisions.md",
+    "docs/team/from-a/pm.aws.a.md",
+    "docs/team/keys/pm.aws.a.iac-commit.txt",
+    "docs/team/keys/pm.aws.a.iac-entry.json",
+    "docs/team/keys/pm.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "pm.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:28:05Z",
+   "type": "move",
+   "from": "pm.aws.c",
+   "to": "pm.aws.a",
+   "source": "docs/team/handover/pm.aws.md"
+  },
+  {
+   "t": "2026-11-23T07:29:05Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "a907b14",
+   "branch": "work/conductor.aws.a",
+   "subject": "docs/team: log line for architect.aws.a (from conductor.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/conductor.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:29:05Z",
+   "type": "handoff",
+   "from": "conductor.aws.a",
+   "to": "conductor.aws.a",
+   "sha": "a907b14"
+  },
+  {
+   "t": "2026-11-23T07:29:28Z",
+   "type": "commit",
+   "agent": "video.aws.a",
+   "sha": "829ab14",
+   "branch": "work/video.aws.a",
+   "subject": "docs/team/keys: video.aws.a Factory key commit and entry",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/video.aws.a.md",
+    "docs/team/keys/video.aws.a.iac-commit.txt",
+    "docs/team/keys/video.aws.a.iac-entry.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:29:33Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "de6df59",
+   "branch": "work/security.aws.a",
+   "subject": "security.aws.a: public key, Factory key commit, note for account C",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/security.aws.a.md",
+    "docs/team/keys/security.aws.a.iac-commit.txt",
+    "docs/team/keys/security.aws.a.iac-entry.json",
+    "docs/team/keys/security.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:29:33Z",
+   "type": "move",
+   "from": "security.aws.c",
+   "to": "security.aws.a",
+   "source": "docs/team/handover/security.aws.md"
+  },
+  {
+   "t": "2026-11-23T07:29:51Z",
+   "type": "commit",
+   "agent": "lambda.aws.a",
+   "sha": "e6a8ac9",
+   "branch": "work/lambda.aws.a",
+   "subject": "docs/team/keys: lambda.aws.a's Factory key commit, for factory.c to land",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/lambda.aws.a.md",
+    "docs/team/keys/lambda.aws.a.iac-commit.txt",
+    "docs/team/keys/lambda.aws.a.iac-entry.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:29:54Z",
+   "type": "commit",
+   "agent": "ux.aws.a",
+   "sha": "58c2c08",
+   "branch": "work/ux.aws.a",
+   "subject": "docs/team/keys: ux.aws.a Factory key commit and entry for factory.c",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/ux.aws.a.md",
+    "docs/team/keys/ux.aws.a.iac-commit.txt",
+    "docs/team/keys/ux.aws.a.iac-entry.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:29:54Z",
+   "type": "commit",
+   "agent": "vaults.aws.a",
+   "sha": "104040a",
+   "branch": "work/vaults.aws.a",
+   "subject": "docs/team/keys: vaults.aws.a's Factory key commit and entry, for factory.c to rebuild",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/vaults.aws.a.md",
+    "docs/team/keys/vaults.aws.a.iac-commit.txt",
+    "docs/team/keys/vaults.aws.a.iac-entry.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:29:56Z",
+   "type": "commit",
+   "agent": "sherpa.aws.a",
+   "sha": "958ac89",
+   "branch": "work/sherpa.aws.a",
+   "subject": "docs/sherpa: walk 3, and sherpa.aws.a's key for the Factory",
+   "signed": true,
+   "files": [
+    "docs/sherpa/2026-11-23__walk-03.md",
+    "docs/team/from-a/sherpa.aws.a.md",
+    "docs/team/keys/sherpa.aws.a.iac-commit.txt",
+    "docs/team/keys/sherpa.aws.a.iac-entry.json",
+    "docs/team/keys/sherpa.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "sherpa.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:29:56Z",
+   "type": "move",
+   "from": "sherpa.aws.c",
+   "to": "sherpa.aws.a",
+   "source": "docs/team/handover/sherpa.aws.md"
+  },
+  {
+   "t": "2026-11-23T07:30:07Z",
+   "type": "commit",
+   "agent": "ontology.aws.a",
+   "sha": "e5dfd40",
+   "branch": "work/ontology.aws.a",
+   "subject": "docs/team/keys: ontology.aws.a's Factory key commit for factory.c",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/ontology.aws.a.md",
+    "docs/team/keys/ontology.aws.a.iac-commit.txt",
+    "docs/team/keys/ontology.aws.a.iac-entry.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:30:26Z",
+   "type": "commit",
+   "agent": "lambda.aws.a",
+   "sha": "8fd8254",
+   "branch": "work/lambda.aws.a",
+   "subject": "docs/lambda: status 07:40Z",
+   "signed": true,
+   "files": [
+    "docs/lambda/status.md"
+   ],
+   "lanes_touched": [
+    "lambda.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:30:30Z",
+   "type": "commit",
+   "agent": "billing.aws.a",
+   "sha": "6697d7f",
+   "branch": "work/billing.aws.a",
+   "subject": "docs/team/keys: billing.aws.a Factory key commit and entry for factory.c",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/billing.aws.a.md",
+    "docs/team/keys/billing.aws.a.iac-commit.txt",
+    "docs/team/keys/billing.aws.a.iac-entry.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:30:31Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "741caaf",
+   "branch": "work/conductor.aws.a",
+   "subject": "docs/team: log line for sherpa.aws.a (from conductor.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/conductor.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:30:31Z",
+   "type": "handoff",
+   "from": "conductor.aws.a",
+   "to": "conductor.aws.a",
+   "sha": "741caaf"
+  },
+  {
+   "t": "2026-11-23T07:30:39Z",
+   "type": "commit",
+   "agent": "s3.aws.a",
+   "sha": "037099f",
+   "branch": "work/s3.aws.a",
+   "subject": "docs/s3: backlog with sherpa's walk 1 and walk 3 items",
+   "signed": true,
+   "files": [
+    "docs/s3/backlog.md"
+   ],
+   "lanes_touched": [
+    "s3.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:30:39Z",
+   "type": "commit",
+   "agent": "ux.aws.a",
+   "sha": "25259f7",
+   "branch": "work/ux.aws.a",
+   "subject": "docs/design: design 02 acceptance status from sherpa.aws.a walk 3",
+   "signed": true,
+   "files": [
+    "docs/design/2026-11-23__02-try-the-twin-link-pattern.md",
+    "docs/team/from-a/ux.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "ux.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:30:45Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "fe7170c",
+   "branch": "dev",
+   "subject": "S3 browser: an address for every place, #/s3/<bucket>/<folder or file> (from s3.aws.c)",
+   "signed": true,
+   "files": [
+    "site/s3.js",
+    "test/README.md",
+    "test/s3/route.e2e.cjs"
+   ],
+   "lanes_touched": [
+    "keeper",
+    "s3.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:30:45Z",
+   "type": "handoff",
+   "from": "s3.aws.c",
+   "to": "aws.c",
+   "sha": "fe7170c"
+  },
+  {
+   "t": "2026-11-23T07:30:47Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "18e5603",
+   "branch": "work/security.aws.a",
+   "subject": "docs/security: 07:28 wake, R-014 and R-015 on the data branch",
+   "signed": true,
+   "files": [
+    "docs/security/last-reviewed.txt",
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:31:19Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "5caefca",
+   "branch": "work/conductor.aws.a",
+   "subject": "docs/team: log line for security.aws.a; hold data.aws.a's site/data until R-014 (from conductor.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/conductor.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:31:19Z",
+   "type": "handoff",
+   "from": "conductor.aws.a",
+   "to": "conductor.aws.a",
+   "sha": "5caefca"
+  },
+  {
+   "t": "2026-11-23T07:31:50Z",
+   "type": "commit",
+   "agent": "lambda.aws.a",
+   "sha": "64127b2",
+   "branch": "work/lambda.aws.a",
+   "subject": "Twin: Lambda and Firehose look up own properties only",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/lambda.aws.a.md",
+    "site/twin.js",
+    "test/twin/lambda-firehose.test.mjs"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "keeper"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:33:07Z",
+   "type": "commit",
+   "agent": "data.aws.a",
+   "sha": "146f67d",
+   "branch": "work/data.aws.a",
+   "subject": "data: R-014 prototype-free tables for log-keyed values; R-015 ceilings on unzip, file size and records; per-file catch",
+   "signed": true,
+   "files": [
+    "docs/data/status.md",
+    "docs/team/from-a/data.aws.a.md",
+    "site/data/extract.js",
+    "site/data/links.js",
+    "site/data/view.js",
+    "test/data/extract.test.mjs",
+    "test/data/view.e2e.cjs"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "data.aws.c",
+    "keeper"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:33:43Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "e58a9cf",
+   "branch": "work/conductor.aws.a",
+   "subject": "docs/team: data.aws.a's R-014/R-015 fix awaiting security recheck (from conductor.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/conductor.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:33:43Z",
+   "type": "handoff",
+   "from": "conductor.aws.a",
+   "to": "conductor.aws.a",
+   "sha": "e58a9cf"
+  },
+  {
+   "t": "2026-11-23T07:33:44Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "d46c027",
+   "branch": "work/security.aws.a",
+   "subject": "docs/security: R-014 and R-015 closed on work/data.aws.a (146f67d)",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:34:00Z",
+   "type": "commit",
+   "agent": "data.aws.a",
+   "sha": "2d4cf0f",
+   "branch": "work/data.aws.a",
+   "subject": "docs/team/from-a: R-014 and R-015 closed by security.aws.a; ready to land",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/data.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:34:18Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "b0c61aa",
+   "branch": "work/conductor.aws.a",
+   "subject": "docs/team: release hold on data.aws.a's site/data after security recheck (from conductor.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/conductor.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:34:18Z",
+   "type": "handoff",
+   "from": "conductor.aws.a",
+   "to": "conductor.aws.a",
+   "sha": "b0c61aa"
+  },
+  {
+   "t": "2026-11-23T07:34:38Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "77eb239",
+   "branch": "dev",
+   "subject": "docs/team: final hand-over to conductor.aws.a; C wakes off",
+   "signed": true,
+   "files": [
+    "docs/team/handover/conductor-c-to-a-final.md",
+    "docs/team/log.md",
+    "docs/team/schedule.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:34:50Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "88148db",
+   "branch": "dev",
+   "subject": "Twin: log lines carry what the enricher adds (country, vault_id)",
+   "signed": true,
+   "files": [
+    "site/twin.js"
+   ],
+   "lanes_touched": [
+    "keeper"
+   ]
+  },
+  {
+   "t": "2026-11-23T07:35Z",
+   "type": "wake",
+   "agent": "conductor.aws.c:",
+   "note": "wave 2 up on account A (07:26); C wakes for conductor, security, architect, s3, sherpa disabled; final hand-over to conductor.aws.a in docs/team/handover/conductor-c-to-a-final.md; going idle"
   }
  ],
  "sources": [
   "git origin/dev",
+  "git origin/work/architect.aws.a",
   "git origin/work/billing.aws.a",
   "git origin/work/boto3.aws.a",
   "git origin/work/cloudformation.aws.a",
   "git origin/work/cloudtrail.aws.a",
+  "git origin/work/conductor.aws.a",
   "git origin/work/data.aws.a",
   "git origin/work/dev.2.aws.a",
   "git origin/work/journalist.aws.a",
   "git origin/work/lambda.aws.a",
   "git origin/work/ontology.aws.a",
+  "git origin/work/pm.aws.a",
+  "git origin/work/s3.aws.a",
+  "git origin/work/security.aws.a",
+  "git origin/work/sherpa.aws.a",
   "git origin/work/swarm.aws.a",
   "git origin/work/ux.aws.a",
   "git origin/work/vaults.aws.a",
