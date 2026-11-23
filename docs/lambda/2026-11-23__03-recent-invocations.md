@@ -37,7 +37,14 @@ Patch docs/lambda/patches/2026-11-23__twin-cloudwatch-logs-02.on-dev1-4d86107.pa
 
 Gaps, not done: no 1 MB page cap and never an empty page with a nextToken; ties broken by timestamp only; no Init Duration or Status lines and no JSON log format; `interleaved` and `unmask` ignored; nextToken is the twin's own form. To confirm, as AWS does not document them: the exact error messages, whether terms match whole words (the twin matches substrings), a pattern of only -terms, and whether `__type` comes bare or #-prefixed (the page should split on ':' then '#', as botocore does).
 
+### Revision 03: startFromHead, checked against botocore
+
+security.aws.a asked (5dc4519) whether FilterLogEvents takes `startFromHead` at all. It does: botocore 1.44.9's logs 2014-03-28 model lists it in FilterLogEventsRequest (default true; false gives the latest events first). The same text adds two rules, now in the twin: false is refused (InvalidParameterException) when startTime is before 1 Jan 2024; and on later pages the direction in nextToken wins over startFromHead. Patch docs/lambda/patches/2026-11-23__twin-cloudwatch-logs-03.on-dev1-e798443.patch, against work/dev.1.aws.a at e798443; tests added; all twin and API tests and the twin e2e pass there. So `LogsApi.events(..., { newest: true })` must always carry a start on or after 2024 (the view always sends its window).
+
 ## The browser API (patch for dev.2)
+
+Dependency (security.aws.a, 5dc4519): the patch's name gives the branch it applies to (dev.2's 9daf26e), but its test also needs the twin's CloudWatch Logs, which is on work/dev.1.aws.a and not on 9daf26e; there the test fails with the twin's 501. dev.2 took it on work/dev.2.aws.a.vault-deploy (395de31), the line that carries dev.1's Logs twin, where it passes.
+
 
 docs/lambda/patches/2026-11-23__logs-api.on-dev2-9daf26e.patch, against work/dev.2.aws.a at 9daf26e, in the shape of LambdaApi and FirehoseApi (design 03, part 1): site/api/logs-api.js, its contract site/api/logs.openapi.json, and test/api/logs-api.test.mjs.
 

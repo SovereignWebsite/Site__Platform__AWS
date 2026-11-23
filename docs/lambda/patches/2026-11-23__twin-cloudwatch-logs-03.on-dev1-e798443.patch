@@ -1,0 +1,56 @@
+diff --git a/site/twin.js b/site/twin.js
+index 5c0cab4..4317851 100644
+--- a/site/twin.js
++++ b/site/twin.js
+@@ -1276,8 +1276,11 @@
+     if (!(limit >= 1 && limit <= 10000 && limit === Math.floor(limit))) return logsErr("InvalidParameterException", "1 validation error detected: Value at 'limit' failed to satisfy constraint: Member must have value between 1 and 10000");
+     var match = logFilter(q.filterPattern);
+     if (!match) return logsErr("InvalidParameterException", "Not in the twin yet: JSON, space-delimited and regex filter patterns");
+-    var from = 0;
+-    if (q.nextToken !== undefined) { var tk = /^twin-(\d+)$/.exec(String(q.nextToken)); if (!tk) return logsErr("InvalidParameterException", "The specified nextToken is invalid."); from = +tk[1]; }
++    // startFromHead (botocore logs 2014-03-28, FilterLogEventsRequest): default true; false gives the latest events first
++    // and is refused when startTime is before 1 Jan 2024; on later pages the direction in nextToken wins over it.
++    var from = 0, head = q.startFromHead !== false;
++    if (q.nextToken !== undefined) { var tk = /^twin-(head|tail)-(\d+)$/.exec(String(q.nextToken)); if (!tk) return logsErr("InvalidParameterException", "The specified nextToken is invalid."); head = tk[1] === "head"; from = +tk[2]; }
++    else if (!head && !(q.startTime >= Date.UTC(2024, 0, 1))) return logsErr("InvalidParameterException", "startFromHead false is supported only when startTime is on or after Jan 1, 2024 00:00:00 UTC."); // message not documented
+     if (Array.isArray(q.logStreamNames) && (q.logStreamNames.length < 1 || q.logStreamNames.length > 100))
+       return logsErr("InvalidParameterException", "1 validation error detected: Value at 'logStreamNames' failed to satisfy constraint: Member must have length between 1 and 100");
+     var names = Array.isArray(q.logStreamNames) ? q.logStreamNames : null, prefix = typeof q.logStreamNamePrefix === "string" ? q.logStreamNamePrefix : null;
+@@ -1285,10 +1288,9 @@
+       return (q.startTime === undefined || e.timestamp >= q.startTime) && (q.endTime === undefined || e.timestamp <= q.endTime) &&
+         (!names || names.indexOf(e.logStreamName) >= 0) && (prefix === null || e.logStreamName.indexOf(prefix) === 0) && match(e.message);
+     });
+-    // startFromHead false: newest first (AWS supports it for startTime on or after 1 Jan 2024, note 11); the recent invocations list uses it.
+-    if (q.startFromHead === false) hit.reverse();
++    if (!head) hit.reverse();
+     var page = hit.slice(from, from + limit), out = { events: page.map(function (e) { return Object.assign({}, e); }), searchedLogStreams: [] };
+-    if (from + limit < hit.length) out.nextToken = "twin-" + (from + limit);
++    if (from + limit < hit.length) out.nextToken = "twin-" + (head ? "head" : "tail") + "-" + (from + limit);
+     return logsJson(out);
+   }
+ 
+diff --git a/test/twin/logs.test.mjs b/test/twin/logs.test.mjs
+index 5045735..55beaed 100644
+--- a/test/twin/logs.test.mjs
++++ b/test/twin/logs.test.mjs
+@@ -81,7 +81,7 @@ const bad = [
+   [{ logGroupName: "/aws/lambda/nope" }, 400, "ResourceNotFoundException"],
+   [{ logGroupName: "/aws/lambda/demo-handler", logGroupIdentifier: "/aws/lambda/demo-handler" }, 400, "InvalidParameterException"],
+   [{ logGroupName: "/aws/lambda/demo-handler", limit: 0 }, 400, "InvalidParameterException"],
+-  [{ logGroupName: "/aws/lambda/demo-handler", nextToken: "x" }, 400, "InvalidParameterException"],
++  [{ logGroupName: "/aws/lambda/demo-handler", nextToken: "twin-5" }, 400, "InvalidParameterException"],
+   [{ logGroupName: "/aws/lambda/demo-handler", filterPattern: "{ $.level = \"ERROR\" }" }, 400, "InvalidParameterException"],
+   [{ logGroupName: "constructor" }, 400, "ResourceNotFoundException"],
+   [{ logGroupName: "/aws/lambda/__proto__" }, 400, "ResourceNotFoundException"]];
+@@ -93,6 +93,11 @@ if ((await ok(T, "FilterLogEvents", Object.assign({ logGroupName: "/aws/lambda/d
+ const newest = await ok(T, "FilterLogEvents", Object.assign({ logGroupName: "/aws/lambda/demo-handler", startFromHead: false, limit: 3 }, day("21")));
+ if (newest.events.map((e) => e.eventId).join() !== all.slice(-3).reverse().map((e) => e.eventId).join()) fail("startFromHead false not newest first");
+ if (!Array.isArray(newest.searchedLogStreams) || newest.searchedLogStreams.length) fail("searchedLogStreams");
++// startFromHead as botocore documents it: false is refused for a startTime before 2024 (or none); the token's direction wins
++for (const q of [{ startTime: ms("2023-12-31T23:59:59Z") }, {}])
++  if ((await call(T, "FilterLogEvents", Object.assign({ logGroupName: "/aws/lambda/demo-handler", startFromHead: false }, q))).j.__type !== "InvalidParameterException") fail("startFromHead false before 2024 accepted " + JSON.stringify(q));
++{ let got2 = [], t2; do { const p = await ok(T, "FilterLogEvents", Object.assign({ logGroupName: "/aws/lambda/demo-handler", limit: 4 }, day("21"), t2 ? { nextToken: t2, startFromHead: true } : { startFromHead: false })); got2 = got2.concat(p.events); t2 = p.nextToken; } while (t2);
++  if (got2.map((e) => e.eventId).join() !== all.slice().reverse().map((e) => e.eventId).join()) fail("token direction does not win over startFromHead"); }
+ if (!all.every((e) => /^\d{56}$/.test(e.eventId))) fail("event id form " + all[0].eventId);
+ { const m = await call(T, "FilterLogEvents", {}); if (m.j.__type !== "InvalidParameterException") fail("missing group " + JSON.stringify(m.j)); }
+ // DescribeLogGroups: pattern (three fields only), prefix and pattern exclusive, empty prefix refused, limit and paging
