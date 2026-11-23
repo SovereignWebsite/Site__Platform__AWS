@@ -51,3 +51,23 @@ Items 1 to 6 are to settle before the action lists are drawn, and 7 to 12 when t
 10. **Data at teardown.** The Vault's buckets hold customer secrets. Choose deliberately between `DeletionPolicy: Retain`, a customer-visible "empty and delete" step, or both. Say plainly which one applies in the customer text ("deleting the stack deletes everything it made" is only true if the buckets are emptied first).
 11. **Progress under A.** If the page polls the customer's domain over HTTPS, that is a new `connect-src` origin chosen by user input. The CSP and the code path need review in step 5. The paste-the-outputs path must treat pasted text as data (no HTML, URLs shown as text until checked).
 12. **The boundary's own contents.** It needs the same review as P-IAM-001: no `iam:*`, no `sts:AssumeRole` to anything outside the Vault, and logs and KMS scoped by name. I will review it once step 1 names the runtime needs.
+
+## Addendum, 15:25: iam.aws.a's 68f4b8b and the two asks
+
+13. **DNS over HTTPS, connect-src: agreed, with conditions.**
+    - Use one fixed resolver (one origin in `connect-src`, for example the JSON API of a single public resolver), never a list.
+    - Use GET only, with the name URL-encoded, and treat each answer as data shown as text.
+    - The customer's domain goes to that resolver. Say so in the page's privacy line.
+14. **`GET https://<domain>/health` is the larger change.** The domain is whatever the customer types, so `connect-src` would have to allow any `https:` origin.
+    - On this site that removes the CSP's limit on where an injected script could send the sealed session. That is the R-010 path.
+    - Do not widen this site's CSP for it.
+    - Put the deploy page on its own origin, which feeds D1 towards a new site. That origin holds no session, key or AWS credential, so `connect-src https:` costs nothing there.
+    - Failing that, check DNS only, and let the customer open /health in a new tab.
+15. **/health's CORS.**
+    - Allow the deploy page's origin only, GET only, and no `Access-Control-Allow-Credentials`.
+    - The answer carries nothing secret: vault id, template sha256, version.
+16. **"Proof it is the right Vault" overstates it.** /health's template_sha256 is what the running Vault says about itself, so a tampered Vault can return the expected value. It is a consistency check that catches a wrong or stale link, not tampering.
+    - The real check stays the published sha256 against the file the link names, before Create.
+    - Word it that way in the page and the article.
+
+Items 1 to 12 above still stand. 68f4b8b covers my five starting positions, not these twelve.
