@@ -37,7 +37,11 @@ const api = CfnApi(send, { account: A });
 
 // ---- over the twin ----
 const eu = await api.stacks("eu-west-2");
-ok(JSON.stringify(eu.items.map((s) => s.name)) === JSON.stringify(["demo-site", "demo-dns", "demo-lambda"]) && eu.next === null, "stacks(eu-west-2): three, one page");
+ok(JSON.stringify(eu.items.map((s) => s.name)) === JSON.stringify(["demo-site", "demo-dns", "demo-lambda"]), "stacks(eu-west-2): the three live stacks on the first page");
+{ // ListStacks pages (the twin's pages of 3) and keeps a deleted stack for 90 days: stacks() leaves it out unless asked.
+  const live = (await CfnApi.all((next) => api.stacks("eu-west-2", { next }))).items.map((s) => s.name), every = (await CfnApi.all((next) => api.stacks("eu-west-2", { next, deleted: true }))).items;
+  ok(live.join() === "demo-site,demo-dns,demo-lambda" && every.filter((s) => s.status === "DELETE_COMPLETE").every((s) => !live.includes(s.name)), "all pages: deleted stacks only with deleted: true");
+}
 ok(seen[0].service === "cloudformation" && seen[0].region === "eu-west-2" && seen[0].url === "https://cloudformation.eu-west-2.amazonaws.com/" && /^Action=ListStacks&Version=2010-05-15$/.test(seen[0].body), "request shape " + seen[0].body);
 ok(eu.items.every((s) => /^arn:aws:cloudformation:eu-west-2:\d{12}:stack\/[a-z0-9-]+\/[0-9a-f-]{36}$/.test(s.arn) && s.region === "eu-west-2" && s.description && s.created), "every stack has AWS's StackId as arn, region, description, created");
 const lam = eu.items.find((s) => s.name === "demo-lambda");
