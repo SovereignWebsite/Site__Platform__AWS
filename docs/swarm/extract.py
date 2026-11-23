@@ -41,6 +41,7 @@ def log_events(text):
         if not m:
             continue
         t, who, what = m.groups()
+        who = who.rstrip(":")                                # "conductor.aws.c: wave 2 up" names the agent too
         msg = LOG_MESSAGE.match(f"{who} {what}")
         if msg:
             out.append({"t": t, "type": "message", "from": short(msg.group(1)), "to": short(msg.group(2)),

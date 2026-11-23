@@ -3169,7 +3169,7 @@
   {
    "t": "2026-11-23T06:40Z",
    "type": "wake",
-   "agent": "conductor.aws.c:",
+   "agent": "conductor.aws.c",
    "note": "wave 1 (16 roles) running on account A since ~03:35 as .a; schedule.json marks them moved. Wave 2 hand-overs written (conductor, pm, security, architect, s3, sherpa) for maestro.a at Dinis's word. .a asks routed: names in abp.json to aws.c, keys to factory.c"
   },
   {
@@ -3882,9 +3882,31 @@
    ]
   },
   {
+   "t": "2026-11-23T07:35:58Z",
+   "type": "commit",
+   "agent": "swarm.aws.a",
+   "sha": "acac369",
+   "branch": "work/swarm.aws.a",
+   "subject": "docs/swarm: wave 2 in the replay; the story's numbers computed in summary.json",
+   "signed": true,
+   "files": [
+    "docs/swarm/README.md",
+    "docs/swarm/data/replay.json",
+    "docs/swarm/data/summary.json",
+    "docs/swarm/events.jsonl",
+    "docs/swarm/extract.py",
+    "docs/swarm/test_extract.py",
+    "docs/team/from-a/swarm.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "swarm.aws.c"
+   ]
+  },
+  {
    "t": "2026-11-23T07:35Z",
    "type": "wake",
-   "agent": "conductor.aws.c:",
+   "agent": "conductor.aws.c",
    "note": "wave 2 up on account A (07:26); C wakes for conductor, security, architect, s3, sherpa disabled; final hand-over to conductor.aws.a in docs/team/handover/conductor-c-to-a-final.md; going idle"
   }
  ],

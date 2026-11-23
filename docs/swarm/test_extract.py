@@ -16,11 +16,13 @@ class Test_Extract(unittest.TestCase):
             "2026-11-23T04:00Z aws.c -> s3.aws.c twin news",
             "2026-11-23T04:01Z conductor.aws.c relayed the news to architect and s3",
             "2026-11-23T04:02Z first runs reported: viz (local)",
-            "not a log line"]))
-        self.assertEqual([e["type"] for e in ev], ["message", "wake", "message", "message", "note"])
+            "not a log line",
+            "2026-11-23T04:03Z conductor.aws.c: wave 2 up"]))
+        self.assertEqual([e["type"] for e in ev], ["message", "wake", "message", "message", "note", "wake"])
         self.assertEqual((ev[0]["from"], ev[0]["to"], ev[0]["topic"]), ("aws.c", "s3.aws.c", "twin news"))
         self.assertEqual([e["to"] for e in ev[2:4]], ["architect.aws.c", "s3.aws.c"])
         self.assertNotIn("agent", ev[4])                      # a summary line is nobody's wake
+        self.assertEqual(ev[5]["agent"], "conductor.aws.c")
 
     def test_summary(self):
         ev = [{"t": f"2026-11-23T03:22:{s:02d}Z", "type": "spawn", "from": "c.aws.c", "to": f"x{s}.aws.c"} for s in (0, 10, 20)]
