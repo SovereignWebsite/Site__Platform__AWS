@@ -62,7 +62,7 @@
     var s = seed;
     return (streams[name] = function () { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; });
   }
-  function rnd() { return rng("v0", PACKS[pack].seed)(); } // one stream for v0's generators, as before
+  function rnd() { return rng("v0", thePack().seed)(); } // one stream for v0's generators, as before
   function pick(a) { return a[Math.floor(rnd() * a.length)]; }
   function lag() { return rng("latency", 7)(); }
   function pad(n, w) { n = String(n); while (n.length < (w || 2)) n = "0" + n; return n; }
@@ -183,6 +183,92 @@
     Object.defineProperty(w, "_hours", { value: out, enumerable: false, configurable: true });
     return out;
   }
+  // ---- Loading the pack (design 02 step 2; architect.aws.a's conditions on 74c254d) ----
+  // The pack's JSON comes from, in order: window.AwsTwinPacks set before this file runs ({ <id>: pack }, used by
+  // tests that run twin.js alone); in a page served over http(s), twin/packs/<id>.json next to this script; else
+  // the in-code PACKS above (until the harnesses and the page menu move over, then PACKS goes). It is parsed with
+  // JSON.parse only, at most PACK_MAX bytes, and checked against the generators and their fields before use: an
+  // unknown generator or field, or a value out of range, is refused. While it loads, handle() waits; if it fails,
+  // every AWS request gets an AWS-shaped 503 and nothing reaches the network (design 01's fail-closed rule).
+  var PACK_MAX = 65536, PACK_ID = /^[a-z0-9-]{1,32}$/;
+  var NO_PARAMS = {};
+  var GEN_FIELDS = {
+    "s3.cors": NO_PARAMS, "site.static": NO_PARAMS, "lambda.dependencies": NO_PARAMS, "cloudtrail.demo": NO_PARAMS, "site.dotted": NO_PARAMS, "iam.roles": NO_PARAMS,
+    "site.archive": { pages: "int:0:5000" },
+    "cloudfront.traffic": { days: "ints:1:28", hours: "ints:0:23", perHour: "int:0:1000", hot: "path?", hotShare: "share?", probe: "probe?" }
+  };
+  function packError(id, what) { return new Error("twin: pack " + id + ": " + what); }
+  function only(id, where, o, allowed) {
+    Object.keys(o).forEach(function (k) { if (!own(allowed, k)) throw packError(id, where + " has an unknown field " + k); });
+  }
+  function checkValue(id, where, kind, v) {
+    var opt = /\?$/.test(kind), k = kind.replace(/\?$/, "").split(":");
+    if (v === undefined && opt) return;
+    var isInt = function (x, lo, hi) { return typeof x === "number" && Math.floor(x) === x && x >= lo && x <= hi; };
+    var bad = function () { throw packError(id, where + " is not " + kind); };
+    if (k[0] === "int") { if (!isInt(v, +k[1], +k[2])) bad(); }
+    else if (k[0] === "ints") { if (!Array.isArray(v) || !v.length || v.length > 31 || !v.every(function (x) { return isInt(x, +k[1], +k[2]); })) bad(); }
+    else if (k[0] === "path") { if (typeof v !== "string" || !/^\/[\x21-\x7e]{0,199}$/.test(v)) bad(); }
+    else if (k[0] === "share") { if (typeof v !== "number" || !(v >= 0 && v <= 1)) bad(); }
+    else if (k[0] === "probe") {
+      if (!v || typeof v !== "object" || Array.isArray(v)) bad();
+      only(id, where, v, { day: 1, ip: 1, perHourStep: 1 });
+      checkValue(id, where + ".day", "int:1:28", v.day); checkValue(id, where + ".perHourStep", "int:0:200", v.perHourStep);
+      if (typeof v.ip !== "string" || !/^(\d{1,3}\.){3}\d{1,3}$/.test(v.ip)) throw packError(id, where + ".ip is not an IPv4 address");
+    } else bad();
+  }
+  function checkPack(o, id) {
+    if (!o || typeof o !== "object" || Array.isArray(o)) throw packError(id, "not an object");
+    only(id, "the pack", o, { id: 1, title: 1, about: 1, seed: 1, see: 1, generate: 1 });
+    if (o.id !== id) throw packError(id, "its id is " + JSON.stringify(o.id));
+    ["title", "about"].forEach(function (f) { if (typeof o[f] !== "string" || !o[f] || o[f].length > 300) throw packError(id, f + " is not a short text"); });
+    checkValue(id, "seed", "int:0:2147483647", o.seed);
+    if (o.see !== undefined) {
+      if (!o.see || typeof o.see !== "object" || Array.isArray(o.see)) throw packError(id, "see is not an object");
+      only(id, "see", o.see, { label: 1, bucket: 1, prefix: 1 });
+      if (typeof o.see.label !== "string" || o.see.label.length > 200 || typeof o.see.bucket !== "string" || !own(B, o.see.bucket) ||
+        typeof o.see.prefix !== "string" || o.see.prefix.length > 200 || /(^|\/)\.\.(\/|$)/.test(o.see.prefix)) throw packError(id, "see is not { label, bucket, prefix }");
+    }
+    if (!Array.isArray(o.generate) || !o.generate.length || o.generate.length > 32) throw packError(id, "generate is not a list of 1 to 32 generators");
+    var lines = 0;
+    o.generate.forEach(function (g, i) {
+      var where = "generate[" + i + "]";
+      if (!g || typeof g !== "object" || typeof g.gen !== "string" || !own(GEN_FIELDS, g.gen)) throw packError(id, where + " names no generator the twin has");
+      var fields = GEN_FIELDS[g.gen], allowed = { gen: 1 };
+      Object.keys(fields).forEach(function (f) { allowed[f] = 1; checkValue(id, where + "." + f, fields[f], g[f]); });
+      only(id, where, g, allowed);
+      if (g.gen === "cloudfront.traffic") {
+        if ((g.hot === undefined) !== (g.hotShare === undefined)) throw packError(id, where + ": hot and hotShare go together");
+        lines += g.days.length * g.hours.length * g.perHour;
+      }
+    });
+    if (lines > 100000) throw packError(id, "more than 100,000 log lines");
+    return o;
+  }
+  var loaded = null, loadError = null;
+  var scriptUrl = (root.document && root.document.currentScript && root.document.currentScript.src) || "";
+  var ready = (function () {
+    try {
+      var pre = root.AwsTwinPacks;
+      if (pre && typeof pre === "object") {
+        if (!own(pre, pack)) throw packError(pack, "not among the packs given");
+        loaded = checkPack(JSON.parse(JSON.stringify(pre[pack])), pack);
+        return Promise.resolve();
+      }
+      if (/^https?:/.test(scriptUrl) && typeof root.fetch === "function" && PACK_ID.test(pack)) {
+        return root.fetch(new URL("twin/packs/" + pack + ".json", scriptUrl).href, { credentials: "same-origin" }).then(function (r) {
+          if (!r.ok) throw packError(pack, "the file answered " + r.status);
+          return r.text();
+        }).then(function (t) {
+          if (t.length > PACK_MAX) throw packError(pack, "the file is over " + PACK_MAX + " bytes");
+          loaded = checkPack(JSON.parse(t), pack);
+        }).catch(function (e) { loadError = e; });
+      }
+      loaded = checkPack(JSON.parse(JSON.stringify(PACKS[pack])), pack);
+    } catch (e) { loadError = e; }
+    return Promise.resolve();
+  })();
+  function thePack() { if (!loaded) throw loadError || packError(pack, "not loaded yet"); return loaded; }
   // The pack builds the account by appending entries; nothing else writes the world.
   function build() {
     if (state) return state;
@@ -291,8 +377,8 @@
     });
     };
     // The pack's generators, in its order (the random stream is shared, so the order is part of the pack).
-    PACKS[pack].generate.forEach(function (g) {
-      if (!Object.prototype.hasOwnProperty.call(G, g.gen)) throw new Error("twin: pack " + pack + " names no generator " + g.gen);
+    thePack().generate.forEach(function (g) {
+      if (!own(G, g.gen)) throw new Error("twin: pack " + pack + " names no generator " + g.gen);
       G[g.gen](g);
     });
     return state;
@@ -760,9 +846,18 @@
   }
 
   // Answer a request as AWS would. Returns a Promise of a Response, or null if the host is not AWS.
+  var AWS_HOST = /(^|\.)amazonaws\.com$/;
   function handle(url, init) {
     init = init || {};
-    var u = new URL(url), host = u.host;
+    var host = new URL(url).host;
+    if (!AWS_HOST.test(host)) return null;
+    // Wait for the pack; if it did not load, an AWS-shaped 503 (fail closed: nothing reaches the network).
+    return ready.then(function () {
+      if (!loaded) return xmlErr("ServiceUnavailable", "The twin's demo pack did not load (" + ((loadError && loadError.message) || "unknown") + "). Twin mode never calls real AWS.", 503);
+      return answer(url, init, host);
+    });
+  }
+  function answer(url, init, host) {
     var body = typeof init.body === "string" ? init.body : "";
     var p;
     try {
@@ -775,7 +870,7 @@
       else if (/^monitoring\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudwatch(new URLSearchParams(body), init);
       else if (/^firehose\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = firehose((hdr(init, "x-amz-target") || "").split(".")[1], body, init);
       else if (/\.?s3\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = s3(url, init);
-      else return null;
+      else p = xmlErr("NotImplemented", "The twin does not answer " + host + " yet. Twin mode never calls real AWS.", 501);
     } catch (e) { p = xmlErr("InternalFailure", e.message, 500); }
     return Promise.resolve(p).then(function (r) { return new Promise(function (res) { setTimeout(function () { res(r); }, 60 + lag() * 120); }); });
   }
@@ -783,6 +878,8 @@
   root.AwsTwin = { handle: handle, account: ACCOUNT, buckets: B, reset: function () { state = null; journal = []; streams = {}; },
     // The journal (design 02): a copy of every entry so far, and a fold of any list of entries into a world.
     journal: function () { build(); return JSON.parse(JSON.stringify(journal)); },
+    // Resolves once the pack has loaded (or failed to: then every AWS request is a 503); loadError says why.
+    ready: function () { return ready; }, loadError: function () { return loadError ? loadError.message : null; },
     fold: function (entries) { return fold(entries); },
     packs: PACKS, pack: function () { return pack; },
     usePack: function (name) { if (!PACKS[name]) return; try { localStorage.setItem("sws-aws-twin-pack", name); } catch (e) { /* none */ } } };
