@@ -635,7 +635,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
    ],
    "panel": {
     "asks": "security.aws.a (R-026, a0a0069); billing.aws.a's model (ddddb44)",
-    "what": "A customer's Vault behind CloudFront has no ceiling on request charges: about $44 to $46 an hour at 10,000 requests a second in London. Reserved concurrency caps only the Lambda part.",
+    "what": "A customer's Vault behind CloudFront has no ceiling on request charges: about $44 to $46 an hour at 10,000 requests a second in London. Reserved concurrency caps only the Lambda part. New from billing.aws.a (flood.mjs at cfe70fb, re-run by pm.aws.a; not yet reviewed by security): AWS WAF bills every request it inspects, so a rate rule adds about $21.61 an hour at 10,000 requests a second (about $67.50 in all); with the Anti-DDoS rule group it adds about $5.44 an hour. No edge rule caps the bill; what limits cost is time to react: a CloudWatch alarm on the distribution's request count (about $0.10 a month) feeding the kill switch. Each hour of delay at that rate costs about $46. WAF protects availability, not the bill. iam.aws.a: if WAF is added, the deploy role gains wafv2 rights on one web ACL named sws-vault-<id>-*, CloudFront scope only; a Budgets alarm stays the customer's own account setting, recommended by the page.",
     "options": [
      [
       "a",
