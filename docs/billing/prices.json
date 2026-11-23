@@ -18,7 +18,11 @@
     "cloudwatch_data": { "url": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/cloudwatch/USD/current/cloudwatch.json", "published": "2026-11-19T17:10:40Z", "note": "AWS's CloudWatch price data. Read by billing.aws.a on 23 Nov 2026." },
     "ec2_data": { "url": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2.json", "published": "2026-11-21T00:48:16Z", "note": "AWS's EC2 on-demand price data. Read by billing.aws.a on 23 Nov 2026." },
     "vpc_data": { "url": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/vpc/USD/current/vpc.json", "published": "2026-11-19T20:55:45Z", "note": "AWS's VPC price data (public IPv4 addresses). Read by billing.aws.a on 23 Nov 2026." },
-    "datatransfer_data": { "url": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/datatransfer/USD/current/datatransfer.json", "published": "2026-11-19T10:58:41Z", "note": "AWS's regional data transfer price data. Read by billing.aws.a on 23 Nov 2026. Its tier ranges are in GB with 1 TB as 1,024 GB (10 TB ends at 10240)." }
+    "datatransfer_data": { "url": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/datatransfer/USD/current/datatransfer.json", "published": "2026-11-19T10:58:41Z", "note": "AWS's regional data transfer price data. Read by billing.aws.a on 23 Nov 2026. Its tier ranges are in GB with 1 TB as 1,024 GB (10 TB ends at 10240)." },
+    "secretsmanager_page": "https://aws.amazon.com/secrets-manager/pricing/",
+    "secretsmanager_data": { "url": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/secretsmanager/USD/current/secretsmanager.json", "published": "2026-11-11T19:56:06Z", "note": "AWS's Secrets Manager price data. Read by billing.aws.a on 23 Nov 2026." },
+    "acm_page": "https://aws.amazon.com/certificate-manager/pricing/",
+    "cloudwatch_page": "https://aws.amazon.com/cloudwatch/pricing/"
   },
   "regions": {
     "eu-west-2": "EU (London)",
@@ -71,7 +75,14 @@
     { "id": "ec2.ondemand.linux.t4g.small", "service": "EC2", "unit": "instance-hour", "eu-west-2": 0.0188, "eu-west-1": 0.0184, "source": "ec2_data", "label": "OnDemand Linux-instancetype-t4g.small" },
     { "id": "ec2.ondemand.linux.t4g.medium", "service": "EC2", "unit": "instance-hour", "eu-west-2": 0.0376, "eu-west-1": 0.0368, "source": "ec2_data", "label": "OnDemand Linux-instancetype-t4g.medium" },
     { "id": "vpc.public_ipv4.in_use", "service": "VPC", "unit": "address-hour", "eu-west-2": 0.005, "eu-west-1": 0.005, "source": "vpc_data", "label": "Hourly charge for In use Public IPv4 Addresses per Hrs", "note": "Each public IPv4 address, in use or idle (idle is the same $0.005 in both regions)." },
-    { "id": "costexplorer.api.request", "service": "Cost Explorer", "unit": "request", "global": 0.01, "source": "cost_explorer_page", "quote": "Each request using your primary billing view ... will incur a cost of $0.01.", "note": "The page's billing view calls Cost Explorer: every refresh in real AWS mode costs a cent." }
+    { "id": "costexplorer.api.request", "service": "Cost Explorer", "unit": "request", "global": 0.01, "source": "cost_explorer_page", "quote": "Each request using your primary billing view ... will incur a cost of $0.01.", "note": "The page's billing view calls Cost Explorer: every refresh in real AWS mode costs a cent." },
+    { "id": "secretsmanager.secret", "service": "Secrets Manager", "unit": "secret-month", "eu-west-2": 0.4, "eu-west-1": 0.4, "source": "secretsmanager_data", "label": "Secret", "quote_source": "secretsmanager_page", "quote": "For secrets that are stored for less than a month, the price is prorated (based on the number of hours.)", "note": "Prorated by the hour, so an ephemeral Vault pays only its hours." },
+    { "id": "secretsmanager.api_request", "service": "Secrets Manager", "unit": "request", "eu-west-2": 5e-06, "eu-west-1": 5e-06, "source": "secretsmanager_data", "label": "API Request", "note": "$0.05 per 10,000 API calls." },
+    { "id": "cloudfront.function.invocation", "service": "CloudFront", "unit": "invocation", "global": 1e-07, "source": "cloudfront_payg_page", "quote": "Invocation pricing is $0.10 per 1 million invocations ($0.0000001 per invocation).", "note": "2,000,000 a month are in cloudfront.free_tier." },
+    { "id": "cloudfront.transfer_from_aws_origin", "service": "CloudFront", "unit": "GB", "global": 0, "source": "cloudfront_payg_page", "quote": "Data Transfer Out (DTO) charges from AWS services to CloudFront are $0/GB.", "note": "Covers the Vault's Lambda Function URL origin behind its distribution." },
+    { "id": "cloudwatch.logs.ingest.standard", "service": "CloudWatch Logs", "unit": "GB", "eu-west-2": 0.5985, "eu-west-1": 0.57, "source": "cloudwatch_data", "label": "Logs Collected Data Ingestion", "quote_source": "cloudwatch_page", "quote": "Collect (Data Ingestion) Standard ... per GB", "note": "Standard log class. Lambda's own logs may be billed on the page's vended-log tiers instead (see not_priced_yet); this row is the upper bound." },
+    { "id": "cloudwatch.logs.storage", "service": "CloudWatch Logs", "unit": "GB-month", "eu-west-2": 0.0315, "eu-west-1": 0.03, "source": "cloudwatch_data", "label": "Stored Data", "quote_source": "cloudwatch_page", "quote": "Store (Archival)* Standard ... per GB compressed", "note": "Per GB compressed; the model counts ingested bytes as stored (no compression), an upper bound." },
+    { "id": "acm.public_certificate.integrated", "service": "Certificate Manager", "unit": "certificate", "global": 0, "source": "acm_page", "quote": "By default, ACM issues certificates at no cost for use with services integrated with ACM.", "note": "The Vault's certificate is used by CloudFront, an integrated service; exportable and ACME certificates are charged and are not used." }
   ],
   "not_priced_yet": [
     "EBS gp3 storage per GB-month (for EC2): not in the EC2 or VPC price data read; the EBS pricing page or its data file is still to be read.",
@@ -81,6 +92,8 @@
     "CloudFormation: the pricing page says charges apply to registry extensions (third-party resource types and hooks) per handler operation; it does not state a price for AWS::IAM resources in one line, so the sws-aws-platform stack is left unpriced, not called free.",
     "CloudWatch Logs vended log delivery: the Firehose delivery tiers are copied (cloudwatch.vended_to_firehose.*), but which log sources they apply to is still to be read on the CloudWatch pricing page, so the estimate does not use them yet.",
     "Data transfer out to the internet: the tiers are copied (transfer.internet_out.*), but any monthly free allowance is not in the price data read, so none is applied yet; the S3 pricing page's own wording on it is still to be read.",
-    "Free tiers for S3 and the AWS account-level credits: not applied; the model shows costs before them."
+    "Free tiers for S3 and the AWS account-level credits: not applied; the model shows costs before them.",
+    "CloudWatch Logs for Lambda: whether a function's own logs are billed at the Standard ingestion rate (cloudwatch.logs.ingest.standard, used as the upper bound) or on the page's tiered vended-log rates is still to be read on the CloudWatch pricing page.",
+    "Amazon ECR (where a Lambda container image must live, vaults design 04 section 8 question 4): storage and transfer not read yet; depends on which account holds the image."
   ]
 }
