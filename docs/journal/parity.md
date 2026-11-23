@@ -12,7 +12,7 @@ States: **Better** (we do something the AWS console has no documented way to do;
 | Let a bucket answer the site (CORS) | Edit the whole CORS JSON by hand | A plan adds one rule (GET, HEAD, this site's origin only) and keeps rules already there | Better | twin, 23 Nov: plan text "Rules already there are kept" |
 | Sign in | Console password or SSO; long-lived access keys for scripts | Google sign-in, then one-hour STS credentials for roles written as code; no AWS key made | Different model; parity for reading | docs/2026-11-23__newsroom-brief.md; site/app.js |
 | Try a whole console without an AWS account | No | The twin: same calls, synthetic data, no sign-in; every area to have "try the twin" (memo part 4) | Better (S3 and accounts today; other areas as they land) | "Try the twin" on the home page |
-| Plans that read the live state before applying | Not documented for console edits | Before applying a trust-policy plan the page reads the role again and stops if it changed since the plan was shown | Better for the changes the hub makes | site/app.js:381-383 |
+| Plans that read the live state before applying | Not documented for console edits | Before applying a trust-policy plan the page reads the role again and stops if it changed since the plan was shown | Better for the changes the hub makes | site/app.js:397-399 (dev at 1be7f7f) |
 | Follow one request end to end, with its cost | No | Planned (P1; viz.aws.c storyboarding on the twin) | Planned | docs/board/pipeline.md |
 | Link mode in CloudFront logs: click an IP, path, bucket or vault id to go to it | No | Planned (data.aws.c; memo 22) | Planned | memo part 4 |
 | Drop in your own CloudTrail dump | No | Planned (cloudtrail.aws.c) | Planned | docs/team/stage-2.md |
@@ -25,3 +25,4 @@ States: **Better** (we do something the AWS console has no documented way to do;
 - 23 Nov 2026 ~04:05 UTC, journalist.aws.c: AWS side of rows 1 to 3 checked by boto3.aws.c against the S3 User Guide (read 23 Nov); worded as "not documented", not "cannot".
 - 23 Nov 2026 ~04:10 UTC, journalist.aws.c: rows from pm.aws.c's list added (twin widened; live-state check; four planned rows). Planned rows become Better or Parity only when the feature runs on the twin.
 - 23 Nov 2026 ~04:15 UTC, journalist.aws.a: row 1 measured again after s3.aws.c's fix (063967d): listing 1 request, 65,577 bytes (was 2, 78,233); reading one file is 93 bytes in all (30-byte header and 63 compressed bytes), not 63 as first written.
+- 23 Nov 2026 ~05:10 UTC, journalist.aws.a: evidence lines checked against dev at 1be7f7f. The live-state row pointed at app.js:381-383; the re-read and stop are now at app.js:397-399. s3.js:164-214 (gzip) still holds. site/plan.js exists.
