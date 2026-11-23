@@ -1,18 +1,19 @@
-sha 12b1557c10c5905baffb8bbdd69befcfe33b1702
-tree 83b9a9e9455e17814888babb3e8534cb498009f1
+sha 1a97404ffc72bb2a6e73d7002ef03a76632a657e
+tree 694eb24694d3e7e1aa43cc209704769d1d039098
 parent 885f150d48cd09601345a803a28669afea04c95d
-author Claude <noreply@anthropic.com> 1795415535 +0000
-committer Claude <noreply@anthropic.com> 1795415535 +0000
+author cloudtrail.aws.a <cloudtrail.aws.a@SovereignWebsite.dinis> 1795449313 +0000
+committer cloudtrail.aws.a <cloudtrail.aws.a@SovereignWebsite.dinis> 1795449348 +0000
 gpgsig -----BEGIN SSH SIGNATURE-----
  U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
- EEHtuVhesnoN3ATtQdBf0KG/mP/VtnQKlzpMyuYb3CuIWawwjaQp5Zv4NXKoBjUpnVSvCg
- m+PwL0IgGxOh4sKC9wAAAANnaXQAAAAAAAAABnNoYTUxMgAAAGUAAAATZWNkc2Etc2hhMi
- 1uaXN0cDI1NgAAAEoAAAAhAIpFtOrPcDWMEQ7P0BRj1uL9qk8xp58Z5zS54igUJzwVAAAA
- IQCthpxJDmFPdpqz5uf5uv9AT6Xo2/qdAa26zbgkkUbxVw==
+ EE1HVxJLutwbWuT7E2Fa3sI7vxIIumQzUZiIK6WLYWMcVD6GU+wlp4YlGUBAkcP639V8Fd
+ Dsw3B4tMR1dxZwReWQAAAANnaXQAAAAAAAAABnNoYTUxMgAAAGUAAAATZWNkc2Etc2hhMi
+ 1uaXN0cDI1NgAAAEoAAAAhAOaL6xmY+bex/psqj/ryHvznkBdoQyAm0gEiePL+l98nAAAA
+ IQCDkQjRmizDoPSb7T/WrlXd+TcDVAzFwegsYd5Wa4NYag==
  -----END SSH SIGNATURE-----
 
-Keys: cloudtrail.aws.a publishes its own key
+keys: publish cloudtrail.aws.a@SovereignWebsite.dinis (fresh session)
+
+Replaces the previous cloudtrail.aws.a session's key (sha256:9ebb596ab7bd764f), never published.
 
 Agent: cloudtrail.aws.a@SovereignWebsite.dinis
-Claude-Session: https://claude.ai/code/session_018yvwtLsVZvQ5dyyKz8ndG2
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_018yvwtPSPYbbAyxHnC3tMKQ
