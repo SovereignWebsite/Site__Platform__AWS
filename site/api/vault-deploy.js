@@ -5,18 +5,25 @@
 // condition 7).
 //
 //   VaultDeploy.newVaultId(crypto)              -> "3f9a0c21b7d4"   12 hex digits from crypto.getRandomValues
+//   index = the page's published-template index, { "<version>": { sha256, url } }: url an S3 object URL pinned to one
+//       object (a ?versionId= form, or a key per version in a bucket that refuses overwrites: cloudformation.aws.a
+//       decides which), sha256 the file's 64 hex digits. The template URL is only ever taken from it (security.aws.a).
 //   VaultDeploy.vaultStackUrl(o)                -> quick-create URL for stack sws-vault-<id>
-//       o = { region, vaultId, templateUrl, imageUri, deployPageOrigin, mode: "one-stack" | "access-stack" }
+//       o = { region, vaultId, index, version, imageUri, deployPageOrigin, mode: "one-stack" | "access-stack" }
 //   VaultDeploy.accessStackUrl(o)               -> quick-create URL for stack sws-vault-<id>-access (least-privilege
-//       mode, screen 2-alt); o = { region, vaultId, templateUrl, params: { Name: value } } (the access template's own
-//       parameters, passed as given; VaultId is always set from o.vaultId)
+//       mode, screen 2-alt); o = { region, vaultId, index, version, params: { Name: value } } (the access template's
+//       index and its own parameters, passed as given; VaultId is always set from o.vaultId). The page shows the
+//       DistributionId and CertificateArn it passes beside the change set, never filled silently (iam.aws.a 0.2.0).
 //   VaultDeploy.deployRoleName(vaultId)         -> "sws-vault-<id>-deploy", the role the customer picks in 2-alt
 //   VaultDeploy.cleanEndpoint(input)            -> { ok: true, endpoint } | { ok: false, reason: "empty" | "not-url" | "not-cloudfront" }
-//   VaultDeploy.checkHealth(fetch, endpoint, { vaultId, versions, timeoutMs, maxBytes })
+//   VaultDeploy.checkHealth(fetch, endpoint, { vaultId, index, version, timeoutMs, maxBytes })
 //       -> Promise<{ ok: true, vaultId, version, sha256 } | { ok: false, reason, ... }>
-//       reason: "not-url" | "not-cloudfront" | "no-answer" | "not-a-vault" | "other-vault" (with vaultId) |
-//               "old-template" (with version) | "too-large"
-//       versions: the page's index of published templates, { "<version>": "<sha256>" }
+//       version: the template version this page linked. reason: "not-url" | "not-cloudfront" | "no-answer" |
+//       "not-a-vault" | "other-vault" (with vaultId) | "old-template" (a version not in the index, with version) |
+//       "other-template" (a published version other than the one linked, or a template_sha256 in the answer that
+//       differs from the index entry, with version) | "too-large"
+//       sha256 is always the index entry for the version, never taken from the answer (architect.aws.a design 05,
+//       change 3: live needs that entry to equal the sha256 of the template the page linked).
 //
 // The link's format is AWS's documented quick-create link (boto3.aws.a, docs/boto3/2026-11-23__08-vault-deploy-design-
 // check.md note C, AWS CloudFormation User Guide read 23 Nov 2026): https://<region>.console.aws.amazon.com/
@@ -36,8 +43,10 @@
   var ORIGIN_RE = /^https:\/\/([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]([a-z0-9-]*[a-z0-9])?(:[1-9][0-9]{0,4})?$/;
   // An S3 object URL in either documented form: https://s3.<region>.amazonaws.com/<bucket>/<key> or
   // https://<bucket>.s3.<region>.amazonaws.com/<key>. Bucket names: 3 to 63 of a-z, 0-9, dot and hyphen.
-  var S3_PATH_RE = /^https:\/\/s3\.[a-z]{2}(-[a-z]+)+-\d\.amazonaws\.com\/[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]\/[^?#\s]+$/;
-  var S3_HOST_RE = /^https:\/\/[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]\.s3\.[a-z]{2}(-[a-z]+)+-\d\.amazonaws\.com\/[^?#\s]+$/;
+  // Optionally pinned to one object version with ?versionId=<id> (S3's version ids are URL-safe characters).
+  var S3_PATH_RE = /^https:\/\/s3\.[a-z]{2}(-[a-z]+)+-\d\.amazonaws\.com\/[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]\/[^?#\s]+(\?versionId=[A-Za-z0-9._-]{1,1024})?$/;
+  var S3_HOST_RE = /^https:\/\/[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]\.s3\.[a-z]{2}(-[a-z]+)+-\d\.amazonaws\.com\/[^?#\s]+(\?versionId=[A-Za-z0-9._-]{1,1024})?$/;
+  var SHA_RE = /^[0-9a-f]{64}$/;
   var PARAM_RE = /^[A-Za-z0-9]{1,255}$/;
   var CLOUDFRONT_RE = /^https:\/\/[a-z0-9]{1,63}\.cloudfront\.net$/;
 
@@ -61,13 +70,21 @@
     });
     return "https://" + region + ".console.aws.amazon.com/cloudformation/home?region=" + region + "#/stacks/create/review?" + q;
   }
+  // An index entry for a version: own key only, an S3 object URL and a sha256.
+  function entry(index, version) {
+    var v = String(version);
+    need(index && typeof index === "object" && Object.prototype.hasOwnProperty.call(index, v), "version (not in the published index)", v);
+    var e = index[v], url = e && String(e.url), sha = e && String(e.sha256);
+    need(e && (S3_PATH_RE.test(url) || S3_HOST_RE.test(url)), "index url for " + v + " (an S3 object URL)", url);
+    need(SHA_RE.test(sha), "index sha256 for " + v, sha);
+    return { url: url, sha256: sha };
+  }
   function common(o) {
     o = o || {};
-    var region = String(o.region), vaultId = String(o.vaultId), templateUrl = String(o.templateUrl);
+    var region = String(o.region), vaultId = String(o.vaultId);
     need(REGION_RE.test(region), "region", region);
     need(VAULT_ID_RE.test(vaultId), "vaultId", vaultId);
-    need(S3_PATH_RE.test(templateUrl) || S3_HOST_RE.test(templateUrl), "templateUrl (an S3 object URL)", templateUrl);
-    return { region: region, vaultId: vaultId, templateUrl: templateUrl };
+    return { region: region, vaultId: vaultId, templateUrl: entry(o.index, o.version).url };
   }
   function vaultStackUrl(o) {
     var c = common(o), imageUri = String(o.imageUri), origin = String(o.deployPageOrigin), mode = o.mode === undefined ? "one-stack" : String(o.mode);
@@ -121,8 +138,9 @@
   function checkHealth(fetch, endpoint, o) {
     o = o || {};
     if (typeof fetch !== "function") return Promise.reject(new TypeError("VaultDeploy.checkHealth needs fetch"));
-    var vaultId = String(o.vaultId), versions = o.versions && typeof o.versions === "object" ? o.versions : {};
+    var vaultId = String(o.vaultId), index = o.index && typeof o.index === "object" ? o.index : {}, linked = String(o.version);
     if (!VAULT_ID_RE.test(vaultId)) return Promise.reject(new TypeError("VaultDeploy.checkHealth needs this page's vaultId"));
+    try { entry(index, linked); } catch (err) { return Promise.reject(new TypeError("VaultDeploy.checkHealth needs the linked version, in the index")); }
     var e = cleanEndpoint(endpoint);
     if (!e.ok) return Promise.resolve({ ok: false, reason: e.reason === "empty" ? "not-url" : e.reason });
     var timeoutMs = o.timeoutMs || 10000, maxBytes = o.maxBytes || 4096;
@@ -137,9 +155,13 @@
         var j; try { j = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(r.bytes)); } catch (err) { return { ok: false, reason: "not-a-vault" }; }
         if (!j || typeof j !== "object" || typeof j.vault_id !== "string" || !VAULT_ID_RE.test(j.vault_id)) return { ok: false, reason: "not-a-vault" };
         if (j.vault_id !== vaultId) return { ok: false, reason: "other-vault", vaultId: j.vault_id };
-        var v = typeof j.template_version === "string" ? j.template_version : "";
-        if (!v || !Object.prototype.hasOwnProperty.call(versions, v)) return { ok: false, reason: "old-template", version: v.slice(0, 40) };
-        return { ok: true, vaultId: j.vault_id, version: v, sha256: String(versions[v]) };
+        var v = typeof j.template_version === "string" ? j.template_version : "", known;
+        if (!v || !Object.prototype.hasOwnProperty.call(index, v)) return { ok: false, reason: "old-template", version: v.slice(0, 40) };
+        try { known = entry(index, v); } catch (err) { return { ok: false, reason: "old-template", version: v.slice(0, 40) }; }
+        if (v !== linked || known.sha256 !== entry(index, linked).sha256) return { ok: false, reason: "other-template", version: v.slice(0, 40) };
+        // /health answers { vault_id, template_version } (vaults.aws.a); a template_sha256, if present, must agree.
+        if (j.template_sha256 !== undefined && j.template_sha256 !== known.sha256) return { ok: false, reason: "other-template", version: v.slice(0, 40) };
+        return { ok: true, vaultId: j.vault_id, version: v, sha256: known.sha256 };
       });
     }, function () { return { ok: false, reason: "no-answer" }; }); // network, DNS, CORS or a refused redirect
     return Promise.race([got, limit]).then(function (r) { clearTimeout(timer); return r; });
