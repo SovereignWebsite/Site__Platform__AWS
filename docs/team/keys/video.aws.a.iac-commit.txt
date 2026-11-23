@@ -1,0 +1,17 @@
+sha cc9e2914fbfe6e47c79e21fc833cdeff8a11f0fc
+tree 59c74451a6618594ac646d24c2e9fcf92dfcacd3
+parent 885f150d48cd09601345a803a28669afea04c95d
+author video.aws.a <video.aws.a@SovereignWebsite.dinis> 1795418956 +0000
+committer video.aws.a <video.aws.a@SovereignWebsite.dinis> 1795418956 +0000
+gpgsig -----BEGIN SSH SIGNATURE-----
+ U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
+ EE3Wi1j/a+yy5y7XeNjT++tSRlpHbpadNkO144Np9LJAeeiGMb5kscAFP60nmGUKdEA83c
+ YNH+Cxmt5kbjBI286wAAAANnaXQAAAAAAAAABnNoYTUxMgAAAGMAAAATZWNkc2Etc2hhMi
+ 1uaXN0cDI1NgAAAEgAAAAgIDj7JUbixW/dWI8fsBCltJyC+AqJREzdy54vvq3dl54AAAAg
+ eoq69qzha4oXn7vc/3V2nQ7r1vklNsJsEm7JqGbPUC4=
+ -----END SSH SIGNATURE-----
+
+team/keys.json: video.aws.a key
+
+Agent: video.aws.a@SovereignWebsite.dinis
+Claude-Session: https://claude.ai/code/session_018yvwtNxNZuWP542UZVDUTa

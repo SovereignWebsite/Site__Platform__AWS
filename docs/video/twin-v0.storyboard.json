@@ -17,7 +17,7 @@
       "narration": "What if you could try an AWS console without an AWS account? I am a synthetic presenter, for a synthetic AWS.",
       "visual": {
         "kind": "image",
-        "src": "https://raw.githubusercontent.com/SovereignWebsite/Site__Platform__AWS/4220426a3fb5ffd66b92349c74ec3ed708359464/docs/video/twin-v0/b1.png",
+        "src": "https://raw.githubusercontent.com/SovereignWebsite/Site__Platform__AWS/0b0b5df0326f368d201ce676b4d0e28b2020ae6a/docs/video/twin-v0/b1.png",
         "alt": "The hub, signed out: the hero and the Try the twin button",
         "credit": "Capture: aws.platform.sovereignweb.site, twin mode"
       },
@@ -31,7 +31,7 @@
       "narration": "One button, and this page talks to a twin of AWS that runs inside your browser.",
       "visual": {
         "kind": "image",
-        "src": "https://raw.githubusercontent.com/SovereignWebsite/Site__Platform__AWS/4220426a3fb5ffd66b92349c74ec3ed708359464/docs/video/twin-v0/b2.png",
+        "src": "https://raw.githubusercontent.com/SovereignWebsite/Site__Platform__AWS/0b0b5df0326f368d201ce676b4d0e28b2020ae6a/docs/video/twin-v0/b2.png",
         "alt": "Twin mode on: the bar says a synthetic AWS runs in this page, account id masked",
         "credit": "Capture: aws.platform.sovereignweb.site, twin mode"
       },
@@ -44,7 +44,7 @@
       "narration": "Same read role, same one-hour credentials, same calls. Even the account number is made up.",
       "visual": {
         "kind": "image",
-        "src": "https://raw.githubusercontent.com/SovereignWebsite/Site__Platform__AWS/4220426a3fb5ffd66b92349c74ec3ed708359464/docs/video/twin-v0/b3.png",
+        "src": "https://raw.githubusercontent.com/SovereignWebsite/Site__Platform__AWS/0b0b5df0326f368d201ce676b4d0e28b2020ae6a/docs/video/twin-v0/b3.png",
         "alt": "The twin account: read role, credentials until one hour on; account id and the synthetic cost masked",
         "credit": "Capture: aws.platform.sovereignweb.site, twin mode"
       },
@@ -58,7 +58,7 @@
       "narration": "The calls are signed just as AWS expects them, and the twin answers in the same formats.",
       "visual": {
         "kind": "image",
-        "src": "https://raw.githubusercontent.com/SovereignWebsite/Site__Platform__AWS/4220426a3fb5ffd66b92349c74ec3ed708359464/docs/video/twin-v0/b4.png",
+        "src": "https://raw.githubusercontent.com/SovereignWebsite/Site__Platform__AWS/0b0b5df0326f368d201ce676b4d0e28b2020ae6a/docs/video/twin-v0/b4.png",
         "alt": "S3 browser: five buckets listed; the account id in their names masked",
         "credit": "Capture: aws.platform.sovereignweb.site, twin mode"
       },
@@ -72,7 +72,7 @@
       "narration": "Zips open right in the page, with every file inside listed. Big ones are read from their index, not downloaded whole.",
       "visual": {
         "kind": "image",
-        "src": "https://raw.githubusercontent.com/SovereignWebsite/Site__Platform__AWS/4220426a3fb5ffd66b92349c74ec3ed708359464/docs/video/twin-v0/b5.png",
+        "src": "https://raw.githubusercontent.com/SovereignWebsite/Site__Platform__AWS/0b0b5df0326f368d201ce676b4d0e28b2020ae6a/docs/video/twin-v0/b5.png",
         "alt": "A Lambda dependencies zip opened: four files inside (this small one read whole, as the page says)",
         "credit": "Capture: aws.platform.sovereignweb.site, twin mode"
       },
@@ -85,7 +85,7 @@
       "narration": "Compressed logs open right here too, unpacked and shown as formatted JSON, in the page.",
       "visual": {
         "kind": "image",
-        "src": "https://raw.githubusercontent.com/SovereignWebsite/Site__Platform__AWS/4220426a3fb5ffd66b92349c74ec3ed708359464/docs/video/twin-v0/b6.png",
+        "src": "https://raw.githubusercontent.com/SovereignWebsite/Site__Platform__AWS/0b0b5df0326f368d201ce676b4d0e28b2020ae6a/docs/video/twin-v0/b6.png",
         "alt": "A CloudFront log, .gz, unzipped in the browser and shown as formatted JSON",
         "credit": "Capture: aws.platform.sovereignweb.site, twin mode"
       },
@@ -98,7 +98,7 @@
       "narration": "The same code talks to your real AWS when you sign in. It is open source, at aws dot platform dot sovereignweb dot site.",
       "visual": {
         "kind": "image",
-        "src": "https://raw.githubusercontent.com/SovereignWebsite/Site__Platform__AWS/4220426a3fb5ffd66b92349c74ec3ed708359464/docs/video/twin-v0/b7.png",
+        "src": "https://raw.githubusercontent.com/SovereignWebsite/Site__Platform__AWS/0b0b5df0326f368d201ce676b4d0e28b2020ae6a/docs/video/twin-v0/b7.png",
         "alt": "Back on the hub after leaving the twin; quote as on-screen text, then the address",
         "credit": "Capture: aws.platform.sovereignweb.site, twin mode"
       },
