@@ -163,6 +163,12 @@
         params: d.params, created: e.t, status: "CREATE_IN_PROGRESS", resources: map(), outputs: [], ids: d.ids,
         events: [{ id: d.stackId.split("/").pop() + "-" + e.seq, t: e.t, logical: d.name, physical: d.stackId, type: "AWS::CloudFormation::Stack", status: "CREATE_IN_PROGRESS", reason: "User Initiated" }] };
     },
+    "cloudformation.deleteStack": function (w, e) {
+      var d = e.data, acc = w.accounts[d.account], st = acc && acc.stacks[d.region + "/" + d.name];
+      if (!st) return;
+      st.status = "DELETE_IN_PROGRESS";
+      st.events.unshift({ id: st.stackId.split("/").pop() + "-" + e.seq, t: e.t, logical: d.name, physical: st.stackId, type: "AWS::CloudFormation::Stack", status: "DELETE_IN_PROGRESS", reason: "User Initiated" });
+    },
     // One resource's (or the stack's own) step, emitted by the clock: newest first in events, as AWS lists them.
     "cloudformation.stackEvent": function (w, e) {
       var d = e.data, acc = w.accounts[d.account], st = acc && acc.stacks[d.region + "/" + d.name];
@@ -803,7 +809,9 @@
   }
   function customerCfn(form, init, region, account) {
     var s = build(), A = form.get("Action"), acc = s.accounts[account] || { stacks: map() };
-    var find = function (n) { var st = n && acc.stacks[region + "/" + n]; if (!st && n) Object.keys(acc.stacks).forEach(function (k) { if (acc.stacks[k].stackId === n && acc.stacks[k].region === region) st = acc.stacks[k]; }); return st || null; };
+    // By name, a deleted stack is gone; by stack id it is still found (DELETE_COMPLETE), as AWS answers.
+    var live = function (x) { return x.status !== "DELETE_COMPLETE"; };
+    var find = function (n) { var st = n && acc.stacks[region + "/" + n]; if (st && !live(st)) st = null; if (!st && n) Object.keys(acc.stacks).forEach(function (k) { if (acc.stacks[k].stackId === n && acc.stacks[k].region === region) st = acc.stacks[k]; }); return st || null; };
     var NS = " xmlns=\"http://cloudformation.amazonaws.com/doc/2010-05-15/\"";
     if (A === "CreateStack") {
       var name = form.get("StackName") || "", params = map(), m = /^sws-vault-([0-9a-f]{12})(-access)?$/.exec(name);
@@ -811,7 +819,7 @@
       if (!m) return cfnErr("ValidationError", "The twin's customer account holds Vault stacks only: sws-vault-<12 hex digits> or sws-vault-<12 hex digits>-access.");
       // Bounds (security.aws.a, R-025 (b)): the twin's region only, and at most CUSTOMER_STACKS stacks in the account.
       if (region !== REGION) return cfnErr("ValidationError", "The twin's customer account is in " + REGION + " only.");
-      if (Object.keys(acc.stacks).length >= CUSTOMER_STACKS && !find(name)) return cfnErr("LimitExceededException", "The twin's customer account holds at most " + CUSTOMER_STACKS + " stacks.");
+      if (Object.keys(acc.stacks).filter(function (k) { return live(acc.stacks[k]); }).length >= CUSTOMER_STACKS && !find(name)) return cfnErr("LimitExceededException", "The twin's customer account holds at most " + CUSTOMER_STACKS + " stacks.");
       // vault.yaml's AllowedPattern, checked before anything is made, as CloudFormation does (R-025 (c)).
       if (params.ImageUri != null && (params.ImageUri.length > 512 || !IMAGE_PATTERN.test(params.ImageUri)))
         return cfnErr("ValidationError", "Parameter 'ImageUri' must match pattern " + IMAGE_PATTERN.source);
@@ -847,7 +855,7 @@
       return xml("<CreateStackResponse" + NS + "><CreateStackResult><StackId>" + esc(stackId) + "</StackId></CreateStackResult></CreateStackResponse>");
     }
     if (A === "DescribeStacks") {
-      var one = form.get("StackName"), list = one ? [find(one)] : Object.keys(acc.stacks).map(function (k) { return acc.stacks[k]; }).filter(function (x) { return x.region === region; });
+      var one = form.get("StackName"), list = one ? [find(one)] : Object.keys(acc.stacks).map(function (k) { return acc.stacks[k]; }).filter(function (x) { return x.region === region && live(x); });
       if (one && !list[0]) return cfnErr("ValidationError", "Stack with id " + one + " does not exist");
       return xml("<DescribeStacksResponse" + NS + "><DescribeStacksResult><Stacks>" + list.map(function (x) {
         return "<member><StackId>" + esc(x.stackId) + "</StackId><StackName>" + esc(x.name) + "</StackName><CreationTime>" + x.created + "</CreationTime><StackStatus>" + x.status + "</StackStatus>" +
@@ -865,6 +873,39 @@
           "</LogicalResourceId><PhysicalResourceId>" + esc(ev.physical) + "</PhysicalResourceId><ResourceType>" + ev.type + "</ResourceType><Timestamp>" + ev.t +
           "</Timestamp><ResourceStatus>" + ev.status + "</ResourceStatus>" + (ev.reason ? "<ResourceStatusReason>" + esc(ev.reason) + "</ResourceStatusReason>" : "") + "</member>";
       }).join("") + "</StackEvents></DescribeStackEventsResult></DescribeStackEventsResponse>");
+    }
+    if (A === "DeleteStack") {
+      // Teardown (cloudformation.aws.a's stack notes): resources in reverse creation order, so the DNS records go before
+      // the distribution and nothing goes while something that refers to it remains; Retain and RetainExceptOnCreate
+      // resources are DELETE_SKIPPED (the bucket, its policy, the log group stay with the customer); then
+      // DELETE_COMPLETE. AWS answers a DeleteStack for a missing or already-deleting stack with success, and so does the
+      // twin. The twin's own choice: a stack still being created or rolled back refuses the delete until it settles.
+      var sd = find(form.get("StackName"));
+      var ok = xml("<DeleteStackResponse" + NS + "><ResponseMetadata><RequestId>twin</RequestId></ResponseMetadata></DeleteStackResponse>");
+      if (!sd || sd.status === "DELETE_IN_PROGRESS") return ok;
+      if (/_IN_PROGRESS$/.test(sd.status)) return cfnErr("ValidationError", "Stack [" + sd.name + "] is in " + sd.status + " state and can not be deleted until it settles (the twin's rule).");
+      var t0 = nowIso(), at = Date.parse(t0) + 1000, sched = [], base = { account: account, region: region, name: sd.name };
+      var ev = function (ms, logical, type, status, extra) { sched.push({ at: new Date(ms).toISOString(), op: "cloudformation.stackEvent", target: sd.stackId,
+        data: Object.assign({ logical: logical, type: type, status: status }, base, extra || {}), actor: "aws:cloudformation", why: "clock.settle" }); };
+      var roleGone = sd.kind === "vault" && sd.mode === "access-stack" && (!find(sd.name + "-access") || find(sd.name + "-access").status !== "CREATE_COMPLETE");
+      if (roleGone) {
+        ev(at, sd.name, "AWS::CloudFormation::Stack", "DELETE_FAILED", { physical: sd.stackId, reason: "Role " + sd.roleArn + " is invalid or cannot be assumed" });
+      } else {
+        var made = sd.events.slice().reverse().map(function (x) { return x.logical; })
+          .filter(function (l, i, a) { return l !== sd.name && a.indexOf(l) === i && sd.resources[l] && sd.resources[l].status === "CREATE_COMPLETE"; });
+        var took = { "AWS::CloudFront::Distribution": 300, "AWS::Route53::RecordSet": 35, "AWS::IAM::Role": 5 };
+        made.reverse().forEach(function (l) {
+          var rs = sd.resources[l], keep = /^Retain/.test(DELETION[l] || "");
+          ev(at, l, rs.type, "DELETE_IN_PROGRESS", { physical: rs.physical });
+          at += keep ? 300 : (took[rs.type] || 2) * 1000;
+          ev(at, l, rs.type, keep ? "DELETE_SKIPPED" : "DELETE_COMPLETE", { physical: rs.physical });
+          at += 300;
+        });
+        ev(at + 500, sd.name, "AWS::CloudFormation::Stack", "DELETE_COMPLETE", { physical: sd.stackId });
+      }
+      record({ t: t0, actor: "user:customer-admin@" + account, op: "cloudformation.deleteStack", target: sd.stackId, why: "deploy.delete",
+        data: { account: account, region: region, name: sd.name }, schedule: sched });
+      return ok;
     }
     if (A === "ListStacks") {
       // Every stack in the region, newest first, filtered by StackStatusFilter.member.N if given (as AWS does).
