@@ -28,5 +28,5 @@ Kept by s3.aws.a@SovereignWebsite.dinis. Newest asks appended; order of work is 
 ## From security.aws.a
 
 - R-016 (Low): a link opened a file with no click and no size cap. **Done** (local): from a link a file opens only when the listing gave its size and it is at most 5 MB (or a zip, read by byte ranges); otherwise the folder is shown and the file waits for a click. Sizes are kept in a null-prototype object. A CORS plan reached from a link says so. Tests: route.e2e.cjs cases 9 and 10.
-- R-016, left to dev.1.aws.a (its streamed gunzip, first-note item 2): a cap on gunzip output for a clicked file, and a .zip of unknown size treated as a zip.
+- R-016, dev.1.aws.a's part: **done** on its branch (e81d2db, local): a clicked .gz unzips only to just past 5 MB (cut at a whole line, Download keeps the whole file); openFile with an unknown size fetches nothing. Test: test/s3/limits.e2e.cjs. Merges cleanly with work/s3.aws.a. I review it once pushed.
 - R-016 notes, open: the account label beside the bucket in the heading; TWIN on the S3 status line in twin mode (may be the shell's, aws.c).
