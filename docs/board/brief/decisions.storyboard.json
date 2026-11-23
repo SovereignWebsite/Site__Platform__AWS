@@ -8,14 +8,14 @@
  "beats": [
   {
    "id": "b1",
-   "narration": "Seven decisions wait for you on the AWS programme. None stops the team: the agents keep building on the synthetic twin.",
+   "narration": "Seven decisions wait for you on the AWS programme. None stops the team: the agents keep building on the twin.",
    "visual": {
     "kind": "svg",
     "src": "intro",
     "caption": "Red: a security risk. Amber: access, approval or a merge.",
     "at": 0,
-    "play": 9,
-    "end": 8.4
+    "play": 8.6,
+    "end": 8
    },
    "facts": [
     "s-decisions"
@@ -136,14 +136,14 @@
   },
   {
    "id": "b8",
-   "narration": "All recommended answers are a, except three, which is c. The full line is on screen. Answer in pm.aws.a's session; the trade-offs follow.",
+   "narration": "All recommended answers are a, except three, which is c. Answer in pm.aws.a's session; the trade-offs follow.",
    "visual": {
     "kind": "svg",
     "src": "outro",
     "caption": "Recommended: 1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a. Answer in pm.aws.a's session.",
     "at": 0,
-    "play": 9.8,
-    "end": 9.2
+    "play": 7.4,
+    "end": 6.8
    },
    "facts": [
     "s-decisions"
