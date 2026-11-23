@@ -30,8 +30,11 @@ const price = (id, region) => {
 export function flood({ concurrency, memoryMb, durationMs, hours = 1, arch = "arm", region = "eu-west-2", edgeRps = 0, responseBytes = 0, logBytesPerInvocation = 0, waf = null, monthHours = 720 }) {
   if (!(concurrency > 0 && memoryMb > 0 && durationMs >= 1 && hours > 0 && edgeRps >= 0 && responseBytes >= 0 && logBytesPerInvocation >= 0)) throw new Error("bad input");
   const seconds = hours * 3600;
-  const busySeconds = concurrency * seconds;                       // the cap: never more than C at once
-  const requests = Math.floor(busySeconds * 1000 / Math.ceil(durationMs));
+  const capRequests = Math.floor(concurrency * seconds * 1000 / Math.ceil(durationMs)); // the cap: never more than C at once
+  // With no edge rate the function is kept busy at the cap (the attacker's best case); with one, Lambda serves
+  // what arrives, up to the cap.
+  const requests = edgeRps > 0 ? Math.min(capRequests, Math.floor(edgeRps * seconds)) : capRequests;
+  const busySeconds = requests * Math.ceil(durationMs) / 1000;
   const gbSeconds = busySeconds * (memoryMb / 1024);              // Lambda's GB-second uses memory in GB (MB/1024)
   const reqId = arch === "arm" ? "lambda.request.arm" : "lambda.request.x86";
   const durId = arch === "arm" ? "lambda.duration.arm.tier1" : "lambda.duration.x86.tier1";
