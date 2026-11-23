@@ -3,6 +3,8 @@
 // bounded read through the API layer. No DOM, no network: it only turns a line into a call for the page to make.
 //
 //   CommandLine.parse(line, table, { previewCap }) -> { ok: true, row, params, options, call: { global, method, args } }
+//       The page resolves call.global and call.method through its own fixed map of API objects, never window[...]
+//       (security.aws.a; R-010).
 //                                                   | { ok: false, code, message }
 //   CommandLine.usage(row)                         -> "s3 listObjects <bucket> <region> [--prefix value] ..."
 //   CommandLine.complete(text, table)              -> rows whose command starts with text (for completion)
@@ -12,7 +14,8 @@
 // lists (booleans as "--name" alone; integers as whole numbers; each at most once). Words are split on spaces; "double
 // quotes" keep spaces, with no escapes inside. s3 getObject's range is typed "--bytes start-end" (whole numbers, start
 // not after end), its length capped at the S3 browser's preview size (security.aws.a R-017; site/s3.js LIMITS.preview,
-// 256 KiB), so one line cannot pull a whole large object: "That range is over the preview limit. Use Files to read it
+// 256 KiB), passed as getObject's one range argument [start, end]; with no --bytes the range is [0, cap - 1], so one
+// line can never pull a whole large object: "That range is over the preview limit. Use Files to read it
 // in parts." table is the parsed commands.json ({ commands }) or its array. Values are passed as given; the API layer
 // encodes them into the request and checks them again.
 (function (root) {
@@ -85,7 +88,9 @@
       else options[name] = val;
     }
     var args = params.slice();
-    if (row.command === "s3 getObject") { if (range) args.push(range[0], range[1]); }
+    // S3Api.getObject(bucket, region, key, range) takes range as one [start, end]. With no --bytes the range is the
+    // first previewCap bytes, so no line fetches a whole object (security.aws.a, R-017).
+    if (row.command === "s3 getObject") args.push(range || [0, cap - 1]);
     else if (row.options.length) args.push(options);
     return { ok: true, row: row, params: params, options: options, call: { global: row.global, method: row.operationId, args: args } };
   }

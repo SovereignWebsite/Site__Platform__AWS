@@ -52,8 +52,9 @@ ok(P("ls").message === "Not a command. Try help.", "unknown command wording (des
 
 // ---- s3 getObject --bytes ----
 r = P("s3 getObject my-bucket eu-west-2 logs/a.json --bytes 0-1023");
-ok(r.ok && JSON.stringify(r.call.args) === JSON.stringify(["my-bucket", "eu-west-2", "logs/a.json", 0, 1023]), "--bytes start-end becomes getObject's start and end");
-ok(P("s3 getObject my-bucket eu-west-2 k").call.args.length === 3, "no --bytes: the whole object is asked for, as getObject does (the page applies its own size rule)");
+ok(r.ok && JSON.stringify(r.call.args) === JSON.stringify(["my-bucket", "eu-west-2", "logs/a.json", [0, 1023]]), "--bytes start-end becomes getObject's one range argument [start, end]");
+ok(JSON.stringify(P("s3 getObject my-bucket eu-west-2 k").call.args[3]) === JSON.stringify([0, 256 * 1024 - 1]), "no --bytes: the first 256 KiB, never the whole object (security.aws.a)");
+ok(JSON.stringify(P("s3 getObject my-bucket eu-west-2 k", { previewCap: 1000 }).call.args[3]) === JSON.stringify([0, 999]), "no --bytes with the page's own cap");
 ok(P("s3 getObject b eu-west-2 k --bytes 0-" + (256 * 1024 - 1)).ok, "exactly the preview cap is allowed");
 const over = P("s3 getObject b eu-west-2 k --bytes 0-" + 256 * 1024);
 ok(!over.ok && over.code === "range-over-cap" && over.message === "That range is over the preview limit. Use Files to read it in parts.", "one byte over the cap is refused, with design 09's sentence");
@@ -82,6 +83,24 @@ for (const row of table.commands) {
   ok((await run("cfn stacks eu-west-2")).items.map((s) => s.name).join() === "demo-site,demo-dns,demo-lambda", "run: cfn stacks eu-west-2 over the twin");
   ok((await run("iam role sws-aws-platform-read")).arn === "arn:aws:iam::" + A + ":role/sws-aws-platform-read", "run: iam role over the twin");
   ok((await run("iam roles --max 2")).items.length === 2, "run: iam roles --max 2 over the twin");
+  // getObject runs on S3Api over the twin: the range header is sent and honoured, whatever the start (security.aws.a).
+  const s3 = ctx.S3Api(send), sizes = [];
+  for (const name of await s3.listBuckets()) {
+    const b = await s3.getBucket(name);
+    if (!b.cors) continue; // the browser can read only buckets with CORS (the twin answers as a browser sees it)
+    const page = await s3.listObjects(name, b.region, { delimiter: "" });
+    page.files.forEach((f) => sizes.push({ bucket: name, region: b.region, key: f.key, size: f.size }));
+  }
+  // The twin's readable objects are all under 1 KB, so the cap is shown with the page's own smaller cap: the same path.
+  const obj = sizes.sort((a, b) => b.size - a.size)[0];
+  ok(obj && obj.size > 600, "an object over 600 bytes to test with (" + (obj && obj.key + " " + obj.size) + ")");
+  const runCap = async (line, cap) => { const x = C.parse(line, table, { previewCap: cap }); if (!x.ok) throw new Error(x.message); return ctx[x.call.global](send, { account: A })[x.call.method](...x.call.args); };
+  const capped = await runCap("s3 getObject " + obj.bucket + " " + obj.region + " " + obj.key, 500);
+  ok(capped.status === 206 && capped.bytes.length === 500 && /^bytes 0-499\//.test(capped.contentRange || ""), "run: no --bytes fetches only the first cap bytes, never the whole object (" + capped.status + ", " + capped.bytes.length + ", " + capped.contentRange + ")");
+  const mid = await run("s3 getObject " + obj.bucket + " " + obj.region + " " + obj.key + " --bytes 5-504");
+  ok(mid.status === 206 && mid.bytes.length === 500 && /^bytes 5-504\//.test(mid.contentRange || ""), "run: --bytes 5-504 sends bytes=5-504 (" + mid.contentRange + ")");
+  const first = await run("s3 getObject " + obj.bucket + " " + obj.region + " " + obj.key + " --bytes 0-0");
+  ok(first.status === 206 && first.bytes.length === 1, "run: --bytes 0-0 (a start of 0) still sends a Range header");
 }
 
 const src = readFileSync(new URL("../../site/api/command-line.js", import.meta.url), "utf8");
