@@ -4,8 +4,8 @@
 // Targets use ontology.aws.a's node ids (ARNs) and type names (docs/ontology/2026-11-23__01-resource-ontology.md).
 (function (root) {
   "use strict";
-  // Derived ids (resources without an ARN): the graph's prefix. "twin:" today; "urn:sws:" if ontology.aws.a agrees (design 03).
-  var DERIVED = "twin:";
+  // Derived ids (things without an ARN), as ontology.aws.a's graph names them: urn:sws:<kind>:<name> (849f77a).
+  function urn(kind, name) { return "urn:sws:" + kind + ":" + name; }
   var LABELS = { "sws-aws-platform-read": "the read role", "sws-aws-platform-change": "the change role" };
 
   function who(u) {
@@ -34,7 +34,7 @@
     if (p.policyArn) out.push({ type: "policy", id: p.policyArn, name: p.policyArn.split("/").pop() });
     if (p.stackName) out.push({ type: "stack", id: "arn:aws:cloudformation:" + r.awsRegion + ":" + acct + ":stack/" + p.stackName, name: p.stackName }); // as the graph names stacks (no stack uuid)
     if (svc === "cloudcontrolapi" && p.typeName === "AWS::S3::Bucket") bucket(p.identifier);
-    if (svc === "cloudtrail" && p.name) out.push({ type: "trail", id: DERIVED + "cloudtrail/trail/" + p.name, name: p.name });
+    if (svc === "cloudtrail" && p.name) out.push({ type: "trail", id: urn("cloudtrail-trail", p.name), name: p.name });
     if (p.functionName) out.push({ type: "function", id: "arn:aws:lambda:" + r.awsRegion + ":" + acct + ":function:" + p.functionName, name: p.functionName });
     return out;
   }
@@ -78,7 +78,7 @@
       targets: targets(r),
       raw: r
     };
-    e.node = e.id ? DERIVED + "event/cloudtrail/" + e.id : null; // the event's own graph node id
+    e.node = e.id ? urn("cloudtrail-event", e.id) : null; // the event's own graph node id
     e.words = words(e);
     return e;
   }

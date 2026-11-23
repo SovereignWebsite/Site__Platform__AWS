@@ -34,12 +34,12 @@ e = one({ eventSource: "sts.amazonaws.com", eventName: "AssumeRoleWithWebIdentit
 eq([e.failed, e.words], [{ code: "AccessDenied", message: "no" }, "u signed in to the role other with Google (refused: AccessDenied)"], "refused sign-in");
 e = one({ eventSource: "cloudformation.amazonaws.com", awsRegion: "eu-west-2", eventName: "ExecuteChangeSet", requestParameters: { stackName: "sws-aws-platform", changeSetName: "c" } });
 eq([e.targets[0].type, e.targets[0].id, e.words], ["stack", "arn:aws:cloudformation:eu-west-2:" + A + ":stack/sws-aws-platform", "the change role applied a change to the stack sws-aws-platform"], "change set (graph stack id)");
-eq(e.node, "twin:event/cloudtrail/t", "event node id");
+eq(e.node, "urn:sws:cloudtrail-event:t", "event node id");
 if ("raw" in R.forGraph(e) || !R.forGraph(e).targets) fail("forGraph keeps raw or loses targets");
 e = one({ eventSource: "cloudcontrolapi.amazonaws.com", awsRegion: "eu-west-2", eventName: "UpdateResource", requestParameters: { typeName: "AWS::S3::Bucket", identifier: "b2", patchDocument: "[]" } });
 eq([e.targets[0].id, e.words], ["arn:aws:s3:::b2", "the change role changed the settings of the bucket b2"], "cloud control");
 e = one({ eventSource: "cloudtrail.amazonaws.com", eventName: "StopLogging", requestParameters: { name: "demo" } });
-eq(e.words, "the change role stopped the trail demo", "stop logging");
+eq([e.targets[0].id, e.words], ["urn:sws:cloudtrail-trail:demo", "the change role stopped the trail demo"], "stop logging");
 e = one({ eventSource: "ec2.amazonaws.com", eventName: "DescribeInstances", requestParameters: null });
 eq([e.targets, e.words], [[], "the change role called DescribeInstances on ec2"], "unknown action");
 const noRO = base({ eventID: "r", eventName: "GetRole", userIdentity: assumed("sws-aws-platform-read") }); delete noRO.readOnly;
