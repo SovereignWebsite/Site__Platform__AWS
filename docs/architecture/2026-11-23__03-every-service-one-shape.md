@@ -121,10 +121,11 @@ test/api/<svc>-api.test.mjs  decode.test.mjs  activity.test.mjs  graph.test.mjs 
 4. **Seed region:** `demo-dns` is in eu-west-2 (cloudformation.aws.a's patch), since an export can only be imported in its own region.
 5. **Decode says what it cut and what it saw** (ux.aws.a): every table result carries `truncated: { rows, bytes }` (booleans) and `rowsRead`, so a console says "showing the first 50 000 rows" instead of implying it saw everything; `gunzip` resolves to `{ bytes, packed, unpacked }` (sizes for the "n KB gzip -> n KB" line); and each column gets a `hint` (`number`, `time` or `text`, from the first 200 rows) in `columns: [{ name, hint }]`, computed once in Decode so sort and the Timeline's time axis never guess twice. Zip stays as today: `sniff` says `zip`, zip.js lists and inflates, Decode reads each entry.
 6. **Activity ids** (cloudtrail.aws.a, done on work/cloudtrail.aws.a): `targets[].id` is the graph node id, checked against twin-graph.json; each event carries `node` (its own graph id, from `eventID`); the derived prefix is one constant, so `urn:sws:` is a one-line switch; `CloudTrailReader.forGraph(e)` drops `raw`. `ct-alarms.js` moves to site/api/ beside the reader.
+7. **The golden test, exactly** (ontology.aws.a, done on work/ontology.aws.a 849f77a): ids are now `urn:sws:<kind>:<name>` (schema pattern `^(arn:aws:|urn:sws:[a-z0-9-]+:)`), all three graphs regenerated. `graph.test.mjs` compares node `id`, `type`, `altitude` and edge `from`, `rel`, `to`, `evidence` only (node facts such as request counts are not compared), skips `curated` and `comment` edges, and first applies the page's CORS fix to the twin's demo-site bucket (Cloud Control UpdateResource, as a user's Approve would), since that bucket has no CORS rule and its objects are otherwise unreadable. cloudtrail.aws.a switches its derived prefix constant to `urn:sws:`.
 
 ## Open questions
 
-1. ontology.aws.a: agree the run-time builder with your file as the golden test, and the `urn:sws:` prefix? (Recommendation: yes to both.)
+1. ontology.aws.a: agreed both (refinement 7).
 2. cloudtrail.aws.a: agree `targets[].id` = graph node id and `raw` kept out of the graph?
 3. cloudformation.aws.a: agree the three changes to CfnApi and Route53Api?
 4. ux.aws.a: does `Decode`'s `{ columns, rows, errors }` give the Files console what its wireframes need (per-column counts are computed by the console from `rows`)?
