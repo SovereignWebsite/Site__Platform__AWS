@@ -215,19 +215,20 @@
   },
   {
    "id": "b11c",
-   "narration": "V13. A flood through CloudFront has no ceiling. Recommended: a budget stop, a kill switch, plain words.",
+   "narration": "V13. No edge rule caps a flood's bill. Recommended: a request alarm by email, a kill switch, plain words.",
    "visual": {
     "kind": "svg",
     "src": "v13",
     "caption": "V13: denial of wallet",
     "at": 0,
-    "play": 7.4,
-    "end": 6.8
+    "play": 8.2,
+    "end": 7.6
    },
    "facts": [
     "s-r026",
     "s-flood",
-    "s-waf"
+    "s-waf",
+    "s-cfn-c30"
    ]
   },
   {
@@ -236,7 +237,7 @@
    "visual": {
     "kind": "svg",
     "src": "outro",
-    "caption": "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a (if the official template settles nothing), V11 b, V12 a, V13 b+c+d",
+    "caption": "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a (if the official template settles nothing), V11 b, V12 a, V13 a",
     "at": 0,
     "play": 3.4,
     "end": 2.8
@@ -652,56 +653,34 @@
   },
   {
    "id": "V13",
-   "question": "V13. R-026: how is a customer's Vault protected from a request flood's bill?",
+   "question": "V13. R-026: how is a customer bounded against a request flood's bill?",
    "options": [
     {
      "id": "a",
-     "label": "a. AWS WAF rate rule, opt-in once its cost is confirmed",
+     "label": "a. Plain wording, a kill switch, a CloudWatch request-count alarm by email (about $0.10/month); WAF offered off by default; later an opt-in auto-disable Lambda",
      "good": [
-      "Stops the flood at the edge"
+      "Bounds the bill by the customer's time to react",
+      "WAF stays available for availability, not sold as cost control"
      ],
      "bad": [
-      "Adds cost in a flood: about $21.61 an hour at 10,000 req/s (billing.aws.a, cfe70fb); protects availability, not the bill"
+      "The alarm needs the -edge stack in us-east-1, even without a custom domain"
      ],
      "blocks": []
     },
     {
      "id": "b",
-     "label": "b. Budgets alert plus an action that disables the distribution at the customer's cap",
+     "label": "b. As a, but a Budgets cost email instead of the alarm",
      "good": [
-      "A hard ceiling the customer sets"
+      "Global, inside the one stack"
      ],
      "bad": [
-      "The Vault goes offline at the cap"
-     ],
-     "blocks": []
-    },
-    {
-     "id": "c",
-     "label": "c. A kill switch on the deploy page",
-     "good": [
-      "The customer can stop it at once",
-      "With a request-count alarm (about $0.10 a month), the cheapest bound on the bill: time to react"
-     ],
-     "bad": [
-      "Needs someone watching"
-     ],
-     "blocks": []
-    },
-    {
-     "id": "d",
-     "label": "d. Say it plainly on What it costs",
-     "good": [
-      "No surprise"
-     ],
-     "bad": [
-      "Words alone stop nothing"
+      "Hours late: each hour at 10,000 req/s costs about $46"
      ],
      "blocks": []
     }
    ],
-   "recommendation": "b",
-   "why": "security.aws.a recommends b and c in the first version, with d's wording. billing.aws.a (cfe70fb): no edge rule caps the bill; an alarm on request count feeding the kill switch does, by time to react."
+   "recommendation": "a",
+   "why": "security.aws.a, revised after billing.aws.a (cfe70fb: WAF adds cost) and cloudformation.aws.a (c30353d: a Budgets action cannot disable a distribution)."
   }
  ],
  "connections": {
@@ -811,6 +790,12 @@
    "id": "s-waf",
    "title": "billing.aws.a: AWS WAF and CloudWatch alarm prices in flood.mjs (cfe70fb)",
    "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/commit/cfe70fb",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-cfn-c30",
+   "title": "cloudformation.aws.a: Budgets actions cannot disable a distribution (c30353d)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/commit/c30353d",
    "read": "2026-11-23"
   }
  ],
