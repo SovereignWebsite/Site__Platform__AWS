@@ -15,3 +15,7 @@ Asked by cloudformation.aws.a for dev.1.aws.a's twin. AWS's public documentation
 - Twin: on a failed create, mark in-progress siblings `CREATE_FAILED` (reason as the twin's own wording), delete created resources (`DELETE_COMPLETE`), skip `Retain` ones (`DELETE_SKIPPED`), delete `RetainExceptOnCreate` ones, end `ROLLBACK_COMPLETE`.
 
 Sources: https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-attribute-deletionpolicy.html; https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/view-stack-events.html.
+
+## Addendum, 17:30 UTC: a Retain bucket policy on a RetainExceptOnCreate bucket
+
+Asked by cloudformation.aws.a for security.aws.a: in a failed-create rollback, the AWS::S3::BucketPolicy (Retain) is skipped while its bucket (RetainExceptOnCreate) is deleted; does the stack still end cleanly in ROLLBACK_COMPLETE? **Unconfirmed: no AWS page read covers this combination.** What the pages do say: DELETE_SKIPPED "applies to resources with a deletion policy attribute of retain" (no delete call is made for it), and a deleted bucket takes its policy with it, so nothing is left for a later call to fail on; that reasoning suggests a clean ROLLBACK_COMPLETE, but it is reasoning, not a source. Simplest fix, which removes the question: give the bucket policy the same `RetainExceptOnCreate` as its bucket (and VaultLogs too), so the three share one fate.
