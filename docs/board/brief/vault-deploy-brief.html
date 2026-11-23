@@ -100,7 +100,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
 <div class="wrap">
   <header>
     <div>
-      <h1>Deploy a Vault: eleven decisions</h1>
+      <h1>Deploy a Vault: twelve decisions</h1>
       <p class="sub">AWS Platform programme · from <span class="t-mono">docs/board/decisions.md</span>, 23 Nov 2026, 15:30 UTC (batch 2) · kept by pm.aws.a</p>
     </div>
     <div class="tabs" role="tablist" aria-label="View">
@@ -139,10 +139,10 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
 
 <script type="application/json" id="storyboard">
 {
- "title": "Deploy a Vault: eleven decisions",
+ "title": "Deploy a Vault: twelve decisions",
  "source": "docs/board/decisions.md, batch 2, on work/pm.aws.a, 23 Nov 15:30 UTC",
  "made_by": "pm.aws.a@SovereignWebsite.dinis",
- "answer": "V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a, V11 b",
+ "answer": "V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a, V11 b, V12 a",
  "scenes": [
   {
    "id": "intro",
@@ -152,8 +152,8 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
    "beats": [
     [
      0,
-     "Eleven decisions about deploying a Vault into a customer's AWS account, EC2 and short-lived deployments.",
-     "Eleven tiles, V1 to V11."
+     "Twelve decisions about deploying a Vault into a customer's AWS account, EC2 and short-lived deployments.",
+     "Twelve tiles, V1 to V12."
     ],
     [
      6,
@@ -167,7 +167,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
     ]
    ],
    "panel": {
-    "what": "Eleven decisions from conductor.aws.a's plan (ea9f61d), the first drafts of steps 1 to 3 and security's review of the page design (d38c93b): vaults.aws.a (eec9d24), cloudformation.aws.a (42677c7), iam.aws.a (68f4b8b). Answer by number in pm.aws.a's session.",
+    "what": "Twelve decisions from conductor.aws.a's plan (ea9f61d), the first drafts of steps 1 to 3 and security's review of the page design (d38c93b): vaults.aws.a (eec9d24), cloudformation.aws.a (42677c7), iam.aws.a (68f4b8b). Answer by number in pm.aws.a's session.",
     "answer": true
    }
   },
@@ -207,7 +207,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
      ]
     ],
     "rec": "a",
-    "blocks": "The page's address and the IaC request. Recommended by security.aws.a and iam.aws.a: checking https://<domain>/health needs the CSP to allow any https host, which on this hub would undo the limit on where an injected script could send your session (R-010)."
+    "blocks": "The page's address and the IaC request. Recommended by security.aws.a, iam.aws.a and architect.aws.a (design 05, 2b95ddc): checking https://<domain>/health needs the CSP to allow any https host, which on this hub would undo the limit on where an injected script could send your session (R-010)."
    }
   },
   {
@@ -583,14 +583,48 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
    }
   },
   {
+   "id": "v12",
+   "eyebrow": "V12 · Privacy",
+   "title": "No public DNS resolver in the first version",
+   "dur": 12,
+   "beats": [
+    [
+     0,
+     "A public DNS resolver would learn every domain a customer types. The page's health check already resolves the name in their own browser.",
+     "The customer's browser looks up their domain itself; a public resolver beside it is crossed out."
+    ],
+    [
+     6,
+     "Recommended: a, no resolver in the first version. Nothing is lost.",
+     "The a option chip lights as recommended."
+    ]
+   ],
+   "panel": {
+    "asks": "architect.aws.a (design 05, 2b95ddc)",
+    "what": "Whether the deploy page asks a public DNS-over-HTTPS resolver (Google or Cloudflare) about the customer's domain.",
+    "options": [
+     [
+      "a",
+      "No resolver in the first version: the /health fetch resolves the name in the customer's own browser."
+     ],
+     [
+      "b",
+      "One named public resolver, which learns each domain a customer types."
+     ]
+    ],
+    "rec": "a",
+    "blocks": "Nothing."
+   }
+  },
+  {
    "id": "outro",
    "eyebrow": "Your answer",
-   "title": "One line answers all eleven",
+   "title": "One line answers all twelve",
    "dur": 10,
    "beats": [
     [
      0,
-     "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a, V11 b.",
+     "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a, V11 b, V12 a.",
      "The full answer line, large."
     ],
     [
@@ -644,7 +678,7 @@ function optionRow(opts, rec, tShow, tRec, notRec=[]) {
 /* ---------- the scenes, drawn ---------- */
 const VIS = {
 intro(){
-  const n=[['V1','Where it lives','acc'],['V2','CloudFormation','acc'],['V3','Sign-in','risk'],['V4','EC2 path','acc'],['V5','Guard rails','risk'],['V6','ec2.aws.a','acc'],['V7','Audit trail','risk'],['V8','Progress','risk'],['V9','Templates','acc'],['V10','Server image','acc'],['V11','Launches','risk']];
+  const n=[['V1','Where it lives','acc'],['V2','CloudFormation','acc'],['V3','Sign-in','risk'],['V4','EC2 path','acc'],['V5','Guard rails','risk'],['V6','ec2.aws.a','acc'],['V7','Audit trail','risk'],['V8','Progress','risk'],['V9','Templates','acc'],['V10','Server image','acc'],['V11','Launches','risk'],['V12','DNS privacy','risk']];
   let s = txt(W/2,70,'Deploy a Vault','t-xl') + cue(0.2, txt(W/2,104,'into a customer\'s AWS account · EC2 · short-lived deployments','t-m t-mute'));
   n.forEach((d,i)=>{ const x=30+(i%6)*152, y=130+Math.floor(i/6)*118, c=d[2]==='risk'?'bx-risk':'bx-acc';
     s += cue(0.8+i*0.3, box(x,y,138,100,c) + txt(x+69,y+50,d[0],'t-l '+(d[2]==='risk'?'t-risk':'t-acc')) + txt(x+69,y+80,d[1],'t-s'), 'pop'); });
@@ -774,10 +808,21 @@ v11(){
   s += optionRow(['a','b'],'b',12,13);
   return s;
 },
+v12(){
+  let s = lbox(60,150,220,80,'customer\'s browser','bx','t-m','looks up their domain');
+  s += cue(0.6, lbox(380,150,220,80,'their domain','bx-ok','t-m','/health answers'));
+  s += path('p12a','M280 190 L378 190','ln-ok',0.6,1.4);
+  s += cue(2, lbox(700,150,200,80,'public resolver','bx-hold','t-s','Google or Cloudflare'));
+  s += `<path d="M600 190 L698 190" class="ln dash"/>`;
+  s += cross(650,190,3);
+  s += cue(3.4, txt(800,260,'would learn every domain typed','t-s t-risk'));
+  s += optionRow(['a','b'],'a',6,7);
+  return s;
+},
 outro(){
   let s = txt(W/2,150,'Recommended','t-m t-mute');
   s += cue(0.3, txt(W/2,226,'V1 a · V2 a · V3 a · V4 b · V5 b','t-l'), 'pop');
-  s += cue(0.6, txt(W/2,266,'V6 a · V7 c · V8 a · V9 a · V10 a · V11 b','t-l'), 'pop');
+  s += cue(0.6, txt(W/2,266,'V6 a · V7 c · V8 a · V9 a · V10 a · V11 b · V12 a','t-l'), 'pop');
   s += cue(5, txt(W/2,330,'Answer in pm.aws.a\'s session','t-m'));
   s += cue(5.6, txt(W/2,358,'claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B','t-mono t-mute'));
   s += cue(6.2, txt(W/2,420,'Twin first: nothing real until you answer.','t-s t-ok'));

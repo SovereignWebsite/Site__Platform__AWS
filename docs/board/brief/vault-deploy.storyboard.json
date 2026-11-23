@@ -1,14 +1,14 @@
 {
  "format": "studio-storyboard/0",
  "slug": "aws-vault-deploy-2026-11-23",
- "title": "Deploy a Vault: eleven decisions",
+ "title": "Deploy a Vault: twelve decisions",
  "audience": "Dinis",
  "requested_by": "pm.aws.a@SovereignWebsite.dinis",
- "summary": "Batch 2 on the AWS Platform programme's decisions page (23 Nov 2026 15:30 UTC): eleven decisions on deploying a Vault into a customer's AWS account, EC2 and short-lived deployments, from conductor.aws.a's plan and the first drafts of steps 1 to 3. Nothing runs outside the twin until Dinis answers.",
+ "summary": "Batch 2 on the AWS Platform programme's decisions page (23 Nov 2026 15:30 UTC): twelve decisions on deploying a Vault into a customer's AWS account, EC2 and short-lived deployments, from conductor.aws.a's plan and the first drafts of steps 1 to 3. Nothing runs outside the twin until Dinis answers.",
  "beats": [
   {
    "id": "b1",
-   "narration": "Eleven decisions on deploying a Vault for a customer. Nothing real runs until you answer.",
+   "narration": "Twelve decisions on deploying a Vault for a customer. Nothing real runs until you answer.",
    "visual": {
     "kind": "svg",
     "src": "intro",
@@ -23,14 +23,14 @@
   },
   {
    "id": "b2",
-   "narration": "V1. Checking the customer's Vault needs a wide CSP. Recommended: its own site, off the hub's origin.",
+   "narration": "V1. Recommended: its own site, off the hub's origin.",
    "visual": {
     "kind": "svg",
     "src": "v1",
     "caption": "V1: where the page lives",
     "at": 0,
-    "play": 7.4,
-    "end": 6.8
+    "play": 4.2,
+    "end": 3.6
    },
    "facts": [
     "s-plan",
@@ -120,14 +120,14 @@
   },
   {
    "id": "b8",
-   "narration": "V7. To read a customer's CloudTrail, recommended: they drop a file into the page. No trust back to us.",
+   "narration": "V7. Recommended: the customer drops their trail into the page. No trust back to us.",
    "visual": {
     "kind": "svg",
     "src": "v7",
     "caption": "V7: the audit trail",
     "at": 0,
-    "play": 8.2,
-    "end": 7.6
+    "play": 6.6,
+    "end": 6
    },
    "facts": [
     "s-trail",
@@ -168,14 +168,14 @@
   },
   {
    "id": "b11",
-   "narration": "V10. Lambda pulls images only from ECR. My view: follow the official template; if it settles nothing, our ECR, pull only.",
+   "narration": "V10. Lambda pulls only from ECR. My view: follow the official template, else our ECR.",
    "visual": {
     "kind": "svg",
     "src": "v10",
     "caption": "V10: the server image",
     "at": 0,
-    "play": 9,
-    "end": 8.4
+    "play": 6.6,
+    "end": 6
    },
    "facts": [
     "s-cfn"
@@ -183,14 +183,14 @@
   },
   {
    "id": "b11a",
-   "narration": "V11. A quick-create link cannot carry a role. Recommended: b, one stack by default, least privilege opt-in.",
+   "narration": "V11. A link cannot carry a role. Recommended: b, one stack by default, least privilege opt-in.",
    "visual": {
     "kind": "svg",
     "src": "v11",
     "caption": "V11: one launch or two",
     "at": 0,
-    "play": 7.4,
-    "end": 6.8
+    "play": 7,
+    "end": 6.4
    },
    "facts": [
     "s-sec-06",
@@ -199,12 +199,27 @@
    ]
   },
   {
+   "id": "b11b",
+   "narration": "V12. Recommended: no public DNS resolver learns customers' domains.",
+   "visual": {
+    "kind": "svg",
+    "src": "v12",
+    "caption": "V12: DNS privacy",
+    "at": 0,
+    "play": 4.2,
+    "end": 3.6
+   },
+   "facts": [
+    "s-arch-05"
+   ]
+  },
+  {
    "id": "b12",
    "narration": "All a, except V4 and V5, b, V7, c, and V11, b. Answer in pm.aws.a's session.",
    "visual": {
     "kind": "svg",
     "src": "outro",
-    "caption": "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a (if the official template settles nothing), V11 b",
+    "caption": "Recommended: V1 a, V2 a, V3 a, V4 b, V5 b, V6 a, V7 c, V8 a, V9 a, V10 a (if the official template settles nothing), V11 b, V12 a",
     "at": 0,
     "play": 7,
     "end": 6.4
@@ -243,7 +258,7 @@
     }
    ],
    "recommendation": "a",
-   "why": "Recommended by security.aws.a and iam.aws.a: checking the Vault's /health needs a CSP open to any https host, which on this hub would weaken the guard on your sealed session (R-010)."
+   "why": "Recommended by security.aws.a, iam.aws.a and architect.aws.a: checking the Vault's /health needs a CSP open to any https host, which on this hub would weaken the guard on your session; as a tab, the page cannot check a custom domain."
   },
   {
    "id": "V2",
@@ -586,6 +601,37 @@
    ],
    "recommendation": "b",
    "why": "Recommended by security.aws.a (seven conditions, 0affab1), iam.aws.a, ux.aws.a and cloudformation.aws.a; vault.yaml 0.4.1 (0f72f91) holds both modes."
+  },
+  {
+   "id": "V12",
+   "question": "V12. May a public DNS-over-HTTPS resolver learn the domains customers type?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. No resolver in the first version",
+     "good": [
+      "No third party learns customers' domains",
+      "The /health fetch already resolves the name"
+     ],
+     "bad": [
+      "No separate DNS step to show"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. One named public resolver (Google or Cloudflare)",
+     "good": [
+      "A separate DNS check on screen"
+     ],
+     "bad": [
+      "The resolver learns each domain typed"
+     ],
+     "blocks": []
+    }
+   ],
+   "recommendation": "a",
+   "why": "architect.aws.a (design 05, 2b95ddc). Blocks nothing."
   }
  ],
  "connections": {
@@ -671,6 +717,12 @@
    "id": "s-boto3-08",
    "title": "boto3.aws.a: quick-create links cannot carry the service role (3ce137a)",
    "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/commit/3ce137a",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-arch-05",
+   "title": "architect.aws.a: design 05, the deploy page's checks (2b95ddc)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/commit/2b95ddc",
    "read": "2026-11-23"
   }
  ],
