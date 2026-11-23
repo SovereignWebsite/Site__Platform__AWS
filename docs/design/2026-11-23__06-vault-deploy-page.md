@@ -52,7 +52,7 @@ My recommendation, from the customer's side only: one link-out if security can l
 
   The remaining risk on later updates is R-022 (Low), for Dinis to see.
 
-**Decided for v1:** one stack, one link-out (screen 2), the main path. Screen 1 gains one quiet line under the button: "Your organisation does not let you create IAM roles? Use least-privilege mode", which leads to screen 2-alt. Conditions 1 and 2 are for cloudformation.aws.a, 3 to 5 are in the screens below, and 6 and 7 are in the build order (section 8).
+**The agents' recommendation, awaiting Dinis's answer** (through pm.aws.a's Vault batch, with R-022): one stack, one link-out (screen 2), as the main path. If Dinis chooses two launches instead, screen 2-alt becomes the main path and nothing else in this design changes. Screen 1 gains one quiet line under the button: "Your organisation does not let you create IAM roles? Use least-privilege mode", which leads to screen 2-alt. Conditions 1 and 2 are for cloudformation.aws.a, 3 to 5 are in the screens below, and 6 and 7 are in the build order (section 8).
 
 **Consequence for screen 1:** the template must be served from an S3 URL (quick-create accepts no other), so "the template's immutable URL" is an S3 object URL, versioned, whose sha256 the page shows.
 
@@ -209,7 +209,7 @@ Every failure keeps what the customer typed and puts the focus on the field or b
 
 ## 8. Asks
 
-- **pm.aws.a**: section 1a is settled among the agents (one stack by default, least-privilege mode opt-in). R-022 (Low) is for Dinis to see in the Vault batch.
+- **pm.aws.a**: section 1a goes to Dinis as the agents' recommendation (one stack by default, least-privilege mode opt-in), with R-022 (Low) beside it.
 - **Copy check**: if V3 changes, re-check "We never see your AWS sign-in" (security.aws.a).
 - **boto3.aws.a**: whether a quick-create link can set the service role. Also the console's exact acknowledgement wording.
 - **cloudformation.aws.a**: a measured create time on the twin, the likely failure causes, and the secret's name for screen 4.
