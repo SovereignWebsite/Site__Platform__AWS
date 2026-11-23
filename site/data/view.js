@@ -26,10 +26,61 @@
     b.onclick = function () { showLines(ctx, field, value); };
     return b;
   }
+  var NAMES = { path: "path", vault: "vault", client: "client", net: "network", status: "status", status_class: "status", agent_kind: "who asked",
+    agent: "user agent", edge: "edge", hour: "hour", method: "method" };
+  // Investigation mode: what the value refers to, what the same lines share, and the trail so far.
+  function investigate(ctx, field, value, box) {
+    var L = root.LogLinks;
+    if (!L) return;
+    ctx.trail = (ctx.trail || []).filter(function (s) { return !(s.field === field && s.value === String(value)); }).slice(-5);
+    ctx.trail.push({ field: field, value: String(value) });
+    var trail = el("div", { fontSize: "12px", color: "var(--muted)", margin: "0 0 6px" });
+    trail.className = "log-trail";
+    trail.appendChild(el("span", null, "Trail: "));
+    ctx.trail.forEach(function (s, i) {
+      if (i) trail.appendChild(el("span", null, " > "));
+      trail.appendChild(i === ctx.trail.length - 1 ? el("span", null, (NAMES[s.field] || s.field) + " " + s.value) : linkTo((NAMES[s.field] || s.field) + " " + s.value, s.field, s.value, ctx));
+    });
+    box.appendChild(trail);
+    var refs = L.resolve(field, value, ctx.context);
+    if (refs.length) {
+      var r = el("div", { margin: "0 0 6px" });
+      r.className = "log-refs";
+      r.appendChild(el("span", { fontWeight: "600" }, "Refers to: "));
+      refs.forEach(function (ref, i) {
+        if (i) r.appendChild(el("span", null, "; "));
+        if (ref.found && ctx.open && ref.kind === "s3-object") {
+          var b = el("button", LINK, ref.label); b.type = "button"; b.setAttribute("data-ref", ref.kind);
+          b.onclick = function () { ctx.open(ref); };
+          r.appendChild(b);
+        } else {
+          r.appendChild(el("span", ref.found ? null : { color: "var(--muted)" }, ref.label + (ref.found || ref.kind === "none" ? "" : " (not found)") +
+            (ref.kind === "vault" && ref.detail ? " (" + Object.keys(ref.detail).filter(function (k) { return k !== "id"; }).map(function (k) { return k + " " + ref.detail[k]; }).join(", ") + ")" : "")));
+        }
+      });
+      box.appendChild(r);
+    }
+    var p = L.pivots(ctx.records, field, value, 5), grid = el("div", { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "6px", margin: "0 0 10px" });
+    grid.className = "log-pivots";
+    Object.keys(p.by).forEach(function (f) {
+      var c = el("div", { border: "1px solid var(--line)", borderRadius: "8px", padding: "6px 8px", fontSize: "12px" });
+      c.appendChild(el("div", { color: "var(--muted)" }, (NAMES[f] || f) + " (" + p.by[f].distinct + ")"));
+      p.by[f].top.forEach(function (t) {
+        var row = el("div", { display: "flex", justifyContent: "space-between", gap: "6px" });
+        var cell = el("span", { wordBreak: "break-all" }); cell.appendChild(linkTo(t.value, f, t.value, ctx));
+        row.appendChild(cell); row.appendChild(el("span", null, t.lines));
+        c.appendChild(row);
+      });
+      grid.appendChild(c);
+    });
+    if (p.lines) box.appendChild(el("div", { fontSize: "12px", color: "var(--muted)", margin: "0 0 4px" }, "These lines also share (" + p.first.slice(0, 16).replace("T", " ") + " to " + p.last.slice(0, 16).replace("T", " ") + " UTC):"));
+    box.appendChild(grid);
+  }
   function showLines(ctx, field, value) {
     var rows = ctx.records.filter(function (r) { return String(r[field]) === String(value); });
     var box = ctx.lines; box.textContent = "";
-    box.appendChild(el("h4", { margin: "0 0 8px" }, rows.length + " line" + (rows.length === 1 ? "" : "s") + " where " + field + " is " + value));
+    box.appendChild(el("h4", { margin: "0 0 8px" }, rows.length + " line" + (rows.length === 1 ? "" : "s") + " where " + (NAMES[field] || field) + " is " + value));
+    investigate(ctx, field, value, box);
     var t = el("table", { width: "100%", borderCollapse: "collapse", fontFamily: "var(--mono)", fontSize: "12px" });
     var head = el("tr");
     ["time", "client", "method", "path", "query", "status", "bytes", "ms", "edge", "agent", "from"].forEach(function (h) { head.appendChild(el("th", { textAlign: "left", borderBottom: "1px solid var(--line)", padding: "2px 6px" }, h)); });
@@ -39,7 +90,15 @@
       [r.t.slice(0, 19).replace("T", " "), r.client, r.method, r.path, r.query, r.status, r.bytes, r.ms, r.edge, r.agent,
         r.src ? r.src.key.split("/").pop() + ":" + r.src.line + (r.src.part ? "." + r.src.part : "") : ""].forEach(function (v, i) {
         var long = i === 3 || i === 4 || i === 9 || i === 10; // path, query, agent, from wrap; the rest stay on one line
-        tr.appendChild(el("td", { padding: "2px 6px", borderBottom: "1px solid var(--soft)", wordBreak: long ? "break-all" : "normal", whiteSpace: long ? "normal" : "nowrap" }, v === null ? "" : v));
+        var td = el("td", { padding: "2px 6px", borderBottom: "1px solid var(--soft)", wordBreak: long ? "break-all" : "normal", whiteSpace: long ? "normal" : "nowrap" }, i === 10 || i === 1 || i === 3 ? null : v === null ? "" : v);
+        if (i === 1) td.appendChild(linkTo(v, "client", v, ctx));
+        if (i === 3) td.appendChild(linkTo(v, "path", v, ctx));
+        if (i === 10 && r.src) {
+          var srcRef = (root.LogLinks ? root.LogLinks.resolve("src", r.src.key + ":" + r.src.line, ctx.context) : [])[0];
+          if (srcRef && ctx.open) { var sb = el("button", LINK, v); sb.type = "button"; sb.setAttribute("data-ref", "src"); sb.onclick = function () { ctx.open(srcRef); }; td.appendChild(sb); }
+          else td.textContent = v;
+        }
+        tr.appendChild(td);
       });
       t.appendChild(tr);
     });
@@ -103,10 +162,13 @@
   }
 
   // Draw a finished result into box.
-  function render(box, result) {
+  // opts.context: what the caller knows for investigation mode ({ siteBucket, siteKeys, logsBucket, vaults });
+  // opts.open(ref): go to an S3 object ({ bucket, key, line? }), e.g. open it in the S3 browser.
+  function render(box, result, opts) {
+    opts = opts || {};
     var s = result.summary, d = result.discover;
     box.textContent = "";
-    var ctx = { records: result.records, lines: el("div", { marginTop: "12px" }) };
+    var ctx = { records: result.records, lines: el("div", { marginTop: "12px" }), context: opts.context || {}, open: opts.open || null };
     ctx.lines.className = "log-lines";
     var head = el("p", { fontSize: "16px", fontWeight: "600", margin: "0 0 8px" }, X.headline(s, d));
     head.className = "log-headline";
@@ -164,7 +226,7 @@
       records.forEach(function (r) { var e = by[r.client] || (by[r.client] = { key: r.client, requests: 0, errors: 0 }); e.requests++; if (r.status >= 400) e.errors++; });
       s.clients_top = Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return b.requests - a.requests || (a.key < b.key ? -1 : 1); });
       var result = { discover: d, summary: s, records: records, read: { files: keys.length, bytes: bytes, skipped: skipped } };
-      render(box, result);
+      render(box, result, opts);
       return result;
     });
   }

@@ -94,4 +94,18 @@ eq(X.read("{not json\n", "k").skipped[0].why, "not JSON", "bad JSON reported");
 const two = new Uint8Array([...gzipSync('{"c_ip":"203.0.113.1"}\n'), ...gzipSync('{"c_ip":"203.0.113.2"}\n')]);
 eq(X.read(await X.gunzip(two), "m").records.length, 2, "two gzip members");
 eq(X.network("::1"), "0:0:0::/48", "IPv6 short form");
+// investigation mode (site/data/links.js)
+new Function(readFileSync(new URL("../../site/data/links.js", import.meta.url), "utf8"))();
+const L = globalThis.LogLinks;
+const ctx = { siteBucket: "site-b", logsBucket: "logs-b", siteKeys: ["index.html", "data/vaults.json"], vaults: [{ id: "vault-demo-001", files: 42 }] };
+eq(L.resolve("path", "/", ctx).map((r) => [r.key, r.found]), [["index.html", true]], "/ is index.html");
+eq(L.resolve("path", "/nope.css", ctx).map((r) => r.found), [false], "a missing object is not found");
+eq(L.resolve("path", "/vault/../../etc/passwd", ctx).map((r) => r.kind), ["none"], "traversal resolves to nothing");
+eq(L.resolve("path", "/vault/vault-demo-001/files", ctx).map((r) => r.kind), ["s3-object", "vault", "s3-object"], "vault path refers to object, vault and vaults list");
+eq(L.resolve("vault", "vault-demo-009", ctx)[0].found, false, "unknown vault not found");
+eq(L.resolve("src", "cloudfront/2026/11/20/09/x.gz:7", ctx)[0], { kind: "s3-object", label: "s3://logs-b/cloudfront/2026/11/20/09/x.gz line 7", bucket: "logs-b", key: "cloudfront/2026/11/20/09/x.gz", line: 7, found: true }, "provenance ref");
+const pv = L.pivots(atk.recs, "client", "203.0.113.66", 3);
+eq(pv.lines, probe.length, "pivot lines");
+if (!pv.by.path || pv.by.path.distinct < 5 || pv.by.client) fail("pivots of the attacker");
+eq(pv.by.net.top[0].value, "203.0.113.0/24", "pivot net");
 console.log("ok: extract (Discover, Read, Normalise, Summarise) on 3 packs and 4 extra formats");

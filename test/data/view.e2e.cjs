@@ -30,7 +30,33 @@ const fail = (m) => { console.error("FAIL", m); process.exit(1); };
     // an hour bar is a link too
     await page.click('button[data-field="hour"]');
     if (!/where hour is 2026-11-20T09/.test(await page.textContent(".log-lines h4"))) fail(pack + ": hour link");
+    // investigation mode: a vault refers to its entry in the vaults list and to data/vaults.json
+    if (!res.siteKeys) fail(pack + ": the investigation context has no site keys");
+    await page.click('.log-vault button[data-value="vault-demo-001"]');
+    const refs = await page.textContent(".log-refs");
+    if (!refs.includes("Vault vault-demo-001 (files 42, region eu-west-2)")) fail(pack + ": vault ref '" + refs + "'");
+    if (!(await page.$$eval(".log-pivots div", (d) => d.length))) fail(pack + ": no pivots");
+    // a path goes to its S3 object, and the open callback gets the bucket and key
+    await page.click('.log-pivots button[data-field="path"]');
+    await page.click('.log-refs button[data-ref="s3-object"]');
+    let op = await page.evaluate(() => window.opened.slice(-1)[0]);
+    if (!op || !/demo-site/.test(op.bucket) || op.key !== "vault/vault-demo-001/files" && op.key !== "data/vaults.json") fail(pack + ": open path " + JSON.stringify(op));
+    // the trail leads back
+    if (!/vault vault-demo-001 > path \/vault\/vault-demo-001\/files$/.test(await page.textContent(".log-trail"))) fail(pack + ": trail '" + (await page.textContent(".log-trail")) + "'");
+    // provenance opens the log file at its line
+    await page.click('.log-lines button[data-ref="src"]');
+    op = await page.evaluate(() => window.opened.slice(-1)[0]);
+    if (!op || !/cloudfront-logs/.test(op.bucket) || !/\.gz$/.test(op.key) || !op.line) fail(pack + ": open src " + JSON.stringify(op));
+    // "/" is the site's index.html
+    await page.click('button[data-field="path"][data-value="/"]');
+    if (!(await page.textContent(".log-refs")).includes("/index.html")) fail(pack + ": / should refer to index.html");
     if (pack === "attack") {
+      // follow the attacker: client > its paths; traversal is not a resource
+      await page.evaluate(() => { const b = [...document.querySelectorAll('button[data-field="client"]')].find((x) => x.dataset.value === "203.0.113.66"); b && b.click(); });
+      const pv = await page.textContent(".log-pivots");
+      if (!pv.includes("/.env") || !pv.includes("bot")) fail("attack: pivots of the attacker '" + pv.slice(0, 200) + "'");
+      await page.evaluate(() => { const b = [...document.querySelectorAll('button[data-field="path"]')].find((x) => x.dataset.value === "/vault/../../etc/passwd"); b && b.click(); });
+      if (!(await page.textContent(".log-refs")).includes("Not a resource")) fail("attack: traversal should not resolve");
       await page.click('button[data-field="agent_kind"][data-value="bot"]');
       const bots = await page.$$eval(".log-lines tr", (rs) => rs.length - 1);
       if (bots < 15) fail("attack: bot lines " + bots);
@@ -57,5 +83,5 @@ const fail = (m) => { console.error("FAIL", m); process.exit(1); };
   if (injected.imgs !== 0 || await page.evaluate(() => window.pwned)) fail("a log value was rendered as HTML");
   if (!injected.text) fail("hostile value not shown as text");
   await browser.close();
-  console.log("ok: log view on 3 packs (headline, gaps, vault cards, link mode with provenance) and hostile values stay text");
+  console.log("ok: log view on 3 packs (headline, gaps, vault cards, link mode with provenance, investigation: refs, pivots, trail, open) and hostile values stay text");
 })().catch((e) => fail(e.stack || e));

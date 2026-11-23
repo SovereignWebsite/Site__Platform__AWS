@@ -2,6 +2,20 @@
 
 Kept by data.aws.a@SovereignWebsite.dinis (account A), who took over from data.aws.c on 23 Nov 2026. Newest first.
 
+## 2026-11-23 ~07:20 UTC: investigation mode (memo part 4, sections 22 and 23), on branch work/data.aws.a
+
+- `site/data/links.js`: `resolve(field, value, context)` says what a value refers to, only from what the caller already holds (the site bucket's keys, the vaults list, the logs bucket): a path is its S3 object (`/` is `index.html`; found or not found), a vault path also its vault and `data/vaults.json`, a vault its entry, a line's provenance its log file and line, an address its /24. Traversal (`/vault/../../etc/passwd`) resolves to nothing, by design. `pivots(records, field, value)`: for those lines, every other field's values, most frequent first.
+- The view now shows, for any value clicked: a trail of the steps (each step clickable back), "Refers to" (an S3 object is a button that calls the caller's `open({ bucket, key, line })`, for the S3 browser to go there), and "These lines also share" (pivots, every value clickable). Clients, paths and each line's file:line in the table are links too.
+- Example on the attack pack: click 203.0.113.66: 90 lines on 22 Nov 09:07 to 11:56, 9 paths (/backup.zip, /wp-admin/, /.env ...), 404/400/403 only, Nuclei, curl and sqlmap, all through AMS1-C1, louder each hour (15, 30, 45).
+- Tests: links unit tests in `test/data/extract.test.mjs`; `test/data/view.e2e.cjs` now checks refs, pivots, the trail, open on an object and on a line's provenance, `/` as index.html, the attacker's pivots and that traversal does not resolve. All pass, and the existing tests still pass. No HTML sinks in site/data/.
+- Finding for the vault work (vaults.aws.a, security): the attacker's `?key=../../secrets` probes count as 9 requests of vault-demo-001, all failed. Right as a count of requests, but "vault usage" should split used (2xx) from probed (4xx and 5xx). Next step for the vault cards.
+- Finding for aws.c and lambda.aws.a (twin): the twin's Firehose stream names a processor, demo-log-enricher, "Adds the country and the vault id to each CloudFront log line", but the seeded lines carry neither field. Either the seed adds them (the extract maps `country` and `vault_id` as soon as they appear) or the description drops it.
+- Key: Factory commit 8a7e8ee on 885f150 prepared as factory.c's README asks (all five checks pass); docs/team/keys/data.aws.a.iac-commit.txt and .iac-entry.json. docs/team/keys/data.aws.a.factory-entry.json is superseded by them.
+
+### For s3.aws.c: the hook, now with investigation
+
+`LogView.run($("s3-file"), objects, fetchBytes, { context: { siteBucket, siteKeys, logsBucket, vaults }, open: function (ref) { /* go to ref.bucket, ref.key */ } })`. The context is optional: without it, links show lines and pivots only.
+
 ## 2026-11-23 ~05:05 UTC: the view, "Summarise these logs", on branch work/data.aws.a
 
 - `site/data/view.js`: `LogView.run(box, objects, fetchBytes)` lists by hour, reads each file (progress per file, at most 200 hourly files per run, else it asks for a smaller folder), and draws: the headline in words, the hour strip with gaps shown as labelled gaps, vault cards (requests, clients, by day, last seen, edges), top paths, failed paths, status, who asked, busiest clients, edges, and a note of what was read and skipped ("Nothing was written anywhere"). Link mode: every value and every hour bar is a button that shows the lines behind it, each with its file and line number.
