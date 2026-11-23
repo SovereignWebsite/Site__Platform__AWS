@@ -44,7 +44,7 @@ Nothing here stops the team: the agents are building on the twin. Decision 3 hol
 - **Blocks:** each area's own site and its "Try the twin" link.
 
 ### 6. Security R-008 (High): a permissions boundary on the change role
-- **Status: ready.** iam.aws.a's v2.5 (ee7f7b9 on work/iam.aws.a) adds the 13 IAM, Lambda and Firehose reads dev.2.aws.a's API layer needs; security.aws.a cleared it on paper (ba0afa0, replacing v2.4's clearance).
+- **Status: ready.** iam.aws.a's v2.5 (ee7f7b9 on work/iam.aws.a; the template to apply: docs/iam/proposals/P-IAM-001-v2.5-draft.yaml there) adds the 13 IAM, Lambda and Firehose reads dev.2.aws.a's API layer needs; security.aws.a cleared it on paper (ba0afa0, replacing v2.4's clearance).
 - **One thing to weigh:** with v2.5 the read role can read Lambda environment variables (GetFunctionConfiguration), so any secret kept there becomes readable from the page. Accept it, and keep secrets in Secrets Manager or SSM rather than in function environments.
 - **Asks:** iam.aws.a (P-IAM-001), through conductor.aws.a; cleared by security.aws.a
 - **What:** even after v2.1, a script in the page can make the change role admin through a change set (R-008). iam.aws.a's draft, now v2.5 (ee7f7b9 on work/iam.aws.a; v2.4 2107fe5, v2.3 2b8ceab), adds permissions boundaries that mirror today's scopes, with a custom read boundary. security.aws.a cleared v2.5 on paper (ba0afa0 on work/security.aws.a; v2.4 0cfa69f; v2.3 47b48c3, after three gaps in v2.2, a1d2057), and the DNS condition is met inside it.
