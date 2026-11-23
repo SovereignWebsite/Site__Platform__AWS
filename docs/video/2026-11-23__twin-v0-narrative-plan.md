@@ -48,3 +48,13 @@ Run at :45 UTC every 4 h; synthetic presenter and AI voice, disclosed, subtitles
 ## Not in this plan
 
 No real account, no real cost, no customer, no person named. Dinis publishes; no agent posts.
+
+## Captured (video.aws.a, 23 Nov 2026 ~04:10 UTC)
+
+Seven captures, b1.png to b7.png in docs/video/twin-v0/, made by docs/video/capture-twin-v0.js from dev at 003976e, and the storyboard for studio.c at docs/video/twin-v0.storyboard.json (129 words, about 52 s). Changes from the plan above:
+
+- Size: 1080x1010 (540x505 CSS px at 2x), studio.c's input size, not 390x844.
+- Beat 3: the cost tile is now labelled synthetic on the site, but its figure is masked anyway (no costs on screen).
+- Beat 5: the twin's zip is small (797 B), and the page says it was read whole. So the line no longer says "just the part it needs" for this file: "Zips open right in the page, with every file inside listed. Big ones are read from their index, not downloaded whole." (site/zip.js reads big zips by byte range.)
+- Beat 7: Google's sign-in script is blocked in the capture (no request off the local site), so the sign-in button's space is empty. Studio.c's on-screen quote and address go over it.
+- Snags 1 and 3 from tonight's walk are fixed on dev: the twin account starts set up, and the cost tile says synthetic. Snag 2 stands (S3 opens with a List buckets press).
