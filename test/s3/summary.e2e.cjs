@@ -49,7 +49,33 @@ const fail = (m) => { throw new Error(m); };
   if (s3.some((a) => !a.startsWith("GET ") || a.indexOf(logs) < 0)) fail("unexpected S3 request: " + s3.filter((a) => !a.startsWith("GET ") || a.indexOf(logs) < 0).join(" "));
   if (await pg.evaluate(() => location.hash) !== `#/s3/${logs}/cloudfront/2026/11/21/`) fail("address after summary " + await pg.evaluate(() => location.hash));
 
+  // 4. Investigation mode: a line's file:line opens that log file through the address (same checks as a link).
+  const val = await pg.$("#s3-file button[data-field]");
+  if (!val) fail("no clickable value in the summary");
+  await val.click();
+  await pg.waitForSelector("#s3-file button[data-ref='src']");
+  await pg.click("#s3-file button[data-ref='src']");
+  await pg.waitForSelector("text=JSON Lines");
+  if (!/^#\/s3\/[^/]+\/cloudfront\/2026\/11\/21\/\d{2}\/.+\.gz$/.test(await pg.evaluate(() => location.hash))) fail("jump to the log file: " + await pg.evaluate(() => location.hash));
+
+  // 5. A folder over 500 MB in all is refused before anything is read, with the total shown.
+  await pg.evaluate(() => {
+    const h = window.AwsTwin.handle;
+    window.AwsTwin.handle = (u, i) => {
+      const r = h(u, i); if (!r || !/list-type=2&max-keys=1000/.test(u)) return r;
+      let extra = ""; for (let n = 0; n < 20; n++) extra += "<Contents><Key>cloudfront/2026/11/21/23/big-" + n + ".gz</Key><Size>31457280</Size></Contents>";
+      return r.then((res) => res.text().then((t) => new Response(t.replace("</ListBucketResult>", extra + "</ListBucketResult>"), { status: res.status, headers: res.headers })));
+    };
+  });
+  await pg.evaluate((h) => { location.hash = h; }, day);
+  await pg.waitForSelector("#s3-objects button:has-text('Summarise these logs')");
+  asks.length = 0;
+  await pg.click("#s3-objects button:has-text('Summarise these logs')");
+  await pg.waitForSelector("#s3-status >> text=for one summary; open a smaller folder");
+  if (!/MB in all/.test(await pg.textContent("#s3-status"))) fail("total not shown");
+  if (asks.some((a) => /\.gz(\?|$)/.test(a))) fail("a file was read past the total ceiling");
+
   if (errors.length) fail("page errors: " + errors.join(" | "));
-  console.log("OK (s3 summary: offered on a folder of hourly logs only when LogView is loaded; " + files.length + " files read in the page, GETs to the logs bucket only)");
+  console.log("OK (s3 summary: offered on a folder of hourly logs only when LogView is loaded; " + files.length + " files read in the page, GETs to the logs bucket only; file:line opens the log; over 500 MB refused before reading)");
   await br.close(); srv.close();
 })().catch((e) => { console.error("FAIL", e.message); process.exit(1); });

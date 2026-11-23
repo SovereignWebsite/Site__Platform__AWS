@@ -311,7 +311,9 @@
   // reads them one at a time through the read role, in this browser only: nothing is kept or sent. Ceilings: at
   // most SUM_MAX files (LogView refuses more and asks for a smaller folder), no file over SUM_FILE is fetched, and
   // the listing stops once past SUM_MAX keys.
-  var LOG_FOLDER = /(^|\/)\d{4}\/(\d{2}\/){0,3}$/, SUM_MAX = 200, SUM_FILE = 32 * 1048576;
+  // SUM_TOTAL: bytes one click may fetch in all (security.aws.a: 200 files of 32 MB would be 6.4 GB); the total is
+  // shown before anything is read, and a folder over it is refused with a request for a smaller one.
+  var LOG_FOLDER = /(^|\/)\d{4}\/(\d{2}\/){0,3}$/, SUM_MAX = 200, SUM_FILE = 32 * 1048576, SUM_TOTAL = 500 * 1048576;
   function summariseButton(b, region, prefix) {
     if (!window.LogView || !window.LogExtract || !LOG_FOLDER.test(prefix)) return null;
     var btn = P.el("button", { type: "button", class: "quiet", text: "Summarise these logs", title: "Read every log file under " + prefix + " in this browser" });
@@ -343,15 +345,24 @@
       return page(null);
     }).then(function () {
       if (my !== state.file) return;
-      P.say(st, "Summarising " + objs.length + " file" + (objs.length === 1 ? "" : "s") + " under " + prefix + "...");
+      var total = objs.reduce(function (a, o) { return a + (o.Size <= SUM_FILE ? o.Size : 0); }, 0), fetched = 0;
+      var many = objs.length + " file" + (objs.length === 1 ? "" : "s");
+      if (total > SUM_TOTAL) return P.say(st, prefix + ": " + many + ", " + human(total) + " in all, more than " + human(SUM_TOTAL) + " for one summary; open a smaller folder (a day or an hour).", "bad");
+      P.say(st, "Summarising " + many + " under " + prefix + " (" + human(total) + " to read)...");
+      // A value in the summary that names a log file opens it through the address, so it gets every check a link
+      // gets (a valid bucket of this account, no climbing out, the size gate); the values come from the logs.
+      var opts = { maxFiles: SUM_MAX, maxFileBytes: SUM_FILE, context: { logsBucket: b },
+        open: function (ref) { if (ref && ref.bucket && ref.key) location.hash = route(String(ref.bucket), String(ref.key)); } };
       return LogView.run(out, objs, function (key) {
         if (my !== state.file) return Promise.reject(new Error("stopped: another place was opened"));
         if (!(sizes[key] <= SUM_FILE)) return Promise.reject(new Error("larger than " + human(SUM_FILE) + "; not read"));
+        if (fetched + sizes[key] > SUM_TOTAL) return Promise.reject(new Error("past " + human(SUM_TOTAL) + " read in all; not read"));
+        fetched += sizes[key];
         return read().then(function (c) { return s3get(c, bucketUrl(b, region, "", key), region); }).then(function (r) {
           if (!r.ok) throw new Error("S3 answered " + r.status);
           return r.arrayBuffer();
         }).then(function (ab) { return new Uint8Array(ab); });
-      }, { maxFiles: SUM_MAX, maxFileBytes: SUM_FILE }).then(function () {
+      }, opts).then(function () {
         if (my === state.file) P.say(st, "Summary of " + b + "/" + prefix + ": read in this browser; nothing was kept or sent.", "ok");
       });
     }).catch(function (e) { if (my === state.file) P.say(st, e.message, "bad"); }).then(function () { btn.disabled = false; });
