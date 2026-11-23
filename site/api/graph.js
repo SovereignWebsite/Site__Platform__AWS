@@ -167,8 +167,9 @@
     // Content: what the files say, by what they hold rather than by their names (the builder's rules made general):
     //   - an s3://<bucket> reference in a config file (YAML, JSON, TOML, INI, .conf, .env) refers_to that bucket;
     //   - a JSON document with a "vaults" list names vaults (in a region, part of the site if it sits in the site's bucket);
-    //   - a CloudFront log file (key <distribution>-YYYY-MM-DD-HH-MM-SS.gz, lines with c_ip, cs_uri_stem, sc_status)
-    //     records its distribution (naming), refers_to the vaults its paths name, and an address with at least 10
+    //   - a CloudFront log file (any object whose lines are JSON with c_ip, cs_uri_stem and sc_status) records the
+    //     distribution each line's distribution_id names (content; design 06); a file whose lines carry no id falls back
+    //     to a key <name>-YYYY-MM-DD-HH-MM-SS.gz (naming). It refers_to the vaults its paths name, and an address with at least 10
     //     requests, at least 80% of them refused (4xx), becomes an actor seen_in those files and targeting those vaults.
     //     Addresses are counted and named by their network only (/24, /48; design 03, Privacy).
     // Vault lists are read before logs, so log lines can name known vaults. Files nothing recognises are left alone.
@@ -179,7 +180,7 @@
       if (!X || typeof X.network !== "function") throw new Error("Graph needs LogExtract.network (site/data/extract.js)");
       return X.network(ip) || "";
     }
-    var LOG_KEY = /\/([a-z0-9-]+)-\d{4}-\d\d-\d\d-\d\d-\d\d-\d\d\.gz$/, CONFIG = /\.(ya?ml|json|toml|ini|conf|cfg|env)$/i;
+    var LOG_KEY = /\/([a-z0-9-]+)-\d{4}-\d\d-\d\d-\d\d-\d\d-\d\d\.gz$/, DIST_ID = /^[A-Z0-9]{1,64}$/, CONFIG = /\.(ya?ml|json|toml|ini|conf|cfg|env)$/i;
     function content(files, o) {
       o = o || {};
       var siteId = null;
@@ -212,14 +213,25 @@
       });
       var byNet = Object.create(null);
       files.forEach(function (f) {
-        var m = LOG_KEY.exec(f.key);
-        if (!m) return;
+        if (typeof f.text !== "string" || f.text.charAt(0) !== "{" || CONFIG.test(f.key)) return;
         var lines = f.text.split("\n").map(function (l) { try { return JSON.parse(l); } catch (e) { return null; } })
           .filter(function (l) { return l && typeof l === "object" && "c_ip" in l && "cs_uri_stem" in l && "sc_status" in l; });
         if (!lines.length) return;
-        var fid = ids.object(f.bucket, f.key), did = "urn:sws:cloudfront-distribution:" + m[1];
-        node(did, "distribution", "A2", m[1], { cfn_type: "AWS::CloudFront::Distribution", inferred: true, note: "named by its log files" });
-        edge(fid, "records", did, "naming", "log object key names " + m[1]);
+        var fid = ids.object(f.bucket, f.key), dists = Object.create(null), any = false;
+        lines.forEach(function (l) { if (typeof l.distribution_id === "string" && DIST_ID.test(l.distribution_id)) { dists[l.distribution_id] = 1; any = true; } });
+        if (any) Object.keys(dists).sort().forEach(function (id) {
+          var did = node("urn:sws:cloudfront-distribution:" + id, "distribution", "A2", id, { cfn_type: "AWS::CloudFront::Distribution", distribution_id: id, inferred: true, note: "named by its log records" });
+          edge(fid, "records", did, "content", "log records (distribution_id " + id + ")");
+          (recorded[fid] = recorded[fid] || []).push(did);
+        });
+        else {
+          var m = LOG_KEY.exec(f.key);
+          if (m) {
+            var did = node("urn:sws:cloudfront-distribution:" + m[1], "distribution", "A2", m[1], { cfn_type: "AWS::CloudFront::Distribution", inferred: true, note: "named by its log files" });
+            edge(fid, "records", did, "naming", "log object key names " + m[1]);
+            (recorded[fid] = recorded[fid] || []).push(did);
+          }
+        }
         var vaults = Object.create(null);
         lines.forEach(function (l) {
           var v = /^\/vault\/([^/?]+)/.exec(String(l.cs_uri_stem));
@@ -471,15 +483,23 @@
       });
     }
 
-    // A distribution whose log files sit under a stream's prefix in that stream's bucket logs through that stream.
+    // A distribution whose log files sit under a stream's prefix in that stream's bucket logs through that stream:
+    // content when its records name it, naming when only the files' names do (the evidence of the records edge).
+    var recorded = Object.create(null);
     function logsThroughStreams() {
-      var dists = new Map();
-      nodes.forEach(function (n) { if (n.type === "distribution") dists.set(n.label, n); });
-      if (!dists.size) return;
+      var fids = Object.keys(recorded);
+      if (!fids.length) return;
       streamDests.forEach(function (sd) {
-        var under = ids.bucket(sd.bucket) + "/" + sd.prefix, named = new Set();
-        nodes.forEach(function (n, id) { var m = id.indexOf(under) === 0 && LOG_KEY.exec(id); if (m && dists.has(m[1])) named.add(m[1]); });
-        named.forEach(function (label) { edge(dists.get(label).id, "logs_to", sd.stream, "naming", "log files named after " + label + " sit under the stream's prefix " + (sd.prefix || "(none)")); });
+        var under = ids.bucket(sd.bucket) + "/" + sd.prefix, seen = Object.create(null);
+        fids.forEach(function (fid) {
+          if (fid.indexOf(under) !== 0) return;
+          recorded[fid].forEach(function (did) {
+            var r = edges.get(fid + "\u0000records\u0000" + did), ev = r ? r.evidence : "naming", k = did + "|" + ev;
+            if (seen[k]) return; seen[k] = 1;
+            var label = nodes.get(did).label;
+            edge(did, "logs_to", sd.stream, ev, (ev === "content" ? "log records naming " : "log files named after ") + label + " sit under the stream's prefix " + (sd.prefix || "(none)"));
+          });
+        });
       });
     }
 

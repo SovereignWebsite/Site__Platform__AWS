@@ -127,7 +127,7 @@ const covered = (e, typeOf) => {
   // Lambda and Firehose adapters
   if (e.rel === "in" && e.evidence === "api" && (ft === "function" || ft === "stream")) return true;
   if (["runs_as", "writes_to", "transforms_with"].includes(e.rel) && e.evidence === "api") return true;
-  if (e.rel === "logs_to" && e.evidence === "naming" && ft === "distribution") return true;
+  if (e.rel === "logs_to" && (e.evidence === "naming" || e.evidence === "content") && ft === "distribution") return true;
   if (e.rel === "packages") return true;
   // IAM adapter
   if (e.rel === "in" && e.evidence === "api" && ft === "role") return true;
@@ -136,7 +136,7 @@ const covered = (e, typeOf) => {
   // content adapter
   if (e.rel === "refers_to" && e.evidence === "content") return true;
   if ((e.rel === "in" || e.rel === "part_of") && e.evidence === "content" && ft === "vault") return true;
-  if (e.rel === "records" && e.evidence === "naming" && typeOf(e.to) === "distribution") return true;
+  if (e.rel === "records" && (e.evidence === "naming" || e.evidence === "content") && typeOf(e.to) === "distribution") return true;
   if ((e.rel === "seen_in" || e.rel === "targeted" || e.rel === "acted_on") && e.evidence === "content" && ft === "actor") return true;
   return false;
 };
@@ -207,6 +207,31 @@ ok(!/\beval\s*\(|new Function|innerHTML|document\.|localStorage|fetch\(/.test(re
   ok(!has("urn:sws:actor-net:192.0.2.0/24") && has("urn:sws:actor-net:198.51.100.0/24") && !has("urn:sws:actor-net:203.0.113.0/24"), "actor rule per network: at least 10 requests, at least 80% 4xx");
   ok(e("urn:sws:actor-net:198.51.100.0/24", "targeted", "urn:sws:vault:v1") && e("logs/cf/d2-2026-11-22-10-00-00.gz".replace(/^/, "arn:aws:s3:::"), "refers_to", "urn:sws:vault:v1"), "actor targets the vault; the log file refers to it");
   ok(has("urn:sws:cloudfront-distribution:d1") && !has("urn:sws:cloudfront-distribution:d4"), "a distribution only from files with log lines");
+}
+
+// ---- CloudFront log files by their records (design 06): distribution_id in the lines, any key; the name only as a fallback ----
+{
+  const r = ctx.Graph({ account: A, backend: "twin" });
+  const rec = (id, ip = "198.51.100.9") => JSON.stringify(Object.assign({ c_ip: ip, cs_uri_stem: "/", sc_status: 200 }, id === undefined ? {} : { distribution_id: id }));
+  r.add.firehose([{ name: "s", arn: "arn:aws:firehose:eu-west-2:" + A + ":deliverystream/s", destinations: [{ kind: "s3", bucket: "logs", prefix: "cf/" }] }]);
+  r.add.content([
+    { bucket: "logs", key: "cf/s-1-2026-11-22-10-00-00-0f0e0d0c-0b0a-0908-0706-050403020100.gz", text: [rec("EAAA111"), rec("EAAA111"), rec("EBBB222")].join("\n") + "\n" },
+    { bucket: "logs", key: "cf/old-2026-11-22-10-00-00.gz", text: rec(undefined) + "\n" },
+    { bucket: "logs", key: "cf/both-2026-11-22-10-00-00.gz", text: rec("ECCC333") + "\n" },
+    { bucket: "logs", key: "cf/bad.gz", text: [rec("e-lower"), rec("<script>"), rec(7), rec("E" + "1".repeat(64))].join("\n") + "\n" },
+    { bucket: "other", key: "x.log", text: rec("EDDD444") + "\n" }
+  ]);
+  const j = JSON.parse(JSON.stringify(r.toJSON())), node = (id) => j.nodes.find((n) => n.id === id), D = (id) => "urn:sws:cloudfront-distribution:" + id;
+  const edge = (f, rel, t) => j.edges.find((e) => e.from === f && e.rel === rel && e.to === t), obj = (b, k) => "arn:aws:s3:::" + b + "/" + k;
+  const f1 = obj("logs", "cf/s-1-2026-11-22-10-00-00-0f0e0d0c-0b0a-0908-0706-050403020100.gz");
+  ok(edge(f1, "records", D("EAAA111")) && edge(f1, "records", D("EAAA111")).evidence === "content" && edge(f1, "records", D("EBBB222")), "Firehose's name: each distribution_id in the records, once, evidence content");
+  ok(node(D("EAAA111")).distribution_id === "EAAA111" && node(D("EAAA111")).trust === "claimed", "the naming node carries the id; claimed (records are content)");
+  ok(edge(obj("logs", "cf/old-2026-11-22-10-00-00.gz"), "records", D("old")).evidence === "naming", "no id in the records: the old key name, naming");
+  ok(edge(obj("logs", "cf/both-2026-11-22-10-00-00.gz"), "records", D("ECCC333")) && !node(D("both")), "an id in the records wins over the name");
+  ok(!j.edges.some((e) => e.from === obj("logs", "cf/bad.gz") && e.rel === "records") && !j.nodes.some((n) => /e-lower|script|1111111111/.test(n.id)), "an id that is not upper-case letters and digits (1 to 64) makes nothing");
+  ok(edge(obj("other", "x.log"), "records", D("EDDD444")), "any key: recognised by the lines, not the name");
+  ok(edge(D("EAAA111"), "logs_to", "arn:aws:firehose:eu-west-2:" + A + ":deliverystream/s").evidence === "content" && edge(D("old"), "logs_to", "arn:aws:firehose:eu-west-2:" + A + ":deliverystream/s").evidence === "naming", "logs_to the stream whose prefix holds the files, with the records edge's evidence");
+  ok(!j.edges.some((e) => e.from === D("EDDD444") && e.rel === "logs_to"), "no logs_to for files outside every stream's prefix");
 }
 
 // ---- packages: by SHA-256 (api), else by METADATA name (naming), whichever order adapters run ----
