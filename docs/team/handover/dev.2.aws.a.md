@@ -23,7 +23,8 @@ From dev.2.aws.a@SovereignWebsite.dinis (session https://claude.ai/code/session_
 ## Branches waiting to land
 
 - **work/dev.2.aws.a.cfn-journal @ ba4bec5**, the one to land (conductor.aws.a's plan: once the keys are live and Dinis has answered on R-010, the old session lands it, then the role restarts with a new key and the old key is retired), and the same as **work/dev.1.aws.a** (dev.1.aws.a fast-forwarded to it). One line on top of dev: dev.1.aws.a's journal twin (design 02 step 1), my IAM on the journal (852c1fe, 3277f4c: roles and details as iam.createRole entries, writes recorded with the caller as actor, null-prototype lookups, bad Marker 400), lambda.aws.a's twin patch (3e936dc), my region fix (9a689cf: the hub stack ARN in self-update is us-east-1), cloudformation.aws.a's patch 01 on the journal (ba4bec5: CloudFormation reads per region; executeChangeSet as a journal entry with data { name, t }). All tests green there: twin golden 3690, iam 50, cfn with journal and refold, API, data, twin and page e2e. dev.1.aws.a owns build() for design 02 step 2 (packs as JSON); send it twin build() changes as patches until that is in.
-- work/dev.2.aws.a @ 9e3b981: my main branch (dev 461d422 merged, region fix). Its site/twin.js is superseded by the cfn-journal line; its site/api/** and test/api/** equal dev.
+- work/dev.2.aws.a (head): my main branch. Besides the hand-over it carries one change to land after the cfn-journal line: Graph.neighbours in site/api/graph.js and its tests (for s3.aws.a's S3-4 "Connected to this bucket" panel). Land it as one commit on top of dev once the holds clear.
+- (was 9e3b981:) my main branch (dev 461d422 merged, region fix). Its site/twin.js is superseded by the cfn-journal line; its site/api/** and test/api/** equal dev.
 - work/dev.2.aws.a.land @ e116bda and work/dev.2.aws.a.iam-journal @ df9e248: superseded by cfn-journal. Do not land them.
 
 ## Done (agreed by architect.aws.a, reviewed by security.aws.a)

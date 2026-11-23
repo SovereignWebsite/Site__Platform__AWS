@@ -288,6 +288,21 @@ ok(!/\beval\s*\(|new Function|innerHTML|document\.|localStorage|fetch\(/.test(re
   ok(!pj.nodes.some((n) => n.trust === "curated"), "no curated nodes without curated edges");
 }
 
+// ---- Graph.neighbours (s3.aws.a's S3-4): pure, over a graph; the same answer from ours and the golden ----
+{
+  const N = ctx.Graph.neighbours, logs = "arn:aws:s3:::" + ctx.AwsTwin.buckets.logs, trailB = "arn:aws:s3:::" + ctx.AwsTwin.buckets.trail;
+  const lg = JSON.parse(JSON.stringify(N(golden, logs))), lm = JSON.parse(JSON.stringify(N(mine, logs)));
+  ok(lg && lg.node.id === logs && lg.links.some((l) => l.rel === "writes_to" && l.direction === "in" && l.node.type === "stream" && l.trust === "verified"), "logs bucket: the Firehose stream writes to it (verified)");
+  ok(lg.links.some((l) => l.via && l.rel === "records" && l.node.type === "distribution" && l.trust === "claimed"), "second hop: its log files record the distribution (claimed)");
+  ok(lg.links.every((l) => l.node && l.node.id !== logs), "never back to the node itself");
+  const key = (r) => JSON.stringify(r.links.filter((l) => l.evidence !== "curated" && l.evidence !== "comment").map((l) => [l.rel, l.direction, l.node.id, l.evidence, l.trust, l.via && l.via.id]));
+  ok(key(lg) === key(lm), "same neighbours from the graph built through the APIs as from the golden");
+  const t = N(mine, trailB);
+  ok(t.links.some((l) => l.via && l.rel === "records" && l.node.type === "event") && t.links.some((l) => l.rel === "logs_to" && l.direction === "in"), "trail bucket: its files record events; the trail logs to it");
+  ok(N(mine, "urn:sws:nope") === null, "unknown id: null");
+  let threw = false; try { N({}, logs); } catch (e) { threw = e instanceof TypeError; } ok(threw, "not a graph: TypeError");
+}
+
 const G = golden, uncovered = G.edges.length - gs.edges.size - G.edges.filter((e) => e.evidence === "curated" || e.evidence === "comment").length;
 if (failures) { console.error(failures + " failed, " + passed + " passed"); process.exit(1); }
 if (ctx.AwsTwin.pack() !== PACK) { console.error("FAIL the twin loaded pack " + ctx.AwsTwin.pack() + ", not " + PACK); process.exit(1); }
