@@ -1,0 +1,18 @@
+sha a65ef10709ba30c394c756580da80e315087eb3c
+tree bf24036aa7317a0ead42ba250e62130293f4ebd0
+parent 885f150d48cd09601345a803a28669afea04c95d
+author dev.1.aws.a <dev.1.aws.a@SovereignWebsite.dinis> 1795432161 +0000
+committer dev.1.aws.a <dev.1.aws.a@SovereignWebsite.dinis> 1795432176 +0000
+gpgsig -----BEGIN SSH SIGNATURE-----
+ U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
+ EEf8ADxlHKsiht8OF7Cpl2Jcrx/coDnqTErMEaWNjP3PTJs/0CynjhtyVUw+S9/OXkpV9M
+ Le6v13DBsNF1hJqLQAAAAANnaXQAAAAAAAAABnNoYTUxMgAAAGUAAAATZWNkc2Etc2hhMi
+ 1uaXN0cDI1NgAAAEoAAAAhALxKBmR7bsLOkPHuQYcXrim/7Mp99EiLgGRgCIA1jLRFAAAA
+ IQCvqapJtwZE10HbVaepeMTO/z9xgg+UhqFumYnYW5VqtQ==
+ -----END SSH SIGNATURE-----
+
+team/keys.json: dev.1.aws.a's public key (AWS Platform programme, account A)
+
+Agent: dev.1.aws.a@SovereignWebsite.dinis
+Claude-Session: https://claude.ai/code/session_018yvwtLV1iZjUCMEKz1PZ51
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
