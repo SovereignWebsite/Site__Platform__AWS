@@ -1,8 +1,8 @@
 {
   "programme": "AWS Platform (aws.c), account C",
-  "owner": "conductor.aws.c@SovereignWebsite.dinis",
+  "owner": "conductor.aws.a@SovereignWebsite.dinis (from 07:26 UTC); conductor.aws.c idle",
   "authority": "Dinis Cruz, 'Lean start', maestro.c's session, 23 Nov 2026 02:39 UTC",
-  "updated": "2026-11-23T06:40Z",
+  "updated": "2026-11-23T07:35Z",
   "offsets_in_use_elsewhere_on_account_c": {
     ":03": "router.a (account A)",
     ":08": "router.c",
@@ -25,7 +25,8 @@
         "docs/team/**"
       ],
       "trigger": "trig_01HkSLvCN5ekhycaWR4s3A45",
-      "started": "2026-11-23T02:44Z"
+      "started": "2026-11-23T02:44Z",
+      "moving_to": "moved: runs on account A as conductor.aws.a@SovereignWebsite.dinis since 07:26 UTC (maestro.a); C wake disabled 07:34"
     },
     {
       "name": "pm.aws.c@SovereignWebsite.dinis",
@@ -34,7 +35,8 @@
       "every": "6 h, :15 (proposed; pm.aws.c proposes its own to Dinis)",
       "paths": [
         "docs/board/**"
-      ]
+      ],
+      "moving_to": "moved: runs on account A as pm.aws.a@SovereignWebsite.dinis since 07:26 UTC (maestro.a); C wake is pm.aws.c's own"
     },
     {
       "name": "security.aws.c@SovereignWebsite.dinis",
@@ -49,7 +51,8 @@
         "adversarial (Sonnet)"
       ],
       "trigger": "trig_01Vxdrot9aUFkZJEWQn2ULQ9",
-      "started": "2026-11-23T02:44Z"
+      "started": "2026-11-23T02:44Z",
+      "moving_to": "moved: runs on account A as security.aws.a@SovereignWebsite.dinis since 07:26 UTC (maestro.a); C wake disabled 07:34"
     },
     {
       "name": "architect.aws.c@SovereignWebsite.dinis",
@@ -65,7 +68,8 @@
         "developer"
       ],
       "trigger": "trig_01Rg8WJ62Ww6m8xDdhxjdWwt",
-      "started": "2026-11-23T02:44Z"
+      "started": "2026-11-23T02:44Z",
+      "moving_to": "moved: runs on account A as architect.aws.a@SovereignWebsite.dinis since 07:26 UTC (maestro.a); C wake disabled 07:34"
     },
     {
       "name": "s3.aws.c@SovereignWebsite.dinis",
@@ -77,7 +81,8 @@
         "site/s3*.js (pending aws.c)"
       ],
       "trigger": "trig_01RGpy5CqCKSZ8yxc8sTknjw",
-      "started": "2026-11-23T02:44Z"
+      "started": "2026-11-23T02:44Z",
+      "moving_to": "moved: runs on account A as s3.aws.a@SovereignWebsite.dinis since 07:26 UTC (maestro.a); C wake disabled 07:34"
     },
     {
       "name": "journalist.aws.c@SovereignWebsite.dinis",
@@ -268,7 +273,8 @@
         "docs/sherpa/**"
       ],
       "trigger": "trig_013ZxidEnyoQDrtU9wGBjpwv",
-      "started": "2026-11-23T03:22Z"
+      "started": "2026-11-23T03:22Z",
+      "moving_to": "moved: runs on account A as sherpa.aws.a@SovereignWebsite.dinis since 07:26 UTC (maestro.a); C wake disabled 07:34"
     },
     {
       "name": "swarm.aws.c@SovereignWebsite.dinis",

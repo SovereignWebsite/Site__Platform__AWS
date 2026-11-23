@@ -10,7 +10,7 @@
   "use strict";
   var P = window.Platform, $ = function (id) { return document.getElementById(id); };
   var MAX_SHOW = 5 * 1024 * 1024;
-  var state = { acct: null, region: "us-east-1", bucket: null, prefix: "", view: 0, file: 0 };
+  var state = { acct: null, region: "us-east-1", bucket: null, prefix: "", view: 0, file: 0, sizes: {}, key: "" };
   // Quick clicks: each new view (buckets, a bucket, a folder) and each file opened takes a number; an answer that
   // comes back after a newer click is dropped, so a slow, older answer never lands under the newer one.
   function newView(alsoFile) { if (alsoFile) state.file++; return ++state.view; }
@@ -32,8 +32,51 @@
   }
   function read() { return P.assume(state.acct, "sws-aws-platform-read"); }
 
+  // ---- the address: #/s3/<bucket>/<folder or file> ----
+  // Reload, Back and a shared link keep the place. The account is never in the address (its ID stays on the device).
+  // An address is input from whoever sent the link: the bucket must be a valid S3 name and one of this account's
+  // buckets before S3 is asked anything, and an address only ever reads; it cannot approve or change anything.
+  var BUCKET = /^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/, pending = null;
+  function route(bucket, path) { return "#/s3/" + bucket + "/" + path.split("/").map(encodeURIComponent).join("/"); }
+  function go(bucket, path) { var h = route(bucket, path); if (location.hash !== h) location.hash = h; }
+  // The address already says where the page is (it was written by the page itself, or nothing moved).
+  function here(r) { return !!r && !r.bad && r.bucket === state.bucket && r.prefix === state.prefix && r.key === state.key; }
+  function parse(hash) {
+    var m = /^#\/s3\/([^/]*)\/(.*)$/.exec(hash || ""), path; if (!m) return null;
+    try { path = m[2].split("/").map(decodeURIComponent).join("/"); } catch (e) { return { bad: true }; }
+    if (!BUCKET.test(m[1]) || path.length > 1024 || /(^|\/)\.\.?(\/|$)/.test(path)) return { bad: true };
+    var cut = path.lastIndexOf("/") + 1;
+    return { bucket: m[1], prefix: path.slice(0, cut), key: cut < path.length ? path : "" };
+  }
+  function pickAccount() {
+    if (!state.acct) state.acct = P.accounts().filter(function (a) { return a.id === $("s3-account").value; })[0] || P.accounts()[0] || null;
+    return state.acct;
+  }
+  function press(name) { Array.prototype.forEach.call($("s3-buckets").querySelectorAll("button"), function (x) { x.setAttribute("aria-pressed", x.textContent === name ? "true" : "false"); }); }
+  function apply(r) {
+    if (!r) return;
+    var st = $("s3-status");
+    if (r.bad) return P.say(st, "This address does not name an S3 bucket and file; nothing was opened.", "bad");
+    if (!P.signedIn() || !pickAccount()) { pending = r; return; }
+    var tab = $("tab-s3"); if (tab && tab.getAttribute("aria-selected") !== "true") tab.click();
+    if (r.bucket === state.bucket && state.bucketRegion && $("s3-list")) {
+      // Same bucket, already answering: only the folder or the file changes.
+      if (r.prefix !== state.prefix) { state.prefix = r.prefix; return listObjects(null, r.key); }
+      if (r.key) return openFile(r.key, state.sizes[r.key]);
+      state.file++; state.key = ""; $("s3-file").textContent = ""; return;
+    }
+    listBuckets(function (names) {
+      if (names.indexOf(r.bucket) < 0) return P.say(st, r.bucket + " is not one of this account's buckets; nothing was opened.", "bad");
+      press(r.bucket); openBucket(r.bucket, r);
+    });
+  }
+  window.addEventListener("hashchange", function () {
+    var r = parse(location.hash);
+    if (!here(r)) apply(r);
+  });
+
   // ---- buckets ----
-  function listBuckets() {
+  function listBuckets(then) {
     var out = $("s3-buckets"), st = $("s3-status"), my = newView(true);
     out.textContent = ""; $("s3-objects").textContent = ""; $("s3-file").textContent = ""; P.say(st, "Listing buckets...");
     read().then(function (c) {
@@ -51,16 +94,19 @@
       names.sort();
       names.forEach(function (n) {
         var b = P.el("button", { type: "button", text: n, "aria-pressed": "false" });
-        b.onclick = function () { Array.prototype.forEach.call(out.querySelectorAll("button"), function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); }); openBucket(n); };
+        b.onclick = function () { press(n); openBucket(n); };
         out.appendChild(P.el("li", {}, [b]));
       });
       P.say(st, names.length + " bucket" + (names.length === 1 ? "" : "s") + ".", "ok");
+      if (then) then(names);
     }).catch(function (e) { if (my === state.view) P.say(st, e.message + (/AccessDenied|not authorized/.test(e.message) ? " (The account needs template v2: see step 3.)" : ""), "bad"); });
   }
 
   // ---- a bucket: check its CORS rule, offer the plan, then list ----
-  function openBucket(name, prefix) {
-    state.bucket = name; state.prefix = prefix || "";
+  // at: { prefix, key } when opened from an address; otherwise the bucket's top.
+  function openBucket(name, at) {
+    state.bucket = name; state.prefix = ""; state.key = ""; state.bucketRegion = null;
+    if (!at) go(name, "");
     var my = newView(true), st = $("s3-status"), box = $("s3-objects"); box.textContent = ""; $("s3-file").textContent = "";
     P.say(st, "Reading " + name + "'s settings...");
     read().then(function (c) { return cc(c, "GetResource", { TypeName: "AWS::S3::Bucket", Identifier: name }); }).then(function (j) {
@@ -69,7 +115,7 @@
       var m = /\.s3\.([a-z0-9-]+)\.amazonaws\.com$/.exec(props.RegionalDomainName || "");
       state.bucketRegion = m ? m[1] : state.region;
       var plan = Plans.corsPlan(props, location.origin);
-      if (plan.unchanged) return listObjects();
+      if (plan.unchanged) { state.prefix = at ? at.prefix : ""; return listObjects(null, at && at.key); }
       showCorsPlan(name, plan);
     }).catch(function (e) { if (my === state.view) P.say(st, e.message, "bad"); });
   }
@@ -105,10 +151,11 @@
     P.say(st, "This is the plan. Nothing has changed yet.");
   }
 
-  function listObjects(token) {
+  // openKey: a file to open once its folder is listed (from an address).
+  function listObjects(token, openKey) {
     var box = $("s3-objects"), st = $("s3-status"), b = state.bucket, region = state.bucketRegion;
     var my = token ? state.view : newView(false);
-    if (!token) box.textContent = "";
+    if (!token) { box.textContent = ""; state.sizes = {}; state.key = openKey || ""; go(b, openKey || state.prefix); if (!openKey) { state.file++; $("s3-file").textContent = ""; } }
     P.say(st, "Listing " + b + "/" + state.prefix + "...");
     read().then(function (c) {
       var q = "?list-type=2&delimiter=%2F&max-keys=500" + (state.prefix ? "&prefix=" + encodeURIComponent(state.prefix) : "") + (token ? "&continuation-token=" + encodeURIComponent(token) : "");
@@ -146,6 +193,7 @@
       });
       Array.prototype.forEach.call(d.getElementsByTagName("Contents"), function (o) {
         var key = o.getElementsByTagName("Key")[0].textContent, size = +o.getElementsByTagName("Size")[0].textContent;
+        state.sizes[key] = size;
         var when = (o.getElementsByTagName("LastModified")[0] || {}).textContent || "";
         if (key === state.prefix) return;
         var x = P.el("button", { type: "button", class: "linkish", text: key.slice(state.prefix.length) }); x.onclick = function () { openFile(key, size); };
@@ -154,6 +202,7 @@
       var nt = d.getElementsByTagName("NextContinuationToken")[0];
       if (nt) { var more = P.el("button", { type: "button", class: "quiet", text: "Load more" }); more.onclick = function () { more.remove(); listObjects(nt.textContent); }; box.appendChild(P.el("div", { class: "row" }, [more])); }
       P.say(st, b + "/" + state.prefix, "ok");
+      if (openKey) openFile(openKey, state.sizes[openKey]);
     }).catch(function (e) { if (my === state.view) P.say(st, e.message + (/Failed to fetch/.test(e.message) ? " (S3 refused the browser: check the bucket's CORS rule and region " + region + ".)" : ""), "bad"); });
   }
   function human(n) { return n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(1) + " MB"; }
@@ -194,9 +243,10 @@
     var box = $("s3-file"), st = $("s3-status"), my = ++state.file; box.textContent = "";
     var name = key.split("/").pop();
     function current() { return my === state.file; }
+    state.key = key; go(state.bucket, key);
     box.appendChild(P.el("h4", { text: key }));
     if (window.Zip && Zip.isZip(key) && size > 22) return openZip(key, size, name, box, st, current);
-    P.say(st, "Opening " + key + " (" + human(size) + ")...");
+    P.say(st, "Opening " + key + (size >= 0 ? " (" + human(size) + ")" : "") + "...");
     read().then(function (c) { return s3get(c, bucketUrl(state.bucket, state.bucketRegion, "", key), state.bucketRegion); }).then(function (r) {
       if (!current()) return;
       if (!r.ok) return r.text().then(function (t) { throw P.awsError(new DOMParser().parseFromString(t, "text/xml"), r.status); });
@@ -301,6 +351,7 @@
     if (keep) sel.value = keep;
     var lb = $("s3-list-buckets"); if (lb) lb.disabled = !accts.length;
     // In the twin, open with the buckets listed: there is one synthetic account and nothing to choose.
+    if (pending && P.signedIn() && accts.length) { var r = pending; pending = null; return apply(r); }
     if (window.AwsTransport && AwsTransport.isTwin() && P.signedIn() && accts.length && !state.acct && lb && lb.onclick) lb.onclick();
   }
   function init() {
@@ -309,10 +360,11 @@
       state.region = "us-east-1";
       if (state.acct) listBuckets();
     };
+    pending = parse(location.hash);
     render();
   }
-  // Open a bucket at a folder (the twin's "See it in" links), with the first account.
-  function openAt(bucket, prefix) { state.acct = P.accounts()[0]; state.region = "us-east-1"; if (state.acct) openBucket(bucket, prefix); }
+  // Open a bucket at a folder (the twin's "See it in" links): through the address, so Back and reload work too.
+  function openAt(bucket, prefix) { var h = route(bucket, prefix || ""); if (location.hash !== h) location.hash = h; else apply(parse(h)); }
   window.S3Browser = { render: render, jsonView: jsonView, openAt: openAt };
   init();
 })();
