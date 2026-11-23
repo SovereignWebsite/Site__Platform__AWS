@@ -33,3 +33,18 @@ One line per wake: `<UTC time> <name> <what> <commit>`. Messages may be logged a
 2026-11-23T12:50Z architect.aws.a designs 02 and 03 aligned with Dinis's privacy decision (networks, not addresses: urn:sws:actor-net, from.net); R-020 built by dev.2.aws.a (1cb0d20) and closed by security.aws.a; work/architect.aws.a 24e5509. To aws.c (keeper of site/twin.js): every twin client sits in 203.0.113.0/24, so at /24 the attack pack's scanner merges with ordinary visitors; design 03 proposes splitting the twin's client ranges so the attacker stays a separate network.
 2026-11-23T13:51Z aws.c added the 22 .a agents to abp.json at Dinis's yes (6ab7233) and landed dev.1/s3 (c0c0d0b), dev.2 (461d422), viz (30155a0), cloudformation patch for review (c87dc92)
 2026-11-23T21:55Z conductor.aws.a archived by the new protocol (docs/team/archive-agent.md, record docs/team/archived/conductor.aws.a.md) at Dinis's word; land/conductor.aws.a landed while the key was live; Factory retire waits in conductor.d's A3 (f0af2f6); private key wiped.
+2026-11-23T19:27Z cloudformation.aws.a pushed Vault deploy stacks, templates bucket plan, tests to docs/cloudformation/ dc2d80e
+2026-11-23T19:37Z vaults.aws.a pushed designs 02-04 and docs/vaults/example/ to dev 8c37324; hand-over docs/vaults/HANDOVER.md (9abc97d) for a fresh session
+2026-11-23T20:06Z video.aws.a twin v0 captures and storyboard landed on dev, 2a7c73b
+2026-11-23T20:35Z sherpa.aws.a landed docs/sherpa walks 3 to 6, Vault deploy step 6 notes and pending-checks on dev, own paths only, signers pass b6541ea
+2026-11-23T20:35Z dev.1.aws.a first landing on dev, ada3437 (notes file only; security cleared the same patch as 6de2c4c; signers pass)
+2026-11-23T20:30Z pm.aws.a board, decisions page (batches 1 to 3) and decision briefs landed on dev 819688d
+2026-11-23T20:40Z data.aws.a time window (P5 step 1), host pivot, Firehose names, tests over http with packs from disk c73ea8d
+2026-11-23T20:40Z swarm.aws.a landed docs/swarm/ (extractor, signature check, summary, steps and player contract, replay view, storyboard 8 and 9; 50 agents, 1199 events) 1cce8ec
+2026-11-23T20:50Z s3.aws.a landed the rest of the reviewed S3 work (line filter, Summarise these logs, errors with Retry, fold labels, Newest file, S3-4 panel core) in its own paths 268cfc7
+2026-11-23T20:58Z data.aws.a fixed security.aws.a review of c73ea8d (test server loopback and normalised allow-list, drill-down stops Play, drag reset) 918b1e6
+2026-11-23T21:10Z s3.aws.a Newest file from a bucket root follows the last folder down to the newest log (sherpa walk 7) 40a6cd2
+2026-11-23T20:34Z swarm.aws.a: signature check hardened after security.aws.a's Medium, closed by security.aws.a at its 20:35 recheck. 896b23b, on dev.
+2026-11-23T22:35Z swarm.aws.a: the replay view plays through viz.aws.a's player (docs/viz/player.mjs); the view only draws. 8b0def9, on dev.
+2026-11-23T22:58Z security.aws.a platform-key scan f391624: 1,355 commits checked; among .aws.a only viz.aws.a is platform-signed (15 on work/viz.aws.a, none on dev); conductor.aws.c (4) and s3.aws.c (2) historic on dev
+2026-11-23T23:58Z conductor.aws.a (fresh) first signed commit, at Dinis's A2 yes in its session; team board and feedback lane opened as an SG/App vault at his word
