@@ -96,3 +96,14 @@ v2.3 ([the draft](P-IAM-001-v2.3-draft.yaml), which replaces v2.2):
 - The read boundary is a customer-managed policy naming what the read role uses today (costs-read, s3-browse, Cloud Control reads). ViewOnlyAccess and SecurityAudit stay attached but act only within it, which is every view the site has today (usage.md); a new view raises the read boundary by console.
 - check_boundary.py now compares statements, not action names: each role statement must be covered by a boundary statement with the same Resource and Condition, and no boundary statement may be wider than a role statement. 0 problems on v2.3; widening the DNS or stack statement to `*` is caught (tested).
 - Still to do in the same console apply: a boundary on sovereignwebsite-factory-dns, or its trust by console only (R-005). Without it, R-008 stays open.
+
+## Cleared on paper (08:40 UTC), and the DNS role
+
+security.aws.a cleared v2.3 on paper as the template for R-008 (47b48c3 on work/security.aws.a), with three conditions: the DNS role step below in the same apply; checks (a) read-boundary coverage and (b) iam:UpdateRole before apply; first apply by Dinis in the console. Low note from the review: if Cloud Control's own calls carry `aws:CalledVia` = cloudformation.amazonaws.com, UpdateResource on AWS::IAM::Role can edit the platform roles' inline policies without a change set; still inside both boundaries, so no escalation.
+
+**sovereignwebsite-factory-dns.** Its permissions are not in this repository: it was made outside CloudFormation (docs/cloudformation/seed/cloudformation.json), and the twin and the docs carry only its trust (GitHub's OIDC provider). A boundary written without them would be invented, so there is none here. Two ways to close R-005, for Dinis:
+
+1. **Console-only trust (no knowledge of the role needed).** Drop `iam:GetRole` and `iam:UpdateAssumeRolePolicy` on the DNS role from the change role and from its boundary (the statement TheDnsRoleTrustPolicy, in both). Cost: the site's trust plans (site/plans/*iac-dns-trust*) stop working; trust changes to that role become a console act, like the bootstrap.
+2. **A boundary on the DNS role.** Needs its permissions policy, which lives where the role was made (the Factory, it seems; not readable from this session). The boundary would name exactly those actions and resources, and deny the same cap and principal actions as the change boundary. Then the change role may keep rewriting its trust: whoever it trusts gets no more than today.
+
+Recommendation: 1 now, in the same console apply (it closes R-005 without waiting on anything); 2 later if the trust plans are wanted back.
