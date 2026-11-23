@@ -79,3 +79,20 @@ Once the `?versionId=` link form is agreed with dev.2.aws.a (asked at 19:35).
 **For Dinis:** `RetentionYears` (1 proposed), and creating the bucket and the publisher stack (iam.aws.a's `sws-vault-publisher`) in our account.
 
 **Link form agreed (19:55 UTC):** dev.2.aws.a 87873df. Each index entry is `{ url, versionId, sha256 }`, where `url` is the key form with no query and `versionId` is required. The link's `templateURL` is `<url>?versionId=<id>`, encoded, and no other query is accepted. This covers `vault`, `vault-access` and `vault-edge`, with one bucket for every region. The plan is ready for aws.c.
+
+**Alarms drafted (20:15 UTC):** cloudtrail.aws.a, on work/cloudtrail.aws.a ee3fa70 (docs/cloudtrail/2026-11-23__03-vault-deploy-audit.md, section "The Vault templates bucket"). Reviewed by security.aws.a. Four rules in `ct-alarms.js`:
+
+| Rule | Severity | Fires on |
+|---|---|---|
+| `vault-templates-bucket` | high | root on any `PutBucket*` or `DeleteBucket*` (refused attempts included), and `PutObjectRetention` or `PutObjectLegalHold` by anyone |
+| `vault-templates-write` | high | a write by anyone but the publisher |
+| `vault-templates-published` | low | each release |
+| `vault-templates-publisher-refused` | medium | any refusal of the publisher |
+
+The rules take `PublisherRoleArn` as `templatesPublisher`.
+
+**What the plan must add:**
+- the trail's data-event selector: `AWS::S3::Object`, with ARN starting `arn:aws:s3:::sws-vault-templates-` and `readOnly` false;
+- cloudtrail.aws.a's two EventBridge patterns (boto3.aws.a note 14).
+
+**Open:** whether the rules must sit in the bucket's own region.
