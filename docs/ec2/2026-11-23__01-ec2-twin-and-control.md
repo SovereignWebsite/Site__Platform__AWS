@@ -123,7 +123,8 @@ Synthetic and labelled as such, in account 111122223333 like the rest of the twi
 6. Each refusal in 2f, one test each; nothing is recorded in the journal when a call is refused.
 7. CreateKeyPair is refused; no answer from the twin ever contains `BEGIN` and `PRIVATE KEY`.
 8. Fold: `AwsTwin.fold(AwsTwin.journal())` gives the same EC2 world as the live one, with the same ids, whatever reads came between.
-9. Golden: the baseline pack's EC2 answers are fixed in test/fixtures/twin-golden/.
+9. Same history however it is read (architect.aws.a): run one stop and start sequence twice, once with a single `tick` past every `at`, once with Describes at random points while the clock runs. The two journals are equal: every settle has `t` equal to its `at`, in `at` order.
+10. Golden: the baseline pack's EC2 answers are fixed in test/fixtures/twin-golden/.
 
 ## 3. The read page for our own account
 
