@@ -1,8 +1,8 @@
 {
   "programme": "AWS Platform (aws.platform.sovereignweb.site), account C",
   "kept_by": "pm.aws.c@SovereignWebsite.dinis",
-  "source": "docs/2026-11-23__memo-aws-platform-programme.md (parts 1 to 3) and the agents' own reports",
-  "updated": "2026-11-23T03:10Z",
+  "source": "The memo (parts 1 to 4), conductor.aws.c's roster (docs/team/schedule.json, docs/team/stage-2.md) and the agents' own reports",
+  "updated": "2026-11-23T04:00Z",
   "states": [
     "done",
     "in progress",
@@ -11,367 +11,407 @@
     "waiting for the agent",
     "blocked"
   ],
-  "rule": "An owner is named only when that agent exists or its starter has said it is starting. Nothing is claimed for an agent that does not exist yet.",
+  "rule": "Twin first: every task is built and shown on the twin before real AWS. Usability first: judged by what a first-time user sees and can do.",
   "tasks": [
     {
-      "id": "P1",
-      "area": "Pipeline (pipeline.md)",
-      "title": "Follow the packet: live architecture view with the characters and game engine; replay, speed, slow; twin then live; five UIs",
-      "owner": "viz.aws.c (not started)",
-      "state": "waiting for the agent",
-      "next": "See pipeline.md, first step",
-      "blocked_on": "The agent starting (now)",
-      "updated": "2026-11-23T03:10Z"
-    },
-    {
-      "id": "P2",
-      "area": "Pipeline (pipeline.md)",
-      "title": "The fractal semantic graph of everything, at several altitudes",
-      "owner": "ontology.aws.c (not started)",
-      "state": "waiting for the agent",
-      "next": "See pipeline.md, first step",
-      "blocked_on": "The agent starting (now)",
-      "updated": "2026-11-23T03:10Z"
-    },
-    {
-      "id": "P4",
-      "area": "Pipeline (pipeline.md)",
-      "title": "Billing connected to everything, in real time from logs, and predicted",
-      "owner": "billing.aws.c (not started)",
-      "state": "waiting for the agent",
-      "next": "See pipeline.md, first step",
-      "blocked_on": "The agent starting (now)",
-      "updated": "2026-11-23T03:10Z"
-    },
-    {
-      "id": "P5",
-      "area": "Pipeline (pipeline.md)",
-      "title": "The time lapse: everything linked, client-side data and WebAssembly",
-      "owner": "architect.aws.c, dev.*.aws.c",
-      "state": "waiting for the agent",
-      "next": "See pipeline.md, first step",
-      "blocked_on": "The agent starting (now)",
-      "updated": "2026-11-23T03:10Z"
-    },
-    {
-      "id": "P8",
-      "area": "Pipeline (pipeline.md)",
-      "title": "Feature launches, AWS style, and documentation of everything",
-      "owner": "journalist.aws.c (not started)",
-      "state": "waiting for the agent",
-      "next": "See pipeline.md, first step",
-      "blocked_on": "The agent starting (now)",
-      "updated": "2026-11-23T03:10Z"
-    },
-    {
-      "id": "PM-5",
-      "area": "Programme",
-      "title": "Every agent signs its commits with its own published key",
-      "owner": "conductor.aws.c",
-      "state": "blocked",
-      "next": "Keys into the Factory's team/keys.json",
-      "blocked_on": "Decision 1",
-      "updated": "2026-11-23T02:55Z"
-    },
-    {
-      "id": "SE-3",
-      "area": "Security",
-      "title": "R-001 Critical: cut sws-aws-platform-change's iam:* to what the plans need",
-      "owner": "aws.c",
+      "id": "UX-0",
+      "area": "Usability (Dinis: 'super critical')",
+      "title": "Walk the hub and 'Try the twin' as a first-time user, desktop and phone; a ranked usability list per wake, each item sent to its owner",
+      "owner": "sherpa.aws.c",
       "state": "in progress",
-      "next": "Template v2.1 written (d67b560): for security.aws.c's review, then Dinis's Approve with the waiting stack plan",
+      "next": "First list: the hub's front page and the S3 browser on the twin",
       "blocked_on": null,
-      "updated": "2026-11-23T04:00Z"
+      "updated": "2026-11-23T03:35Z"
     },
     {
-      "id": "PM-4",
-      "area": "Programme",
-      "title": "The AWS team's agents and their docs paths in this site's policy",
-      "owner": "aws.c",
+      "id": "SE-4",
+      "area": "Security",
+      "title": "R-009 High: the deploy's signer check can be bypassed; R-010 High: team code on the hub's origin",
+      "owner": "security.aws.c, aws.c",
       "state": "blocked",
-      "next": "aws.c adds each agent as it starts",
-      "blocked_on": "Decision 3",
-      "updated": "2026-11-23T02:55Z"
+      "next": "Checker from main or a pinned commit; security review of every site/ change",
+      "blocked_on": "Decisions 2 and 3",
+      "updated": "2026-11-23T04:00Z"
     },
     {
       "id": "PM-1",
       "area": "Programme",
-      "title": "The board and one decisions page for Dinis",
+      "title": "The board, the pipeline and one decisions page for Dinis",
       "owner": "pm.aws.c",
       "state": "in progress",
-      "next": "Collect open questions from every aws.* agent at each wake; keep decisions.md current",
-      "blocked_on": "Decision 3 (only aws.c may commit here; it commits the board meanwhile)",
-      "updated": "2026-11-23T02:55Z"
+      "next": "Commits its own board now; folds questions in each wake",
+      "blocked_on": null,
+      "updated": "2026-11-23T04:00Z"
     },
     {
       "id": "PM-2",
       "area": "Programme",
-      "title": "Start stage 1: security.aws.c (with AppSec and adversarial as sub-agents), architect.aws.c, s3.aws.c",
+      "title": "Stage 1 and stage 2: 22 agents running (docs/team/schedule.json)",
       "owner": "conductor.aws.c",
       "state": "done",
-      "next": "Running: security.aws.c (:28, 2 h), architect.aws.c (:38, 3 h), s3.aws.c (:53, 3 h), conductor (:58, 4 h); roster in docs/team/schedule.json",
-      "blocked_on": "Decision 1 for keys and signing",
-      "updated": "2026-11-23T02:55Z"
+      "next": "Roster and wakes in docs/team/schedule.json; briefs in docs/team/stage-2.md; 16 roles moving to account A (docs/team/handover/, 0439523)",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
     },
     {
-      "id": "PM-3",
+      "id": "PM-4",
       "area": "Programme",
-      "title": "Start stage 2: lambda, iam, cloudformation (with route53), cloudtrail (with cloudwatch), vaults, design, ux, data, dev, boto3, video, journalist",
-      "owner": "conductor.aws.c",
-      "state": "in progress",
-      "next": "Start now: no budget cap (Dinis, ~03:05 UTC); add ontology, billing, viz, dev.1 to dev.4",
+      "title": "Each agent's docs path in this site's policy",
+      "owner": "aws.c",
+      "state": "done",
+      "next": "Five agents added (c32279d); aws.c adds the rest as they come",
       "blocked_on": null,
-      "updated": "2026-11-23T03:10Z"
+      "updated": "2026-11-23T04:00Z"
+    },
+    {
+      "id": "PM-5",
+      "area": "Programme",
+      "title": "Every agent signs with its own published key",
+      "owner": "conductor.aws.c",
+      "state": "blocked",
+      "next": "pm.aws.c's key live (885f150). Agents whose sessions cannot reach the Factory (cloudtrail.aws.c first) wait",
+      "blocked_on": "Decision 1 (landing keys)",
+      "updated": "2026-11-23T03:45Z"
+    },
+    {
+      "id": "TW-1",
+      "area": "Twin (memo part 4)",
+      "title": "The twin as the place everything is built: the whole site works on it; packs, scenarios, synthetic users, editing, generators, external feeds",
+      "owner": "architect.aws.c (design), dev.2.aws.c (moving to dev.2.aws.a) (build)",
+      "state": "in progress",
+      "next": "Twin v0 is in (5371ed9, fails closed); architect's design 02: packs and scenarios",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
+    },
+    {
+      "id": "TW-2",
+      "area": "Twin (memo part 4)",
+      "title": "'Try the twin' on every area, so anyone can use the consoles without an AWS account",
+      "owner": "ux.aws.c (moving to ux.aws.a) with each area agent",
+      "state": "waiting for the agent",
+      "next": "One link pattern, shown first on the S3 browser",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
+    },
+    {
+      "id": "AR-1",
+      "area": "Twin (memo part 4)",
+      "title": "The API layer: every primitive as a browser JavaScript API with an OpenAPI document; one API, five UIs",
+      "owner": "architect.aws.c, dev.2.aws.c (moving to dev.2.aws.a)",
+      "state": "in progress",
+      "next": "site/api/: S3 first",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
     },
     {
       "id": "S3-1",
       "area": "1. S3",
-      "title": "A spectacular, smooth S3 browser (the first deliverable)",
-      "owner": "s3.aws.c",
+      "title": "A spectacular, smooth S3 browser",
+      "owner": "s3.aws.c, dev.1.aws.c (moving to dev.1.aws.a)",
       "state": "in progress",
-      "next": "docs/s3/: a note on smoothness and the next three steps",
+      "next": "Fix the top three items from sherpa's first usability list; then the smoothness note's next three steps",
       "blocked_on": null,
-      "updated": "2026-11-23T02:55Z"
+      "updated": "2026-11-23T03:35Z"
     },
     {
       "id": "S3-2",
       "area": "1. S3",
-      "title": "CloudFront-logs bucket readable in the browser (gzip, JSON Lines, CSV): first step of the extract workflow",
-      "owner": "aws.c",
+      "title": "CloudFront-logs zip: normalise the records, view them several ways, and 'link' mode (click a path, IP, bucket or vault id to go to it)",
+      "owner": "data.aws.c (moving to data.aws.a)",
       "state": "in progress",
-      "next": "Per aws.c's report",
+      "next": "Start on the CloudFront logs the twin already seeds (memo 22)",
       "blocked_on": null,
-      "updated": "2026-11-23T02:45Z"
+      "updated": "2026-11-23T03:35Z"
     },
     {
       "id": "S3-3",
       "area": "1. S3",
-      "title": "s3.aws.platform.sovereignweb.site (its own site, API, explanations)",
+      "title": "s3.aws.platform.sovereignweb.site and the eight other area sites",
       "owner": "factory.c",
       "state": "blocked",
-      "next": "Factory request",
-      "blocked_on": "Dinis: the nine area sites (not urgent)",
-      "updated": "2026-11-23T02:55Z"
+      "next": "Factory requests on work/factory.c-aws-areas",
+      "blocked_on": "Decision 5 (your merge)",
+      "updated": "2026-11-23T03:35Z"
     },
     {
       "id": "S3-4",
       "area": "1. S3",
-      "title": "The bucket graph: everything that uses a bucket (Firehose, Lambda, the stack that made it, Route 53 records)",
-      "owner": null,
+      "title": "The bucket graph: everything that uses a bucket",
+      "owner": "ontology.aws.c (moving to ontology.aws.a), s3.aws.c",
       "state": "waiting for the agent",
-      "next": "Needs the API layer (AR-1) and the other areas' reads",
-      "blocked_on": "AR-1",
-      "updated": "2026-11-23T02:45Z"
+      "next": "After the graph schema (P2)",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
     },
     {
       "id": "LF-1",
       "area": "2. Lambda with Firehose",
-      "title": "Lambda and Firehose: what each function and stream does, where it writes, traffic; site, API, explanations",
-      "owner": "lambda.aws.c (not started)",
-      "state": "blocked",
-      "next": "Stage 2",
-      "blocked_on": "The agent starting (stage 2, now); then the area site",
-      "updated": "2026-11-23T03:10Z"
+      "title": "What each function and stream does, where it writes, traffic; API and UI on the twin",
+      "owner": "lambda.aws.c (moving to lambda.aws.a)",
+      "state": "in progress",
+      "next": "A first view over the twin's seeded functions and streams",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
     },
     {
       "id": "CF-1",
       "area": "3. CloudFormation",
-      "title": "Every stack, mapped to what it made",
-      "owner": "cloudformation.aws.c (not started)",
-      "state": "blocked",
-      "next": "Stage 2",
-      "blocked_on": "The agent starting (stage 2, now); then the area site",
-      "updated": "2026-11-23T03:10Z"
+      "title": "Every stack mapped to what it made",
+      "owner": "cloudformation.aws.c (moving to cloudformation.aws.a)",
+      "state": "in progress",
+      "next": "Stacks in the twin, each linked to its resources",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
     },
     {
       "id": "R53-1",
       "area": "4. Route 53",
-      "title": "Zones and records, mapped to what they serve",
-      "owner": "cloudformation.aws.c (not started)",
-      "state": "blocked",
-      "next": "Stage 2",
-      "blocked_on": "The agent starting (stage 2, now); then the area site",
-      "updated": "2026-11-23T03:10Z"
+      "title": "Zones and records mapped to what they serve",
+      "owner": "cloudformation.aws.c (moving to cloudformation.aws.a)",
+      "state": "in progress",
+      "next": "After CF-1's first view",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
     },
     {
       "id": "IAM-1",
       "area": "5. IAM",
-      "title": "Roles, policies, accounts, the trust graph, clean-up: all the right accounts and privileges, nothing more",
-      "owner": "iam.aws.c (not started)",
-      "state": "blocked",
-      "next": "Stage 2",
-      "blocked_on": "The agent starting (stage 2, now); then the area site",
-      "updated": "2026-11-23T03:10Z"
+      "title": "Roles, policies, the trust graph, over-privilege and unused access",
+      "owner": "iam.aws.c (moving to iam.aws.a)",
+      "state": "in progress",
+      "next": "The hub's own two roles and R-001 first; least-privilege sets per area as proposals for aws.c",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
     },
     {
-      "id": "IAM-2",
+      "id": "SE-3",
       "area": "5. IAM",
-      "title": "Template v3 as a plan: least-privilege read permissions for the next capabilities (CloudFront, Firehose, logs, Lambda)",
-      "owner": "architect.aws.c (draft), security.aws.c (review)",
-      "state": "starting",
-      "next": "Not written yet: draft, security review, then one stack plan for Dinis's Approve",
-      "blocked_on": null,
-      "updated": "2026-11-23T02:50Z"
+      "title": "R-001 Critical: the change role can no longer make itself admin (template v2.1, d67b560)",
+      "owner": "aws.c",
+      "state": "ready",
+      "next": "Reviewed by security; waits for Dinis's Approve on the site",
+      "blocked_on": "Decision 4",
+      "updated": "2026-11-23T03:35Z"
     },
     {
       "id": "CT-1",
       "area": "6. CloudTrail",
-      "title": "Understand what is happening; anyone can drop in their own CloudTrail dump",
-      "owner": "cloudtrail.aws.c (not started)",
-      "state": "blocked",
-      "next": "Stage 2",
-      "blocked_on": "The agent starting (stage 2, now); then the area site",
-      "updated": "2026-11-23T03:10Z"
+      "title": "Timeline and per-asset activity; anyone can drop in their own CloudTrail dump",
+      "owner": "cloudtrail.aws.c (moving to cloudtrail.aws.a)",
+      "state": "in progress",
+      "next": "Read the twin's CloudTrail records; the timeline view",
+      "blocked_on": "Decision 1 (its key); aws.c adding the agent's folder to the policy",
+      "updated": "2026-11-23T03:35Z"
     },
     {
       "id": "CW-1",
       "area": "7. CloudWatch",
-      "title": "Logs and metrics, read in the browser",
-      "owner": "cloudtrail.aws.c (not started)",
-      "state": "blocked",
-      "next": "Stage 2",
-      "blocked_on": "The agent starting (stage 2, now); then the area site",
-      "updated": "2026-11-23T03:10Z"
+      "title": "Logs, metrics and alarms in the browser",
+      "owner": "cloudtrail.aws.c (moving to cloudtrail.aws.a)",
+      "state": "waiting for the agent",
+      "next": "After CT-1's timeline",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
     },
     {
       "id": "UI-1",
       "area": "8. The five consoles",
-      "title": "Five complete console designs over one API layer, built on semantic graphs, each for how Dinis uses AWS",
-      "owner": "design.aws.c and ux.aws.c (not started)",
-      "state": "blocked",
-      "next": "Designer proposes five (memo 13.4)",
-      "blocked_on": "The agent starting (stage 2, now)",
-      "updated": "2026-11-23T03:10Z"
+      "title": "Five complete console designs over one API layer, one of them 3D",
+      "owner": "ux.aws.c (moving to ux.aws.a) (with design.c)",
+      "state": "in progress",
+      "next": "Five concepts, one page each, judged by a first-time user",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
     },
     {
       "id": "VA-1",
       "area": "9. The vaults",
-      "title": "Vaults and append lanes from the browser (sgit.ai): live reads, snapshots, the graph's cross-mapping folders",
-      "owner": "vaults.aws.c (not started)",
-      "state": "blocked",
-      "next": "Stage 2",
-      "blocked_on": "The agent starting (stage 2, now)",
-      "updated": "2026-11-23T03:10Z"
+      "title": "Vaults and append lanes from the browser; three vaults; vaults as the capture store (P3)",
+      "owner": "vaults.aws.c (moving to vaults.aws.a)",
+      "state": "in progress",
+      "next": "A note: how a page creates and appends to a vault, from sgit.ai",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
     },
     {
       "id": "EX-1",
       "area": "10. The extract workflow",
-      "title": "CloudFront logs written by Firehose: see, extract, transform, move; vault usage visible",
-      "owner": "data.aws.c (not started)",
-      "state": "blocked",
-      "next": "Starts from S3-2",
-      "blocked_on": "S3-2",
-      "updated": "2026-11-23T03:10Z"
-    },
-    {
-      "id": "TW-1",
-      "area": "11. The twin",
-      "title": "A replica of AWS answering the same endpoints with synthetic data; the code cannot tell the difference",
-      "owner": "architect.aws.c",
-      "state": "in progress",
-      "next": "Twin v0 live in the hub (5371ed9, aws.c); the architect designs over it",
+      "title": "See, extract, transform, move the CloudFront logs; vault usage visible",
+      "owner": "data.aws.c (moving to data.aws.a)",
+      "state": "waiting for the agent",
+      "next": "After S3-2",
       "blocked_on": null,
-      "updated": "2026-11-23T03:50Z"
+      "updated": "2026-11-23T03:35Z"
     },
     {
-      "id": "AR-1",
-      "area": "11. The twin",
-      "title": "The API layer: every primitive used as a browser JavaScript API with an OpenAPI document; refactor for five UIs",
-      "owner": "architect.aws.c",
+      "id": "P1",
+      "area": "Pipeline P1: follow the packet",
+      "title": "One request followed through every service, replay, speed, slow, logs, IAM use; twin first, five UIs",
+      "owner": "viz.aws.c (moving to viz.aws.a)",
       "state": "in progress",
-      "next": "API layer and twin design, S3 first, in docs/architecture/",
+      "next": "Confirmed by Dinis (~03:35 UTC): one visitor loads a page on a Sovereign Website (CloudFront, S3, logs through Firehose, the vault, the cost of that request), with different data, step by step, colour-coded, zoom in and out. Storyboard first, on the twin",
       "blocked_on": null,
-      "updated": "2026-11-23T02:55Z"
+      "updated": "2026-11-23T03:35Z"
     },
     {
-      "id": "AV-1",
-      "area": "12. Articles and videos",
-      "title": "Articles (Dinis's voice and the agents'), diagrams, a video narrative per major step with the studio",
-      "owner": "journalist.aws.c and video.aws.c (not started)",
-      "state": "blocked",
-      "next": "Stage 2",
-      "blocked_on": "The agents starting (now)",
-      "updated": "2026-11-23T03:10Z"
+      "id": "P2",
+      "area": "Pipeline P2: the fractal graph",
+      "title": "The ontology and taxonomy of every resource, at several altitudes (memo 21: business function down to atoms)",
+      "owner": "ontology.aws.c (moving to ontology.aws.a)",
+      "state": "in progress",
+      "next": "The type list and relations over the twin's account; public ontologies reused; schema to the architect",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
+    },
+    {
+      "id": "P4",
+      "area": "Pipeline P4: billing",
+      "title": "Billing tied to everything, real time from logs, and predicted",
+      "owner": "billing.aws.c (moving to billing.aws.a)",
+      "state": "in progress",
+      "next": "A price model of the twin's stack from AWS's public pricing pages, each price cited",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
+    },
+    {
+      "id": "P5",
+      "area": "Pipeline P5: time lapse",
+      "title": "Back and forward in time, everything linked; client-side data and WebAssembly",
+      "owner": "data.aws.c (moving to data.aws.a), architect.aws.c",
+      "state": "waiting for the agent",
+      "next": "Design after S3-2's link mode",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
+    },
+    {
+      "id": "P6",
+      "area": "Pipeline P6: EC2",
+      "title": "Ephemeral EC2 infrastructure, with metrics",
+      "owner": "unassigned",
+      "state": "waiting for the agent",
+      "next": "After the IAM area and a security review",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
+    },
+    {
+      "id": "P7",
+      "area": "Pipeline P7: scoped access",
+      "title": "Access on demand with budgets, limited capabilities and models, blockable",
+      "owner": "iam.aws.c (moving to iam.aws.a), security.aws.c (later)",
+      "state": "waiting for the agent",
+      "next": "After P4 and the IAM area",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
+    },
+    {
+      "id": "P8",
+      "area": "Pipeline P8: launches",
+      "title": "AWS-style launch posts and user-point-of-view articles, drafts for Dinis",
+      "owner": "journalist.aws.c (moving to journalist.aws.a) with sherpa.aws.c",
+      "state": "in progress",
+      "next": "First draft: \"Look inside a zip in your S3 bucket without downloading it\", user point of view, with a try-it-on-the-twin walkthrough",
+      "blocked_on": "aws.c adding the agent's folder to the policy",
+      "updated": "2026-11-23T03:45Z"
     },
     {
       "id": "AV-2",
-      "area": "12. Articles and videos",
-      "title": "The parity tracker: parity with AWS, and where we do better, published on the hub",
-      "owner": "pm.aws.c until journalist.aws.c starts",
+      "area": "Pipeline P8: launches",
+      "title": "The parity tracker, published on the hub",
+      "owner": "journalist.aws.c (moving to journalist.aws.a)",
       "state": "in progress",
-      "next": "Seeds from aws.c: zips read without downloading, .json.gz as formatted JSON, a diff before any change, a CORS plan that keeps existing rules",
+      "next": "docs/journal/parity.md, eight rows (local 5d5d8f2); \"AWS side to confirm\" rows checked by boto3.aws.c",
+      "blocked_on": "aws.c adding the agent's folder to the policy",
+      "updated": "2026-11-23T03:45Z"
+    },
+    {
+      "id": "AV-1",
+      "area": "Articles and videos",
+      "title": "A video narrative per major step, with the studio",
+      "owner": "video.aws.c (moving to video.aws.a) with studio.c",
+      "state": "in progress",
+      "next": "First: tonight's twin, as a short narrative",
       "blocked_on": null,
-      "updated": "2026-11-23T02:50Z"
+      "updated": "2026-11-23T03:35Z"
+    },
+    {
+      "id": "SW-1",
+      "area": "The team as a story",
+      "title": "The swarm: the agents as a graph, replayed from 02:40 UTC, on web-summit.sgit.ai's engine",
+      "owner": "swarm.aws.c (moving to swarm.aws.a)",
+      "state": "in progress",
+      "next": "Replay of tonight's swarm from public sources only",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
+    },
+    {
+      "id": "BO-1",
+      "area": "Stack mapping",
+      "title": "Dinis's stack and Boto3 use mapped to browser APIs and least privilege; the twin's wire formats checked",
+      "owner": "boto3.aws.c (moving to boto3.aws.a)",
+      "state": "in progress",
+      "next": "S3 first: twin responses against AWS's documentation",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
+    },
+    {
+      "id": "SE-1",
+      "area": "Security",
+      "title": "Hourly review: code, design, permissions; attack scenarios for the twin (memo 23)",
+      "owner": "security.aws.c",
+      "state": "in progress",
+      "next": "risks.md; then an attack scenario viz.aws.c can show",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
+    },
+    {
+      "id": "SE-2",
+      "area": "Security",
+      "title": "What data is confidential and what can be public",
+      "owner": "security.aws.c",
+      "state": "waiting for the agent",
+      "next": "After the next review",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
+    },
+    {
+      "id": "QA-1",
+      "area": "Quality",
+      "title": "The hub's tests in test/",
+      "owner": "aws.c",
+      "state": "done",
+      "next": "In (89d8698)",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
+    },
+    {
+      "id": "OP-2",
+      "area": "AWS changes",
+      "title": "A GitHub Actions read-only inventory role",
+      "owner": "unassigned",
+      "state": "waiting for the agent",
+      "next": "Later, after security review",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
+    },
+    {
+      "id": "OP-3",
+      "area": "Programme",
+      "title": "Secure Send S3 API: code, deployment, clients and regions",
+      "owner": "vaults.aws.c (moving to vaults.aws.a) with maestro.c",
+      "state": "in progress",
+      "next": "Asked of maestro.c",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:35Z"
     },
     {
       "id": "AV-3",
-      "area": "12. Articles and videos",
+      "area": "Articles and videos",
       "title": "Newsroom brief: the last AWS console log-in",
       "owner": "aws.c",
       "state": "done",
       "next": "With newsroom.c",
       "blocked_on": null,
-      "updated": "2026-11-23T02:45Z"
-    },
-    {
-      "id": "SE-1",
-      "area": "Security",
-      "title": "Hourly review of code, design and permissions (no pen or live testing); first: the change role's self-update",
-      "owner": "security.aws.c",
-      "state": "in progress",
-      "next": "First review done (7 risks, R-001 Critical); docs/security/risks.md written, not yet committed",
-      "blocked_on": "Decisions 1 and 3",
-      "updated": "2026-11-23T02:55Z"
-    },
-    {
-      "id": "SE-2",
-      "area": "Security",
-      "title": "Confirm what data is confidential and what could be public (memo 9)",
-      "owner": "security.aws.c",
-      "state": "starting",
-      "next": "After its first review",
-      "blocked_on": null,
-      "updated": "2026-11-23T02:45Z"
-    },
-    {
-      "id": "QA-1",
-      "area": "Quality",
-      "title": "The site's tests (SigV4 vector, plans, end to end in Chromium) into test/",
-      "owner": "aws.c",
-      "state": "done",
-      "next": "In test/ (89d8698), with a README",
-      "blocked_on": null,
-      "updated": "2026-11-23T03:50Z"
-    },
-    {
-      "id": "OP-1",
-      "area": "AWS changes",
-      "title": "The waiting stack plan (template description lines only, Dinis's name removed)",
-      "owner": "Dinis",
-      "state": "ready",
-      "next": "Approve on the site when next signed in",
-      "blocked_on": "Decision 4",
-      "updated": "2026-11-23T02:55Z"
-    },
-    {
-      "id": "OP-2",
-      "area": "AWS changes",
-      "title": "A GitHub Actions read-only inventory role for snapshots",
-      "owner": null,
-      "state": "blocked",
-      "next": "Security review first; not tonight",
-      "blocked_on": "Later, after security review",
-      "updated": "2026-11-23T02:55Z"
-    },
-    {
-      "id": "OP-3",
-      "area": "Programme",
-      "title": "Secure Send S3 API: where its code and deployment live; which clients and regions first",
-      "owner": "maestro.c and conductor.aws.c",
-      "state": "in progress",
-      "next": "Asked by aws.c; comes to Dinis only if they cannot answer",
-      "blocked_on": null,
-      "updated": "2026-11-23T02:45Z"
+      "updated": "2026-11-23T03:35Z"
     }
   ]
 }

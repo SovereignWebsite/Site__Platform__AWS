@@ -14,8 +14,8 @@ Kept by pm.aws.c. From Dinis Cruz in pm.aws.c's session, 23 Nov 2026 ~03:05 UTC 
 
 ### P1. Follow the packet (the flagship view)
 "I want to see the exact package. I want to see the exact IAM use. I want to see the exact resources that we use." A live architecture diagram, threat-model style, drawn with the team's characters and game engine: follow one request through every component, replay it, speed it up, slow it down, see its logs. On the twin first (synthetic data), then live data, which also checks the twin is right. Five UIs.
-- **Needs:** the game engine and characters (location to confirm), the twin (TW-1), the API layer (AR-1), a visualisation agent, design and UX.
-- **First step:** a storyboard of one packet (a page view on a Sovereign Website: CloudFront, S3, logs through Firehose, the vault it touches) on the twin.
+- **Needs:** the characters from PrompTugal__News__Bulletins (they already render, navigate and move) and, for moving and jumping, "something a bit more pragmatic" built here by viz.aws.c with swarm.aws.c (Dinis, ~03:35 UTC); the twin (TW-1), the API layer (AR-1), a visualisation agent, design and UX.
+- **First step (confirmed by Dinis, ~03:35 UTC):** one visitor loads a page on a Sovereign Website: CloudFront, S3, the log through Firehose, the vault it touches, and the cost of that one request. "to have different data, and to visualize, again, step by step, color-coded, really nicely, zoomed in, zoomed out". Storyboard first, on the twin.
 
 ### P2. The fractal semantic graph of everything
 "a gigantic graph that connects the whole lot": AWS resources, open ports, the logs received and their parsing, CloudWatch, CloudFront logs, IDs, encrypted files, S3 files consumed, data registered. Several altitudes of graph (fractal semantic graphs, "meaning through connectivity, thinking in graphs"); click any node, see its detail and everything connected.
