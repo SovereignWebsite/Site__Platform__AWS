@@ -124,5 +124,5 @@ Not every agent every hour. Agents start at **different minutes of the hour**, s
 2. Secure Send S3 API, clients and regions: ask maestro.c and the conductor.
 3. Vault APIs and append lanes: documented on sgit.ai.
 4. Five consoles: the designer designs and proposes them.
-5. Coding and NFR principles: Dinis will give the links.
+5. Key sites to read (Dinis, ~02:55 UTC), for every agent: https://sgit.ai (vaults, append lanes, examples), https://coding.sgit.ai (coding principles), https://nfrs.sgit.ai (non-functional requirements), https://newsroom.sgit.ai (articles, including browser-side protection).
 6. Schedule: as section 12; conductor.aws and the PM run it; maestro.c creates the team.
