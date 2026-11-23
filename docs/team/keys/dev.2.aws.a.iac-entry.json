@@ -1,20 +1,20 @@
 {
   "id": "dev-2-aws-a-sovereignwebsite",
   "agent": "dev.2.aws.a@SovereignWebsite.dinis",
-  "role": "Developer 2 on account A (AWS Platform programme): the API layer in site/api/ (S3Api's contract and tests) to architect.aws.c's designs, on the twin. Takes over from dev.2.aws.c.",
+  "role": "Developer 2 on account A (AWS Platform programme): the API layer in site/api/ and the twin, to architect.aws.a's designs. Fresh session of 23 November 2026 ~15:45 UTC at Dinis Cruz's word; replaces the earlier dev.2.aws.a key (sha256:a56d8c1b2f8c2c17).",
   "how": "Made by the agent in its own session on 23 November 2026 with sgit pki keygen; public bundle from sgit pki export. Only the public half is here.",
   "created": "2026-11-23",
   "status": "active",
-  "session": "https://claude.ai/code/session_018yvwtN79NSkFnwbV7UzFuc",
-  "fingerprint": "sha256:a56d8c1b2f8c2c17",
-  "signing_fingerprint": "sha256:94ed2eea80dc6550",
+  "session": "https://claude.ai/code/session_018yvwtQpZ4nNt6XniKN2YHr",
+  "fingerprint": "sha256:b78d18144e1f9c1a",
+  "signing_fingerprint": "sha256:0b36e70744cf37f1",
   "bundle": {
     "v": 1,
-    "encrypt": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAhwccLd5SUfVozgMlbCoS\nGJsbV8xpj+LN201q30I7N1g5nyFuJIGfcwpCnNqqRdNkM57lki1T3wQSDutJEPee\ngzclJvMGNwgW3F4EqnCEiDRS7hlp7IHAsihWXhZDN7psl9SQqb4fGzHxbSQbR4vI\nmcvnc571iPzM/xDQvDw9WcJwO6l03ITwYpOczo0ZVfIS8g8PDb/ADdc+sGWnvo/q\nvQoqZC/xVzfG9DlQjEwW4gJIrZSp0qQTKafHpd0LcfRq7XxWpHedDPsD91JazawQ\nm2gQjSkGBYGCYw1JozmS6lX4JEZl2YJAoOBed6ydwNGNbfr+NKN+WV1EhL/WuYdc\nXrOnOk2ix+v8kq0n+CHQNEPUJT3+kwl/zmuxHH+ePlKLkhr9FKvhZE5ybJjq3juc\nRv/vkjMPtlfkuV8+FYfT02btoevmJNTQnaLO9yDhSYootin3M1ZWQ7RjjfWRDVTR\n3AU4XGsKTg5IoEwdcQVfjnF9nImU8J6Ck4zngI32T9OdMPKjdpLE4TkmJSV5dJCQ\npHJlfG8b3nTq9cutNsdhAvK8lROO35CI4XQNaVyrVoWiW5w9FcXxCgGMOiVGG7O2\nBcS6gYFB7TuGHqljDwOzNAMWnOVJIxxbedGci71ZLcc3cwwHFdBnw1p0RyETJHHO\n+TJvePlS7Rx0n5kpG5IP9VkCAwEAAQ==\n-----END PUBLIC KEY-----\n",
-    "sign": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgsdeb9lEPFoFIFZAdKH4ovQuNJsc\nMmeby3MtyHMjYCXQQh0Er9U+nA2RhVku+1Yba1ATvF+3ZoTwpxwUsjswCQ==\n-----END PUBLIC KEY-----\n",
+    "encrypt": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAvAw/KXuKASUp3LlqXxf/\n/488xtw2WiMQz2WWThnfLYIvfsySazEb0gRKarjRiCNsmKwZkJss6up2awmlZLrH\n+SYBksmuBc2HRoINeY/QddT0PhfXw41dfIH3OMrgkEz7z5sIUnsI01/DRkEMC5mW\nRx99u+FTd/HtZL/qJqahTWOLvG3MDr7SmcSbiw8rLagA5u8O5q2ZfDy8nVuaRde0\nxOQ8oKZfAI+FkKq1rg2CUrIeLIv051L40JnUreQy/sLkHc3jY68ngVfN+EFK8cxT\nBwPxF9T+hE0ZEpK7D9CSox5Phpn//Flb5ikftD80hhuhCJJWfXMQc8aPByNafLzQ\nYbRE+XteKLZd32bJkQ/Qd6eAsVXWB+jNoiQ8ZurtAW+zT763qctfzM3BCX/RkHUN\nbzqw+eU/75hzfv2/UshBOldOUUfv4QndTH2Vvj7PrPQgNOHOUzetTTozDc/yW2XI\nU9htfNWA4tx8byiKF0GK0oEFPMce0mLDcWy13DfqON3FpcvjRTxf7YuHrrLzKqoF\nTMOcSh/lz7okXka7sfYHhmOWNKeq7mGfwBdfR6oi3ga1aSZGlDJBBC8AGvrqsDXB\nSIAHy5c9BUbH7rYB4MIfBBgGEnEZ6ukzlPxsyCIPGTA0SaLQJrMoRcX8XUYVDaAp\nlhcemFM5xcxlBtxDHnxSUTECAwEAAQ==\n-----END PUBLIC KEY-----\n",
+    "sign": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE4mYKmgp4aO8SilVAqPyhkVoFv6eD\nI3TrQYl5A1gAsaYjHsfQE1Cf3qCnI/BQGCQ/PlW1WogMcGaG+JqNZ+mXGw==\n-----END PUBLIC KEY-----\n",
     "label": "dev.2.aws.a@SovereignWebsite.dinis",
-    "fingerprint": "sha256:a56d8c1b2f8c2c17",
-    "signing_fingerprint": "sha256:94ed2eea80dc6550"
+    "fingerprint": "sha256:b78d18144e1f9c1a",
+    "signing_fingerprint": "sha256:0b36e70744cf37f1"
   },
   "ssh_signing": {
     "from": "bundle.sign",
