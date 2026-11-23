@@ -1,8 +1,8 @@
 diff --git a/site/twin.js b/site/twin.js
-index 8dcf703..a9cc940 100644
+index 9274521..6347d64 100644
 --- a/site/twin.js
 +++ b/site/twin.js
-@@ -73,6 +73,39 @@
+@@ -77,6 +77,39 @@
      dotted: "demo.static.example"
    };
    var state = null;
@@ -42,7 +42,7 @@ index 8dcf703..a9cc940 100644
    function seedCors() {
      var o = {}, origin = root.location ? root.location.origin : "http://localhost";
      [B.logs, B.deps, B.trail, B.dotted].forEach(function (b) { o[b] = { CorsRules: [{ Id: "sws-aws-platform", AllowedOrigins: [origin], AllowedMethods: ["GET", "HEAD"], AllowedHeaders: ["*"], ExposedHeaders: ["ETag", "Content-Type", "Content-Length", "Last-Modified"], MaxAge: 3000 }] }; });
-@@ -118,16 +151,6 @@
+@@ -122,16 +155,6 @@
        ["config.json", JSON.stringify({ timeout: 30, memory: 256, region: REGION })]
      ]), "2026-11-18T16:54:00.000Z");
      // CloudTrail log files: one per region and five minutes. IAM is global, so its events are written under us-east-1.
@@ -59,16 +59,16 @@ index 8dcf703..a9cc940 100644
      function trailFile(region, stamp, events, modified) {
        put(B.trail, "AWSLogs/" + ACCOUNT + "/CloudTrail/" + region + "/2026/11/22/" + ACCOUNT + "_CloudTrail_" + region + "_" + stamp + "_demo.json.gz", "application/x-gzip",
          gzip(enc.encode(JSON.stringify({ Records: events }))), modified);
-@@ -144,7 +167,7 @@
+@@ -152,7 +175,7 @@
        objects: objects, cors: seedCors(),
-       roles: { "sovereignwebsite-factory-dns": { Version: "2012-10-17", Statement: [{ Effect: "Allow", Principal: { Federated: "arn:aws:iam::" + ACCOUNT + ":oidc-provider/token.actions.githubusercontent.com" }, Action: "sts:AssumeRoleWithWebIdentity",
+       roles: { "sws-aws-platform-read": platformTrust(), "sws-aws-platform-change": platformTrust(), "sovereignwebsite-factory-dns": { Version: "2012-10-17", Statement: [{ Effect: "Allow", Principal: { Federated: "arn:aws:iam::" + ACCOUNT + ":oidc-provider/token.actions.githubusercontent.com" }, Action: "sts:AssumeRoleWithWebIdentity",
          Condition: { StringEquals: { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com", [K]: ["repo:SovereignWebsite@358722364/SovereignWebsite__IaC@1464324035:environment:apply", "repo:SovereignWebsite@358722364/SovereignWebsite__Factory@1464324035:environment:apply"] } } }] } },
 -      template: null, stackStatus: "CREATE_COMPLETE", changeSets: {}, requests: {}
 +      template: null, stackStatus: "CREATE_COMPLETE", changeSets: {}, requests: {}, trailSeq: 100, trailLive: {}
      };
-     return state;
-   }
-@@ -168,7 +191,14 @@
+     // IAM read answers (design 04, dev.2.aws.a): the four demo roles the Lambda and Firehose twins run as, each
+     // trusting the service that runs as it, and every role's details, policies and last use.
+@@ -184,7 +207,14 @@
      var A = form.get("Action");
      if (A === "AssumeRoleWithWebIdentity") {
        var role = (form.get("RoleArn") || "").split(":role/")[1] || "", exp = new Date(Date.now() + 3600e3).toISOString();
@@ -84,14 +84,14 @@ index 8dcf703..a9cc940 100644
        return xml("<AssumeRoleWithWebIdentityResponse><AssumeRoleWithWebIdentityResult><Credentials><AccessKeyId>ASIATWIN" + (role === "sws-aws-platform-change" ? "CHANGE" : "READ") + "</AccessKeyId><SecretAccessKey>twin-secret</SecretAccessKey><SessionToken>twin-session-token</SessionToken><Expiration>" + exp + "</Expiration></Credentials><AssumedRoleUser><Arn>arn:aws:sts::" + ACCOUNT + ":assumed-role/" + role + "/sws-aws-platform</Arn></AssumedRoleUser></AssumeRoleWithWebIdentityResult></AssumeRoleWithWebIdentityResponse>");
      }
      if (!signed(init)) return xmlErr("MissingAuthenticationToken", "Request is missing Authentication Token", 403);
-@@ -183,19 +213,26 @@
-     var s = build(), A = form.get("Action"), name = form.get("RoleName");
-     if (!s.roles[name]) return xmlErr("NoSuchEntity", "The role with name " + name + " cannot be found.", 404);
-     if (A === "GetRole") return xml("<GetRoleResponse><GetRoleResult><Role><RoleName>" + esc(name) + "</RoleName><AssumeRolePolicyDocument>" + encodeURIComponent(JSON.stringify(s.roles[name])) + "</AssumeRolePolicyDocument></Role></GetRoleResult></GetRoleResponse>");
--    if (A === "UpdateAssumeRolePolicy") { var p = JSON.parse(form.get("PolicyDocument")); p.Statement.forEach(function (st) { st.Condition = collapse(st.Condition); }); s.roles[name] = p; return xml("<UpdateAssumeRolePolicyResponse/>"); }
+@@ -294,19 +324,26 @@
+       if (!info.inline[pol]) return xmlErr("NoSuchEntity", "The role policy with name " + pol + " cannot be found.", 404);
+       return iamOk("GetRolePolicy", "<RoleName>" + esc(name) + "</RoleName><PolicyName>" + esc(pol) + "</PolicyName><PolicyDocument>" + encodeURIComponent(JSON.stringify(info.inline[pol])) + "</PolicyDocument>");
+     }
+-    if (A === "UpdateAssumeRolePolicy") { var p = JSON.parse(form.get("PolicyDocument")); p.Statement.forEach(function (st) { st.Condition = collapse(st.Condition); }); s.roles[name] = p; return xml("<UpdateAssumeRolePolicyResponse" + IAM_NS + "><ResponseMetadata><RequestId>00000000-0000-4000-8000-0000000000ab</RequestId></ResponseMetadata></UpdateAssumeRolePolicyResponse>"); }
 +    if (A === "UpdateAssumeRolePolicy") { var p = JSON.parse(form.get("PolicyDocument")); p.Statement.forEach(function (st) { st.Condition = collapse(st.Condition); }); s.roles[name] = p;
 +      record(s, init, { source: "iam.amazonaws.com", name: "UpdateAssumeRolePolicy", region: "us-east-1", write: true, params: { roleName: name, policyDocument: JSON.stringify(p) } });
-+      return xml("<UpdateAssumeRolePolicyResponse/>"); }
++      return xml("<UpdateAssumeRolePolicyResponse" + IAM_NS + "><ResponseMetadata><RequestId>00000000-0000-4000-8000-0000000000ab</RequestId></ResponseMetadata></UpdateAssumeRolePolicyResponse>"); }
      return xmlErr("InvalidAction", "Not in the twin yet: iam " + A);
    }
 -  function cloudformation(form, init) {
@@ -115,7 +115,7 @@ index 8dcf703..a9cc940 100644
        if (A === "DescribeStacks") return xml("<DescribeStacksResponse><DescribeStacksResult><Stacks><member><StackName>sws-aws-platform</StackName><StackStatus>" + s.stackStatus + "</StackStatus></member></Stacks></DescribeStacksResult></DescribeStacksResponse>");
        return xmlErr("InvalidAction", "Not in the twin yet: cloudformation " + A);
      });
-@@ -212,6 +249,7 @@
+@@ -323,6 +360,7 @@
        return json({ TypeName: q.TypeName, ResourceDescription: { Identifier: q.Identifier, Properties: JSON.stringify(props) } });
      }
      if (target === "UpdateResource") {
@@ -123,7 +123,7 @@ index 8dcf703..a9cc940 100644
        if (region !== REGION) { s.requests.bad = "The bucket you are attempting to access must be addressed using the specified endpoint."; return json({ ProgressEvent: { RequestToken: "bad", OperationStatus: "IN_PROGRESS" } }); }
        JSON.parse(q.PatchDocument).forEach(function (op) {
          if (op.path === "/CorsConfiguration") s.cors[q.Identifier] = op.value;
-@@ -279,7 +317,7 @@
+@@ -453,7 +491,7 @@
      try {
        if (host === "sts.amazonaws.com" || /^sts\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = sts(new URLSearchParams(body), init);
        else if (host === "iam.amazonaws.com") p = iam(new URLSearchParams(body), init);
@@ -131,7 +131,7 @@ index 8dcf703..a9cc940 100644
 +      else if (/^cloudformation\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudformation(new URLSearchParams(body), init, host);
        else if (/^ce\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = ce();
        else if (/^cloudcontrolapi\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudcontrol((hdr(init, "x-amz-target") || "").split(".")[1], body, init, host);
-       else if (/\.?s3\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = s3(url, init);
+       else if (/^lambda\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = lambda(url, init);
 diff --git a/test/twin/cloudtrail-live.test.mjs b/test/twin/cloudtrail-live.test.mjs
 new file mode 100644
 index 0000000..9afe5fe
