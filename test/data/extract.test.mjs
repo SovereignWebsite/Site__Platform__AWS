@@ -1,0 +1,97 @@
+// The extract module (site/data/extract.js) against the twin's CloudFront logs, all three packs, and
+// against hand-made inputs for the formats the twin does not produce. Node 22; no network.
+import { readFileSync } from "node:fs";
+import { gzipSync } from "node:zlib";
+const fail = (m) => { console.error("FAIL", m); process.exit(1); };
+const eq = (a, b, m) => { if (JSON.stringify(a) !== JSON.stringify(b)) fail(m + ": got " + JSON.stringify(a) + ", want " + JSON.stringify(b)); };
+globalThis.window = globalThis;
+new Function(readFileSync(new URL("../../site/data/extract.js", import.meta.url), "utf8"))();
+const X = globalThis.LogExtract;
+const twinSrc = readFileSync(new URL("../../site/twin.js", import.meta.url), "utf8");
+const auth = { authorization: "AWS4-HMAC-SHA256 Credential=ASIATWINREAD/x" };
+const tags = (x, n) => [...x.matchAll(new RegExp("<" + n + ">([^<]*)</" + n + ">", "g"))].map((m) => m[1]);
+
+async function loadPack(pack) {
+  globalThis.location = { origin: "http://localhost", search: "?pack=" + pack };
+  new Function(twinSrc)();
+  const T = globalThis.AwsTwin; T.reset();
+  if (T.pack() !== pack) fail("twin did not load pack " + pack);
+  const base = "https://" + T.buckets.logs + ".s3.eu-west-2.amazonaws.com/";
+  const get = (q) => T.handle(base + q, { method: "GET", headers: auth });
+  const x = await (await get("?list-type=2&prefix=cloudfront%2F")).text();
+  const keys = tags(x, "Key"), sizes = tags(x, "Size");
+  const objects = keys.map((k, i) => ({ Key: k, Size: +sizes[i] }));
+  const files = [];
+  for (const k of keys) files.push({ key: k, bytes: new Uint8Array(await (await get(k)).arrayBuffer()) });
+  return { objects, files };
+}
+
+async function run(pack) {
+  const { objects, files } = await loadPack(pack);
+  const d = X.discover(objects);
+  eq(d.files, 9, pack + " files"); eq(d.hours.length, 9, pack + " hours"); eq(d.other, [], pack + " keys outside the hourly layout");
+  eq(d.first, "2026-11-20T09", pack + " first hour"); eq(d.last, "2026-11-22T11", pack + " last hour");
+  eq(d.gaps.map((g) => g.hours), [21, 21], pack + " gaps (12:00 to 08:59 each night)");
+  const recs = [], skipped = []; let independent = [];
+  for (const f of files) {
+    const text = await X.gunzip(f.bytes);
+    const r = X.read(text, f.key);
+    r.records.forEach((x) => recs.push(X.normalise(x))); skipped.push(...r.skipped);
+    independent.push(...text.split("\n").filter(Boolean).map((l) => JSON.parse(l)));
+  }
+  eq(skipped, [], pack + " skipped lines");
+  eq(recs.length, independent.length, pack + " record count");
+  if (recs.some((r) => !r.src || !r.src.key || !r.src.line)) fail(pack + " a record without provenance");
+  const s = X.summarise(recs);
+  // every total checked against a plain count of the raw lines
+  eq(s.requests, independent.length, pack + " requests");
+  eq(s.bytes, independent.reduce((a, r) => a + r.sc_bytes, 0), pack + " bytes");
+  eq(s.errors, independent.filter((r) => r.sc_status >= 400).length, pack + " errors");
+  eq(s.clients, new Set(independent.map((r) => r.c_ip)).size, pack + " clients");
+  for (const v of ["vault-demo-001", "vault-demo-002"]) {
+    const want = independent.filter((r) => r.cs_uri_stem.startsWith("/vault/" + v + "/")).length;
+    eq((s.vaults.find((x) => x.key === v) || { requests: 0 }).requests, want, pack + " " + v);
+  }
+  if (s.hours.reduce((a, h) => a + h.requests, 0) !== s.requests) fail(pack + " hours do not add up");
+  if (s.first > s.last) fail(pack + " first after last");
+  return { d, s, recs };
+}
+
+const base = await run("baseline");
+eq(base.s.requests, 225, "baseline requests");
+eq(base.s.status.map((x) => [x.key, x.requests]), [["2xx", 190], ["4xx", 35]], "baseline status classes");
+eq(base.s.paths.filter((p) => p.errors).map((p) => p.key), ["/favicon.ico"], "baseline: every 404 is /favicon.ico");
+eq(base.s.vaults.map((v) => v.key), ["vault-demo-001", "vault-demo-002"], "baseline vaults");
+eq(base.s.networks.map((n) => n.key), ["203.0.113.0/24"], "baseline: one documentation /24");
+console.log("baseline:", X.headline(base.s, base.d));
+
+const atk = await run("attack");
+const probe = atk.recs.filter((r) => r.client === "203.0.113.66");
+if (probe.length < 15) fail("attack: probes missing");
+if (!atk.s.agent_kinds.find((k) => k.key === "bot")) fail("attack: sqlmap and Nuclei not seen as bots");
+// path traversal on the vault API must not be counted as a vault
+if (atk.s.vaults.some((v) => v.key === ".." || v.key.includes("/"))) fail("attack: traversal counted as a vault");
+const withQuery = atk.recs.find((r) => r.query.includes("key=../../secrets"));
+if (!withQuery || withQuery.path !== "/vault/vault-demo-001/files") fail("attack: query not split from the path");
+console.log("attack:  ", X.headline(atk.s, atk.d));
+
+const surge = await run("surge");
+eq(surge.s.vaults[0].key, "vault-demo-001", "surge: the hot vault first");
+if (surge.s.requests < 2000) fail("surge: expected ten times the traffic");
+console.log("surge:   ", X.headline(surge.s, surge.d));
+
+// formats the twin does not produce
+const cat = X.read('{"c-ip":"198.51.100.7","cs-uri-stem":"/a","sc-status":"200"}{"c-ip":"198.51.100.8","cs-uri-stem":"/b}","sc-status":"500"}\n', "k");
+eq(cat.records.length, 2, "concatenated JSON"); eq(cat.records[1].src, { key: "k", line: 1, part: 2 }, "part provenance");
+eq(X.normalise(cat.records[1]).path, "/b}", "brace inside a string");
+const tsv = X.read("#Version: 1.0\n#Fields: date time x-edge-location sc-bytes c-ip cs-method cs(Host) cs-uri-stem sc-status cs(User-Agent) cs-uri-query x-edge-result-type x-edge-request-id time-taken\n" +
+  "2026-11-21\t10:00:01\tLHR50-C1\t512\t2001:db8:abcd:12::1\tGET\td1.cloudfront.net\t/index.html\t200\tMozilla/5.0\t-\tHit\tabc123==\t0.002\nbroken line\n", "std.gz");
+eq(tsv.records.length, 1, "standard log line"); eq(tsv.skipped.length, 1, "broken line skipped");
+const n = X.normalise(tsv.records[0]);
+eq([n.t, n.net, n.result, n.request_id, n.host, n.ms, n.edge_city, n.kind, n.query], ["2026-11-21T10:00:01.000Z", "2001:db8:abcd::/48", "Hit", "abc123==", "d1.cloudfront.net", 2, "LHR", "page", ""], "standard log fields");
+eq(X.read("{not json\n", "k").skipped[0].why, "not JSON", "bad JSON reported");
+// two gzip members in one file
+const two = new Uint8Array([...gzipSync('{"c_ip":"203.0.113.1"}\n'), ...gzipSync('{"c_ip":"203.0.113.2"}\n')]);
+eq(X.read(await X.gunzip(two), "m").records.length, 2, "two gzip members");
+eq(X.network("::1"), "0:0:0::/48", "IPv6 short form");
+console.log("ok: extract (Discover, Read, Normalise, Summarise) on 3 packs and 4 extra formats");
