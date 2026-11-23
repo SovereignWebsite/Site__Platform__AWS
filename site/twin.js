@@ -762,7 +762,10 @@
       [["VaultFunctionUrl", "AWS::Lambda::Url", 2], ["VaultFunctionUrlPermission", "AWS::Lambda::Permission", 1], ["VaultFunctionInvokePermission", "AWS::Lambda::Permission", 1]],
       [["VaultDistribution", "AWS::CloudFront::Distribution", 240]],
       [["VaultRecordA", "AWS::Route53::RecordSet", 35], ["VaultRecordAAAA", "AWS::Route53::RecordSet", 35]]
-    ]
+    ],
+    // sws-vault-<id>-edge, in us-east-1 only (vault-edge.yaml): the certificate if there is a domain, the WAF web ACL if
+    // the rate limit is on. The seconds are the twin's own; with DNS elsewhere the certificate waits (stackSchedule).
+    edge: [[["VaultCertificate", "AWS::CertificateManager::Certificate", 180], ["VaultWebAcl", "AWS::WAFv2::WebACL", 30]]]
   };
   function vaultIds(account, region, name) {
     // Each stack its own stream, seeded from its name, so two stacks do not share ids (R-025 (d)).
@@ -771,7 +774,10 @@
     var r = rng("vault.ids:" + account + "/" + region + "/" + name + "@" + journal.length, seed), pick = function (abc, n) { var o = ""; for (var i = 0; i < n; i++) o += abc[Math.floor(r() * abc.length)]; return o; };
     var lower = "abcdefghijklmnopqrstuvwxyz0123456789", upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     return { stack: pick("0123456789abcdef", 8) + "-" + pick("0123456789abcdef", 4) + "-11ef-" + pick("0123456789abcdef", 4) + "-" + pick("0123456789abcdef", 12),
-      url: pick(lower, 32), distribution: "E" + pick(upper, 13), cfDomain: "d" + pick(lower, 13) + ".cloudfront.net", secret: pick("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 6) };
+      url: pick(lower, 32), distribution: "E" + pick(upper, 13), cfDomain: "d" + pick(lower, 13) + ".cloudfront.net", secret: pick("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 6),
+      // Drawn after the others, so a Vault stack's earlier ids are as before.
+      cert: uuid(), acl: uuid(), valName: pick("0123456789abcdef", 32), valValue: pick("0123456789abcdef", 32) + "." + pick("abcdefghijklmnopqrstuvwxyz", 10) };
+    function uuid() { var h = "0123456789abcdef"; return pick(h, 8) + "-" + pick(h, 4) + "-4" + pick(h, 3) + "-" + pick("89ab", 1) + pick(h, 3) + "-" + pick(h, 12); }
   }
   function physicalOf(st, logical) {
     var id = st.params.VaultId, a = st.account, rg = st.region, x = st.ids;
@@ -781,10 +787,13 @@
       VaultBucketPolicy: "sws-vault-" + id + "-data-" + a + "-" + rg, VaultFunctionRole: "sws-vault-" + id + "-api", VaultFunction: "sws-vault-" + id + "-api",
       VaultFunctionUrl: "arn:aws:lambda:" + rg + ":" + a + ":function:sws-vault-" + id + "-api", VaultFunctionUrlPermission: "sws-vault-" + id + "-api-url",
       VaultFunctionInvokePermission: "sws-vault-" + id + "-api-invoke", VaultDistribution: x.distribution,
-      VaultRecordA: st.params.DomainName || "", VaultRecordAAAA: st.params.DomainName || "" }[logical] || "";
+      VaultRecordA: st.params.DomainName || "", VaultRecordAAAA: st.params.DomainName || "",
+      VaultCertificate: "arn:aws:acm:" + rg + ":" + a + ":certificate/" + x.cert, VaultWebAcl: "arn:aws:wafv2:" + rg + ":" + a + ":global/webacl/sws-vault-" + id + "-waf/" + x.acl }[logical] || "";
   }
   function stackOutputs(st) {
     var p = st.params, x = st.ids, id = p.VaultId, a = st.account, rg = st.region, kv = function (k, v) { return { OutputKey: k, OutputValue: v }; };
+    if (st.kind === "edge") return [].concat(p.DomainName ? [kv("CertificateArn", physicalOf(st, "VaultCertificate"))] : [],
+      p.EnableRateLimit === "true" ? [kv("WebAclArn", physicalOf(st, "VaultWebAcl"))] : []);
     if (st.kind === "access") return [kv("DeployRoleArn", "arn:aws:iam::" + a + ":role/sws-vault-" + id + "-deploy"), kv("BoundaryArn", "arn:aws:iam::" + a + ":policy/sws-vault-" + id + "-boundary")];
     var base = p.DomainName ? "https://" + p.DomainName : "https://" + x.cfDomain;
     var out = [kv("Endpoint", base), kv("HealthCheck", base + "/api/info/health"), kv("DeployCheck", "https://" + x.cfDomain + "/health"),
@@ -798,6 +807,8 @@
     var waves = VAULT_WAVES[st.kind].map(function (wv) {
       return wv.filter(function (r) {
         if (st.kind === "vault" && r[0] === "VaultBoundary") return st.mode === "one-stack";
+        if (r[0] === "VaultCertificate") return !!st.params.DomainName;
+        if (r[0] === "VaultWebAcl") return st.params.EnableRateLimit === "true";
         return !/^VaultRecordA/.test(r[0]) || (st.params.DomainName && st.params.HostedZoneId);
       });
     }).filter(function (wv) { return wv.length; });
@@ -811,12 +822,20 @@
     // ROLLBACK_COMPLETE with no outputs. After boto3.aws.a's note 13 (work/boto3.aws.a 6b96561). The twin's own
     // choices, where AWS does not document them: the wording "Resource creation cancelled", the failure reasons, and
     // what a failed or cancelled resource shows in the rollback (DELETE_COMPLETE, or DELETE_SKIPPED if Retain).
-    var fail = st.failure, touched = [];
+    var fail = st.failure, touched = [], waiting = false;
     for (var wi = 0; wi < waves.length; wi++) {
       var wv = waves[wi], end = at, failing = fail && wv.some(function (r) { return r[0] === fail.logical; });
       var fAt = failing ? at + fail.after * 1000 : Infinity;
       wv.forEach(function (r) {
         ev(at, r[0], r[1], "CREATE_IN_PROGRESS");
+        // DNS elsewhere: ACM waits for its validation record, which CloudFormation shows in the events (vault-edge.yaml); the
+        // twin cannot see the customer's DNS, so the certificate, and the stack, stay in progress. The wording is the twin's.
+        if (r[0] === "VaultCertificate" && !st.params.HostedZoneId) {
+          ev(at + 400, r[0], r[1], "CREATE_IN_PROGRESS", { physical: physicalOf(st, r[0]), reason: "Resource creation Initiated" });
+          ev(at + 20000, r[0], r[1], "CREATE_IN_PROGRESS", { physical: physicalOf(st, r[0]), reason: "Content of DNS Record is: {Name: _" + st.ids.valName + "." + st.params.DomainName +
+            ".,Type: CNAME,Value: _" + st.ids.valValue + ".acm-validations.aws.}" });
+          waiting = true; return;
+        }
         if (at + 400 < fAt) ev(at + 400, r[0], r[1], "CREATE_IN_PROGRESS", { physical: physicalOf(st, r[0]), reason: "Resource creation Initiated" });
         var doneAt = at + r[2] * 1000;
         if (r[0] === (fail || {}).logical && failing) touched.push([r, "failed"]);
@@ -840,6 +859,7 @@
         ev(t + 500, st.name, "AWS::CloudFormation::Stack", "ROLLBACK_COMPLETE", { physical: st.stackId });
         return out;
       }
+      if (waiting) return out;
       at = end + 1000;
     }
     ev(at, st.name, "AWS::CloudFormation::Stack", "CREATE_COMPLETE", { physical: st.stackId, outputs: stackOutputs(st) });
@@ -861,11 +881,13 @@
     var find = function (n) { var st = n && acc.stacks[region + "/" + n]; if (st && !live(st)) st = null; if (!st && n) every().forEach(function (x) { if (x.stackId === n && x.region === region) st = x; }); return st || null; };
     var NS = " xmlns=\"http://cloudformation.amazonaws.com/doc/2010-05-15/\"";
     if (A === "CreateStack") {
-      var name = form.get("StackName") || "", params = map(), m = /^sws-vault-([0-9a-f]{12})(-access)?$/.exec(name);
+      var name = form.get("StackName") || "", params = map(), m = /^sws-vault-([0-9a-f]{12})(-access|-edge)?$/.exec(name);
       formParams(form, "Parameters").forEach(function (kv) { params[kv[0]] = kv[1]; });
-      if (!m) return cfnErr("ValidationError", "The twin's customer account holds Vault stacks only: sws-vault-<12 hex digits> or sws-vault-<12 hex digits>-access.");
-      // Bounds (security.aws.a, R-025 (b)): the twin's region only, and at most CUSTOMER_STACKS stacks in the account.
-      if (region !== REGION) return cfnErr("ValidationError", "The twin's customer account is in " + REGION + " only.");
+      if (!m) return cfnErr("ValidationError", "The twin's customer account holds Vault stacks only: sws-vault-<12 hex digits>, or that with -access or -edge.");
+      // Bounds (security.aws.a, R-025 (b)): the twin's region only (us-east-1 for the -edge stack only, which must be
+      // there: vault-edge.yaml's rule OnlyInUsEast1), and at most CUSTOMER_STACKS stacks in the account.
+      if (m[2] === "-edge" && region !== "us-east-1") return cfnErr("ValidationError", "CloudFront takes certificates and web ACLs from us-east-1 only. Run this stack in us-east-1.");
+      if (m[2] !== "-edge" && region !== REGION) return cfnErr("ValidationError", "The twin's customer account is in " + REGION + " only (and us-east-1 for the -edge stack).");
       if (Object.keys(acc.stacks).filter(function (k) { return live(acc.stacks[k]); }).length >= CUSTOMER_STACKS && !find(name)) return cfnErr("LimitExceededException", "The twin's customer account holds at most " + CUSTOMER_STACKS + " stacks.");
       // vault.yaml's AllowedPattern, checked before anything is made, as CloudFormation does (R-025 (c)).
       if (params.ImageUri != null && (params.ImageUri.length > 512 || !IMAGE_PATTERN.test(params.ImageUri)))
@@ -875,8 +897,8 @@
       var existing = find(name);
       if (existing && existing.status !== "DELETE_COMPLETE") return cfnErr("AlreadyExistsException", "Stack [" + name + "] already exists");
       var caps = []; for (var c = 1; c <= 8; c++) { var cv = form.get("Capabilities.member." + c); if (cv) caps.push(cv); }
-      if (caps.indexOf("CAPABILITY_NAMED_IAM") < 0) return cfnErr("InsufficientCapabilitiesException", "Requires capabilities : [CAPABILITY_NAMED_IAM]");
-      var kind = m[2] ? "access" : "vault", roleArn = form.get("RoleARN") || null, mode = null, collides = false;
+      if (m[2] !== "-edge" && caps.indexOf("CAPABILITY_NAMED_IAM") < 0) return cfnErr("InsufficientCapabilitiesException", "Requires capabilities : [CAPABILITY_NAMED_IAM]");
+      var kind = m[2] === "-access" ? "access" : m[2] === "-edge" ? "edge" : "vault", roleArn = form.get("RoleARN") || null, mode = null, collides = false;
       if (kind === "vault") {
         mode = params.DeployMode || "one-stack";
         if (mode !== "one-stack" && mode !== "access-stack") return cfnErr("ValidationError", "Parameter 'DeployMode' must be one of AllowedValues");
@@ -887,6 +909,17 @@
         // One-stack mode makes its own boundary; an -access stack's boundary of the same name makes the create fail.
         collides = mode === "one-stack" && !!access && access.status === "CREATE_COMPLETE";
         params.DeployMode = mode;
+      }
+      if (kind === "edge") {
+        // vault-edge.yaml's parameter rules, then its one structural rule: with no domain and no rate limit there is no
+        // resource, and CloudFormation refuses a template with none.
+        params.EnableRateLimit = params.EnableRateLimit || "false"; params.RateLimit = params.RateLimit || "1000"; params.RateWindowSec = params.RateWindowSec || "300";
+        if (["false", "true"].indexOf(params.EnableRateLimit) < 0) return cfnErr("ValidationError", "Parameter 'EnableRateLimit' must be one of AllowedValues");
+        if (["60", "120", "300", "600"].indexOf(params.RateWindowSec) < 0) return cfnErr("ValidationError", "Parameter 'RateWindowSec' must be one of AllowedValues");
+        if (!/^[0-9]{1,10}$/.test(params.RateLimit) || +params.RateLimit < 10 || +params.RateLimit > 2000000000) return cfnErr("ValidationError", "Parameter 'RateLimit' must be a number from 10 to 2000000000 (the twin's wording)");
+        if (params.DomainName && (params.DomainName.length > 253 || !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(params.DomainName))) return cfnErr("ValidationError", "Parameter 'DomainName' must match pattern of vault-edge.yaml");
+        if (params.HostedZoneId && !/^Z[A-Z0-9]{1,31}$/.test(params.HostedZoneId)) return cfnErr("ValidationError", "Parameter 'HostedZoneId' must match pattern ^$|^Z[A-Z0-9]{1,31}$");
+        if (!params.DomainName && params.EnableRateLimit !== "true") return cfnErr("ValidationError", "Template format error: At least one Resources member must be defined.");
       }
       var ids = vaultIds(account, region, name), stackId = "arn:aws:cloudformation:" + region + ":" + account + ":stack/" + name + "/" + ids.stack;
       var plain = {}; Object.keys(params).forEach(function (k) { plain[k] = params[k]; });
