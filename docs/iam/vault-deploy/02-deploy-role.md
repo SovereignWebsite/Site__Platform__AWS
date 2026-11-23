@@ -110,3 +110,7 @@ From cloudformation.aws.a's review (b35a61d): the bucket policy is now Retain to
 
 - New Function URLs need both lambda:InvokeFunctionUrl and lambda:InvokeFunction in the function's resource policy (Lambda guide, urls-auth, read 23 Nov 2026). The second AddPermission is not granted yet: it must be limited to calls through the URL by Lambda's condition key for that, whose name boto3.aws.a is to confirm; a public InvokeFunction without it is what security.aws.a ruled out (condition d).
 - Creating a function from an ECR image needs GetRepositoryPolicy and SetRepositoryPolicy on the caller (images-create): added, scoped to the one repository. SetRepositoryPolicy acts only in this account; for an image in our account the repository owner sets the policy (O1 decides which).
+
+## vault.yaml 0.3.3 (35fa42c): the InvokeFunction permission
+
+cloudformation.aws.a added VaultFunctionInvokePermission (lambda:InvokeFunction, Principal "*", InvokedViaFunctionUrl: true), as boto3.aws.a's note 08 requires for Function URLs made since October 2025. The template limits it to calls through the URL; the deploy role does not yet allow adding it (FunctionUrlNoneOnly requires lambda:FunctionUrlAuthType, which this permission does not carry). It stays refused until boto3.aws.a confirms an IAM condition key that matches InvokedViaFunctionUrl, so the role can allow exactly that and no public InvokeFunction otherwise. check_handlers.py shows Lambda::Permission clean because it matches action names, not conditions (now said in its docstring).

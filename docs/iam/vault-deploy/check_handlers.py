@@ -1,7 +1,9 @@
 """For each resource type in the Vault's templates, compare the permissions its CloudFormation handlers list (the
 resource schemas cfn-lint ships, a snapshot of the registry) with the deploy role in vault-access.yaml.
 A schema lists every permission a handler MAY need, for any property, so "missing" here means "check whether this
-template's properties need it", not "certainly broken". Reads files only; no AWS.
+template's properties need it", not "certainly broken". It matches action names only and does not evaluate
+conditions: an action allowed only under a condition (FunctionUrlNoneOnly on AddPermission, for example) counts as
+allowed here even when a given resource's call would not meet the condition. Reads files only; no AWS.
 Run: python3 -I docs/iam/vault-deploy/check_handlers.py <vault.yaml> [<vault-edge.yaml> ...]"""
 import fnmatch, json, os, sys
 import cfnlint
