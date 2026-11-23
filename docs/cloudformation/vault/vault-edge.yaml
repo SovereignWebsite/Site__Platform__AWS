@@ -3,14 +3,13 @@ Description: >-
   Stack sws-vault-<id>-edge, always in us-east-1: what CloudFront takes only from us-east-1. (1) The certificate for
   a Vault's own domain (optional): with the domain's hosted zone in this account ACM validates by DNS on its own;
   with DNS elsewhere the stack waits for the validation record that CloudFormation shows in the stack's events.
-  (2) An optional cost alarm on the distribution's request count (R-026; CloudFront's metrics are in us-east-1),
-  which emails the customer; the recommended guard. (3) An optional WAF web ACL with a per-address rate limit (off by
+  (2) An optional WAF web ACL with a per-address rate limit (off by
   default: billing.aws.a finds it adds cost rather than capping it). Its outputs go into the Vault stack's CertificateArn and WebAclArn.
-  DRAFT 0.5.2 by cloudformation.aws.a, 23 Nov 2026.
+  DRAFT 0.6.0 by cloudformation.aws.a, 23 Nov 2026.
 
 Metadata:
   SovereignWebsite:
-    TemplateVersion: 0.5.2-draft
+    TemplateVersion: 0.6.0-draft
 
 Parameters:
   VaultId:
@@ -48,34 +47,10 @@ Parameters:
     AllowedValues: [60, 120, 300, 600]
     Description: The rate limit's evaluation window in seconds (the values WAF allows).
 
-  DistributionId:
-    Type: String
-    MaxLength: 32
-    Default: ""
-    AllowedPattern: "^$|^E[A-Z0-9]{5,31}$"
-    Description: The Vault's CloudFront distribution (output DistributionId of sws-vault-<id>). Needed for the cost alarm; add it with a stack update after the Vault stack exists.
-  RequestAlarmThreshold:
-    Type: Number
-    Default: 0
-    MinValue: 0
-    Description: >-
-      Requests in 5 minutes above which the cost alarm fires. 0 means no alarm. The customer chooses it; the page can
-      suggest one from billing.aws.a's model.
-  AlertEmail:
-    Type: String
-    MaxLength: 254
-    Default: ""
-    AllowedPattern: "^$|^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
-    Description: >-
-      Where the cost alarm emails. Typed by the customer in their own console: the deploy page never asks for it,
-      prefills it or stores it (security.aws.a). AWS sends a confirmation email first. Empty means console only.
-
 Conditions:
   HasDomain: !Not [!Equals [!Ref DomainName, ""]]
   HasZone: !And [!Condition HasDomain, !Not [!Equals [!Ref HostedZoneId, ""]]]
   RateLimitOn: !Equals [!Ref EnableRateLimit, "true"]
-  CostAlarmOn: !And [!Not [!Equals [!Ref DistributionId, ""]], !Not [!Equals [!Ref RequestAlarmThreshold, 0]]]
-  CostAlarmEmail: !And [!Condition CostAlarmOn, !Not [!Equals [!Ref AlertEmail, ""]]]
 
 Rules:
   OnlyInUsEast1:
@@ -97,64 +72,6 @@ Resources:
         - !Ref AWS::NoValue
       Tags:
         - { Key: sws-vault, Value: !Ref VaultId }
-
-  # ---- cost alarm (R-026): CloudFront's request metrics are in us-east-1, namespace AWS/CloudFront, dimensions
-  # DistributionId and Region=Global, Requests a default metric at no extra charge (CloudFront developer guide, read by
-  # boto3.aws.a, note 16); the alarm itself bills as a CloudWatch alarm. It notifies; the kill switch that would
-  # disable the distribution (an alarm-driven Lambda) is sketched in 2026-11-23__vault-flood-guard-01.md, not built. ----
-  CostAlarmTopic:
-    Type: AWS::SNS::Topic
-    Condition: CostAlarmEmail
-    Properties:
-      TopicName: !Sub "sws-vault-${VaultId}-cost"
-      Subscription:
-        - { Protocol: email, Endpoint: !Ref AlertEmail }
-      Tags:
-        - { Key: sws-vault, Value: !Ref VaultId }
-
-  # Only this alarm may publish to the topic, so "cost" mail cannot be spoofed from inside the account (security.aws.a).
-  # The alarm's ARN is built from its name, not referenced, so there is no circular dependency.
-  CostAlarmTopicPolicy:
-    Type: AWS::SNS::TopicPolicy
-    Condition: CostAlarmEmail
-    Properties:
-      Topics: [!Ref CostAlarmTopic]
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Sid: OnlyThisAlarmPublishes
-            Effect: Allow
-            Principal: { Service: cloudwatch.amazonaws.com }
-            Action: sns:Publish
-            Resource: !Ref CostAlarmTopic
-            Condition:
-              ArnEquals: { "aws:SourceArn": !Sub "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:sws-vault-${VaultId}-requests" }
-          - Sid: NobodyElsePublishes
-            Effect: Deny
-            Principal: "*"
-            Action: sns:Publish
-            Resource: !Ref CostAlarmTopic
-            Condition:
-              ArnNotEquals: { "aws:SourceArn": !Sub "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:sws-vault-${VaultId}-requests" }
-
-  CostAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Condition: CostAlarmOn
-    Properties:
-      AlarmName: !Sub "sws-vault-${VaultId}-requests"
-      AlarmDescription: The Vault's CloudFront distribution is serving more requests than expected; CloudFront bills every request.
-      Namespace: AWS/CloudFront
-      MetricName: Requests
-      Dimensions:
-        - { Name: DistributionId, Value: !Ref DistributionId }
-        - { Name: Region, Value: Global }
-      Statistic: Sum
-      Period: 300
-      EvaluationPeriods: 1
-      Threshold: !Ref RequestAlarmThreshold
-      ComparisonOperator: GreaterThanThreshold
-      TreatMissingData: notBreaching
-      AlarmActions: !If [CostAlarmEmail, [!Ref CostAlarmTopic], !Ref AWS::NoValue]
 
   # A per-address rate limit. It caps one source, not a flood spread over many addresses; billing.aws.a prices it
   # (WAF has its own charges) and boto3.aws.a checks whether blocked requests still carry CloudFront's request charge.
@@ -189,9 +106,6 @@ Outputs:
   CertificateArn:
     Condition: HasDomain
     Value: !Ref VaultCertificate
-  CostAlarmName:
-    Condition: CostAlarmOn
-    Value: !Ref CostAlarm
   WebAclArn:
     Condition: RateLimitOn
     Value: !GetAtt VaultWebAcl.Arn

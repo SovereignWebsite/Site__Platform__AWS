@@ -129,16 +129,19 @@ check(e["Parameters"]["EnableRateLimit"]["Default"] == "false", "rate limit on b
 check(e["Resources"]["VaultWebAcl"]["Properties"]["Scope"] == "CLOUDFRONT", "web ACL scope")
 check(e["Resources"]["VaultWebAcl"]["Properties"]["Name"] == {"Fn::Sub": "sws-vault-${VaultId}-waf"}, "web ACL name")
 check(v["Parameters"]["WebAclArn"].get("Default") == "", "WebAclArn not optional")
-ER = e["Resources"]
-check(ER["CostAlarm"]["Condition"] == "CostAlarmOn" and e["Parameters"]["RequestAlarmThreshold"]["Default"] == 0, "cost alarm optional")
-check(ER["CostAlarm"]["Properties"]["AlarmName"] == {"Fn::Sub": "sws-vault-${VaultId}-requests"}, "cost alarm name (iam.aws.a scope)")
+check(not any(r["Type"] in ("AWS::CloudWatch::Alarm", "AWS::SNS::Topic") for r in e["Resources"].values()), "alarm or topic in -edge (runs as the deploy role; R-027)")
+a_t = load("vault-alarm.yaml")
+ER = a_t["Resources"]
+check("OnlyInUsEast1" in a_t["Rules"], "alarm stack us-east-1 rule")
+check("Condition" not in ER["CostAlarm"], "cost alarm conditional in its own stack")
+check(ER["CostAlarm"]["Properties"]["AlarmName"] == {"Fn::Sub": "sws-vault-${VaultId}-requests"}, "cost alarm name")
 check(ER["CostAlarmTopic"]["Properties"]["TopicName"] == {"Fn::Sub": "sws-vault-${VaultId}-cost"}, "cost topic name")
 tp = ER["CostAlarmTopicPolicy"]["Properties"]["PolicyDocument"]["Statement"]
 check({st["Sid"] for st in tp} == {"OnlyThisAlarmPublishes", "NobodyElsePublishes"}, "cost topic policy")
-# IAM can limit AlarmActions (cloudwatch:AlarmActions) but no documented key covers OKActions or InsufficientDataActions
-# (boto3.aws.a note 16), so the template itself must never set them (iam.aws.a).
+# IAM can limit AlarmActions but no documented key covers OKActions or InsufficientDataActions (boto3.aws.a note 16).
 check(not ({"OKActions", "InsufficientDataActions"} & set(ER["CostAlarm"]["Properties"])), "cost alarm has OK or insufficient-data actions")
-check(ER["CostAlarm"]["Properties"]["AlarmActions"] == {"Fn::If": ["CostAlarmEmail", [{"Ref": "CostAlarmTopic"}], {"Ref": "AWS::NoValue"}]}, "alarm actions only the cost topic (iam.aws.a)")
+check(ER["CostAlarm"]["Properties"]["AlarmActions"] == {"Fn::If": ["CostAlarmEmail", [{"Ref": "CostAlarmTopic"}], {"Ref": "AWS::NoValue"}]}, "alarm actions only the cost topic")
+check(all(r["Type"] in ("AWS::CloudWatch::Alarm", "AWS::SNS::Topic", "AWS::SNS::TopicPolicy") for r in ER.values()), "alarm stack holds more than alarm, topic and policy")
 
 if fails:
     print("FAIL\n  " + "\n  ".join(fails)); sys.exit(1)

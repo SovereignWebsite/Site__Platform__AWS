@@ -1,0 +1,107 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Stack sws-vault-<id>-alarm, in us-east-1 (CloudFront's metrics are there): an optional cost alarm on the Vault's
+  CloudFront request count (R-026), emailing the customer. Always run by the customer with their OWN console identity,
+  never with the deploy role, in both deploy modes: IAM cannot pin an alarm's OK or insufficient-data actions or its
+  metric, so the deploy role is never allowed to create alarms (security.aws.a, R-027). Run it after the Vault stack
+  exists, with its DistributionId output. DRAFT 0.1.0 by cloudformation.aws.a, 23 Nov 2026.
+
+Metadata:
+  SovereignWebsite:
+    TemplateVersion: 0.1.0-draft
+
+Parameters:
+  VaultId:
+    Type: String
+    MaxLength: 12
+    AllowedPattern: "^[0-9a-f]{12}$"
+  DistributionId:
+    Type: String
+    MaxLength: 32
+    AllowedPattern: "^E[A-Z0-9]{5,31}$"
+    Description: The Vault's CloudFront distribution (output DistributionId of stack sws-vault-<id>).
+  RequestAlarmThreshold:
+    Type: Number
+    MinValue: 1
+    Description: >-
+      Requests in 5 minutes above which the cost alarm fires. The customer chooses it; the page can suggest one from
+      billing.aws.a's model.
+  AlertEmail:
+    Type: String
+    MaxLength: 254
+    Default: ""
+    AllowedPattern: "^$|^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+    Description: >-
+      Where the cost alarm emails. Typed by the customer in their own console: the deploy page never asks for it,
+      prefills it or stores it (security.aws.a). AWS sends a confirmation email first. Empty means console only.
+
+Conditions:
+  CostAlarmEmail: !Not [!Equals [!Ref AlertEmail, ""]]
+
+Rules:
+  OnlyInUsEast1:
+    Assertions:
+      - Assert: !Equals [!Ref AWS::Region, us-east-1]
+        AssertDescription: CloudFront's metrics are published in us-east-1 only. Run this stack in us-east-1.
+
+Resources:
+  # ---- cost alarm (R-026): CloudFront's request metrics are in us-east-1, namespace AWS/CloudFront, dimensions
+  # DistributionId and Region=Global, Requests a default metric at no extra charge (CloudFront developer guide, read by
+  # boto3.aws.a, note 16); the alarm itself bills as a CloudWatch alarm. It notifies; the kill switch that would
+  # disable the distribution (an alarm-driven Lambda) is sketched in 2026-11-23__vault-flood-guard-01.md, not built. ----
+  CostAlarmTopic:
+    Type: AWS::SNS::Topic
+    Condition: CostAlarmEmail
+    Properties:
+      TopicName: !Sub "sws-vault-${VaultId}-cost"
+      Subscription:
+        - { Protocol: email, Endpoint: !Ref AlertEmail }
+      Tags:
+        - { Key: sws-vault, Value: !Ref VaultId }
+
+  # Only this alarm may publish to the topic, so "cost" mail cannot be spoofed from inside the account (security.aws.a).
+  # The alarm's ARN is built from its name, not referenced, so there is no circular dependency.
+  CostAlarmTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Condition: CostAlarmEmail
+    Properties:
+      Topics: [!Ref CostAlarmTopic]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: OnlyThisAlarmPublishes
+            Effect: Allow
+            Principal: { Service: cloudwatch.amazonaws.com }
+            Action: sns:Publish
+            Resource: !Ref CostAlarmTopic
+            Condition:
+              ArnEquals: { "aws:SourceArn": !Sub "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:sws-vault-${VaultId}-requests" }
+          - Sid: NobodyElsePublishes
+            Effect: Deny
+            Principal: "*"
+            Action: sns:Publish
+            Resource: !Ref CostAlarmTopic
+            Condition:
+              ArnNotEquals: { "aws:SourceArn": !Sub "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:sws-vault-${VaultId}-requests" }
+
+  CostAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "sws-vault-${VaultId}-requests"
+      AlarmDescription: The Vault's CloudFront distribution is serving more requests than expected; CloudFront bills every request.
+      Namespace: AWS/CloudFront
+      MetricName: Requests
+      Dimensions:
+        - { Name: DistributionId, Value: !Ref DistributionId }
+        - { Name: Region, Value: Global }
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: !Ref RequestAlarmThreshold
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [CostAlarmEmail, [!Ref CostAlarmTopic], !Ref AWS::NoValue]
+
+Outputs:
+  CostAlarmName:
+    Value: !Ref CostAlarm

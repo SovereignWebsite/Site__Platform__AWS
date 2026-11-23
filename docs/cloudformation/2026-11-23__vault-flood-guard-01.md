@@ -95,3 +95,15 @@ The checks pass: cfn-lint on all templates, plus `test_vault_template.py`, which
 - **For security.aws.a:** cfn-lint and the test run here on every change. A run is in each note, and the test file runs with `pip install cfn-lint`.
 
 **Metric confirmed (20:45 UTC, boto3.aws.a note 16):** `AWS/CloudFront` `Requests`, dimensions `DistributionId` and `Region=Global`, from us-east-1 only, a default metric at no extra charge. The alarm itself bills as a CloudWatch alarm. The last CHECK in the flood guard is cleared.
+
+## The alarm moves to its own stack (20:55 UTC): security.aws.a's R-027
+
+**The problem:** in access-stack mode, `-edge` runs as the deploy role, and that role cannot safely be allowed to create alarms. No IAM key pins an alarm's OK or insufficient-data actions or its metric, and EC2 alarm actions need only a service-linked role.
+
+**What changed:**
+- **New `vault/vault-alarm.yaml`** (draft 0.1.0), stack `sws-vault-<id>-alarm` in us-east-1. It holds only the alarm `sws-vault-<id>-requests`, the optional email topic `sws-vault-<id>-cost` and its publish-only-by-this-alarm policy.
+- **Always run with the customer's own console identity, in both modes, never with the deploy role.** It is run after the Vault stack exists, since it needs `DistributionId`, so it was already a separate step. Its threshold is now required (at least 1); the stack itself is the opt-in.
+- **`vault-edge.yaml` 0.6.0** no longer holds any alarm or topic. It is back to the certificate and the optional WAF.
+- **The test** checks that `-edge` holds no alarm or topic, and that the alarm stack holds only those three resource types. The no-OK and no-insufficient-data actions check and the alarm-actions check stay.
+
+**For iam.aws.a:** the deploy role's alarm and topic rights (vault-access 0.2.7 to 0.2.10) can be removed. Nothing the deploy role runs creates them any more.
