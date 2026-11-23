@@ -1,0 +1,65 @@
+{
+  "about": "Price book v1 for the AWS Platform stack, kept by billing.aws.c@SovereignWebsite.dinis. Every price is copied from AWS's public pricing pages, or from the price data file each page loads to fill its tables, on the date given. None is estimated or invented. List prices in US dollars, before tax, before any credit, discount or Savings Plan. A price not listed here is not known yet: the model says so and does not guess.",
+  "retrieved": "2026-11-23",
+  "currency": "USD",
+  "sources": {
+    "s3_page": "https://aws.amazon.com/s3/pricing/",
+    "s3_data": { "url": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/s3/USD/current/s3.json", "published": "2026-11-21T17:29:19Z" },
+    "lambda_page": "https://aws.amazon.com/lambda/pricing/",
+    "lambda_data": { "url": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/lambda/USD/current/lambda.json", "published": "2026-11-20T20:36:47Z" },
+    "firehose_page": "https://aws.amazon.com/kinesis/data-firehose/pricing/",
+    "firehose_data": { "url": "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/kinesisfirehose/USD/current/kinesisfirehose.json", "published": "2026-11-04T21:34:42Z" },
+    "cloudfront_page": "https://aws.amazon.com/cloudfront/pricing/",
+    "cloudfront_payg_page": "https://aws.amazon.com/cloudfront/pricing/pay-as-you-go/",
+    "cloudtrail_page": "https://aws.amazon.com/cloudtrail/pricing/",
+    "route53_page": "https://aws.amazon.com/route53/pricing/",
+    "cost_explorer_page": "https://aws.amazon.com/aws-cost-management/aws-cost-explorer/pricing/",
+    "cloudformation_page": "https://aws.amazon.com/cloudformation/pricing/"
+  },
+  "regions": {
+    "eu-west-2": "EU (London)",
+    "eu-west-1": "EU (Ireland)"
+  },
+  "prices": [
+    { "id": "s3.storage.standard.first50tb", "service": "S3", "unit": "GB-month", "eu-west-2": 0.024, "eu-west-1": 0.023, "source": "s3_data", "label": "Standard Storage First 50 TB per GB Mo" },
+    { "id": "s3.request.put", "service": "S3", "unit": "request", "eu-west-2": 0.0000053, "eu-west-1": 0.000005, "source": "s3_data", "label": "PUT COPY/POST or LIST requests per Requests", "note": "PUT, COPY, POST and LIST. $0.0053 and $0.005 per 1,000." },
+    { "id": "s3.request.get", "service": "S3", "unit": "request", "eu-west-2": 0.00000042, "eu-west-1": 0.0000004, "source": "s3_data", "label": "GET and all other requests per Requests", "note": "GET and all other requests. $0.00042 and $0.0004 per 1,000." },
+    { "id": "s3.transfer.to_cloudfront", "service": "S3", "unit": "GB", "eu-west-2": 0, "eu-west-1": 0, "source": "s3_page", "quote": "Data transferred out to Amazon CloudFront (CloudFront).", "note": "Listed on the S3 page among transfers with no charge." },
+
+    { "id": "cloudfront.transfer_out.europe.first1tb", "service": "CloudFront", "unit": "GB", "global": 0, "source": "cloudfront_payg_page", "quote": "Regional Data Transfer Out to Internet (per GB) ... Europe, Israel, and Türkiye ... First 1TB Free", "note": "Pay-as-you-go. Also in the always free tier: 1 TB of data transfer out each month." },
+    { "id": "cloudfront.transfer_out.europe.next9tb", "service": "CloudFront", "unit": "GB", "global": 0.085, "source": "cloudfront_payg_page", "quote": "Next 9TB $0.085 (Europe, Israel, and Türkiye)" },
+    { "id": "cloudfront.transfer_out.europe.next40tb", "service": "CloudFront", "unit": "GB", "global": 0.080, "source": "cloudfront_payg_page", "quote": "Next 40TB $0.080 (Europe, Israel, and Türkiye)" },
+    { "id": "cloudfront.request.https.europe", "service": "CloudFront", "unit": "request", "global": 0.0000012, "source": "cloudfront_payg_page", "quote": "HTTPS requests $0.0120 per 10,000 (Europe, Israel, and Türkiye); First 10MM HTTP(S) requests Free" },
+    { "id": "cloudfront.request.http.europe", "service": "CloudFront", "unit": "request", "global": 0.0000009, "source": "cloudfront_payg_page", "quote": "HTTP requests $0.0090 per 10,000 (Europe, Israel, and Türkiye)" },
+    { "id": "cloudfront.free_tier", "service": "CloudFront", "unit": "month", "free": { "transfer_out_gb": 1000, "requests": 10000000, "function_invocations": 2000000 }, "source": "cloudfront_payg_page", "quote": "Free Tier Always free 1 TB of data transfer out 10,000,000 HTTP or HTTPS Requests 2,000,000 CloudFront Function Invocations Each month", "note": "The page says 1 TB; the model counts it as 1,000 GB, as AWS's own tier steps read in TB. To confirm against a real bill." },
+    { "id": "cloudfront.flat_rate.plans", "service": "CloudFront", "unit": "distribution-month", "plans": { "Free": 0, "Pro": 15, "Business": 200, "Premium": 1000 }, "allowances": { "Free": { "requests": 1000000, "transfer_gb": 100 }, "Pro": { "requests": 10000000, "transfer_gb": 50000 } }, "source": "cloudfront_page", "quote": "Monthly price per distribution $0/month ... $15/month ... $200/month ... $1,000/month No overage charges", "note": "An alternative to pay-as-you-go, per distribution. Which pricing each real distribution uses is not known until Dinis signs in." },
+
+    { "id": "lambda.request.x86", "service": "Lambda", "unit": "request", "eu-west-2": 0.0000002, "eu-west-1": 0.0000002, "source": "lambda_data", "label": "Lambda Requests" },
+    { "id": "lambda.duration.x86.tier1", "service": "Lambda", "unit": "GB-second", "eu-west-2": 0.0000166667, "eu-west-1": 0.0000166667, "source": "lambda_data", "label": "Lambda Duration", "note": "First 6 billion GB-seconds a month (Lambda page)." },
+    { "id": "lambda.request.arm", "service": "Lambda", "unit": "request", "eu-west-2": 0.0000002, "eu-west-1": 0.0000002, "source": "lambda_data", "label": "Lambda Requests-ARM" },
+    { "id": "lambda.duration.arm.tier1", "service": "Lambda", "unit": "GB-second", "eu-west-2": 0.0000133334, "eu-west-1": 0.0000133334, "source": "lambda_data", "label": "Lambda Duration-ARM" },
+    { "id": "lambda.free_tier", "service": "Lambda", "unit": "month", "free": { "requests": 1000000, "gb_seconds": 400000 }, "source": "lambda_page", "quote": "The free tier includes one million requests and 400,000 GB-seconds per month." },
+
+    { "id": "firehose.ingest.directput.first500tb", "service": "Data Firehose", "unit": "GB", "eu-west-2": 0.035, "eu-west-1": 0.031, "source": "firehose_data", "label": "Per GB of data ingested first 500TB", "rounding": "Each record billed in 5 KB increments", "quote": "Ingestion pricing is tiered and billed per GB ingested in 5KB increments (a 3KB record is billed as 5KB, a 12KB record is billed as 15KB, etc.).", "quote_source": "firehose_page" },
+    { "id": "firehose.ingest.vendedlogs.first500tb", "service": "Data Firehose", "unit": "GB", "eu-west-2": 0.16, "eu-west-1": 0.14, "source": "firehose_data", "label": "Per GB of data ingested first 500TB Vended Logs", "note": "Applies if the logs reach Firehose as vended logs rather than Direct PUT. Which path the real CloudFront logs take is an open question (see README)." },
+    { "id": "firehose.decompress", "service": "Data Firehose", "unit": "GB", "eu-west-2": 0.00392, "eu-west-1": 0.00348, "source": "firehose_data", "label": "Per GB of data decompressed" },
+    { "id": "firehose.format_conversion", "service": "Data Firehose", "unit": "GB", "eu-west-2": 0.021, "eu-west-1": 0.019, "source": "firehose_data", "label": "Per GB of data format conversion" },
+
+    { "id": "cloudtrail.management.first_copy", "service": "CloudTrail", "unit": "event", "global": 0, "source": "cloudtrail_page", "quote": "Management events delivered to Amazon S3 $2.00 per 100,000 management events delivered (after first free copy; see AWS Free Tier for details)" },
+    { "id": "cloudtrail.management.extra_copy", "service": "CloudTrail", "unit": "event", "global": 0.00002, "source": "cloudtrail_page", "quote": "$2.00 per 100,000 management events delivered (after first free copy)" },
+    { "id": "cloudtrail.data_event", "service": "CloudTrail", "unit": "event", "global": 0.000001, "source": "cloudtrail_page", "quote": "Data events delivered to Amazon S3 $0.10 per 100,000 data events delivered" },
+
+    { "id": "route53.hosted_zone.first25", "service": "Route 53", "unit": "zone-month", "global": 0.50, "source": "route53_page", "quote": "Standard Hosted Zones $0.50 per hosted zone per month for the first 25 hosted zones", "note": "Not prorated for partial months." },
+    { "id": "route53.query.standard", "service": "Route 53", "unit": "query", "global": 0.0000004, "source": "route53_page", "quote": "Standard Queries $0.40 per million queries (first 1 billion queries per month)", "note": "Alias A/AAAA records mapped to the AWS services the page lists are not charged per query." },
+
+    { "id": "costexplorer.api.request", "service": "Cost Explorer", "unit": "request", "global": 0.01, "source": "cost_explorer_page", "quote": "Each request using your primary billing view ... will incur a cost of $0.01.", "note": "The page's billing view calls Cost Explorer: every refresh in real AWS mode costs a cent." }
+  ],
+  "not_priced_yet": [
+    "STS and IAM: no price row found on a pricing page yet; treated as unknown, not as free.",
+    "Cloud Control API: pricing page not yet read.",
+    "CloudFormation: the pricing page says charges apply to registry extensions (third-party resource types and hooks) per handler operation; it does not state a price for AWS::IAM resources in one line, so the sws-aws-platform stack is left unpriced, not called free.",
+    "CloudWatch Logs vended log delivery (a possible path for CloudFront standard logs): not yet read.",
+    "S3 data transfer out to the internet (direct, not through CloudFront): the region price data was read but the tiers for EU (London) and EU (Ireland) are not yet copied.",
+    "Free tiers for S3 and the AWS account-level credits: not applied; the model shows costs before them."
+  ]
+}
