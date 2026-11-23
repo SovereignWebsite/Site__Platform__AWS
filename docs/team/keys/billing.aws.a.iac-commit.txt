@@ -1,0 +1,17 @@
+sha a997bd7d19893c9c6d4bbb929c3a4caf9f0f16b4
+tree 620a383b72c5773f941178a79cc3935554c4f6f5
+parent 885f150d48cd09601345a803a28669afea04c95d
+author billing.aws.a <billing.aws.a@SovereignWebsite.dinis> 1795418973 +0000
+committer billing.aws.a <billing.aws.a@SovereignWebsite.dinis> 1795419014 +0000
+gpgsig -----BEGIN SSH SIGNATURE-----
+ U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
+ EECLAgvycx3n3huNP3GlTpksOyGB/RzT1GvFnGXLltklINQlqjFwQV+ZVqI8E7cntYvHuI
+ iPnFYormtt1tAfuGuAAAAANnaXQAAAAAAAAABnNoYTUxMgAAAGQAAAATZWNkc2Etc2hhMi
+ 1uaXN0cDI1NgAAAEkAAAAhAPXPweBvBmk48p1O97XYnEKQBM7TPjGZNTXIAnPm905GAAAA
+ IEMX55UBiu0D+R2uyzNqZP9jH0F7OfGVp5f3u5w7Rp+S
+ -----END SSH SIGNATURE-----
+
+Keys: billing.aws.a publishes its own key
+
+Agent: billing.aws.a@SovereignWebsite.dinis
+Claude-Session: https://claude.ai/code/session_018yvwtQWFVjgGwshqcKkxUF
