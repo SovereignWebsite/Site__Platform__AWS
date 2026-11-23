@@ -137,7 +137,8 @@ check("Condition" not in ER["CostAlarm"], "cost alarm conditional in its own sta
 check(ER["CostAlarm"]["Properties"]["AlarmName"] == {"Fn::Sub": "sws-vault-${VaultId}-requests"}, "cost alarm name")
 check(ER["CostAlarmTopic"]["Properties"]["TopicName"] == {"Fn::Sub": "sws-vault-${VaultId}-cost"}, "cost topic name")
 tp = ER["CostAlarmTopicPolicy"]["Properties"]["PolicyDocument"]["Statement"]
-check({st["Sid"] for st in tp} == {"OnlyThisAlarmPublishes", "NobodyElsePublishes"}, "cost topic policy")
+sids = {(st["Fn::If"][1] if "Fn::If" in st else st)["Sid"] for st in tp}
+check(sids == {"OnlyThisAlarmPublishes", "NobodyElsePublishes", "KillSwitchReportsFailure"}, f"cost topic policy {sids}")
 # IAM can limit AlarmActions but no documented key covers OKActions or InsufficientDataActions (boto3.aws.a note 16).
 for an in ("CostAlarm", "CostAlarmSlow"):
     check(not ({"OKActions", "InsufficientDataActions"} & set(ER[an]["Properties"])), f"{an} has OK or insufficient-data actions")
@@ -146,14 +147,20 @@ check(ER["CostAlarmSlow"]["Properties"]["AlarmActions"] == ER["CostAlarm"]["Prop
 acts = [a for a in walk(ER["CostAlarm"]["Properties"]["AlarmActions"]) if isinstance(a, dict) and ("Ref" in a or "Fn::GetAtt" in a)]
 check(all(a in ({"Ref": "CostAlarmTopic"}, {"Fn::GetAtt": ["KillSwitchFunction", "Arn"]}, {"Ref": "AWS::NoValue"}) for a in acts), f"alarm actions beyond the topic and the switch: {acts}")
 base = {"AWS::CloudWatch::Alarm", "AWS::SNS::Topic", "AWS::SNS::TopicPolicy"}
-switch = {"KillSwitchRole", "KillSwitchLogs", "KillSwitchFunction", "KillSwitchPermission", "KillSwitchPermissionSlow"}
+switch = {"KillSwitchRole", "KillSwitchLogs", "KillSwitchFunction", "KillSwitchPermission", "KillSwitchPermissionSlow",
+          "KillSwitchInvokeConfig", "KillSwitchErrorsAlarm"}
 for n, r in ER.items():
     check(r["Type"] in base or (n in switch and r.get("Condition") in ("KillSwitchOn", "SlowKillSwitch")), f"alarm stack holds {n} ({r['Type']}) outside the kill switch")
 check(a_t["Parameters"]["KillSwitch"]["Default"] == "off", "kill switch on by default")
 for pn in ("KillSwitchPermission", "KillSwitchPermissionSlow"):
     ksp = ER[pn]["Properties"]
     check(ksp["Principal"] == "lambda.alarms.cloudwatch.amazonaws.com" and "SourceArn" in ksp and "SourceAccount" in ksp, f"{pn}: kill switch invocable by more than its alarm")
-check(ER["KillSwitchFunction"]["Properties"]["ReservedConcurrentExecutions"] == 1, "kill switch concurrency")
+# No reservation on the switch: new accounts refuse one that takes unreserved below 10 (security.aws.a S2).
+check("ReservedConcurrentExecutions" not in ER["KillSwitchFunction"]["Properties"], "kill switch reserves concurrency")
+ek = ER["KillSwitchErrorsAlarm"]["Properties"]
+check(not ({"OKActions", "InsufficientDataActions"} & set(ek)), "errors alarm has OK or insufficient-data actions")
+check(ek["AlarmActions"] == {"Fn::If": ["CostAlarmEmail", [{"Ref": "CostAlarmTopic"}], {"Ref": "AWS::NoValue"}]}, "errors alarm acts beyond the topic")
+check(ER["KillSwitchInvokeConfig"]["Properties"]["MaximumRetryAttempts"] == 2, "kill switch retries")
 check(len(ER["KillSwitchFunction"]["Properties"]["Code"]["ZipFile"]) < 4096, "kill switch code over 4 KB")
 for st in walk(ER["KillSwitchRole"]["Properties"]["Policies"]):
     if isinstance(st, dict) and st.get("Effect") == "Allow":

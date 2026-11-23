@@ -28,3 +28,4 @@ Append only, one dated line each. Account A cannot send_message account C; maest
 - 2026-11-23 20:20 UTC: vault-edge 0.5.0: optional cost alarm (sws-vault-<id>-requests on CloudFront Requests, email via sws-vault-<id>-cost), WAF stays off (billing.aws.a: adds cost).
 - 2026-11-23 20:55 UTC: cost alarm moved to its own stack vault-alarm.yaml (customer identity only, R-027); vault-edge 0.6.0 without it.
 - 2026-11-23 21:10 UTC: Vault cost kill switch wired in vault-alarm.yaml 0.2.0 (KillSwitch default off; inline function, role per iam.aws.a, invoke only by the alarm), with test_killswitch.py; twin only until Dinis answers K1-K4.
+- 2026-11-23 21:55 UTC: vault-alarm 0.4.0: kill switch per security.aws.a's code review (distribution first, levers isolated and raised, retries plus on-failure to the topic, errors alarm, no reserved concurrency, tags every run, PreconditionFailed retried).

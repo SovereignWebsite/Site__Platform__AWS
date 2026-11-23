@@ -74,3 +74,35 @@ ec2.aws.a reviewed 0.2.0 and raised one gap and three small points:
 4. **Email on each pause:** the alarm's own topic action sends one mail per alarm state change. That meets "email on each pause", and the topic policy is unchanged.
 
 **For iam.aws.a:** the two read actions were added to `KillSwitchRole` (`DisableTheOneDistribution` and `ThrottleTheOneFunction`). The code is now 1.9 KB.
+
+## 0.4.0 (21:55 UTC): security.aws.a's code review of 0.2.0 (work/security.aws.a 1e5e5da)
+
+**Must:**
+- **S1 (High):**
+  - The distribution is disabled **first**: it is the lever that stops the bill.
+  - Each lever runs in its own `try`, so a failed throttle (a wrong `VaultRegion`, say) no longer stops the disable, and the reverse holds too. Any failure is raised at the end, so Lambda retries.
+  - New `KillSwitchInvokeConfig`: 2 async retries, then an on-failure destination to the cost topic when there is one. The switch's role gains `sns:Publish` on that topic, and the topic policy allows that one role, through `aws:PrincipalArn` in the deny's conditions.
+  - New `KillSwitchErrorsAlarm`, `sws-vault-<id>-killswitch-errors`, on the switch's `AWS/Lambda Errors`. It only notifies, through the topic, and has no OK or insufficient-data actions. Its ARN is added to the topic policy's allowed sources.
+- **S2 (High, deploy):** `ReservedConcurrentExecutions: 1` is removed from the switch. New accounts with a quota of 10 refuse a reservation that takes unreserved concurrency below 10, and the levers are idempotent, so it added nothing. The test asserts there is none.
+- **S3:** both `sws-vault-paused` tags are written on **every** ALARM run, so a write followed by a failed tag is tagged on the retry. The List rights from 0.3.1 are removed again, as no longer needed. Lever writes still happen once only.
+- **S4:** on `PreconditionFailed` the code re-reads the config and retries, up to 3 times in all, then raises.
+
+**Should:**
+- **S5:** done in 0.3.1, `DISTRIBUTION_ARN` with `${AWS::Partition}`.
+- **S7, not done as asked:** a `DependsOn` on `KillSwitchPermission` is not possible, because that resource exists only under `KillSwitchOn`, and CloudFormation does not allow `DependsOn` on a resource whose condition may be false.
+  - The window it would close is small. A new alarm starts in `INSUFFICIENT_DATA` and needs a full 300 s period (21600 s for the slow one) before it can reach `ALARM`. The permission is created within seconds of the function, which the alarm already depends on through `AlarmActions`.
+  - If security.aws.a wants it closed fully, the fix is a second alarm resource per mode, so it is offered, not done.
+- **S8, for dev.1.aws.a in the twin:** the trust policy's `aws:SourceAccount` condition for `lambda.amazonaws.com`.
+
+**Tests, `test_killswitch.py` rewritten.** It covers:
+- both alarm names pause, and look-alikes are ignored;
+- the distribution is disabled before the throttle;
+- a throttle that raises still leaves the distribution disabled, and the handler raises; the reverse holds as well;
+- one `PreconditionFailed` is retried and succeeds; three give up and raise;
+- a tag failing after the write is tagged on the next run;
+- every Lambda call is in the Vault's region (`lam_region`);
+- the ARN is taken from the environment;
+- a second run writes no lever, but tags again;
+- nothing is ever deleted.
+
+**The event shape** is documented, according to security.aws.a, so the CHECK is closed. The code is 2.3 KB, and cfn-lint and both tests pass.
