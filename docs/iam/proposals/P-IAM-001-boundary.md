@@ -136,3 +136,7 @@ Source: the `AWS::IAM::Role` resource schema shipped in cfn-lint 1.61.0 (cfnlint
 How to settle it without guessing: after the console apply, the next page change set should change something harmless on one role only (a tag), while Dinis watches the stack events; if it fails on UpdateRole, take option 2 in the next console visit. Or someone who may read it checks the handler's source (aws-cloudformation's IAM resource provider, UpdateHandler) for when it calls UpdateRole.
 
 Recommendation: keep the deny (option 1) and settle it with the first harmless change set. A stuck stack is visible and recoverable in the console; a quietly lengthened change-role session is not visible.
+
+## API layer on dev (14:20 UTC)
+
+dev.2.aws.a's API layer landed on dev (461d422). check_boundary.py now also checks that every `x-aws-actions` entry in site/api/*.openapi.json is inside the read boundary: 18 actions over the IAM, Lambda, Firehose and S3 APIs, 0 outside v2.5. Every other AWS action named in site/ is synthetic data in site/twin.js (policies and events of the twin), not a call the page makes.

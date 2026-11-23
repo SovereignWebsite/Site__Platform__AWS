@@ -6,6 +6,7 @@
    actions, so the boundary is never wider than today (security.aws.a B1, B2: a change set may widen the role's own
    policies up to the boundary, so a boundary on Resource "*" where today is scoped is a way out).
 Managed policies attached to the read role (ViewOnlyAccess, SecurityAudit) are not checked: the boundary caps them.
+3. Every x-aws-actions entry in site/api/*.openapi.json is inside the read boundary (run on a checkout of dev).
 Reads files only; no AWS. Run: python3 -I docs/iam/check_boundary.py  (needs cfn-lint installed for its YAML loader).
 """
 import fnmatch, json, sys
@@ -43,7 +44,23 @@ def check(role_name, boundary_name, res):
                 print("  BOUNDARY WIDER THAN TODAY:", b.get("Sid"), a, key(b["Resource"])); bad += 1
     return bad
 
+def api_reads(res):
+    """3. Every action site/api/*.openapi.json lists in x-aws-actions is allowed by the read role's boundary
+    (security.aws.a, v2.5: a view whose reads are outside the boundary is denied once it is applied)."""
+    import glob
+    allow = [a for s in stmts(res["ReadBoundary"]["Properties"]["PolicyDocument"]) if s["Effect"] == "Allow" for a in lst(s["Action"])]
+    bad = 0
+    print("== site/api x-aws-actions inside ReadBoundary")
+    for f in sorted(glob.glob("site/api/*.openapi.json")):
+        spec = json.load(open(f))
+        for path, ops in spec.get("paths", {}).items():
+            for op in ops.values():
+                for a in (op.get("x-aws-actions", []) if isinstance(op, dict) else []):
+                    if not any(covers(p, a) for p in allow):
+                        print("  OUTSIDE READ BOUNDARY:", a, "in", f, path); bad += 1
+    return bad
+
 res = load(DRAFT)["Resources"]
-bad = check("PlatformChange", "ChangeBoundary", res) + check("PlatformRead", "ReadBoundary", res)
+bad = check("PlatformChange", "ChangeBoundary", res) + check("PlatformRead", "ReadBoundary", res) + api_reads(res)
 print("problems:", bad)
 sys.exit(1 if bad else 0)
