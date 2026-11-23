@@ -14,6 +14,7 @@ docs/security/risks.md (R-001 to R-013) and docs/security/last-reviewed.txt.
 
 - Reviews of code, design and permissions only; AppSec and adversarial as Sonnet sub-agents. No pen or live testing.
 - Open at hand-over: R-001 fix (template v2.1, d67b560) reviewed, waits on Dinis's Approve; R-008 High (escalation through a change set); R-009 High (deploy signer check bypass); R-010 High (team code on the hub's origin); twin attack scenarios for viz (memo part 4); the .a agents' branches each ask for review before landing (lambda's twin patch, data's extract and view, dev.2's OpenAPI, swarm's view).
+- Also open: R-013 (c), connect-src *.amazonaws.com, Low (security.aws.c 06:28; no new risks 003976e..5d086db).
 - The C session has not yet installed sgit-ai (waited on Dinis): the A session makes its key at once.
 
 ## Wake
