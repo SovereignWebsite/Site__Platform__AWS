@@ -114,7 +114,13 @@ checks += 24;
   assert.deepEqual(e4.filter((e) => e.logical === "sws-vault-" + ID).map((e) => e.status), ["CREATE_IN_PROGRESS", "ROLLBACK_IN_PROGRESS", "ROLLBACK_COMPLETE"], "the stack rolls back");
   assert.equal(o4.status, "ROLLBACK_COMPLETE"); assert.deepEqual(o4.out, {}, "no outputs after a rollback");
   assert.ok(!e4.some((e) => e.logical === "VaultDistribution"), "nothing after wave 1 was started");
-  checks += 6;
+  const last = (l) => e4.filter((e) => e.logical === l).pop().status;
+  assert.equal(last("AccessToken"), "DELETE_COMPLETE", "a cancelled resource is DELETE_COMPLETE in the rollback");
+  assert.equal(last("VaultBucket"), "DELETE_SKIPPED", "Retain: the bucket is DELETE_SKIPPED");
+  assert.equal(last("VaultLogs"), "DELETE_SKIPPED", "Retain: the log group is DELETE_SKIPPED");
+  assert.equal(e4.filter((e) => e.status === "CREATE_FAILED" && e.logical !== "VaultBoundary").length, 4, "the four in-progress siblings are CREATE_FAILED");
+  assert.equal(((await cfn(t4, { Action: "DescribeStackEvents", StackName: "sws-vault-" + ID })).text.match(/Resource creation cancelled/g) || []).length, 4, "with the twin's wording");
+  checks += 11;
 }
 
 // 3d. ListStackResources: what was made, in creation order, with its physical id and status; DescribeStacks with no

@@ -744,12 +744,17 @@
       out.push({ at: new Date(ms).toISOString(), op: "cloudformation.stackEvent", target: st.stackId, data: d, actor: "aws:cloudformation", why: "clock.settle" }); };
     if (st.collides) {
       // One-stack mode with an -access stack's boundary already there: the name collides, wave 1 is cancelled, rollback.
+      // After boto3.aws.a's note 13 (work/boto3.aws.a 6b96561): in-progress siblings are CREATE_FAILED; on rollback
+      // DeletionPolicy Retain resources are DELETE_SKIPPED (AWS's stack-events guide), the rest DELETE_COMPLETE.
+      // The twin's own choices, where AWS does not document it: the wording "Resource creation cancelled", and what a
+      // resource that never finished shows in the rollback (DELETE_SKIPPED if Retain, else DELETE_COMPLETE).
+      var RETAIN = { VaultBucket: 1, VaultBucketPolicy: 1, VaultLogs: 1 };
       var w1 = waves[0], bad = "sws-vault-" + st.params.VaultId + "-boundary";
       w1.forEach(function (r) { ev(at, r[0], r[1], "CREATE_IN_PROGRESS"); });
       ev(at + 900, "VaultBoundary", "AWS::IAM::ManagedPolicy", "CREATE_FAILED", { reason: "Resource handler returned message: \"A policy called " + bad + " already exists. Duplicate names are not allowed.\" (HandlerErrorCode: AlreadyExists)" });
       w1.forEach(function (r) { if (r[0] !== "VaultBoundary") ev(at + 1000, r[0], r[1], "CREATE_FAILED", { reason: "Resource creation cancelled" }); });
       ev(at + 1100, st.name, "AWS::CloudFormation::Stack", "ROLLBACK_IN_PROGRESS", { physical: st.stackId, reason: "The following resource(s) failed to create: [" + w1.map(function (r) { return r[0]; }).sort().join(", ") + "]. Rollback requested by user." });
-      w1.forEach(function (r, i) { ev(at + 2000 + i * 300, r[0], r[1], "DELETE_COMPLETE"); });
+      w1.forEach(function (r, i) { ev(at + 2000 + i * 300, r[0], r[1], RETAIN[r[0]] ? "DELETE_SKIPPED" : "DELETE_COMPLETE"); });
       ev(at + 2000 + w1.length * 300 + 500, st.name, "AWS::CloudFormation::Stack", "ROLLBACK_COMPLETE", { physical: st.stackId });
       return out;
     }
