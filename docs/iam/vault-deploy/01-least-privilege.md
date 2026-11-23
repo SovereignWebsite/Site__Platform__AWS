@@ -19,9 +19,10 @@ iam.aws.a, 23 Nov 2026 ~15:05 UTC, for docs/team/plan-vault-deploy.md (work/cond
 Under A the page holds nothing in the customer's account, so it cannot read the stack's events. What it can do, in order of the customer's wait:
 
 1. **While the stack runs:** the customer's own console shows the events (they are already there, having pressed Create). The page shows what is happening in words and a time estimate from the template (viz.aws.a, step 7, can draw the expected resources appearing, marked "expected", not "seen").
-2. **When it ends, with a custom domain:** the page knows the domain (the customer typed it), so it polls without any credential: DNS for the name (a public DNS-over-HTTPS resolver, which needs a CSP connect-src entry: security.aws.a to agree), then `GET https://<domain>/health`.
-3. **When it ends, without a custom domain:** the CloudFront address is random, so the page cannot find it alone. The customer copies one value, the Vault's address, from the stack's Outputs tab into the page. One paste, no secret: an address is public.
-4. **Proof it is the right Vault:** the Vault's `/health` answers, with CORS for the deploy page's origin only, `{ vault_id, template_sha256, version }`. The page compares template_sha256 with the template it linked, so "live" means "live and running exactly the template you were shown".
+2. **When it ends, with a custom domain:** the page knows the domain (the customer typed it), so it checks DNS without any credential, through one fixed DNS-over-HTTPS resolver origin, GET only, the answer shown as text, with a line saying the domain is sent to that resolver (security.aws.a's terms for the CSP entry).
+3. **`/health` only from a page on its own origin.** Fetching `https://<typed domain>/health` needs `connect-src https:`, which on this site would undo the CSP's limit on where an injected script could send the sealed session (R-010; security.aws.a). So: if the deploy page is a new site with no session, key or credential (D1 = new site), it may fetch `/health`; if it is a tab of this site, it checks DNS only and offers `/health` as a link the customer opens in a new tab.
+4. **Without a custom domain:** the CloudFront or Function URL address is random, so the customer copies one value, the Vault's address, from the stack's Outputs tab. One paste, no secret: an address is public.
+5. **What `/health` proves, and what it does not.** `/health` (CORS for the deploy origin only, GET only, no Allow-Credentials, nothing secret in the body) may return `{ vault_id, template_sha256, version }`. That is what the running Vault says about itself: it catches a wrong or stale link, not tampering, since a tampered Vault can return the expected value. The real check stays before Create: the published sha256 against the linked template file.
 
 Not recommended for the first version: **a read role the stack creates** (choice B for reads), trusting Google with `aud` = the deploy page's client ID and `sub` = the customer's Google subject, allowed only `cloudformation:DescribeStacks` and `DescribeStackEvents` on `stack/sws-vault-<id>/*`. It gives live events, but it brings back a sign-in step that sherpa.aws.a cut, and it is a second trust ask: while the customer is signed in, any script in our page can read that stack. Offer it later as an opt-in if customers ask for live events in our page.
 
@@ -69,6 +70,7 @@ A customer-managed policy in the bootstrap stack, the most any role the Vault st
 ## Open, for the batch (pm.aws.a)
 
 1. D3: choice A for the first version (recommended), B later for reads and teardown, never C.
+1a. D1 (from security.aws.a): a deploy page on its own origin (new site, no session, key or credential) can check `/health` and the customer's domain freely; as a tab of this site it may check DNS only. This is an argument for D1 = a new site.
 2. Live progress: none in the first version (the customer's console shows it; the page checks DNS and /health at the end, with one paste when there is no custom domain), or a read role in the customer's account (B), which is a sign-in step and a second trust ask. Recommended: the first.
 3. Region and domain: whether the customer's hosted zone already exists (the deploy role then edits records in it) or the stack creates one (then the customer delegates the name servers themselves, outside AWS).
 
