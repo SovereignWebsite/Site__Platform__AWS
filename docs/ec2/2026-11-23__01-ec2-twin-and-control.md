@@ -24,40 +24,61 @@ Read before this: vaults design 04 (work/vaults.aws.a, 23f8b03), iam.aws.a's ste
 
 ### 2a. Wire format
 
-The page calls EC2 as the browser would call AWS: `POST https://ec2.<region>.amazonaws.com/`, form body `Action=<name>&Version=2016-11-15&...`, SigV4 signed, XML answers in the `http://ec2.amazonaws.com/doc/2016-11-15/` namespace, errors as `<Response><Errors><Error><Code>..</Code><Message>..</Message></Error></Errors><RequestID>..</RequestID></Response>` (*check*). The twin adds one line to `handle()`:
+Checked by boto3.aws.a (docs/boto3/2026-11-23__10-ec2-design-api-check.md, work/boto3.aws.a 74b9d1f) against botocore's `ec2/2016-11-15` model, the EC2 API reference and the Service Authorization Reference.
+
+The page calls EC2 as the browser would call AWS: `POST https://ec2.<region>.amazonaws.com/`, form body `Action=<name>&Version=2016-11-15&...`, SigV4 signed (scope `<region>/ec2/aws4_request`). botocore names the protocol `ec2`, a variant of Query: lists go in as `InstanceId.1`, `Filter.1.Name`, `Filter.1.Value.1`, `TagSpecification.1.Tag.1.Key`, nested structures as `MetadataOptions.HttpTokens`; answers are `<ActionResponse xmlns="http://ec2.amazonaws.com/doc/2016-11-15/">` with a lowercase `<requestId>` and lists as `...Set` of `<item>` (the twin copies each action's sample body from the API reference); errors are `<Response><Errors><Error><Code/><Message/></Error></Errors><RequestID/></Response>`, capital `RequestID`. An unsigned call is `MissingAuthenticationToken`, HTTP 403. The twin adds one line to `handle()`, matching the global host too:
 
 ```js
-else if (/^ec2\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = ec2(new URLSearchParams(body), init, host);
+else if (/^ec2(\.[a-z0-9-]+)?\.amazonaws\.com$/.test(host)) p = ec2(new URLSearchParams(body), init, host);
 ```
 
-The region is the host's second label, as Cloud Control already does. Lists use EC2's numbered form (`InstanceId.1`, `Filter.1.Name`, `Filter.1.Value.1`) (*check*).
+The region is the host's second label (us-east-1 for the global host), as Cloud Control already does.
+
+**To confirm, by Dinis only:** whether the EC2 endpoint answers a browser's cross-origin POST (CORS pre-flight). Nothing public says so, agents may not call AWS, and the whole read page (section 3) depends on it. It is one signed call from his browser on the read page's first version; if the answer is no, the read page needs another route (section 3).
 
 ### 2b. Actions in v1
 
 | Action | Twin answer | Notes |
 |---|---|---|
-| DescribeRegions | the twin's region list, with `OptInStatus` | the read page's region sweep starts here |
-| DescribeInstances | reservations and instances in that region, filters `instance-state-name`, `tag:<k>`, `tag-key`, `instance-id` | paginated with `NextToken` past 50 (the real default and maximum differ, *check*); the twin pages at a small size so the page's paging is tested |
+| DescribeRegions | the twin's regions, `RegionName`, `Endpoint`, `OptInStatus` | no paging; enabled regions only unless `AllRegions=true` |
+| DescribeInstances | reservations and instances, filters `instance-state-name`, `tag:<k>`, `tag-key`, `instance-id` | paging below |
 | DescribeInstanceStatus | state and checks, `IncludeAllInstances` | optional in v1 |
-| DescribeImages | `Owner.1=self` only, plus the AMIs the instances use | no public catalogue in the twin |
-| DescribeSecurityGroups | groups and rules in that region | the read page flags any rule open to 0.0.0.0/0 or ::/0 |
-| DescribeKeyPairs | name, id, fingerprint, type | **never key material**; see 2e |
-| DescribeTags | tags of instances | |
-| RunInstances | one or more new instances in `pending` | refuses what section 2f refuses |
-| StartInstances, StopInstances, TerminateInstances | state change lists (`currentState`, `previousState`) | |
-| CreateTags, DeleteTags | | how a stack or the scheduler marks what it owns |
+| DescribeInstanceCreditSpecifications | `standard` or `unlimited` per instance | credit mode is not on the Instance shape |
+| DescribeImages | `Owner.1=self` only, plus the AMIs the instances use | no public catalogue; without `Owner` the twin answers the same as `self` |
+| DescribeSecurityGroups | groups and rules | the read page flags any rule open to 0.0.0.0/0 or ::/0 |
+| DescribeVolumes | volumes, size, encryption, attachment | root volume size and encryption come from here, not the instance |
+| DescribeAddresses | Elastic IPs | no paging |
+| DescribeKeyPairs | `KeyName`, `KeyPairId`, `KeyFingerprint`, `KeyType`, `CreateTime` | no paging; **never key material**; see 2e |
+| DescribeTags | tags | |
+| RunInstances | one reservation of `MinCount` to `MaxCount` instances in `pending` | refuses what 2f refuses; default VPC, subnet and `default` security group when omitted |
+| StartInstances, StopInstances, TerminateInstances | `startingInstances`, `stoppingInstances`, `terminatingInstances` with `currentState`, `previousState` (`{code, name}`) | |
+| CreateTags, DeleteTags | `return` true | how a stack marks what it owns; 2f.9 |
+| CreateSecurityGroup, AuthorizeSecurityGroupIngress | the group id; `return` true | 2f.4 |
+| ImportKeyPair | `KeyFingerprint`, `KeyName`, `KeyPairId` | public key only; 2e |
 
-Anything else answers `InvalidAction` (HTTP 400), so a page that strays from the list fails loudly in the twin, not silently.
+AMIs come only from the pack (`ec2.registerImage` is a seed op, not a call). Anything else answers `InvalidAction` (status to confirm; the twin uses 400), so a page that strays fails loudly in the twin.
+
+**Paging** (boto3.aws.a): without `MaxResults` a Describe returns everything; with it, a page holds 0 to `MaxResults` items and may be **empty with a `nextToken`**; DescribeSecurityGroups and DescribeTags take 5 to 1000; `MaxResults` with `InstanceIds` is refused (`InvalidParameterCombination`, to confirm); a bad token is `InvalidPaginationToken`; order is not guaranteed, so tests never depend on it. DescribeRegions, DescribeKeyPairs and DescribeAddresses have no paging, so the read API returns `next: null` for them. The twin pages at a small size and returns one empty page with a token in its paging test.
+
+**EC2 behaviours the twin mimics** (boto3.aws.a, section 10):
+
+- `DryRun=true`: `DryRunOperation` if allowed, `UnauthorizedOperation` if not (a refusal outranks the dry run), and nothing written to the journal.
+- `IncorrectInstanceState` when the action does not fit the state (start a running instance, stop a terminated one).
+- TerminateInstances is idempotent: terminating a terminated instance succeeds.
+- All or nothing: one bad id in a multi-id Start, Stop or Terminate fails the whole call; a Describe with a malformed id errors, one with an id the account does not own leaves it out.
+- `InvalidInstanceID.Malformed` (not `i-` plus 8 or 17 hex) and `InvalidInstanceID.NotFound`, including for a short propagation delay after RunInstances (eventual consistency), clock-driven like the settles, delay in the pack.
+- `ClientToken` on RunInstances: the same token and parameters return the first reservation and launch nothing; the same token with other parameters fails `IdempotentParameterMismatch`; tokens are per region; at most 64 ASCII characters.
+- `InstanceLimitExceeded` and `VcpuLimitExceeded` above a pack-set limit, so the vCPU quota of section 4.5 is testable.
 
 ### 2c. The world and the journal
 
 One world per account (architect.aws.a, agreed with vaults.aws.a for the vault deploy): `w.ec2[region]` lives inside each account's world, account 111122223333's seed is that account's alone, and a twin customer account starts with an empty EC2 world unless its stack creates instances. Maps are `Object.create(null)`, as the journal's `map()`:
 
 ```
-w.ec2[region] = { instances: map(), images: map(), groups: map(), keyPairs: map() }
+w.ec2[region] = { instances: map(), volumes: map(), images: map(), groups: map(), keyPairs: map(), vpcs: map(), subnets: map() }
 ```
 
-An instance: `{ id, type, image, state, launched, stateChanged, stateReason, tags, groups: [id], profile: arn|null, vpc, subnet, keyName|null, publicIp|null, privateIp, az, metadataOptions, creditMode, rootVolume: { sizeGiB, encrypted } }`. `profile` is the instance profile's role, so the graph gets `instance runs_as role` as it does for Lambda and Firehose; v1 seeds one default VPC and subnet per region.
+An instance: `{ id, type, image, state, launched, stateChanged, stateReason, tags, groups: [id], profile: arn|null, vpc, subnet, keyName|null, publicIp|null, privateIp, az, metadataOptions, creditMode, rootVolume: volume id, clientToken }`, and `w.ec2[region].volumes` holds `{ id, sizeGiB, encrypted, attachedTo }`. The world's names are the twin's; the answers use the wire names (`LaunchTime`, `StateReason{Code,Message}`, `StateTransitionReason`, `SecurityGroups[{GroupId,GroupName}]`, `IamInstanceProfile{Arn,Id}`, `VpcId`, `SubnetId`, `Placement.AvailabilityZone`, `PublicIpAddress`, `PrivateIpAddress`, `MetadataOptions.HttpTokens`, `BlockDeviceMappings`). `creditMode` is answered only by DescribeInstanceCreditSpecifications, the volume only by DescribeVolumes. `profile` is the instance profile's role, so the graph gets `instance runs_as role` as it does for Lambda and Firehose; v1 seeds one default VPC and subnet per region.
 
 New journal operations, one small function each (the OPS table). Writes made by a call have the caller as actor (`actorOf(init)`) and `why` `plan.approve`, `pack.seed` or `schedule.<name>`; settles (2d) have actor `aws:ec2` and why `clock.settle`:
 
@@ -81,37 +102,40 @@ EC2's states: `pending` to `running`; `stopping` to `stopped`; `shutting-down` t
 
 **A read never writes** (architect.aws.a): the journal must not depend on whether or when someone looked, replay of an export must equal the live session, and design 02 step 3 needs every role-actor entry to match exactly one CloudTrail record. So settles are clock-driven, design 02's mechanism for timed steps:
 
+- A start goes `stopped`, `pending`, `running`, so StartInstances carries a `pending` settle like RunInstances.
 - The transition entry carries its settle: `ec2.setState { from: "running", to: "stopping", settles: { to: "stopped", at: t + 30000 } }` (RunInstances: `pending`, settles to `running`).
 - When the twin clock passes `at`, the twin emits `ec2.setState { from: "stopping", to: "stopped" }` with actor `aws:ec2` and why `clock.settle`. CloudTrail derives nothing from it (AWS logs no API call for a settle).
 - "Terminated stays visible, then goes" is a settle too: an `ec2.forget` entry at the end of the period.
 - The twin's one clock (dev.1.aws.a's, shared with stack events) gives `now()` and `tick(ms)`. When it is paused, as in tests, nothing settles until `tick`.
-- The delays (proposed: running after 20 s, stopped after 30 s, terminated after 15 s, forgotten after a period to *check*) are twin choices, not AWS figures, and live in the pack, not in code.
+- The delays (proposed: running after 20 s, stopped after 30 s, terminated after 15 s, forgotten after about an hour: AWS says "usually less than one hour", so this is a pack value, not a promise) are twin choices, not AWS figures, and live in the pack, not in code.
 
 Stopped instances keep their tags, private address and root volume, and lose a public address that was not an Elastic IP (*check*); the twin does the same so the read page shows what Dinis would see.
 
 ### 2e. Key pairs: names only
 
-`CreateKeyPair` returns the private key in its answer (*check*). The twin answers it with `UnsupportedOperation` and a message that says why: no private key passes through the page, the twin or an agent. `ImportKeyPair` is accepted with a public key only, and the twin keeps the name, id and fingerprint, never the key. Section 5 recommends no key pair at all for our instances (no SSH; Session Manager if a shell is ever needed, *check*).
+`CreateKeyPair` returns the private key in its answer (`keyMaterial`, confirmed by boto3.aws.a). The twin refuses it with `UnauthorizedOperation` (what a real IAM denial returns) and a message saying it is a twin refusal: no private key passes through the page, the twin or an agent. `ImportKeyPair` is accepted with a public key only, and the twin keeps the name, id and fingerprint, never the key (duplicate name `InvalidKeyPair.Duplicate`, bad key `InvalidKeyPair.Format`). Section 5 recommends no key pair at all for our instances, and no shell at all in v1 (5).
 
 ### 2f. What the twin refuses, so the guard rails are testable
 
 The twin enforces the same rules the real path would, so a test proves the page cannot get past them:
 
-1. `RunInstances` without the tags `sws:managed=true`, `sws:owner=<stack or plan>` and `sws:expires-at=<ISO time>` fails `UnauthorizedOperation` (in AWS this is an IAM condition on `aws:RequestTag`, section 4; *check*).
-2. A region not in the allowed list fails the same way (an IAM `aws:RequestedRegion` condition, *check*).
-3. `sws:expires-at` more than the maximum lifetime after launch fails (number from V5).
-4. A public SSH rule (port 22 from 0.0.0.0/0 or ::/0) in a security group made through the twin fails.
-5. `MetadataOptions.HttpTokens` other than `required` fails (IMDSv2 only).
-6. Start, Stop and Terminate on an instance without `sws:managed=true` fail `UnauthorizedOperation` (an `ec2:ResourceTag` condition, *check*).
-7. (from 6d) `CreditSpecification.CpuCredits=unlimited` on a t4g instance fails.
-8. An AMI not in the allow list fails (security.aws.a).
-9. CreateTags or DeleteTags on an `sws:*` key after launch fails, so an expiry cannot be pushed back (security.aws.a).
+Each rule is marked **IAM** (the real path enforces it with a condition, section 4) or **twin and template** (IAM cannot say it; the real guard is a template check, the sweeper or an account setting).
 
-DescribeInstanceAttribute and ModifyInstanceAttribute are not in 2b, so they answer `InvalidAction`: the page cannot read or change user data.
+1. **IAM.** `RunInstances` without the tags `sws:managed=true`, `sws:owner=<stack or plan>` and `sws:expires-at=<ISO time>` on both the instance and its volume fails `UnauthorizedOperation` (`aws:RequestTag` and `aws:TagKeys`, per resource type).
+2. **IAM.** A region not in the allowed list fails the same way (`aws:RequestedRegion`).
+3. **Twin and template** (to confirm with iam.aws.a whether an IAM date comparison on a tag value works). `sws:expires-at` more than the maximum lifetime after launch fails (number from V5).
+4. **Twin and template** (plus an AWS Config rule). A public SSH rule (port 22 from 0.0.0.0/0 or ::/0) fails.
+5. **IAM** (`ec2:MetadataHttpTokens`). `MetadataOptions.HttpTokens` other than `required` fails, **omitted included**: when omitted the real default depends on the AMI and the account, so the template always sets it.
+6. **IAM** (`ec2:ResourceTag/sws:managed`). Start, Stop and Terminate on an instance without `sws:managed=true` fail `UnauthorizedOperation`.
+7. **Twin and template** (no IAM key exists for it; the account default can be set per region with ModifyDefaultCreditSpecification, an AWS change for Dinis). `CreditSpecification.CpuCredits=unlimited` on a t4g instance, or omitted (the t4g default is unlimited), fails.
+8. **IAM** (`ec2:Owner` or `ec2:ImageID`). An AMI not in the allow list fails (security.aws.a).
+9. **IAM** (`aws:TagKeys`, `ec2:CreateAction` on CreateTags). CreateTags or DeleteTags on an `sws:*` key after launch fails, so an expiry cannot be pushed back (security.aws.a).
+
+DescribeInstanceAttribute and ModifyInstanceAttribute are not in 2b, so the twin answers `InvalidAction`: the page cannot read or change user data. (In AWS both exist; there the guard is that no role of ours is granted them, nor DescribeLaunchTemplateVersions, which also returns user data.)
 
 ### 2g. Seed data (pack baseline)
 
-Synthetic and labelled as such, in account 111122223333 like the rest of the twin: one stopped instance `demo-ec2-vault` in eu-west-2 (tagged as managed, with an expiry in the past so the read page shows an overdue one), one security group with HTTPS from CloudFront only, no key pairs, one AMI owned by self, and nothing in other regions, so the region sweep shows empty regions as empty. The attack pack adds nothing to EC2 in v1.
+Synthetic and labelled as such, in account 111122223333 like the rest of the twin: one stopped instance `demo-ec2-vault` in eu-west-2 (tagged as managed, with an expiry in the past so the read page shows an overdue one), a default VPC, subnet and `default` security group in every twin region (RunInstances falls back to them), one security group with HTTPS from CloudFront only, no key pairs, one AMI owned by self, and nothing in other regions, so the region sweep shows empty regions as empty. The attack pack adds nothing to EC2 in v1.
 
 ### 2h. Tests (test/twin/ec2.test.mjs)
 
@@ -130,9 +154,9 @@ Synthetic and labelled as such, in account 111122223333 like the rest of the twi
 
 **What it shows:** every region, the instances in it (name tag, type, state, age, `sws:expires-at` and whether it is overdue, public address, security group warnings), stopped instances' volumes still billed, and the cost so far and per hour from billing.aws.a's prices, labelled "list price, estimate" as billing.aws.a labels its others.
 
-**Permissions (iam.aws.a, docs/iam/ec2-01-answer.md on work/iam.aws.a):** do not rely on the read role's `ViewOnlyAccess`. P-IAM-001 v2.5 (cleared, pending Dinis's console apply) caps the read role with a boundary that names its reads exactly, which caps ViewOnlyAccess's EC2 reads out. So the page's reads are added by name to the read role and its boundary: `ec2:DescribeRegions`, `ec2:DescribeInstances`, `ec2:DescribeSecurityGroups`, and `ec2:DescribeVolumes` and `ec2:DescribeAddresses` for billed volumes and addresses. That is a console apply, so a plan for Dinis. **Never** `ec2:DescribeInstanceAttribute`: it returns user data, and the page never fetches user data (security.aws.a).
+**Permissions (iam.aws.a, docs/iam/ec2-01-answer.md on work/iam.aws.a):** do not rely on the read role's `ViewOnlyAccess`. P-IAM-001 v2.5 (cleared, pending Dinis's console apply) caps the read role with a boundary that names its reads exactly, which caps ViewOnlyAccess's EC2 reads out. So the page's reads are added by name to the read role and its boundary: `ec2:DescribeRegions`, `ec2:DescribeInstances`, `ec2:DescribeSecurityGroups`, and `ec2:DescribeVolumes` and `ec2:DescribeAddresses` for billed volumes and addresses. That is a console apply, so a plan for Dinis. **Never** `ec2:DescribeInstanceAttribute` or `ec2:DescribeLaunchTemplateVersions`: both return user data, and the page never fetches user data (security.aws.a, boto3.aws.a). EC2 reads have no resource-level permissions, so tags cannot narrow them: the read role sees every instance in every region it reads.
 
-**Calls:** DescribeRegions in one region, then DescribeInstances (and DescribeSecurityGroups) in each enabled region, in parallel with a small limit, from the browser with the read role, through the one transport (twin or AWS, docs/architecture/2026-11-23__01-one-transport-two-back-ends.md). Two calls per region; with about 17 default regions, about 35 signed calls per refresh (*check* the count of default regions). No polling: refresh on demand.
+**Calls:** DescribeRegions once, then DescribeInstances, DescribeSecurityGroups, DescribeVolumes and DescribeAddresses in each enabled region, in parallel with a small limit, from the browser with the read role, through the one transport (twin or AWS, docs/architecture/2026-11-23__01-one-transport-two-back-ends.md). With the 17 regions AWS enables by default that is 1 + 17 x 4 = 69 signed calls per refresh before extra pages (boto3.aws.a), so: refresh on demand, no polling, and a region filter that defaults to the allowed regions (two today), which makes the usual refresh 9 calls. The sweep of all regions stays one click away, because an instance in a region nobody looks at is the cost the page exists to catch. **If the EC2 endpoint refuses a browser's cross-origin call (2a)**, the read page cannot call EC2 directly; the fallback is Cloud Control's ListResources for `AWS::EC2::Instance` (the site already calls Cloud Control; *check* that its endpoint answers CORS, as the site's existing calls suggest).
 
 **CSP:** the page talks to `https://ec2.<region>.amazonaws.com`, already inside `connect-src https://*.amazonaws.com`. R-013 (c) suggests listing exact hosts; if the keeper does that, the EC2 hosts of the allowed regions join the list.
 
@@ -147,14 +171,16 @@ The change role has **no EC2 right today** (bootstrap.yaml:84-131). Any EC2 acti
 1. **Creating instances only through CloudFormation, with a service role** (security.aws.a's point 1): every EC2 deployment is a stack `sws-ec2-<fixed-length id>` made by the change set flow the site already has (diff, change set, two clicks). The stack runs as its own CloudFormation service role, as iam.aws.a's Vault deploy role does, so the change role holds only the change-set rights on `stack/sws-ec2-<id>/*` and `iam:PassRole` on that one service role, never RunInstances itself. P-IAM-002 drafts it once V4 is decided (iam.aws.a).
 2. **What the service role may launch**, conditions per resource type (iam.aws.a checked the keys in cfn-lint's IAM data; boto3.aws.a confirms against the live reference):
    - `ec2:RunInstances` on `instance/*` and `volume/*` with `aws:RequestTag/sws:managed`, `sws:owner`, `sws:expires-at` and `aws:TagKeys`; `aws:RequestedRegion` in the allowed list; `ec2:InstanceType` in the short list; `ec2:MetadataHttpTokens=required`; `ec2:Encrypted=true` on volumes;
-   - on `image/*`: an AMI allow list (`ec2:Owner` or exact ids);
+   - on `image/*`: an AMI allow list (`ec2:Owner` or `ec2:ImageID`);
+   - RunInstances also needs `security-group/*`, `subnet/*` and `network-interface/*` (required resource types): the allow covers them, scoped to the stack's own security group and the default VPC's subnets, and `network-interface/*` carries the same tag conditions;
+   - **no condition key exists for user data**, so what the instance runs is fixed only by the template under review and the AMI allow list;
    - exactly one passable instance role, with `iam:PassedToService=ec2.amazonaws.com`. User data can send that role's credentials anywhere, so the role holds only the bucket, the secret and logs;
-   - a Deny on `key-pair/*` (no key pair, ever);
+   - a Deny on `key-pair/*`, and on `ec2:CreateKeyPair` and `ec2:ImportKeyPair` (no key pair, ever);
    - `ec2:CreateTags` only with `ec2:CreateAction=RunInstances`; otherwise a Deny on CreateTags and DeleteTags for `sws:*` keys, so nobody can tag-hijack an unmanaged instance or push back an `sws:expires-at`;
    - **never** `ec2:ModifyInstanceAttribute`: new user data plus a start is new code running under the instance role.
 3. **Start and stop directly**, as a one-click plan, only with `ec2:ResourceTag/sws:managed=true`. These are reversible.
-4. **Terminate only by deleting the stack**, so nothing is left behind (volumes, security groups, addresses) and the delete is visible in CloudFormation's events.
-5. **What IAM cannot say, recorded as gaps:** a security group's CIDR (a template check plus an AWS Config rule), the number of instances (a low vCPU quota, an AWS change for Dinis), the maximum lifetime and the cost cap (twin refusals, a template check and the sweeper of 6b).
+4. **Terminate only by deleting the stack** (the service role, not the change role, holds Terminate and Stop), so nothing is left behind (volumes, security groups, addresses) and the delete is visible in CloudFormation's events.
+5. **What IAM cannot say, recorded as gaps:** a security group's CIDR (a template check plus an AWS Config rule), the number of instances (a low vCPU quota, an AWS change for Dinis), the CPU credit mode (a template check, or the account default per region, an AWS change for Dinis), user data (the template under review), the maximum lifetime and the cost cap (twin refusals, a template check and the sweeper of 6b).
 6. R-002 and R-008 still apply: a change-set right is reachable by a script in the page, so what the service role may launch is the real limit. EC2 adds cost risk on top of access risk.
 
 ## 5. EC2 as a second way to deploy the Vault
@@ -169,7 +195,7 @@ customer's account, chosen region (stack sws-vault-<id>, "ec2" variant)
 
 - **Same as the Lambda variant:** bucket (retained), secret (generated), CloudFront in front with `/health`, the domain phase, the names `sws-vault-<id>-<part>` and tags, the outputs. Only the compute differs, so the page, the `/health` check and iam.aws.a's deploy role change least.
 - **The instance:** the smallest arm64 type the image runs well on (billing.aws.a and a twin load test to choose; no number here), the image `diniscruz/sg-send-vault` pinned by digest, started by user data that pulls the image and runs it with `SEND__STORAGE_MODE=s3` (*check* how the token reaches the process: the same server question as vaults design 04 question 3; the instance role can read the secret at start-up, which avoids putting the token in the template or user data). Docker Hub is reachable from an instance, so the ECR question of design 04 (question 4) does not arise for EC2.
-- **No inbound SSH, no key pair**, IMDSv2 required, root volume encrypted, security group open to CloudFront's origin-facing addresses only (the AWS managed prefix list for CloudFront, *check*), so the instance is not reachable directly. This is stronger than the Lambda variant's public Function URL.
+- **No inbound SSH, no key pair, no shell in v1**: Session Manager would need `AmazonSSMManagedInstanceCore` on the instance role (boto3.aws.a), against the rule that the role holds only the bucket, the secret and logs; a broken instance is replaced, not repaired. IMDSv2 required, root volume encrypted, security group open to CloudFront's origin-facing addresses only (the AWS managed prefix list for CloudFront, *check*), so the instance is not reachable directly. This is stronger than the Lambda variant's public Function URL.
 - **What EC2 adds:** a disk (`SEND__STORAGE_MODE=disk` becomes possible, but `s3` stays recommended: an ephemeral instance loses its disk), a predictable hourly cost instead of per request, no cold starts. **What it costs:** an instance billed while it runs, whether used or not, and patching (the image is fixed by digest; the operating system needs updates, so ephemeral instances replaced often are simpler than long-lived ones).
 - **Why it matters for step 11:** a short-lived instance is the natural unit of "start for a couple of hours, destroy".
 
@@ -204,7 +230,7 @@ From billing.aws.a's rows (docs/billing/prices.json on work/billing.aws.a, retri
 eu-west-1 is a little lower for the instance (0.0046, 0.0184, 0.0368) and the same for the address. **Not counted:** the root volume (EBS gp3 is in billing.aws.a's not_priced_yet), CloudFront, S3, Secrets Manager, logs, data transfer, and t4g CPU credits above baseline. Two design points follow:
 
 1. **CPU credits:** t4g instances start in "unlimited" credit mode by default, which bills credits above baseline (*check*). Ephemeral instances should launch in "standard" mode (`CreditSpecification`), so an instance pinned at full CPU (a bug, or a flood) is slowed, not billed more. The twin refuses `unlimited` as a seventh rule in 2f.
-2. **The public address:** an instance behind CloudFront as a custom origin needs a public name, and so a public IPv4 billed by the hour, whether used or not (*check* whether CloudFront's VPC origins remove the need, which would also take the instance off the internet entirely). Counted above.
+2. **The public address:** an instance behind CloudFront as a custom origin needs a public name, and so a public IPv4 billed by the hour, whether used or not (*check* whether CloudFront's VPC origins remove the need, which would also take the instance off the internet entirely). Counted above. VPC origins do support instances in private subnets (boto3.aws.a), but such an instance still has to pull the image and reach S3 and Secrets Manager, through a NAT gateway or VPC endpoints, which cost more per hour than one address: to weigh with billing.aws.a once those rows exist.
 
 ### 6e. Guard rails for V5, to propose with numbers from the twin
 
@@ -232,7 +258,8 @@ No number is set here: V5 (b) says ec2.aws.a and billing.aws.a propose them from
 
 - **dev.1.aws.a** (took it, 15:04 UTC; after its privacy change and deploy step 4): build section 2 as one twin patch with test/twin/ec2.test.mjs, on top of work/dev.1.aws.a (49db094 or later); I review it against this design, architect.aws.a against design 02. The settle (2d) uses the twin clock dev.1.aws.a brings forward for stack events: `now()` and `tick(ms)`, clock-driven, never on read.
 - **architect.aws.a:** answered (15:06 UTC, docs/team/from-a/architect.aws.a.md); folded into 2c, 2d and 3. Later, not v1: a no-state `ec2.refused` entry so refused calls appear in the CloudTrail derivation.
-- **boto3.aws.a:** every *check* above, most of all 2a, 2d, 2f and 6b.
+- **boto3.aws.a:** answered (docs/boto3/2026-11-23__10-ec2-design-api-check.md, work/boto3.aws.a 74b9d1f); folded into 2a to 2g, 3, 4, 5. Still to confirm there: `InvalidAction` and `DryRunOperation` statuses, the error for `MaxResults` with `InstanceIds`, CloudFront's custom-origin port rule, and whether a stack can hold the schedule that deletes it.
+- **Dinis, via pm.aws.a, when the read page's first version exists:** one signed EC2 call from his browser to settle CORS (2a); not a decision, a test only he may run.
 - **iam.aws.a:** answered (docs/iam/ec2-01-answer.md); P-IAM-002 once V4 is decided.
 - **billing.aws.a:** done for t4g and public IPv4 (15:05 UTC, section 6d); still open: EBS gp3 per GB-month.
 - **security.aws.a:** reviewed (ff92c75), folded in.
