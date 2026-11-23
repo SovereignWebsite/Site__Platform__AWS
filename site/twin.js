@@ -19,13 +19,19 @@
   try { var qp = new URLSearchParams(root.location.search).get("pack"); if (qp && PACKS[qp]) pack = qp; else { var sp = localStorage.getItem("sws-aws-twin-pack"); if (sp && PACKS[sp]) pack = sp; } } catch (e) { /* none */ }
   var enc = new TextEncoder();
 
-  // ---- deterministic synthetic data ----
-  var seed = 20261123;
-  function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+  // ---- deterministic synthetic data: named random streams (design 02) ----
+  // Each consumer draws from its own stream, so adding one never shifts the numbers another one gets. v0's data is
+  // the "v0" stream with v0's seed, so step 1 gives byte-for-byte v0's output; latency has its own, as before, so the
+  // data never depends on how many calls came first.
+  var streams = {};
+  function rng(name, seed) {
+    if (streams[name]) return streams[name];
+    var s = seed;
+    return (streams[name] = function () { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; });
+  }
+  function rnd() { return rng("v0", 20261123)(); }
   function pick(a) { return a[Math.floor(rnd() * a.length)]; }
-  // Latency has its own generator, so the data never depends on how many calls came first.
-  var lseed = 7;
-  function lag() { lseed = (lseed * 1103515245 + 12345) & 0x7fffffff; return lseed / 0x7fffffff; }
+  function lag() { return rng("latency", 7)(); }
   function pad(n, w) { n = String(n); while (n.length < (w || 2)) n = "0" + n; return n; }
 
   // What the stream's processor (demo-log-enricher) adds to each line: the country (from the edge here; a real
@@ -68,6 +74,50 @@
       });
   }
 
+  // ---- design 02, step 1: a journal folded into a world ----
+  // Every fact in the synthetic account is an entry in one append-only journal, and the world the services answer
+  // from is the entries applied in order (design 02, docs/architecture/, architect.aws.a). A pack appends entries;
+  // later, generators, scenarios, actors, edits and feeds will too. Services read the world and turn every write
+  // into an entry, with the caller as its actor. An entry: { seq, t, actor, op, target, data, why, source }.
+  // Bodies stay lazy: data.body is a recipe ({ text }, { gzipText } or { zip: [[name, text], ...] }), made into
+  // bytes the first time something reads it, then kept, as v0 kept its promises.
+  var journal = [];
+  function emptyWorld() { return { objects: {}, cors: {}, roles: {}, template: null, stackStatus: "CREATE_COMPLETE", changeSets: {}, requests: {} }; }
+  function bodyOf(spec) {
+    if (spec.gzipText != null) return gzip(enc.encode(spec.gzipText));
+    if (spec.zip) return makeZip(spec.zip);
+    return Promise.resolve(enc.encode(spec.text));
+  }
+  function lazyObject(d) {
+    var o = { type: d.type, modified: d.modified, spec: d.body }, made = null;
+    Object.defineProperty(o, "body", { enumerable: false, get: function () { return made || (made = bodyOf(o.spec)); } });
+    return o;
+  }
+  // One small function per operation on the world: (world, entry) -> world changed in place.
+  var OPS = {
+    "s3.putObject": function (w, e) { var d = e.data; (w.objects[d.bucket] = w.objects[d.bucket] || {})[d.key] = lazyObject(d); },
+    "s3.putBucketCors": function (w, e) { w.cors[e.data.bucket] = JSON.parse(JSON.stringify(e.data.cors)); },
+    "s3.addCorsRule": function (w, e) { w.cors[e.data.bucket].CorsRules.push(JSON.parse(JSON.stringify(e.data.rule))); },
+    "iam.createRole": function (w, e) { w.roles[e.data.name] = JSON.parse(JSON.stringify(e.data.trust)); },
+    "iam.updateAssumeRolePolicy": function (w, e) { w.roles[e.data.name] = JSON.parse(JSON.stringify(e.data.trust)); },
+    "cloudformation.loadTemplate": function (w, e) { w.template = e.data.body; },
+    "cloudformation.createChangeSet": function (w, e) { w.changeSets[e.data.name] = e.data.body; },
+    "cloudformation.executeChangeSet": function (w, e) { w.template = w.changeSets[e.data.name]; w.stackStatus = "UPDATE_COMPLETE"; },
+    "cloudcontrol.requestFailed": function (w, e) { w.requests[e.data.token] = e.data.message; }
+  };
+  function apply(w, e) { var f = OPS[e.op]; if (!f) throw new Error("twin: no operation " + e.op); f(w, e); return w; }
+  function fold(entries) { return entries.reduce(apply, emptyWorld()); }
+  // Append an entry to the journal and apply it to the live world.
+  function record(e) {
+    var full = { seq: journal.length + 1, t: e.t || new Date().toISOString(), actor: e.actor || "twin", op: e.op, target: e.target || null,
+      data: e.data, why: e.why || null, source: e.source || "twin" };
+    journal.push(full);
+    if (state) apply(state, full);
+    return full;
+  }
+  // Who made a call: the twin's credentials name the role (ASIATWINREAD, ASIATWINCHANGE).
+  function actorOf(init) { var m = /Credential=ASIATWIN(\w+)/.exec(hdr(init, "authorization") || ""); return m ? "role:sws-aws-platform-" + m[1].toLowerCase() : "anonymous"; }
+
   // ---- the synthetic account ----
   var B = {
     site: ACCOUNT + "--demo-site--" + REGION,
@@ -77,15 +127,22 @@
     dotted: "demo.static.example"
   };
   var state = null;
-  function seedCors() {
-    var o = {}, origin = root.location ? root.location.origin : "http://localhost";
-    [B.logs, B.deps, B.trail, B.dotted].forEach(function (b) { o[b] = { CorsRules: [{ Id: "sws-aws-platform", AllowedOrigins: [origin], AllowedMethods: ["GET", "HEAD"], AllowedHeaders: ["*"], ExposedHeaders: ["ETag", "Content-Type", "Content-Length", "Last-Modified"], MaxAge: 3000 }] }; });
-    return o;
-  }
+  // The pack builds the account by appending entries; nothing else writes the world.
   function build() {
     if (state) return state;
-    var objects = {}; // bucket -> key -> { body: Promise<Uint8Array>, type, modified }
-    function put(bucket, key, type, body, when) { (objects[bucket] = objects[bucket] || {})[key] = { body: Promise.resolve(body).then(function (b) { return typeof b === "string" ? enc.encode(b) : b; }), type: type, modified: when || "2026-11-20T09:00:00.000Z" }; }
+    state = emptyWorld();
+    var source = "pack:" + pack;
+    // body: a string (text), or a recipe ({ gzipText } or { zip }).
+    function put(bucket, key, type, body, when, why) {
+      var modified = when || "2026-11-20T09:00:00.000Z";
+      record({ t: modified, actor: source, source: source, why: why || "pack.seed", op: "s3.putObject", target: "arn:aws:s3:::" + bucket + "/" + key,
+        data: { bucket: bucket, key: key, type: type, modified: modified, body: typeof body === "string" ? { text: body } : body } });
+    }
+    var origin = root.location ? root.location.origin : "http://localhost";
+    [B.logs, B.deps, B.trail, B.dotted].forEach(function (b) {
+      record({ t: "2026-11-18T09:00:00.000Z", actor: source, source: source, why: "pack.seed", op: "s3.putBucketCors", target: "arn:aws:s3:::" + b,
+        data: { bucket: b, cors: { CorsRules: [{ Id: "sws-aws-platform", AllowedOrigins: [origin], AllowedMethods: ["GET", "HEAD"], AllowedHeaders: ["*"], ExposedHeaders: ["ETag", "Content-Type", "Content-Length", "Last-Modified"], MaxAge: 3000 }] } } });
+    });
     // a small static site
     put(B.site, "index.html", "text/html", "<!doctype html>\n<html lang=\"en-GB\">\n<head><title>Demo site</title></head>\n<body><h1>Demo site</h1><p>Served from S3 through CloudFront.</p></body>\n</html>\n");
     put(B.site, "assets/site.css", "text/css", "body { font: 16px/1.5 system-ui; }\nh1 { color: #2456c7; }\n");
@@ -112,15 +169,15 @@
         }
         lines.sort();
       }
-      put(B.logs, "cloudfront/2026/11/" + day + "/" + pad(hour) + "/demo-distribution-1-2026-11-" + day + "-" + pad(hour) + "-00-00.gz", "application/x-gzip", gzip(enc.encode(lines.join("\n") + "\n")), "2026-11-" + day + "T" + pad(hour) + ":59:00.000Z");
+      put(B.logs, "cloudfront/2026/11/" + day + "/" + pad(hour) + "/demo-distribution-1-2026-11-" + day + "-" + pad(hour) + "-00-00.gz", "application/x-gzip", { gzipText: lines.join("\n") + "\n" }, "2026-11-" + day + "T" + pad(hour) + ":59:00.000Z", "cloudfront.traffic");
     }
     // Lambda dependencies as zips
-    put(B.deps, "lambdas-dependencies/demo-handler==v1.0.0.zip", "application/zip", makeZip([
+    put(B.deps, "lambdas-dependencies/demo-handler==v1.0.0.zip", "application/zip", { zip: [
       ["demo_handler/__init__.py", "from .handler import run\n"],
       ["demo_handler/handler.py", "import json\n\n\ndef run(event, context):\n    # Return the vault ids in the request\n    body = json.loads(event.get('body') or '{}')\n    return {'statusCode': 200, 'body': json.dumps({'vaults': body.get('vaults', [])})}\n"],
       ["demo_handler-1.0.0.dist-info/METADATA", "Metadata-Version: 2.1\nName: demo-handler\nVersion: 1.0.0\n"],
       ["config.json", JSON.stringify({ timeout: 30, memory: 256, region: REGION })]
-    ]), "2026-11-18T16:54:00.000Z");
+    ] }, "2026-11-18T16:54:00.000Z", "lambda.dependencies");
     // CloudTrail log files: one per region and five minutes. IAM is global, so its events are written under us-east-1.
     function trailEvent(n, e) {
       var role = e.write ? "sws-aws-platform-change" : "sws-aws-platform-read";
@@ -134,7 +191,7 @@
     }
     function trailFile(region, stamp, events, modified) {
       put(B.trail, "AWSLogs/" + ACCOUNT + "/CloudTrail/" + region + "/2026/11/22/" + ACCOUNT + "_CloudTrail_" + region + "_" + stamp + "_demo.json.gz", "application/x-gzip",
-        gzip(enc.encode(JSON.stringify({ Records: events }))), modified);
+        { gzipText: JSON.stringify({ Records: events }) }, modified, "cloudtrail.delivery");
     }
     trailFile(REGION, "20261122T1005Z", [trailEvent(1, { time: "2026-11-22T10:01:02Z", source: "s3.amazonaws.com", name: "GetObject", region: REGION, data: true, params: { bucketName: B.site, key: "data/vaults.json" } })], "2026-11-22T10:05:00.000Z");
     trailFile("us-east-1", "20261122T1005Z", [trailEvent(2, { time: "2026-11-22T10:04:40Z", source: "iam.amazonaws.com", name: "UpdateAssumeRolePolicy", region: "us-east-1", write: true, params: { roleName: "sovereignwebsite-factory-dns", policyDocument: "(the new trust policy)" } })], "2026-11-22T10:05:00.000Z");
@@ -148,12 +205,11 @@
       return { Version: "2012-10-17", Statement: [{ Effect: "Allow", Principal: { Federated: "accounts.google.com" }, Action: "sts:AssumeRoleWithWebIdentity",
         Condition: { StringEquals: { "accounts.google.com:aud": "twin-client-id.apps.googleusercontent.com", "accounts.google.com:sub": "000000000000000000001" } } }] };
     }
-    state = {
-      objects: objects, cors: seedCors(),
-      roles: { "sws-aws-platform-read": platformTrust(), "sws-aws-platform-change": platformTrust(), "sovereignwebsite-factory-dns": { Version: "2012-10-17", Statement: [{ Effect: "Allow", Principal: { Federated: "arn:aws:iam::" + ACCOUNT + ":oidc-provider/token.actions.githubusercontent.com" }, Action: "sts:AssumeRoleWithWebIdentity",
-        Condition: { StringEquals: { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com", [K]: ["repo:SovereignWebsite@358722364/SovereignWebsite__IaC@1464324035:environment:apply", "repo:SovereignWebsite@358722364/SovereignWebsite__Factory@1464324035:environment:apply"] } } }] } },
-      template: null, stackStatus: "CREATE_COMPLETE", changeSets: {}, requests: {}
-    };
+    var roles = { "sws-aws-platform-read": platformTrust(), "sws-aws-platform-change": platformTrust(), "sovereignwebsite-factory-dns": { Version: "2012-10-17", Statement: [{ Effect: "Allow", Principal: { Federated: "arn:aws:iam::" + ACCOUNT + ":oidc-provider/token.actions.githubusercontent.com" }, Action: "sts:AssumeRoleWithWebIdentity",
+      Condition: { StringEquals: { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com", [K]: ["repo:SovereignWebsite@358722364/SovereignWebsite__IaC@1464324035:environment:apply", "repo:SovereignWebsite@358722364/SovereignWebsite__Factory@1464324035:environment:apply"] } } }] } };
+    Object.keys(roles).forEach(function (name) {
+      record({ t: "2026-11-18T09:00:00.000Z", actor: source, source: source, why: "pack.seed", op: "iam.createRole", target: "arn:aws:iam::" + ACCOUNT + ":role/" + name, data: { name: name, trust: roles[name] } });
+    });
     return state;
   }
 
@@ -191,19 +247,23 @@
     var s = build(), A = form.get("Action"), name = form.get("RoleName");
     if (!s.roles[name]) return xmlErr("NoSuchEntity", "The role with name " + name + " cannot be found.", 404);
     if (A === "GetRole") return xml("<GetRoleResponse><GetRoleResult><Role><RoleName>" + esc(name) + "</RoleName><AssumeRolePolicyDocument>" + encodeURIComponent(JSON.stringify(s.roles[name])) + "</AssumeRolePolicyDocument></Role></GetRoleResult></GetRoleResponse>");
-    if (A === "UpdateAssumeRolePolicy") { var p = JSON.parse(form.get("PolicyDocument")); p.Statement.forEach(function (st) { st.Condition = collapse(st.Condition); }); s.roles[name] = p; return xml("<UpdateAssumeRolePolicyResponse/>"); }
+    if (A === "UpdateAssumeRolePolicy") {
+      var p = JSON.parse(form.get("PolicyDocument")); p.Statement.forEach(function (st) { st.Condition = collapse(st.Condition); });
+      record({ actor: actorOf(init), op: "iam.updateAssumeRolePolicy", target: "arn:aws:iam::" + ACCOUNT + ":role/" + name, data: { name: name, trust: p }, why: "plan.approve" });
+      return xml("<UpdateAssumeRolePolicyResponse/>");
+    }
     return xmlErr("InvalidAction", "Not in the twin yet: iam " + A);
   }
   function cloudformation(form, init) {
     if (!signed(init)) return xmlErr("MissingAuthenticationToken", "Request is missing Authentication Token", 403);
     var s = build(), A = form.get("Action");
     var ready = s.template ? Promise.resolve(s.template) : fetch(new URL("cloudformation/bootstrap.yaml", document.baseURI)).then(function (r) { return r.text(); })
-      .then(function (t) { s.template = t.replace("Description: >-\n", "Description: >-\n  (twin: an older version)\n"); return s.template; });
+      .then(function (t) { record({ op: "cloudformation.loadTemplate", target: "arn:aws:cloudformation:" + REGION + ":" + ACCOUNT + ":stack/sws-aws-platform", data: { body: t.replace("Description: >-\n", "Description: >-\n  (twin: an older version)\n") } }); return s.template; });
     return ready.then(function () {
       if (A === "GetTemplate") return xml("<GetTemplateResponse><GetTemplateResult><TemplateBody>" + esc(s.template) + "</TemplateBody></GetTemplateResult></GetTemplateResponse>");
-      if (A === "CreateChangeSet") { s.changeSets[form.get("ChangeSetName")] = form.get("TemplateBody"); return xml("<CreateChangeSetResponse><CreateChangeSetResult><Id>twin</Id></CreateChangeSetResult></CreateChangeSetResponse>"); }
+      if (A === "CreateChangeSet") { record({ actor: actorOf(init), op: "cloudformation.createChangeSet", target: "arn:aws:cloudformation:" + REGION + ":" + ACCOUNT + ":stack/sws-aws-platform", data: { name: form.get("ChangeSetName"), body: form.get("TemplateBody") }, why: "plan.approve" }); return xml("<CreateChangeSetResponse><CreateChangeSetResult><Id>twin</Id></CreateChangeSetResult></CreateChangeSetResponse>"); }
       if (A === "DescribeChangeSet") return xml("<DescribeChangeSetResponse><DescribeChangeSetResult><Status>CREATE_COMPLETE</Status><Changes><member><ResourceChange><Action>Modify</Action><LogicalResourceId>PlatformRead</LogicalResourceId><ResourceType>AWS::IAM::Role</ResourceType><Replacement>False</Replacement></ResourceChange></member><member><ResourceChange><Action>Modify</Action><LogicalResourceId>PlatformChange</LogicalResourceId><ResourceType>AWS::IAM::Role</ResourceType><Replacement>False</Replacement></ResourceChange></member></Changes></DescribeChangeSetResult></DescribeChangeSetResponse>");
-      if (A === "ExecuteChangeSet") { s.template = s.changeSets[form.get("ChangeSetName")]; s.stackStatus = "UPDATE_COMPLETE"; return xml("<ExecuteChangeSetResponse/>"); }
+      if (A === "ExecuteChangeSet") { record({ actor: actorOf(init), op: "cloudformation.executeChangeSet", target: "arn:aws:cloudformation:" + REGION + ":" + ACCOUNT + ":stack/sws-aws-platform", data: { name: form.get("ChangeSetName") }, why: "plan.approve" }); return xml("<ExecuteChangeSetResponse/>"); }
       if (A === "DescribeStacks") return xml("<DescribeStacksResponse><DescribeStacksResult><Stacks><member><StackName>sws-aws-platform</StackName><StackStatus>" + s.stackStatus + "</StackStatus></member></Stacks></DescribeStacksResult></DescribeStacksResponse>");
       return xmlErr("InvalidAction", "Not in the twin yet: cloudformation " + A);
     });
@@ -220,10 +280,11 @@
       return json({ TypeName: q.TypeName, ResourceDescription: { Identifier: q.Identifier, Properties: JSON.stringify(props) } });
     }
     if (target === "UpdateResource") {
-      if (region !== REGION) { s.requests.bad = "The bucket you are attempting to access must be addressed using the specified endpoint."; return json({ ProgressEvent: { RequestToken: "bad", OperationStatus: "IN_PROGRESS" } }); }
+      if (region !== REGION) { record({ actor: actorOf(init), op: "cloudcontrol.requestFailed", target: "arn:aws:s3:::" + q.Identifier, data: { token: "bad", message: "The bucket you are attempting to access must be addressed using the specified endpoint." } }); return json({ ProgressEvent: { RequestToken: "bad", OperationStatus: "IN_PROGRESS" } }); }
       JSON.parse(q.PatchDocument).forEach(function (op) {
-        if (op.path === "/CorsConfiguration") s.cors[q.Identifier] = op.value;
-        else if (op.path === "/CorsConfiguration/CorsRules/-") s.cors[q.Identifier].CorsRules.push(op.value);
+        var who = actorOf(init), target = "arn:aws:s3:::" + q.Identifier;
+        if (op.path === "/CorsConfiguration") record({ actor: who, op: "s3.putBucketCors", target: target, data: { bucket: q.Identifier, cors: op.value }, why: "plan.approve" });
+        else if (op.path === "/CorsConfiguration/CorsRules/-") record({ actor: who, op: "s3.addCorsRule", target: target, data: { bucket: q.Identifier, rule: op.value }, why: "plan.approve" });
       });
       return json({ ProgressEvent: { RequestToken: "ok", OperationStatus: "IN_PROGRESS" } });
     }
@@ -353,7 +414,10 @@
     return Promise.resolve(p).then(function (r) { return new Promise(function (res) { setTimeout(function () { res(r); }, 60 + lag() * 120); }); });
   }
 
-  root.AwsTwin = { handle: handle, account: ACCOUNT, buckets: B, reset: function () { state = null; seed = 20261123; lseed = 7; },
+  root.AwsTwin = { handle: handle, account: ACCOUNT, buckets: B, reset: function () { state = null; journal = []; streams = {}; },
+    // The journal (design 02): a copy of every entry so far, and a fold of any list of entries into a world.
+    journal: function () { build(); return JSON.parse(JSON.stringify(journal)); },
+    fold: function (entries) { return fold(entries); },
     packs: PACKS, pack: function () { return pack; },
     usePack: function (name) { if (!PACKS[name]) return; try { localStorage.setItem("sws-aws-twin-pack", name); } catch (e) { /* none */ } } };
 })(window);
