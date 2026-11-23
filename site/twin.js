@@ -7,6 +7,16 @@
 (function (root) {
   "use strict";
   var ACCOUNT = "111122223333", REGION = "eu-west-2";
+  // Demo packs: each is a whole synthetic world; loading one changes what every view shows.
+  // Dinis, 23 Nov 2026: "imagine like you can have multiple twins data sets"; "here's the attack ... or this
+  // some extra traffic flying around".
+  var PACKS = {
+    baseline: { title: "Normal day", about: "A small site behind CloudFront, its logs written by Firehose, two vaults in use.", perHour: 25, attack: false },
+    attack: { title: "Attack in progress", about: "One address scanning for secrets and admin pages, then trying path traversal on the vault API, among normal visitors.", perHour: 25, attack: true },
+    surge: { title: "Traffic surge", about: "Ten times the usual visitors, most of them on one vault's files.", perHour: 250, attack: false, hot: "/vault/vault-demo-001/files" }
+  };
+  var pack = "baseline";
+  try { var qp = new URLSearchParams(root.location.search).get("pack"); if (qp && PACKS[qp]) pack = qp; else { var sp = localStorage.getItem("sws-aws-twin-pack"); if (sp && PACKS[sp]) pack = sp; } } catch (e) { /* none */ }
   var enc = new TextEncoder();
 
   // ---- deterministic synthetic data ----
@@ -69,12 +79,23 @@
     // CloudFront logs delivered by Firehose: one gzip of JSON lines per hour
     var paths = ["/", "/index.html", "/assets/site.css", "/data/vaults.json", "/vault/vault-demo-001/files", "/vault/vault-demo-002/files", "/favicon.ico"];
     for (var day = 20; day <= 22; day++) for (var hour = 9; hour <= 11; hour++) {
-      var lines = [];
-      for (var i = 0; i < 25; i++) {
-        var p = pick(paths);
+      var lines = [], P = PACKS[pack];
+      for (var i = 0; i < P.perHour; i++) {
+        var p = P.hot && rnd() < 0.7 ? P.hot : pick(paths);
         lines.push(JSON.stringify({ timestamp: "2026-11-" + day + "T" + pad(hour) + ":" + pad(Math.floor(rnd() * 60)) + ":" + pad(Math.floor(rnd() * 60)) + "Z",
           c_ip: "203.0.113." + Math.floor(rnd() * 250 + 1), cs_method: "GET", cs_uri_stem: p, sc_status: p === "/favicon.ico" ? 404 : 200,
           sc_bytes: Math.floor(rnd() * 9000 + 300), time_taken: +(rnd() * 0.2).toFixed(3), x_edge_location: pick(["LHR50-C1", "DUB2-C1", "AMS1-C1"]), cs_user_agent: pick(["Mozilla/5.0", "curl/8.5", "python-requests/2.32"]) }));
+      }
+      if (P.attack && day === 22) {
+        // One address (TEST-NET-3, documentation range) probing, getting louder each hour.
+        var probes = ["/.env", "/.git/config", "/wp-admin/", "/admin", "/config.json", "/backup.zip", "/vault/../../etc/passwd", "/vault/vault-demo-001/files?key=../../secrets", "/api/vaults?id=1%27%20OR%20%271%27=%271"];
+        for (var a = 0; a < (hour - 8) * 15; a++) {
+          var pr = pick(probes);
+          lines.push(JSON.stringify({ timestamp: "2026-11-22T" + pad(hour) + ":" + pad(Math.floor(rnd() * 60)) + ":" + pad(Math.floor(rnd() * 60)) + "Z",
+            c_ip: "203.0.113.66", cs_method: pick(["GET", "GET", "POST"]), cs_uri_stem: pr, sc_status: pick([403, 404, 404, 400]), sc_bytes: Math.floor(rnd() * 400 + 100),
+            time_taken: +(rnd() * 0.05).toFixed(3), x_edge_location: "AMS1-C1", cs_user_agent: pick(["sqlmap/1.8", "Nuclei - Open-source project", "curl/8.5"]) }));
+        }
+        lines.sort();
       }
       put(B.logs, "cloudfront/2026/11/" + day + "/" + pad(hour) + "/demo-distribution-1-2026-11-" + day + "-" + pad(hour) + "-00-00.gz", "application/x-gzip", gzip(enc.encode(lines.join("\n") + "\n")), "2026-11-" + day + "T" + pad(hour) + ":59:00.000Z");
     }
@@ -215,5 +236,7 @@
     return Promise.resolve(p).then(function (r) { return new Promise(function (res) { setTimeout(function () { res(r); }, 60 + rnd() * 120); }); });
   }
 
-  root.AwsTwin = { handle: handle, account: ACCOUNT, buckets: B, reset: function () { state = null; seed = 20261123; } };
+  root.AwsTwin = { handle: handle, account: ACCOUNT, buckets: B, reset: function () { state = null; seed = 20261123; },
+    packs: PACKS, pack: function () { return pack; },
+    usePack: function (name) { if (!PACKS[name]) return; try { localStorage.setItem("sws-aws-twin-pack", name); } catch (e) { /* none */ } } };
 })(window);

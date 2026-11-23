@@ -486,6 +486,13 @@
   if ($("twin-enter")) $("twin-enter").onclick = function () { enterTwin(true); };
   if ($("twin-leave")) $("twin-leave").onclick = function () { enterTwin(false); };
   $("twin-bar").hidden = !TWIN;
+  if (TWIN && window.AwsTwin) {
+    var ps = $("twin-pack");
+    Object.keys(AwsTwin.packs).forEach(function (k) { ps.appendChild(el("option", { value: k, text: AwsTwin.packs[k].title })); });
+    ps.value = AwsTwin.pack(); $("twin-pack-about").textContent = AwsTwin.packs[ps.value].about;
+    // A pack is a whole world: loading one reloads the page on it.
+    ps.onchange = function () { AwsTwin.usePack(ps.value); location.href = location.pathname + "?twin&pack=" + ps.value; };
+  }
   window.Platform = { diffView: diffView, assume: assume, jsonCall: jsonCall, xmlText: xmlText, awsError: awsError, el: el, say: say,
     accounts: function () { return accounts; }, signedIn: function () { return !!mem.idToken; } };
   initGoogle();

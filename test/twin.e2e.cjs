@@ -57,6 +57,20 @@ const fail = (m) => { throw new Error(m); };
   await pg.click("#s3-list >> text=site.yaml");
   await pg.waitForSelector("#s3-file pre.code.lang-yaml .t-key");
   if (process.argv[2]) await pg.screenshot({ path: process.argv[2], fullPage: true });
+  // demo packs: the attack pack shows the scanner in the logs of 22 Nov
+  if (await pg.$eval("#twin-pack", (e) => e.value) !== "baseline") fail("default pack");
+  await Promise.all([pg.waitForNavigation(), pg.selectOption("#twin-pack", "attack")]);
+  await pg.waitForSelector("#twin-bar:not([hidden])");
+  if (!(await pg.textContent("#twin-pack-about")).includes("scanning")) fail("pack description");
+  await pg.click("#tab-s3");
+  await pg.click("#s3-list-buckets");
+  await pg.click("#s3-buckets button:has-text('demo-cloudfront-logs')");
+  await pg.click("text=Approve and add the rule to");
+  for (const f of ["cloudfront/", "2026/", "11/", "22/", "11/"]) await pg.click(`#s3-list >> text=${f}`);
+  await pg.click("#s3-list button:has-text('.gz')");
+  await pg.waitForSelector("text=JSON Lines");
+  const attack = await pg.textContent("#s3-file");
+  if (!attack.includes("203.0.113.66") || !/sqlmap|Nuclei/.test(attack)) fail("attack not in the logs");
   // fails closed: a service the twin does not answer gets a 501, and nothing leaves the page
   const st = await pg.evaluate(() => AwsTransport.fetch("https://lambda.eu-west-2.amazonaws.com/2015-03-31/functions", { headers: {} }).then((r) => r.status));
   if (st !== 501) fail("twin did not fail closed: " + st);
