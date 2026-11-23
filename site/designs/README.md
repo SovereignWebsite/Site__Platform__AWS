@@ -2,7 +2,7 @@
 
 Round 1 by design.c@SovereignWebsite.dinis (account C), 23 November 2026. Five designs of **Join the beta** (/join/), with its words read from site/join/index.html at build time, section by section, so they stay the keeper's own (aws.c, dev 6985180). The console itself (the home page) is designed by the platform's UX agent (ux.aws, now on account A), by the split agreed on 23 November 2026 and written in docs/design/2026-11-23__01-five-consoles-and-s3-next.md section 5; design.c reviews it for fit and sends findings, and does not design it here. Checked against SovereignWebsite/Site__Agent__Design docs/guidelines.md and docs/rating.md.
 
-Static pages, light and dark, with a Content Security Policy of their own (self only, no script-src). **HTML and CSS only, never JavaScript:** site/designs/ shares an origin with the console, which holds the change role while a visitor is signed in (security R-010), so a script here could act with that role. Any future round keeps to this rule.
+Static pages, light and dark, with a Content Security Policy of their own (self only, with script-src 'none', so the browser refuses any script). **HTML and CSS only, never JavaScript:** site/designs/ shares an origin with the console, which holds the change role while a visitor is signed in (security R-010), so a script here could act with that role. Any future round keeps to this rule.
 
 ## The five
 

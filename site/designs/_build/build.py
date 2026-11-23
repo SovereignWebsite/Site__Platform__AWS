@@ -35,7 +35,7 @@ FAMILY = [("https://sovereignwebsite.ai/", "Sovereign Website"), ("https://sover
           ("https://agents.sovereignweb.site/", "Agents"), ("https://vault.sovereignwebsite.site/", "Vault"),
           ("https://agenticcells.ai/", "AgentiCCells"), ("https://riskmandate.ai/", "RiskMandate"),
           ("https://newsroom.sgit.ai/", "Newsroom")]
-CSP = "default-src 'self'; img-src 'self'; style-src 'self' 'unsafe-inline'; base-uri 'none'; form-action 'none'"
+CSP = "default-src 'self'; script-src 'none'; img-src 'self'; style-src 'self' 'unsafe-inline'; base-uri 'none'; form-action 'none'"
 
 
 def sec(title, h="h2", cls="sec"):
