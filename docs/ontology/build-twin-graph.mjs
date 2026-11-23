@@ -50,6 +50,11 @@ globalThis.fetch = (u) => {
   return Promise.resolve(new Response(readFileSync(join(SITE, url.pathname.slice(1)))));
 };
 (0, eval)(twinSrc);
+// Privacy (Dinis Cruz, 23 Nov 2026 ~11:15 UTC, recorded in docs/data design 01): keep only the network of an
+// address (/24, /48), never the address or a keyed hash. data.aws.a's own truncation, so both agree.
+(0, eval)(readFileSync(join(SITE, "data", "extract.js"), "utf8"));
+const NET = (ip) => globalThis.LogExtract.network(ip);
+const KIND = (ua) => globalThis.LogExtract.agentKind(ua);
 const twin = globalThis.AwsTwin;
 if (args.has("--list-packs")) { process.stdout.write(JSON.stringify(twin.packs)); process.exit(0); }
 if (twin.pack() !== PACK) { console.error("no such demo pack in site/twin.js: " + PACK + " (have: " + Object.keys(twin.packs).join(", ") + ")"); process.exit(2); }
@@ -166,10 +171,11 @@ for (const o of objectsOf[B.logs]) {
   const lines = text(gunzipSync(await get(B.logs, o.key))).trim().split("\n").map((l) => JSON.parse(l));
   requests += lines.length;
   lines.forEach((l) => {
-    visitors.add(l.c_ip);
-    const a = (byIp[l.c_ip] = byIp[l.c_ip] || { requests: 0, refused: 0, agents: new Set(), files: new Set(), vaults: new Set(), paths: new Set(), first: l.timestamp, last: l.timestamp });
+    visitors.add(l.c_ip); // only counted; the address itself is never written
+    const net = NET(l.c_ip);
+    const a = (byIp[net] = byIp[net] || { requests: 0, refused: 0, agents: new Set(), files: new Set(), vaults: new Set(), paths: new Set(), first: l.timestamp, last: l.timestamp });
     a.requests++; if (l.sc_status >= 400 && l.sc_status < 500) a.refused++; // 4xx only: a 5xx is the site failing, not the client refused
-    a.agents.add(l.cs_user_agent); a.files.add(o.key); a.paths.add(l.cs_uri_stem);
+    a.agents.add(KIND(l.cs_user_agent)); a.files.add(o.key); a.paths.add(l.cs_uri_stem);
     const v = /^\/vault\/([^/?]+)/.exec(l.cs_uri_stem)?.[1]; if (v) a.vaults.add(v);
     // Prefer the vault_id the processor wrote into the line; fall back to the path for lines without it.
     const vid = "vault_id" in l ? l.vault_id : v; if (vid) perVault[vid] = (perVault[vid] || 0) + 1;
@@ -188,16 +194,17 @@ for (const o of objectsOf[B.logs]) {
 Object.assign(nodes.get(ids.bucket(B.logs)), { requests, visitors: visitors.size },
   Object.keys(countries).length ? { countries: Object.fromEntries(Object.entries(countries).sort()) } : {});
 for (const [v, n] of Object.entries(perVault)) if (nodes.has(ids.vault(v))) Object.assign(nodes.get(ids.vault(v)), { requests: n, share_of_requests: +(n / requests).toFixed(3) });
-// An address stands out as an actor when most of what it asks for is refused (4xx): a rule on the data, no list
-// of known bad addresses. Normal visitors stay a count on the bucket, not a node each.
-for (const [ip, a] of Object.entries(byIp).sort()) {
-  if (a.requests < 10 || a.refused / a.requests < 0.8) continue;
-  const aid = "urn:sws:actor-ip:" + ip;
-  node(aid, "actor", "A4", ip + " (refused " + a.refused + " of " + a.requests + ")", {
-    ocsf_class: "HTTP Activity", src_ip: ip, requests: a.requests, refused: a.refused, first: a.first, last: a.last,
-    user_agents: [...a.agents].sort(), distinct_paths: a.paths.size, rule: "at least 10 requests, at least 80% refused (4xx)" });
-  [...a.files].sort().forEach((f) => edge(aid, "seen_in", ids.object(B.logs, f), "content", "log lines (c_ip " + ip + ")"));
-  [...a.vaults].sort().filter((v) => nodes.has(ids.vault(v))).forEach((v) => edge(aid, "targeted", ids.vault(v), "content", "log lines (c_ip " + ip + ", paths under /vault/" + v + ")"));
+// A network stands out as an actor when most of what it asks for is refused (4xx): a rule on the data, no list
+// of known bad addresses. Normal visitors stay a count on the bucket, not a node each. Counted per network
+// (/24, /48), as privacy requires; the agent is kept as its kind (browser, script, scanner), not the raw string.
+for (const [net, a] of Object.entries(byIp).sort()) {
+  if (!net || a.requests < 10 || a.refused / a.requests < 0.8) continue;
+  const aid = "urn:sws:actor-net:" + net;
+  node(aid, "actor", "A4", net + " (refused " + a.refused + " of " + a.requests + ")", {
+    ocsf_class: "HTTP Activity", src_net: net, requests: a.requests, refused: a.refused, first: a.first, last: a.last,
+    agent_kinds: [...a.agents].sort(), distinct_paths: a.paths.size, rule: "per network: at least 10 requests, at least 80% refused (4xx)" });
+  [...a.files].sort().forEach((f) => edge(aid, "seen_in", ids.object(B.logs, f), "content", "log lines (network " + net + ")"));
+  [...a.vaults].sort().filter((v) => nodes.has(ids.vault(v))).forEach((v) => edge(aid, "targeted", ids.vault(v), "content", "log lines (network " + net + ", paths under /vault/" + v + ")"));
 }
 for (const d of [...nodes.values()].filter((n) => n.type === "distribution"))
   if (/Served from S3 through CloudFront/.test(text(await get(B.site, "index.html")))) edge(d.id, "serves_from", ids.bucket(B.site), "content", "index.html ('Served from S3 through CloudFront')");
@@ -307,7 +314,7 @@ for (const o of objectsOf[B.trail]) {
   for (const r of JSON.parse(text(gunzipSync(await get(B.trail, o.key)))).Records) {
     const eid = "urn:sws:cloudtrail-event:" + r.eventID;
     const target = r.requestParameters?.key ? r.requestParameters.key : r.requestParameters?.roleName || "";
-    node(eid, "event", "A1", r.eventSource.split(".")[0] + " " + r.eventName + (target ? " " + target : ""), { ocsf_class: "API Activity", time: r.eventTime, src_ip: r.sourceIPAddress, read_only: r.readOnly });
+    node(eid, "event", "A1", r.eventSource.split(".")[0] + " " + r.eventName + (target ? " " + target : ""), { ocsf_class: "API Activity", time: r.eventTime, src_net: NET(r.sourceIPAddress) || undefined, read_only: r.readOnly });
     edge(ids.object(B.trail, o.key), "records", eid, "content", "CloudTrail Records");
     const issuer = r.userIdentity?.sessionContext?.sessionIssuer;
     if (issuer?.type === "Role") { roleNames.add(issuer.userName); edge(eid, "acted_as", ids.role(issuer.userName), "content", "CloudTrail userIdentity.sessionContext.sessionIssuer"); }
@@ -318,11 +325,11 @@ for (const o of objectsOf[B.trail]) {
     if (p.roleName) { roleNames.add(p.roleName); edge(eid, "acted_on", ids.role(p.roleName), "content", "CloudTrail requestParameters.roleName"); }
     // The caller's address is an actor too (design 03 refinement 6): it acted on what the event acted on, so an
     // address links to everything it touched, in CloudTrail as in the CloudFront logs.
-    const ip = r.sourceIPAddress;
-    if (ip && /^[0-9a-fA-F:.]+$/.test(ip)) {
-      const aid = node("urn:sws:actor-ip:" + ip, "actor", "A4", ip, { src_ip: ip });
-      if (p.bucketName && p.key) edge(aid, "acted_on", ids.object(p.bucketName, p.key), "content", "CloudTrail sourceIPAddress " + ip);
-      if (p.roleName) edge(aid, "acted_on", ids.role(p.roleName), "content", "CloudTrail sourceIPAddress " + ip);
+    const net = NET(r.sourceIPAddress); // a service name (s3.amazonaws.com) has no network and makes no actor
+    if (net) {
+      const aid = node("urn:sws:actor-net:" + net, "actor", "A4", net, { src_net: net });
+      if (p.bucketName && p.key) edge(aid, "acted_on", ids.object(p.bucketName, p.key), "content", "CloudTrail sourceIPAddress (network " + net + ")");
+      if (p.roleName) edge(aid, "acted_on", ids.role(p.roleName), "content", "CloudTrail sourceIPAddress (network " + net + ")");
     }
     events.push(eid);
   }

@@ -31,11 +31,11 @@
    "backend": "twin"
   },
   {
-   "id": "urn:sws:actor-ip:203.0.113.7",
+   "id": "urn:sws:actor-net:203.0.113.0/24",
    "type": "actor",
-   "label": "203.0.113.7",
+   "label": "203.0.113.0/24",
    "altitude": "A4",
-   "src_ip": "203.0.113.7",
+   "src_net": "203.0.113.0/24",
    "trust": "claimed",
    "backend": "twin"
   },
@@ -122,7 +122,7 @@
    "altitude": "A1",
    "ocsf_class": "API Activity",
    "time": "2026-11-22T10:01:02Z",
-   "src_ip": "203.0.113.7",
+   "src_net": "203.0.113.0/24",
    "read_only": true,
    "trust": "claimed",
    "backend": "twin"
@@ -134,7 +134,7 @@
    "altitude": "A1",
    "ocsf_class": "API Activity",
    "time": "2026-11-22T10:04:40Z",
-   "src_ip": "203.0.113.7",
+   "src_net": "203.0.113.0/24",
    "read_only": false,
    "trust": "claimed",
    "backend": "twin"
@@ -1302,20 +1302,20 @@
    "source": "Cloud Control GetResource (RegionalDomainName)"
   },
   {
-   "from": "urn:sws:actor-ip:203.0.113.7",
+   "from": "urn:sws:actor-net:203.0.113.0/24",
    "rel": "acted_on",
    "to": "arn:aws:iam::111122223333:role/sovereignwebsite-factory-dns",
    "evidence": "content",
    "trust": "claimed",
-   "source": "CloudTrail sourceIPAddress 203.0.113.7"
+   "source": "CloudTrail sourceIPAddress (network 203.0.113.0/24)"
   },
   {
-   "from": "urn:sws:actor-ip:203.0.113.7",
+   "from": "urn:sws:actor-net:203.0.113.0/24",
    "rel": "acted_on",
    "to": "arn:aws:s3:::111122223333--demo-site--eu-west-2/data/vaults.json",
    "evidence": "content",
    "trust": "claimed",
-   "source": "CloudTrail sourceIPAddress 203.0.113.7"
+   "source": "CloudTrail sourceIPAddress (network 203.0.113.0/24)"
   },
   {
    "from": "urn:sws:business-function:visitor-reads-vault-files",

@@ -10,14 +10,14 @@
   "curated"
  ],
  "counts": {
-  "nodes": 55,
-  "edges": 110,
+  "nodes": 54,
+  "edges": 106,
   "by_evidence": {
    "api": 44,
    "curated": 7,
    "template": 4,
    "naming": 11,
-   "content": 44
+   "content": 40
   }
  },
  "nodes": [
@@ -31,32 +31,11 @@
    "backend": "twin"
   },
   {
-   "id": "urn:sws:actor-ip:203.0.113.66",
+   "id": "urn:sws:actor-net:203.0.113.0/24",
    "type": "actor",
-   "label": "203.0.113.66 (refused 90 of 90)",
+   "label": "203.0.113.0/24",
    "altitude": "A4",
-   "ocsf_class": "HTTP Activity",
-   "src_ip": "203.0.113.66",
-   "requests": 90,
-   "refused": 90,
-   "first": "2026-11-22T09:07:14Z",
-   "last": "2026-11-22T11:56:08Z",
-   "user_agents": [
-    "Nuclei - Open-source project",
-    "curl/8.5",
-    "sqlmap/1.8"
-   ],
-   "distinct_paths": 9,
-   "rule": "at least 10 requests, at least 80% refused (4xx)",
-   "trust": "claimed",
-   "backend": "twin"
-  },
-  {
-   "id": "urn:sws:actor-ip:203.0.113.7",
-   "type": "actor",
-   "label": "203.0.113.7",
-   "altitude": "A4",
-   "src_ip": "203.0.113.7",
+   "src_net": "203.0.113.0/24",
    "trust": "claimed",
    "backend": "twin"
   },
@@ -143,7 +122,7 @@
    "altitude": "A1",
    "ocsf_class": "API Activity",
    "time": "2026-11-22T10:01:02Z",
-   "src_ip": "203.0.113.7",
+   "src_net": "203.0.113.0/24",
    "read_only": true,
    "trust": "claimed",
    "backend": "twin"
@@ -155,7 +134,7 @@
    "altitude": "A1",
    "ocsf_class": "API Activity",
    "time": "2026-11-22T10:04:40Z",
-   "src_ip": "203.0.113.7",
+   "src_net": "203.0.113.0/24",
    "read_only": false,
    "trust": "claimed",
    "backend": "twin"
@@ -1323,52 +1302,20 @@
    "source": "Cloud Control GetResource (RegionalDomainName)"
   },
   {
-   "from": "urn:sws:actor-ip:203.0.113.66",
-   "rel": "seen_in",
-   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/09/demo-distribution-1-2026-11-22-09-00-00.gz",
-   "evidence": "content",
-   "trust": "claimed",
-   "source": "log lines (c_ip 203.0.113.66)"
-  },
-  {
-   "from": "urn:sws:actor-ip:203.0.113.66",
-   "rel": "seen_in",
-   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/10/demo-distribution-1-2026-11-22-10-00-00.gz",
-   "evidence": "content",
-   "trust": "claimed",
-   "source": "log lines (c_ip 203.0.113.66)"
-  },
-  {
-   "from": "urn:sws:actor-ip:203.0.113.66",
-   "rel": "seen_in",
-   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/11/demo-distribution-1-2026-11-22-11-00-00.gz",
-   "evidence": "content",
-   "trust": "claimed",
-   "source": "log lines (c_ip 203.0.113.66)"
-  },
-  {
-   "from": "urn:sws:actor-ip:203.0.113.66",
-   "rel": "targeted",
-   "to": "urn:sws:vault:vault-demo-001",
-   "evidence": "content",
-   "trust": "claimed",
-   "source": "log lines (c_ip 203.0.113.66, paths under /vault/vault-demo-001)"
-  },
-  {
-   "from": "urn:sws:actor-ip:203.0.113.7",
+   "from": "urn:sws:actor-net:203.0.113.0/24",
    "rel": "acted_on",
    "to": "arn:aws:iam::111122223333:role/sovereignwebsite-factory-dns",
    "evidence": "content",
    "trust": "claimed",
-   "source": "CloudTrail sourceIPAddress 203.0.113.7"
+   "source": "CloudTrail sourceIPAddress (network 203.0.113.0/24)"
   },
   {
-   "from": "urn:sws:actor-ip:203.0.113.7",
+   "from": "urn:sws:actor-net:203.0.113.0/24",
    "rel": "acted_on",
    "to": "arn:aws:s3:::111122223333--demo-site--eu-west-2/data/vaults.json",
    "evidence": "content",
    "trust": "claimed",
-   "source": "CloudTrail sourceIPAddress 203.0.113.7"
+   "source": "CloudTrail sourceIPAddress (network 203.0.113.0/24)"
   },
   {
    "from": "urn:sws:business-function:visitor-reads-vault-files",

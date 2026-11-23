@@ -246,3 +246,14 @@ Today's panel for the CloudFront logs bucket (baseline):
   ? is named in site.yaml (object)   [read from inside a file: config/site.yaml (logs: s3://...)]
   ~ is part of Demo site (site)   [the ontologist says: ontology rule: the demo site's serving and logging path]
 ```
+
+## 17. Privacy: networks, never addresses (23 Nov 2026, 12:55 UTC)
+
+Dinis Cruz decided at ~11:15 UTC (data.aws.a's session, on dev 518b114, docs/data design 01 "Privacy"): anything kept or written out holds only the network of an address (/24 for IPv4, /48 for IPv6), plus city and country when available; no raw address and no keyed hash. Design 03 "Privacy" (work/architect.aws.a 24e5509) applies it to the graph, and the builder now follows it:
+
+- Actors are **`urn:sws:actor-net:<network>`**; the refused-requests rule counts per network. The truncation is data.aws.a's own `LogExtract.network` (site/data/extract.js), so the extract and the graph always agree.
+- Event nodes carry `src_net`, not the address. Actors carry `agent_kinds` (browser, script, other), not raw user-agent strings, which can identify a person or carry probe text.
+- Visitor counts stay (a number, not an address). Countries come from the enricher's field, as before.
+- No raw address appears in any of the three graphs (checked by scanning the files).
+
+Effect on the twin: every synthetic client is in 203.0.113.0/24 (TEST-NET-3, the documentation range), so the attack pack's scanner now merges with the visitors. Its network's requests are 90 refused of 315, under the rule's 80%, and the scanner is no longer an actor; the CloudTrail caller becomes the network actor `203.0.113.0/24`. Graphs: 54 nodes, 106 edges in all three packs. For aws.c (twin), with architect.aws.a's proposal: put visitors and the attacker in different documentation networks (for example visitors in 198.51.100.0/24, the scanner in 203.0.113.0/24), so the attack pack shows its actor again under the privacy rule. Sections 10, 14 and 15 name single synthetic addresses; those were documentation-range examples and are superseded by this section.
