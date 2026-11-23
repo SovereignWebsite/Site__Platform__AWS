@@ -50,7 +50,9 @@ function perUseHour(region, t) {
 // hours: how long the Vault lives; monthHours: hours in the billing month (720 for November, as forecast.mjs);
 // storedGb: data in the bucket (versions included); newHostedZone: true only if the customer makes a new zone for the Vault
 // (the template adds records to an existing zone and makes none itself).
-export function vaultCost({ region = "eu-west-2", hours = 720, monthHours = 720, traffic = IDLE, storedGb = 0, newHostedZone = false } = {}) {
+// imageGb: the container image held in ECR in this region (about 90 MB, sgit.ai via vaults design 04); 0 when another
+// account holds it and pays (design 04 section 8, question 4, option b).
+export function vaultCost({ region = "eu-west-2", hours = 720, monthHours = 720, traffic = IDLE, storedGb = 0, newHostedZone = false, imageGb = 0.09 } = {}) {
   if (!book.regions[region]) throw new Error("Region not in the price book: " + region);
   if (!(hours > 0 && monthHours > 0 && storedGb >= 0)) throw new Error("bad input");
   const t = { ...IDLE, ...traffic };
@@ -65,6 +67,8 @@ export function vaultCost({ region = "eu-west-2", hours = 720, monthHours = 720,
     if (h === 0) add("acm.public_certificate.integrated", "fixed", price("acm.public_certificate.integrated", region));
     fixed += add("secretsmanager.secret", "fixed", price("secretsmanager.secret", region) / monthHours);       // prorated by the hour
     fixed += add("s3.storage.standard.first50tb", "fixed", (storedGb * price("s3.storage.standard.first50tb", region)) / monthHours);
+    fixed += add("ecr.storage", "fixed", (imageGb * price("ecr.storage", region)) / monthHours);
+    if (h === 0) add("ecr.transfer_same_region", "fixed", price("ecr.transfer_same_region", region));
     const storedLogGb = logGbPerHour * Math.min(h + 1, STACK.logRetentionDays * 24);                          // grows until retention
     fixed += add("cloudwatch.logs.storage", "fixed", (storedLogGb * price("cloudwatch.logs.storage", region)) / monthHours);
     let perUse = 0;
@@ -85,7 +89,6 @@ export function vaultCost({ region = "eu-west-2", hours = 720, monthHours = 720,
 
 // Lines this Vault may incur that prices.json cannot price yet: unknown, never $0. The total is a lower bound until each is priced.
 export const NOT_PRICED = [
-  { id: "ecr.image", cost: null, why: "Amazon ECR storage and transfer for the Lambda image: not read yet; depends on which account holds the image." },
   { id: "cloudwatch.logs.lambda_vended_tiers", cost: null, why: "Whether Lambda's own logs use the vended-log tiers instead of Standard ingestion: still to read. Standard is used, as the higher rate." },
   { id: "cloudfront.transfer_out.past_free_tb", cost: null, why: "The first 1 TB a month is $0 per account; an account already past it pays the next tier on this Vault's bytes. Not modelled." },
 ];
@@ -99,7 +102,8 @@ export const assumptions = [
   "Secrets Manager prorated by the hour (its page); S3 storage spread evenly over the month's hours.",
   "A new Route 53 hosted zone is charged in full at the hour it is made (not prorated); the template itself makes no zone.",
   "The token reaches the function by a dynamic reference at deploy (design 04 section 6), so no Secrets Manager calls at run time unless secretReads says so.",
-  "Not priced (prices.json not_priced_yet): Amazon ECR for the image; whether Lambda logs use the vended-log tiers.",
+  "ECR: one 0.09 GB image per region in this account (if another account holds it, imageGb: 0 and that account pays); pulls by Lambda in the same region are free (ECR page).",
+  "Not priced (prices.json not_priced_yet): whether Lambda logs use the vended-log tiers.",
 ];
 
 // A stated traffic for the "under traffic" figure: synthetic, for scale only, to be replaced by the twin's or a real Vault's.
