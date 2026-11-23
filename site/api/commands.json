@@ -157,6 +157,75 @@
       ]
     },
     {
+      "command": "cloudfront distribution",
+      "service": "cloudfront",
+      "operationId": "distribution",
+      "global": "CloudFrontApi",
+      "doc": "cloudfront.openapi.json",
+      "params": [
+        {
+          "name": "id",
+          "pattern": "^[A-Z0-9]{1,64}$"
+        }
+      ],
+      "options": [],
+      "summary": "One distribution with its logging and default root",
+      "role": "read",
+      "actions": [
+        "cloudfront:GetDistribution"
+      ]
+    },
+    {
+      "command": "cloudfront distributions",
+      "service": "cloudfront",
+      "operationId": "distributions",
+      "global": "CloudFrontApi",
+      "doc": "cloudfront.openapi.json",
+      "params": [],
+      "options": [
+        {
+          "name": "next",
+          "type": "string"
+        },
+        {
+          "name": "max",
+          "type": "integer"
+        }
+      ],
+      "summary": "One page of the account's distributions",
+      "role": "read",
+      "actions": [
+        "cloudfront:ListDistributions"
+      ]
+    },
+    {
+      "command": "cloudfront functions",
+      "service": "cloudfront",
+      "operationId": "functions",
+      "global": "CloudFrontApi",
+      "doc": "cloudfront.openapi.json",
+      "params": [],
+      "options": [
+        {
+          "name": "next",
+          "type": "string"
+        },
+        {
+          "name": "max",
+          "type": "integer"
+        },
+        {
+          "name": "stage",
+          "type": "string"
+        }
+      ],
+      "summary": "One page of the account's CloudFront Functions (metadata, never code)",
+      "role": "read",
+      "actions": [
+        "cloudfront:ListFunctions"
+      ]
+    },
+    {
       "command": "firehose stream",
       "service": "firehose",
       "operationId": "stream",
