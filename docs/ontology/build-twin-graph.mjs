@@ -168,7 +168,7 @@ for (const o of objectsOf[B.logs]) {
   lines.forEach((l) => {
     visitors.add(l.c_ip);
     const a = (byIp[l.c_ip] = byIp[l.c_ip] || { requests: 0, refused: 0, agents: new Set(), files: new Set(), vaults: new Set(), paths: new Set(), first: l.timestamp, last: l.timestamp });
-    a.requests++; if (l.sc_status >= 400) a.refused++;
+    a.requests++; if (l.sc_status >= 400 && l.sc_status < 500) a.refused++; // 4xx only: a 5xx is the site failing, not the client refused
     a.agents.add(l.cs_user_agent); a.files.add(o.key); a.paths.add(l.cs_uri_stem);
     const v = /^\/vault\/([^/?]+)/.exec(l.cs_uri_stem)?.[1]; if (v) a.vaults.add(v);
     // Prefer the vault_id the processor wrote into the line; fall back to the path for lines without it.
