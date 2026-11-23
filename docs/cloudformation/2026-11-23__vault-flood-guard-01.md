@@ -69,3 +69,16 @@ billing.aws.a's pricing (cfe70fb) finds that WAF **adds** cost rather than cappi
 - CloudFront's request metrics come in near real time, unlike Budgets.
 
 The checks pass: cfn-lint on all templates, plus `test_vault_template.py`, which now also checks that the alarm is optional and that its name and the topic's name are in scope. The email pattern was tested: good addresses and empty are accepted; spaces, a missing dot after `@` and a trailing newline are refused.
+
+## boto3.aws.a's checks (note 15), applied (20:30 UTC, vault 0.5.1, vault-edge 0.5.1)
+
+- **Confirmed:**
+  - a CloudFront web ACL must be created in us-east-1;
+  - its ARN is `arn:aws:wafv2:us-east-1:<acct>:global/webacl/<name>/<id>`, which matches `WebAclArn`'s pattern; that CHECK is removed.
+- **Rate limit:**
+  - the minimum is 10 and the maximum 2,000,000,000, so `RateLimit`'s minimum is now 10;
+  - the window is not fixed: it is 60, 120, 300 or 600 s, now `RateWindowSec` (default 300).
+- **Blocked requests:** whether they are free on pay-as-you-go is **not** confirmed, and WAF also bills per inspected request. So WAF stays off by default, as availability protection only.
+- **Budgets:** an action can only apply an IAM policy or SCP or target EC2 or RDS instances, so none can disable a distribution. The data updates up to three times a day. Budgets is therefore rejected as the flood signal, and CloudWatch `Requests` is the fast one.
+- **Still CHECK:** the alarm's metric dimensions (`Region=Global`), asked of boto3.aws.a.
+- **An automatic disable is a real AWS change in the customer's account.** It is a plan for Dinis and is wired only after ec2.aws.a's design 03.

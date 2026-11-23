@@ -6,11 +6,11 @@ Description: >-
   (2) An optional cost alarm on the distribution's request count (R-026; CloudFront's metrics are in us-east-1),
   which emails the customer; the recommended guard. (3) An optional WAF web ACL with a per-address rate limit (off by
   default: billing.aws.a finds it adds cost rather than capping it). Its outputs go into the Vault stack's CertificateArn and WebAclArn.
-  DRAFT 0.5.0 by cloudformation.aws.a, 23 Nov 2026.
+  DRAFT 0.5.1 by cloudformation.aws.a, 23 Nov 2026.
 
 Metadata:
   SovereignWebsite:
-    TemplateVersion: 0.5.0-draft
+    TemplateVersion: 0.5.1-draft
 
 Parameters:
   VaultId:
@@ -35,13 +35,18 @@ Parameters:
     Type: String
     Default: "false"
     AllowedValues: ["false", "true"]
-    Description: Create a WAF web ACL that blocks any one address above RateLimit requests per 5 minutes (R-026; Dinis decides).
+    Description: Create a WAF web ACL that blocks any one address above RateLimit requests per RateWindowSec (availability protection only; it adds cost, billing.aws.a).
   RateLimit:
     Type: Number
     Default: 1000
-    MinValue: 100
+    MinValue: 10
     MaxValue: 2000000000
-    Description: Requests per address per 5-minute window before WAF blocks it. CHECK the minimum against AWS WAF's documentation.
+    Description: Requests per address per window before WAF blocks it (WAF allows 10 to 2,000,000,000; boto3.aws.a note 15).
+  RateWindowSec:
+    Type: Number
+    Default: 300
+    AllowedValues: [60, 120, 300, 600]
+    Description: The rate limit's evaluation window in seconds (the values WAF allows).
 
   DistributionId:
     Type: String
@@ -143,6 +148,7 @@ Resources:
           Statement:
             RateBasedStatement:
               Limit: !Ref RateLimit
+              EvaluationWindowSec: !Ref RateWindowSec
               AggregateKeyType: IP
           VisibilityConfig:
             SampledRequestsEnabled: true
