@@ -66,7 +66,7 @@ let checks = 0;
   const t = fresh(), code = async (p, r, n = E) => tag((await create(t, n, p, r)).text, "Message")[0] || "";
   assert.match(await code({ VaultId: ID, DomainName: "vault.example.com" }, "eu-west-2"), /us-east-1 only/, "the -edge stack only in us-east-1");
   assert.match(await code({ VaultId: ID, DomainName: "vault.example.com" }, "us-east-1", "sws-vault-" + ID), /eu-west-2 only/, "a Vault stack never in us-east-1");
-  assert.match(await code({ VaultId: ID }), /At least one Resources member/, "no domain and no rate limit: no resource");
+  assert.equal(await code({ VaultId: ID }), "Nothing to create. Give a DomainName (for a certificate) or set EnableRateLimit to true.", "no domain and no rate limit: the rule SomethingToMake");
   assert.match(await code({ VaultId: ID, EnableRateLimit: "yes" }), /EnableRateLimit/);
   assert.match(await code({ VaultId: ID, EnableRateLimit: "true", RateWindowSec: "90" }), /RateWindowSec/);
   assert.match(await code({ VaultId: ID, EnableRateLimit: "true", RateLimit: "9" }), /RateLimit/);

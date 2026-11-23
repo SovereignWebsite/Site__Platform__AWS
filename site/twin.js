@@ -763,7 +763,7 @@
       [["VaultDistribution", "AWS::CloudFront::Distribution", 240]],
       [["VaultRecordA", "AWS::Route53::RecordSet", 35], ["VaultRecordAAAA", "AWS::Route53::RecordSet", 35]]
     ],
-    // sws-vault-<id>-edge, in us-east-1 only (vault-edge.yaml): the certificate if there is a domain, the WAF web ACL if
+    // sws-vault-<id>-edge, in us-east-1 only (vault-edge.yaml 0.6.1): the certificate if there is a domain, the WAF web ACL if
     // the rate limit is on. The seconds are the twin's own; with DNS elsewhere the certificate waits (stackSchedule).
     edge: [[["VaultCertificate", "AWS::CertificateManager::Certificate", 180], ["VaultWebAcl", "AWS::WAFv2::WebACL", 30]]]
   };
@@ -911,15 +911,15 @@
         params.DeployMode = mode;
       }
       if (kind === "edge") {
-        // vault-edge.yaml's parameter rules, then its one structural rule: with no domain and no rate limit there is no
-        // resource, and CloudFormation refuses a template with none.
+        // vault-edge.yaml's parameter rules, then its rule SomethingToMake (0.6.1): no domain and no rate limit is refused
+        // with the rule's own AssertDescription.
         params.EnableRateLimit = params.EnableRateLimit || "false"; params.RateLimit = params.RateLimit || "1000"; params.RateWindowSec = params.RateWindowSec || "300";
         if (["false", "true"].indexOf(params.EnableRateLimit) < 0) return cfnErr("ValidationError", "Parameter 'EnableRateLimit' must be one of AllowedValues");
         if (["60", "120", "300", "600"].indexOf(params.RateWindowSec) < 0) return cfnErr("ValidationError", "Parameter 'RateWindowSec' must be one of AllowedValues");
         if (!/^[0-9]{1,10}$/.test(params.RateLimit) || +params.RateLimit < 10 || +params.RateLimit > 2000000000) return cfnErr("ValidationError", "Parameter 'RateLimit' must be a number from 10 to 2000000000 (the twin's wording)");
         if (params.DomainName && (params.DomainName.length > 253 || !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(params.DomainName))) return cfnErr("ValidationError", "Parameter 'DomainName' must match pattern of vault-edge.yaml");
         if (params.HostedZoneId && !/^Z[A-Z0-9]{1,31}$/.test(params.HostedZoneId)) return cfnErr("ValidationError", "Parameter 'HostedZoneId' must match pattern ^$|^Z[A-Z0-9]{1,31}$");
-        if (!params.DomainName && params.EnableRateLimit !== "true") return cfnErr("ValidationError", "Template format error: At least one Resources member must be defined.");
+        if (!params.DomainName && params.EnableRateLimit !== "true") return cfnErr("ValidationError", "Nothing to create. Give a DomainName (for a certificate) or set EnableRateLimit to true.");
       }
       var ids = vaultIds(account, region, name), stackId = "arn:aws:cloudformation:" + region + ":" + account + ":stack/" + name + "/" + ids.stack;
       var plain = {}; Object.keys(params).forEach(function (k) { plain[k] = params[k]; });
