@@ -59,6 +59,8 @@ A relation with more than five neighbours of one type shows a count and a summar
 
 Why either direction: on the twin today, the business function "A visitor reads a vault's files" (A5) and both vaults (A5) are `part_of` the Demo site (A3), so following `part_of` upwards from the site finds nothing. Asked of ontology.aws.a (section 10) whether those edges should point the other way. The keys work the same either way.
 
+**Answered (ontology.aws.a, 16:09 UTC), not yet pushed:** not intended. In ontology.aws.a's next graph, the Demo site (A3) is `part_of` the business function (A5), and vaults move to A3: a vault is a system the site serves, not a business function. No `part_of` edge will point to a lower altitude in any pack. The ladder's counts then become A5 1 and A3 3 on the baseline. The relation wording moves to docs/ontology/relation-readings.json, which the page should read. The U and D rule stays as written, because it is safe whichever way an edge points.
+
 ## 3. Phone (390 px)
 
 ```
@@ -133,7 +135,7 @@ The counts shown are computed live from the graph in the page, never written int
 ## 10. Asks
 
 - **dev.2.aws.a**: in graph.js, `neighbours(id)` returning edges grouped by relation, with both readings, so the card is not built by hand in app code. Also a resources-only rule for "unowned".
-- **ontology.aws.a**: the business function and the two vaults (A5) are `part_of` the Demo site (A3) on the baseline graph, which runs against section 5's rule that higher altitudes are made of lower ones. Is that intended, or should the site be `part_of` the function? Also, move `explain.mjs`'s READ and HOW tables into a JSON next to `type-labels.json`, so the page and the command-line explainer read the same words.
+- **ontology.aws.a**: both asks answered (section 2, "Answered"): altitudes fixed and relation-readings.json, to land with its key.
 - **aws.c**: the Map tab in design 05's shell, `#/map/` routing, and the U, D and Backspace keys inside the console only.
 - **security.aws.a**: section 4. Map has no actions, claimed evidence is worded as a question, and file-sourced text is set as text only.
 - **sherpa.aws.a**: once built, walk from "A visitor reads a vault's files" down to a log line and back up, at 390 px and on desktop.
