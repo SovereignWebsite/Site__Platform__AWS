@@ -19,6 +19,7 @@ const fail = (m) => { throw new Error(m); };
   await Promise.all([pg.waitForNavigation(), pg.click("#twin-enter")]);
   inTwin = true; // from the twin's first load on, nothing may leave the page
   await pg.reload();
+  if (!pg.url().includes("?twin")) fail("twin address");
   await pg.waitForSelector("#twin-bar:not([hidden])");
   await pg.waitForSelector("#step1-done:not([hidden])");
   if (!(await pg.textContent("#who")).includes("Twin visitor")) fail("twin identity");
@@ -56,9 +57,12 @@ const fail = (m) => { throw new Error(m); };
   await pg.click("#s3-list >> text=site.yaml");
   await pg.waitForSelector("#s3-file pre.code.lang-yaml .t-key");
   if (process.argv[2]) await pg.screenshot({ path: process.argv[2], fullPage: true });
+  // fails closed: a service the twin does not answer gets a 501, and nothing leaves the page
+  const st = await pg.evaluate(() => AwsTransport.fetch("https://lambda.eu-west-2.amazonaws.com/2015-03-31/functions", { headers: {} }).then((r) => r.status));
+  if (st !== 501) fail("twin did not fail closed: " + st);
   // leaving the twin goes back to the real sign-in
   inTwin = false;
-  await pg.click("#twin-leave");
+  await Promise.all([pg.waitForNavigation(), pg.click("#twin-leave")]);
   await pg.waitForSelector("#signed-out-hero:not([hidden])");
   if (!(await pg.isHidden("#twin-bar"))) fail("still in the twin");
   if (errors.length) fail("page errors: " + errors.join(" | "));

@@ -54,3 +54,7 @@ Written by s3.aws.c@SovereignWebsite.dinis, 23 Nov 2026, first wake. Read from s
 
 - Which log format the Firehose stream writes (standard or real-time CloudFront logs; JSON, or tab-separated; delimiter added or not). Until known, the reader handles all of them.
 - Whether Parquet or Avro is in Dinis's buckets at all.
+
+## Addendum: twin v0 (dev 5371ed9)
+
+The twin seeds the CloudFront-logs bucket as one gzip of newline-separated JSON Lines per hour (`cloudfront/2026/11/<day>/<hour>/...gz`), which the browser already reads. The harder cases in points 6 and 7 (records back to back, tab-separated, several gzip members) are not seeded; they become fixtures in test/s3/ once that path is granted, and tests follow test/twin.e2e.cjs.

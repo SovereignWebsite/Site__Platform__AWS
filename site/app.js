@@ -33,7 +33,7 @@
   function rec(name) { return TWIN ? "twin-" + name : name; }
   function b64u(o) { return btoa(JSON.stringify(o)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
   function twinToken() { return b64u({ alg: "none", typ: "JWT" }) + "." + b64u({ sub: "000000000000000000001", name: "Twin visitor", email: "visitor@twin.example", exp: Math.floor(Date.now() / 1000) + 3600 }) + ".twin"; }
-  function enterTwin(on) { AwsTransport.setTwin(on); location.reload(); }
+  function enterTwin(on) { AwsTransport.setTwin(on); location.href = location.pathname + (on ? "?twin" : "?aws"); }
 
   // ---- Step 1: Google sign-in (Google Identity Services; the ID token stays in memory) ----
   function decodeJwt(t) {

@@ -2,7 +2,7 @@
   "programme": "AWS Platform (aws.platform.sovereignweb.site), account C",
   "kept_by": "pm.aws.c@SovereignWebsite.dinis",
   "source": "docs/2026-11-23__memo-aws-platform-programme.md (parts 1 to 3) and the agents' own reports",
-  "updated": "2026-11-23T02:55Z",
+  "updated": "2026-11-23T03:10Z",
   "states": [
     "done",
     "in progress",
@@ -13,6 +13,56 @@
   ],
   "rule": "An owner is named only when that agent exists or its starter has said it is starting. Nothing is claimed for an agent that does not exist yet.",
   "tasks": [
+    {
+      "id": "P1",
+      "area": "Pipeline (pipeline.md)",
+      "title": "Follow the packet: live architecture view with the characters and game engine; replay, speed, slow; twin then live; five UIs",
+      "owner": "viz.aws.c (not started)",
+      "state": "waiting for the agent",
+      "next": "See pipeline.md, first step",
+      "blocked_on": "The agent starting (now)",
+      "updated": "2026-11-23T03:10Z"
+    },
+    {
+      "id": "P2",
+      "area": "Pipeline (pipeline.md)",
+      "title": "The fractal semantic graph of everything, at several altitudes",
+      "owner": "ontology.aws.c (not started)",
+      "state": "waiting for the agent",
+      "next": "See pipeline.md, first step",
+      "blocked_on": "The agent starting (now)",
+      "updated": "2026-11-23T03:10Z"
+    },
+    {
+      "id": "P4",
+      "area": "Pipeline (pipeline.md)",
+      "title": "Billing connected to everything, in real time from logs, and predicted",
+      "owner": "billing.aws.c (not started)",
+      "state": "waiting for the agent",
+      "next": "See pipeline.md, first step",
+      "blocked_on": "The agent starting (now)",
+      "updated": "2026-11-23T03:10Z"
+    },
+    {
+      "id": "P5",
+      "area": "Pipeline (pipeline.md)",
+      "title": "The time lapse: everything linked, client-side data and WebAssembly",
+      "owner": "architect.aws.c, dev.*.aws.c",
+      "state": "waiting for the agent",
+      "next": "See pipeline.md, first step",
+      "blocked_on": "The agent starting (now)",
+      "updated": "2026-11-23T03:10Z"
+    },
+    {
+      "id": "P8",
+      "area": "Pipeline (pipeline.md)",
+      "title": "Feature launches, AWS style, and documentation of everything",
+      "owner": "journalist.aws.c (not started)",
+      "state": "waiting for the agent",
+      "next": "See pipeline.md, first step",
+      "blocked_on": "The agent starting (now)",
+      "updated": "2026-11-23T03:10Z"
+    },
     {
       "id": "PM-5",
       "area": "Programme",
@@ -28,10 +78,10 @@
       "area": "Security",
       "title": "R-001 Critical: cut sws-aws-platform-change's iam:* to what the plans need",
       "owner": "aws.c",
-      "state": "blocked",
-      "next": "A plan for Dinis's Approve on the site",
-      "blocked_on": "Decision 2",
-      "updated": "2026-11-23T02:55Z"
+      "state": "in progress",
+      "next": "Template v2.1 written (d67b560): for security.aws.c's review, then Dinis's Approve with the waiting stack plan",
+      "blocked_on": null,
+      "updated": "2026-11-23T04:00Z"
     },
     {
       "id": "PM-4",
@@ -68,10 +118,10 @@
       "area": "Programme",
       "title": "Start stage 2: lambda, iam, cloudformation (with route53), cloudtrail (with cloudwatch), vaults, design, ux, data, dev, boto3, video, journalist",
       "owner": "conductor.aws.c",
-      "state": "blocked",
-      "next": "Conductor recommends 24 h, for accountant.c's figures",
-      "blocked_on": "Decision 6",
-      "updated": "2026-11-23T02:55Z"
+      "state": "in progress",
+      "next": "Start now: no budget cap (Dinis, ~03:05 UTC); add ontology, billing, viz, dev.1 to dev.4",
+      "blocked_on": null,
+      "updated": "2026-11-23T03:10Z"
     },
     {
       "id": "S3-1",
@@ -120,8 +170,8 @@
       "owner": "lambda.aws.c (not started)",
       "state": "blocked",
       "next": "Stage 2",
-      "blocked_on": "Decision 6, then the area site",
-      "updated": "2026-11-23T02:55Z"
+      "blocked_on": "The agent starting (stage 2, now); then the area site",
+      "updated": "2026-11-23T03:10Z"
     },
     {
       "id": "CF-1",
@@ -130,8 +180,8 @@
       "owner": "cloudformation.aws.c (not started)",
       "state": "blocked",
       "next": "Stage 2",
-      "blocked_on": "Decision 6, then the area site",
-      "updated": "2026-11-23T02:55Z"
+      "blocked_on": "The agent starting (stage 2, now); then the area site",
+      "updated": "2026-11-23T03:10Z"
     },
     {
       "id": "R53-1",
@@ -140,8 +190,8 @@
       "owner": "cloudformation.aws.c (not started)",
       "state": "blocked",
       "next": "Stage 2",
-      "blocked_on": "Decision 6, then the area site",
-      "updated": "2026-11-23T02:55Z"
+      "blocked_on": "The agent starting (stage 2, now); then the area site",
+      "updated": "2026-11-23T03:10Z"
     },
     {
       "id": "IAM-1",
@@ -150,8 +200,8 @@
       "owner": "iam.aws.c (not started)",
       "state": "blocked",
       "next": "Stage 2",
-      "blocked_on": "Decision 6, then the area site",
-      "updated": "2026-11-23T02:55Z"
+      "blocked_on": "The agent starting (stage 2, now); then the area site",
+      "updated": "2026-11-23T03:10Z"
     },
     {
       "id": "IAM-2",
@@ -170,8 +220,8 @@
       "owner": "cloudtrail.aws.c (not started)",
       "state": "blocked",
       "next": "Stage 2",
-      "blocked_on": "Decision 6, then the area site",
-      "updated": "2026-11-23T02:55Z"
+      "blocked_on": "The agent starting (stage 2, now); then the area site",
+      "updated": "2026-11-23T03:10Z"
     },
     {
       "id": "CW-1",
@@ -180,8 +230,8 @@
       "owner": "cloudtrail.aws.c (not started)",
       "state": "blocked",
       "next": "Stage 2",
-      "blocked_on": "Decision 6, then the area site",
-      "updated": "2026-11-23T02:55Z"
+      "blocked_on": "The agent starting (stage 2, now); then the area site",
+      "updated": "2026-11-23T03:10Z"
     },
     {
       "id": "UI-1",
@@ -190,8 +240,8 @@
       "owner": "design.aws.c and ux.aws.c (not started)",
       "state": "blocked",
       "next": "Designer proposes five (memo 13.4)",
-      "blocked_on": "Decision 6",
-      "updated": "2026-11-23T02:55Z"
+      "blocked_on": "The agent starting (stage 2, now)",
+      "updated": "2026-11-23T03:10Z"
     },
     {
       "id": "VA-1",
@@ -200,8 +250,8 @@
       "owner": "vaults.aws.c (not started)",
       "state": "blocked",
       "next": "Stage 2",
-      "blocked_on": "Decision 6",
-      "updated": "2026-11-23T02:55Z"
+      "blocked_on": "The agent starting (stage 2, now)",
+      "updated": "2026-11-23T03:10Z"
     },
     {
       "id": "EX-1",
@@ -210,8 +260,8 @@
       "owner": "data.aws.c (not started)",
       "state": "blocked",
       "next": "Starts from S3-2",
-      "blocked_on": "Decision 6; S3-2",
-      "updated": "2026-11-23T02:55Z"
+      "blocked_on": "S3-2",
+      "updated": "2026-11-23T03:10Z"
     },
     {
       "id": "TW-1",
@@ -240,8 +290,8 @@
       "owner": "journalist.aws.c and video.aws.c (not started)",
       "state": "blocked",
       "next": "Stage 2",
-      "blocked_on": "Decisions 6 and 7",
-      "updated": "2026-11-23T02:55Z"
+      "blocked_on": "The agents starting (now)",
+      "updated": "2026-11-23T03:10Z"
     },
     {
       "id": "AV-2",
