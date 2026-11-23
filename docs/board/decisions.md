@@ -1,6 +1,6 @@
 # Decisions for Dinis: AWS Platform
 
-Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 08:30 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a".
+Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 08:35 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a".
 
 Nothing here stops the team: the agents are building on the twin. Decision 3 holds dev.2.aws.a's code (site/api/**, test/api/**) on its branch.
 
@@ -44,8 +44,9 @@ Nothing here stops the team: the agents are building on the twin. Decision 3 hol
 ### 6. Security R-008 (High): a permissions boundary on the change role
 - **Asks:** iam.aws.a (P-IAM-001), through conductor.aws.a; cleared by security.aws.a
 - **What:** even after v2.1, a script in the page can make the change role admin through a change set (R-008). iam.aws.a's v2.3 (c06d979, local to iam.aws.a: its branch push waits on decision 7) adds permissions boundaries that mirror today's scopes, with a custom read boundary. security.aws.a cleared v2.3 on paper (47b48c3 on work/security.aws.a), after finding three gaps in v2.2 (a1d2057) that v2.3 fixes.
-- **Options:** (a) one apply in the AWS console of v2.1 plus the v2.3 boundaries, on three conditions: (1) the same apply bounds sovereignwebsite-factory-dns or makes its trust console-only, else R-005 keeps R-008 open; (2) iam.aws.a first finishes its two checks (read-boundary coverage, UpdateRole behaviour); (3) the first apply is your own act in the console; (b) v2.1 through the page now (decision 4), boundaries later; (c) no boundary, rely on splitting off the change page (R-002).
-- **Recommended:** (a) with its three conditions (iam.aws.a and security.aws.a agree). If (a), decision 4 folds into it. R-008 stays Open until applied.
+- **Before any apply:** iam.aws.a finishes two checks: that the read boundary covers what the read role needs, and whether CloudFormation calls iam:UpdateRole on every role update. The first apply is your own act in the console.
+- **Options:** (a) one console apply of v2.3 (both boundaries) and console-only trust for sovereignwebsite-factory-dns: the change role loses GetRole and UpdateAssumeRolePolicy on it, so the site's DNS-trust plans stop working; (b) as (a), but keep DNS trust edits from the page, which leaves R-005 as a way past the boundaries until that role gets its own boundary (its permissions are not in this repository); (c) v2.1 through the page now (decision 4), boundaries later; (d) no boundary, rely on splitting off the change page (R-002).
+- **Recommended:** (a) (iam.aws.a; security.aws.a's condition that R-005 be closed in the same apply). If (a) or (b), decision 4 folds into it. R-008 stays Open until applied.
 - **Blocks:** R-008 closing. A change to AWS, so yours.
 
 ### 7. Two account A agents cannot push their branches
