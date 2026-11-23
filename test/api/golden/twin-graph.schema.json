@@ -1,0 +1,258 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "docs/ontology/twin-graph.schema.json",
+ "title": "Resource graph of an AWS account (the twin's, then real ones)",
+ "description": "Shape of twin-graph*.json. Trust and backend added 23 Nov 2026 for R-020 (design 03). Draft by ontology.aws.a@SovereignWebsite.dinis, 23 Nov 2026, for architect.aws.c and the UIs to challenge. Terms: 2026-11-23__01-resource-ontology.md. build-twin-graph.mjs checks every graph it writes against the enums, required fields and references here, and also that every edge end is a node, ids are unique and counts add up (rules JSON Schema cannot state).",
+ "type": "object",
+ "required": [
+  "about",
+  "backend",
+  "evidence_levels",
+  "counts",
+  "nodes",
+  "edges"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "about": {
+   "type": "string"
+  },
+  "backend": {
+   "$ref": "#/$defs/backend"
+  },
+  "evidence_levels": {
+   "type": "array",
+   "items": {
+    "$ref": "#/$defs/evidence"
+   }
+  },
+  "counts": {
+   "type": "object",
+   "required": [
+    "nodes",
+    "edges",
+    "by_evidence"
+   ],
+   "properties": {
+    "nodes": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "edges": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "by_evidence": {
+     "type": "object",
+     "propertyNames": {
+      "$ref": "#/$defs/evidence"
+     },
+     "additionalProperties": {
+      "type": "integer",
+      "minimum": 0
+     }
+    }
+   }
+  },
+  "nodes": {
+   "type": "array",
+   "items": {
+    "$ref": "#/$defs/node"
+   }
+  },
+  "edges": {
+   "type": "array",
+   "items": {
+    "$ref": "#/$defs/edge"
+   }
+  }
+ },
+ "$defs": {
+  "evidence": {
+   "description": "How we know a link, strongest first: an AWS API answered it; a CloudFormation template declares it; read from inside a file or record; inferred from a name; only a code comment says so; asserted by the ontologist.",
+   "enum": [
+    "api",
+    "template",
+    "content",
+    "naming",
+    "comment",
+    "curated"
+   ]
+  },
+  "altitude": {
+   "description": "Memo section 21: A0 atoms, A1 cells (events, objects), A2 molecules (resources), A3 organs (systems), A4 people (actors, roles), A5 civilisation (business functions).",
+   "enum": [
+    "A0",
+    "A1",
+    "A2",
+    "A3",
+    "A4",
+    "A5"
+   ]
+  },
+  "node_type": {
+   "enum": [
+    "account",
+    "region",
+    "bucket",
+    "object",
+    "prefix",
+    "distribution",
+    "stream",
+    "record",
+    "function",
+    "stack",
+    "role",
+    "policy",
+    "identity_provider",
+    "external_principal",
+    "trail",
+    "alarm",
+    "event",
+    "actor",
+    "vault",
+    "site",
+    "business_function",
+    "unknown"
+   ]
+  },
+  "relation": {
+   "description": "Each reads forward and backward in plain English; see the ontology doc, sections 3, 9, 10 and 11.",
+   "enum": [
+    "in",
+    "holds",
+    "made_by",
+    "writes_to",
+    "logs_to",
+    "serves_from",
+    "packages",
+    "trusts",
+    "allows_subject",
+    "has_policy",
+    "acted_as",
+    "acted_on",
+    "records",
+    "refers_to",
+    "part_of",
+    "signed_in_via",
+    "seen_in",
+    "targeted",
+    "runs_as",
+    "transforms_with"
+   ]
+  },
+  "node": {
+   "type": "object",
+   "required": [
+    "id",
+    "type",
+    "label",
+    "altitude",
+    "trust",
+    "backend"
+   ],
+   "properties": {
+    "id": {
+     "type": "string",
+     "description": "The ARN where AWS defines one, otherwise a stable derived URN, urn:sws:<kind>:<name>, the same for the twin and a real account.",
+     "pattern": "^(arn:aws:|urn:sws:[a-z0-9-]+:)"
+    },
+    "type": {
+     "$ref": "#/$defs/node_type"
+    },
+    "label": {
+     "type": "string",
+     "minLength": 1
+    },
+    "altitude": {
+     "$ref": "#/$defs/altitude"
+    },
+    "cfn_type": {
+     "type": "string",
+     "pattern": "^AWS::[A-Za-z0-9]+::[A-Za-z0-9]+$"
+    },
+    "inferred": {
+     "type": "boolean",
+     "description": "No API in the data source describes this node; it is known only through other evidence."
+    },
+    "dangling": {
+     "type": "boolean",
+     "description": "Named somewhere but not found where it should exist; see note."
+    },
+    "note": {
+     "type": "string"
+    },
+    "ocsf_class": {
+     "enum": [
+      "API Activity",
+      "HTTP Activity"
+     ]
+    },
+    "trust": {
+     "$ref": "#/$defs/trust"
+    },
+    "backend": {
+     "$ref": "#/$defs/backend"
+    }
+   },
+   "additionalProperties": {
+    "type": [
+     "string",
+     "number",
+     "boolean",
+     "array",
+     "object"
+    ]
+   }
+  },
+  "edge": {
+   "type": "object",
+   "required": [
+    "from",
+    "rel",
+    "to",
+    "evidence",
+    "trust",
+    "source"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "from": {
+     "type": "string"
+    },
+    "rel": {
+     "$ref": "#/$defs/relation"
+    },
+    "to": {
+     "type": "string"
+    },
+    "evidence": {
+     "$ref": "#/$defs/evidence"
+    },
+    "trust": {
+     "$ref": "#/$defs/trust"
+    },
+    "source": {
+     "type": "string",
+     "minLength": 1,
+     "description": "Which call, file or rule the link comes from, so a user can check it."
+    }
+   }
+  },
+  "trust": {
+   "description": "R-020 (design 03, Trust of evidence): verified for api and template evidence (AWS's own answer, or the stack AWS deployed); claimed for content, naming and comment (anyone who can write the bucket can write it); curated stays curated. A node is verified if any verified edge names it; else curated if every edge naming it is curated; else claimed. Claimed evidence may raise a question, never drive a plan.",
+   "enum": [
+    "verified",
+    "claimed",
+    "curated"
+   ]
+  },
+  "backend": {
+   "description": "Where the graph was read from, set by the page's mode (the banner), never by the APIs. A twin graph is never merged with an AWS one.",
+   "enum": [
+    "twin",
+    "aws"
+   ]
+  }
+ }
+}
