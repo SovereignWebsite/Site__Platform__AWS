@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SovereignWebsite AWS platform v2.3 DRAFT (iam.aws.a, P-IAM-001; security.aws.a's B1 to B3 addressed; not for apply until reviewed), bootstrap (the last console log-in). Two roles that
+  SovereignWebsite AWS platform v2.4 DRAFT (iam.aws.a, P-IAM-001; v2.3 cleared by security.aws.a plus R-005 option 1: no trust edits to the DNS role from the site; not for apply until the checks in P-IAM-001 pass), bootstrap (the last console log-in). Two roles that
   the account owner's own Google sign-in, in their browser on aws.platform.sovereignweb.site, may
   assume through STS AssumeRoleWithWebIdentity for at most one hour. No IAM user, no
   access key, nothing stored. Written by aws.c@SovereignWebsite.dinis, 22 Nov 2026; the site fills in both parameters.
@@ -28,10 +28,6 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-          - Sid: TheDnsRoleTrustPolicy
-            Effect: Allow
-            Action: [iam:GetRole, iam:UpdateAssumeRolePolicy]
-            Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/sovereignwebsite-factory-dns
           - Sid: BucketCorsThroughCloudControl
             Effect: Allow
             Action: ["s3:Get*", "s3:List*", s3:PutBucketCORS, cloudformation:GetResource, cloudformation:ListResources, cloudformation:UpdateResource, cloudformation:GetResourceRequestStatus]
@@ -155,14 +151,8 @@ Resources:
                 accounts.google.com:aud: !Ref GoogleClientId
                 accounts.google.com:sub: !Ref GoogleSub
       Policies:
-        - PolicyName: dns-role-trust-only
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Sid: TheDnsRoleTrustPolicy
-                Effect: Allow
-                Action: [iam:GetRole, iam:UpdateAssumeRolePolicy]
-                Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/sovereignwebsite-factory-dns
+        # v2.4 DRAFT, R-005: the DNS role's trust is changed only by console. Its own rights can repoint this site's
+        # name (security.aws.a, from the Factory's docs/aws-oidc.md), so whoever controls its trust controls the site.
         # v2, 23 Nov 2026: let a bucket answer this site (a CORS rule, added through Cloud Control).
         - PolicyName: s3-cors
           PolicyDocument:
