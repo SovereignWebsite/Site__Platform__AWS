@@ -1,0 +1,8 @@
+{
+  "v": 1,
+  "encrypt": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAoZ/dyufO1TUHqO/Kxpz+\nitvm9mm2Ug9l6/7B7TT1kRUESOm0xsslR0PqkpLtSoj+/YSW+aXRUtmyyiPxh6Us\nP59gSiA+eJXXS9XZLjhRh2igB45eEp9IQ0Ahpqw7SjevtuvghJ3J2c8TzfWV2z5U\nbp9ltlGGj/OAxvlw4jKjV2mjt2WfcOuFAS6E3xobH+R5drM6AwKSnx4VkAKctbZ3\ngaI+aF9NiADN4Ou/tacIJ8vLsi1K2xQ3wvVwRi7rXNfBERwVQE37ZGYgYYG6XBJ8\n6H2Jy0LbzlWVg3Odxg7HnLuthjrABXItal/+ODu8K8C+RjKE0nGdnMl9/xNCqHvz\nhgd4WMD63QkWRwZIsHibLQLk8ftfvchl7cSYqGzEyeTFVx5wiNph0UQY4I1BQyJN\nyz/J+OITjhDPspReTqzhtSoHfn3u911YWbyWTjf4HlXpxBgg/BwOkEtbdYLeOhjy\nR3DtjOk2RDJGTzNgwA9PJjhn7diiSJMZp44MaQRHVLlYRWPlLTI8cQBxSruAgg8e\nXSu23YHs/7ecBuZpqXEMI31XDy/MGbA3k4zOSC+oMWJ8Iq/aVikK0bKdI4dW2nMK\nRG8BM0iCI357g+tWvIgeXo6K1Wj9ZRX+LAkAmhvTyKMUJfKFXtL5F5HJXERBPS4P\nTcQoE3kNH0D+OG3wUzmwBwsCAwEAAQ==\n-----END PUBLIC KEY-----\n",
+  "sign": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEk74FXByVimVx2dWYX8vHZ3TOni56\nd1NHOjYrQfRth6a6JbLhcys2K3uri6jQY7StG19qYOy2qa4/A7SyZOKF3A==\n-----END PUBLIC KEY-----\n",
+  "label": "architect.aws.a@SovereignWebsite.dinis",
+  "fingerprint": "sha256:de99a9493fff045a",
+  "signing_fingerprint": "sha256:02e3892825e6faeb"
+}
