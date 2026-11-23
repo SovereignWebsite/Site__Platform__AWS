@@ -1,0 +1,261 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "LambdaApi (browser)",
+    "version": "0.1.0",
+    "summary": "The browser-side contract of LambdaApi (site/api/lambda-api.js).",
+    "description": "This site has no server. The paths are logical names for the methods of the browser object LambdaApi, not URLs anything listens on; operationId is the method name and parameters are its arguments in order. Each operation lists in x-aws-actions the IAM actions it needs on real AWS. Reads only. Lists return one page { items, next }; LambdaApi.all drains them with a cap."
+  },
+  "servers": [],
+  "x-browser-global": "LambdaApi",
+  "x-design": "docs/architecture/2026-11-23__03-every-service-one-shape.md (work/architect.aws.a)",
+  "paths": {
+    "/{region}/functions": {
+      "get": {
+        "operationId": "functions",
+        "summary": "One page of the region's functions",
+        "x-arguments": "functions(region, { next, max })",
+        "x-wire": "Lambda ListFunctions: GET /2015-03-31/functions/?Marker=&MaxItems= (REST JSON)",
+        "x-aws-actions": [
+          "lambda:ListFunctions"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "region",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "examples": [
+                "eu-west-2"
+              ]
+            }
+          },
+          {
+            "name": "next",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "next"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Function"
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Opaque cursor for the next page; null at the end"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        }
+      }
+    },
+    "/{region}/functions/{name}": {
+      "get": {
+        "operationId": "function",
+        "summary": "One function's configuration",
+        "x-arguments": "function(region, name)",
+        "x-wire": "Lambda GetFunctionConfiguration: GET /2015-03-31/functions/{name}/configuration",
+        "x-aws-actions": [
+          "lambda:GetFunctionConfiguration"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "region",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "examples": [
+                "eu-west-2"
+              ]
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Function name or ARN",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The function",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Function"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Function": {
+        "type": "object",
+        "required": [
+          "name",
+          "arn",
+          "region"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "arn": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string"
+          },
+          "runtime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "handler": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "memory": {
+            "type": "integer"
+          },
+          "timeout": {
+            "type": "integer"
+          },
+          "codeSize": {
+            "type": "integer"
+          },
+          "codeSha256": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "modified": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "state": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "packageType": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "architectures": {
+            "type": "array"
+          }
+        }
+      },
+      "AwsError": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "status"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "examples": [
+              "ResourceNotFoundException",
+              "AccessDeniedException"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "responses": {
+      "AwsError": {
+        "description": "The promise rejects with an Error ('Code: Message', .code, .status), or the browser's TypeError for a CORS refusal",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AwsError"
+            }
+          }
+        }
+      }
+    }
+  }
+}
