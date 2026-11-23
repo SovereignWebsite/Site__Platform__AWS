@@ -368,19 +368,21 @@
     if (/\.(jsonl|ndjson)$/i.test(name) || /^\s*\{/.test(text)) {
       try {
         var rows = text.split("\n").filter(function (l) { return l.trim(); }).map(function (l) { return JSON.parse(l); });
-        if (rows.length) { box.appendChild(jsonView(rows)); return P.say(st, name + ": JSON Lines (" + rows.length + "), formatted.", "ok"); }
+        if (rows.length) { box.appendChild(filteredView(rows, JSON.stringify, jsonView, "lines")); return P.say(st, name + ": JSON Lines (" + rows.length + "), formatted.", "ok"); }
       } catch (e) { /* not JSON Lines */ }
     }
     if (/^\s*\{/.test(text)) {
       // Firehose writes records back to back ("}{") unless a delimiter is set: read them as a list.
       var recs = concatenatedJson(text);
-      if (recs) { box.appendChild(jsonView(recs)); return P.say(st, name + ": " + recs.length + " JSON records back to back (as Firehose writes them), formatted.", "ok"); }
+      if (recs) { box.appendChild(filteredView(recs, JSON.stringify, jsonView, "records")); return P.say(st, name + ": " + recs.length + " JSON records back to back (as Firehose writes them), formatted.", "ok"); }
     }
     var tab = tableOf(name, type, text);
     if (tab) { box.appendChild(tableView(tab, name, text)); return P.say(st, name + ": " + tab.what + ", " + tab.rows.length + " row" + (tab.rows.length === 1 ? "" : "s") + ".", "ok"); }
     if (/^text\/|xml|javascript|yaml/.test(type) || TEXT.test(name) || !/[\x00-\x08\x0E-\x1F]/.test(text.slice(0, 4096))) {
       var coloured = window.Highlight && Highlight.highlight(name, text, document);
-      box.appendChild(coloured || P.el("pre", { text: text })); return P.say(st, name, "ok");
+      var whole = coloured || P.el("pre", { text: text }), lines = text.split("\n");
+      box.appendChild(lines.length > 2 ? filteredView(lines, String, function (sub) { return sub === lines ? whole : P.el("pre", { text: sub.join("\n") }); }, "lines") : whole);
+      return P.say(st, name, "ok");
     }
     P.say(st, name + ": not text; use Download.", "ok");
   }
@@ -444,6 +446,33 @@
   }
   // A table of the rows, TABLE_PAGE at a time, cells as text only; "Show as text" swaps in the raw file.
   var TABLE_PAGE = 200, MAX_COLS = 200;
+  // ---- W3-5: a line filter in the viewer (sherpa walk 3, finding 5) ----
+  // Keeps the rows (JSON Lines, records, table rows) or text lines that contain what is typed, in any case, and says
+  // "N of M lines match". Plain text matching (no patterns); the file is only read, never changed.
+  function filterBox(unit, total, onChange) {
+    var input = P.el("input", { type: "search", class: "filter line-filter", placeholder: "Filter " + unit, "aria-label": "Filter " + unit });
+    var count = P.el("span", { class: "small line-count", "aria-live": "polite" }), timer = null;
+    input.oninput = function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () { var q = input.value.toLowerCase(), n = onChange(q); count.textContent = q ? n + " of " + total + " " + unit + " match" : ""; }, 120);
+    };
+    return P.el("div", { class: "toolbar" }, [input, count]);
+  }
+  function filteredView(items, keyOf, render, unit) {
+    var wrap = P.el("div", { class: "filtered" }), holder = P.el("div", {}), keys = null, first = render(items);
+    holder.appendChild(first);
+    wrap.appendChild(filterBox(unit, items.length, function (q) {
+      holder.textContent = "";
+      if (!q) { holder.appendChild(first); return items.length; }
+      if (!keys) keys = items.map(function (x) { return String(keyOf(x)).toLowerCase(); });
+      var sub = items.filter(function (x, i) { return keys[i].indexOf(q) >= 0; });
+      holder.appendChild(sub.length ? render(sub) : P.el("p", { class: "small", text: "No " + unit + " match." }));
+      return sub.length;
+    }));
+    wrap.appendChild(holder);
+    return wrap;
+  }
+
   function tableView(tab, name, text) {
     var wrap = P.el("div", { class: "table-view" }), cols = tab.head ? tab.head.length : 0;
     tab.rows.forEach(function (r) { if (r.length > cols) cols = r.length; });
@@ -451,30 +480,36 @@
     var allCols = cols; if (cols > MAX_COLS) cols = MAX_COLS;
     var head = [];
     for (var c = 0; c < cols; c++) head.push(P.el("th", { text: tab.head && tab.head[c] != null ? tab.head[c] : String(c + 1) }));
-    var tbody = P.el("tbody", {}), shown = 0;
+    var tbody = P.el("tbody", {}), shown = 0, rows = tab.rows, keys = null;
     var table = P.el("table", { class: "s3-table data-table" }, [P.el("thead", {}, [P.el("tr", {}, head)]), tbody]);
     var more = P.el("button", { type: "button", class: "quiet" }), raw = null;
     function page() {
-      var to = Math.min(tab.rows.length, shown + TABLE_PAGE);
+      var to = Math.min(rows.length, shown + TABLE_PAGE);
       for (var i = shown; i < to; i++) {
-        var tds = []; for (var j = 0; j < cols; j++) tds.push(P.el("td", { text: tab.rows[i][j] != null ? tab.rows[i][j] : "" }));
+        var tds = []; for (var j = 0; j < cols; j++) tds.push(P.el("td", { text: rows[i][j] != null ? rows[i][j] : "" }));
         tbody.appendChild(P.el("tr", {}, tds));
       }
       shown = to;
-      more.hidden = shown >= tab.rows.length;
-      more.textContent = "Show " + Math.min(TABLE_PAGE, tab.rows.length - shown) + " more of " + (tab.rows.length - shown);
+      more.hidden = shown >= rows.length;
+      more.textContent = "Show " + Math.min(TABLE_PAGE, rows.length - shown) + " more of " + (rows.length - shown);
     }
+    var lineFilter = filterBox("rows", tab.rows.length, function (q) {
+      if (!keys) keys = tab.rows.map(function (r) { return r.join("\t").toLowerCase(); });
+      rows = q ? tab.rows.filter(function (r, i) { return keys[i].indexOf(q) >= 0; }) : tab.rows;
+      tbody.textContent = ""; shown = 0; page();
+      return rows.length;
+    });
     more.onclick = page;
     var asText = P.el("button", { type: "button", class: "quiet", text: "Show as text" });
     asText.onclick = function () {
       var t = !raw || raw.hidden;
       if (!raw) { raw = P.el("pre", { text: text }); wrap.appendChild(raw); }
-      raw.hidden = !t; grid.hidden = t; more.hidden = t || shown >= tab.rows.length;
+      raw.hidden = !t; grid.hidden = t; lineFilter.hidden = t; more.hidden = t || shown >= rows.length;
       asText.textContent = t ? "Show as a table" : "Show as text";
     };
     var grid = P.el("div", { class: "s3-wrap" }, [table]);
     wrap.appendChild(P.el("p", { class: "row" }, [asText, P.el("span", { class: "small", text: tab.rows.length + " rows, " + (allCols > cols ? "the first " + cols + " of " + allCols + " columns (Show as text has them all)" : cols + " columns") + (tab.head ? "" : " (no header row: numbered)") })]));
-    wrap.appendChild(grid); wrap.appendChild(P.el("div", { class: "row" }, [more]));
+    wrap.appendChild(lineFilter); wrap.appendChild(grid); wrap.appendChild(P.el("div", { class: "row" }, [more]));
     page();
     return wrap;
   }
