@@ -39,6 +39,8 @@
   // ---- Twin mode: a synthetic AWS (twin.js) behind the same calls; its own identity and accounts ----
   var TWIN = window.AwsTransport && AwsTransport.isTwin();
   function rec(name) { return TWIN ? "twin-" + name : name; }
+  // The twin opens on S3, where its synthetic data is (sherpa.aws.c, walk 02).
+  if (TWIN) currentTab = "s3";
   function b64u(o) { return btoa(JSON.stringify(o)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
   function twinToken() { return b64u({ alg: "none", typ: "JWT" }) + "." + b64u({ sub: "000000000000000000001", name: "Twin visitor", email: "visitor@twin.example", exp: Math.floor(Date.now() / 1000) + 3600 }) + ".twin"; }
   function enterTwin(on) { AwsTransport.setTwin(on); location.href = location.pathname + (on ? "?twin" : "?aws"); }
@@ -262,7 +264,7 @@
       var read = el("button", { type: "button", text: "Read this account" });
       var rm = el("button", { type: "button", class: "quiet", text: "Forget" });
       rm.onclick = function () { accounts.splice(i, 1); saveAccounts(accounts); renderAccounts(); renderPlans(); };
-      var setup = acct.twin ? el("p", { class: "small", text: "A synthetic account: already set up, nothing to do in AWS. It is read for you below." }) : setupLinks(acct);
+      var setup = acct.twin ? el("p", { class: "small", text: "A synthetic account: already set up, nothing to do in AWS. It is read for you here; its buckets are on the S3 tab." }) : setupLinks(acct);
       if (acct.ready && !acct.twin) setup = el("details", { class: "setup-again" }, [el("summary", { text: "Set up again (CloudFormation)" }), setup]);
       var badge = wrongGoogle(acct) ? el("span", { class: "badge warn", text: "other Google account" }) : acct.ready ? el("span", { class: "badge ok", text: "set up" }) : el("span", { class: "badge", text: "not set up yet" });
       read.onclick = function () {
@@ -503,11 +505,18 @@
   if ($("twin-leave")) $("twin-leave").onclick = function () { enterTwin(false); };
   $("twin-bar").hidden = !TWIN;
   // In the twin, Leave the twin is the way out; sign out and forget this device belong to real sign-in.
-  if (TWIN) { $("sign-out").hidden = true; $("forget-device").hidden = true; if ($("plans-twin-note")) $("plans-twin-note").hidden = false; }
+  if (TWIN) { $("sign-out").hidden = true; $("forget-device").hidden = true; $("add-account").hidden = true; $("twin-add-note").hidden = false;
+    $("twin-add-leave").onclick = function () { enterTwin(false); }; if ($("plans-twin-note")) $("plans-twin-note").hidden = false; }
   if (TWIN && window.AwsTwin) {
     var ps = $("twin-pack");
     Object.keys(AwsTwin.packs).forEach(function (k) { ps.appendChild(el("option", { value: k, text: AwsTwin.packs[k].title })); });
     ps.value = AwsTwin.pack(); $("twin-pack-about").textContent = AwsTwin.packs[ps.value].about;
+    // Where a pack shows: one click to the place (sherpa.aws.c, walk 02).
+    var see = AwsTwin.packs[ps.value].see, sb = $("twin-pack-see");
+    if (see) {
+      sb.hidden = false; sb.textContent = "See it in " + see.label;
+      sb.onclick = function () { setTab("s3"); if (window.S3Browser) S3Browser.openAt(AwsTwin.buckets[see.bucket], see.prefix); };
+    }
     // A pack is a whole world: loading one reloads the page on it.
     ps.onchange = function () { AwsTwin.usePack(ps.value); location.href = location.pathname + "?twin&pack=" + ps.value; };
   }

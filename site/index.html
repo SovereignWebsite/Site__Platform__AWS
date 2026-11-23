@@ -59,6 +59,7 @@
   <span><strong>Twin mode.</strong> A synthetic AWS that runs in this page: same calls, made-up data (account 111122223333). Nothing here touches a real account.</span>
   <label class="pack">Demo pack <select id="twin-pack" aria-label="Demo pack"></select></label>
   <span id="twin-pack-about" class="small"></span>
+  <button type="button" id="twin-pack-see" class="linkish" hidden></button>
   <button type="button" id="twin-leave" class="quiet">Leave the twin</button>
 </div>
 <section id="step1" class="signin">
@@ -105,6 +106,7 @@
   <div class="panel-head"><h2>Your AWS accounts</h2><p class="small">Kept in this browser only, sealed with its key; never on the page or in any repository.</p></div>
   <p id="identity-warning" class="warning" hidden></p>
   <ul class="grid" id="accounts"></ul>
+  <p id="twin-add-note" class="small" hidden>Your own AWS account cannot be added inside the twin: <button type="button" id="twin-add-leave" class="linkish">leave the twin</button> and sign in with Google to add it.</p>
   <form id="add-account" class="card add-card">
     <h3>Add an account</h3>
     <div class="row">
