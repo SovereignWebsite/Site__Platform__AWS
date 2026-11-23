@@ -413,6 +413,33 @@
    "moved_from": "video.aws.c"
   },
   {
+   "id": "sherpa.aws.a",
+   "session": "session_018yvwtPct58bYVDGY6ZLM7S",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "sherpa.aws.c"
+  },
+  {
+   "id": "pm.aws.a",
+   "session": "session_018yvwtLfieUut6hSirZ6W9B",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "pm.aws.c"
+  },
+  {
+   "id": "swarm.aws.a",
+   "session": "session_018yvwtMJYhTXmX6uJHBKqgJ",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "swarm.aws.c"
+  },
+  {
    "id": "architect.aws.a",
    "session": "session_018yvwtPuQzTBRoKGD45TYFV",
    "parent": null,
@@ -530,15 +557,6 @@
    "moved_from": "ontology.aws.c"
   },
   {
-   "id": "pm.aws.a",
-   "session": "session_018yvwtLfieUut6hSirZ6W9B",
-   "parent": null,
-   "born": null,
-   "programme": "aws.c",
-   "account": "a",
-   "moved_from": "pm.aws.c"
-  },
-  {
    "id": "security.aws.a",
    "session": "session_018yvwtNBPNd9zoeTUyhJ4YY",
    "parent": null,
@@ -546,24 +564,6 @@
    "programme": "aws.c",
    "account": "a",
    "moved_from": "security.aws.c"
-  },
-  {
-   "id": "sherpa.aws.a",
-   "session": "session_018yvwtPct58bYVDGY6ZLM7S",
-   "parent": null,
-   "born": null,
-   "programme": "aws.c",
-   "account": "a",
-   "moved_from": "sherpa.aws.c"
-  },
-  {
-   "id": "swarm.aws.a",
-   "session": "session_018yvwtMJYhTXmX6uJHBKqgJ",
-   "parent": null,
-   "born": null,
-   "programme": "aws.c",
-   "account": "a",
-   "moved_from": "swarm.aws.c"
   },
   {
    "id": "ux.aws.a",
@@ -13615,8 +13615,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "journalist.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T15:55:29Z",
@@ -13652,8 +13652,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "billing.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T15:55:34Z",
@@ -13672,8 +13672,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T15:55:38Z",
@@ -13692,8 +13692,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T15:55:55Z",
@@ -13717,8 +13717,8 @@
     "conductor.aws.c",
     "lambda.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "lambda.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T15:56:02Z",
@@ -13737,8 +13737,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T15:56:15Z",
@@ -13757,8 +13757,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "cloudtrail.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T15:56:32Z",
@@ -13774,8 +13774,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "billing.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T15:56:56Z",
@@ -13886,8 +13886,8 @@
     "cloudtrail.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "cloudtrail.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:00:37Z",
@@ -13905,8 +13905,8 @@
     "conductor.aws.c",
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:00:58Z",
@@ -13944,8 +13944,8 @@
     "billing.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "billing.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:01:10Z",
@@ -13961,8 +13961,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "cloudtrail.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:01:30Z",
@@ -13980,8 +13980,8 @@
     "boto3.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:01:58Z",
@@ -14050,8 +14050,8 @@
    "lanes_touched": [
     "boto3.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:02:44Z",
@@ -14105,8 +14105,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:02:56Z",
@@ -14178,8 +14178,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:03:38Z",
@@ -14196,8 +14196,8 @@
    "lanes_touched": [
     "billing.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "billing.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:03:38Z",
@@ -14213,8 +14213,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:03:39Z",
@@ -14308,8 +14308,8 @@
     "boto3.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:04:17Z",
@@ -14364,8 +14364,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:05:12Z",
@@ -14461,8 +14461,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:05:36Z",
@@ -14536,8 +14536,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:05:53Z",
@@ -14650,8 +14650,8 @@
     "boto3.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:07:40Z",
@@ -14669,8 +14669,8 @@
     "conductor.aws.c",
     "journalist.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "journalist.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:07:43Z",
@@ -14705,8 +14705,8 @@
     "conductor.aws.c",
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:07:57Z",
@@ -14743,8 +14743,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:08:44Z",
@@ -14799,8 +14799,8 @@
    "lanes_touched": [
     "journalist.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "journalist.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:09:23Z",
@@ -14816,8 +14816,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:09:25Z",
@@ -14850,8 +14850,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:09:47Z",
@@ -14884,8 +14884,8 @@
    "lanes_touched": [
     "boto3.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:09:56Z",
@@ -14920,8 +14920,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:10:38Z",
@@ -14990,8 +14990,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:11:14Z",
@@ -15007,8 +15007,8 @@
    "lanes_touched": [
     "boto3.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:11:34Z",
@@ -15099,8 +15099,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:14:30Z",
@@ -15168,8 +15168,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:15:08Z",
@@ -15231,8 +15231,8 @@
     "conductor.aws.c",
     "lambda.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "lambda.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:29:21Z",
@@ -15267,8 +15267,8 @@
    "lanes_touched": [
     "boto3.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:30:58Z",
@@ -15350,8 +15350,8 @@
     "cloudtrail.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "cloudtrail.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:34:34Z",
@@ -15369,8 +15369,8 @@
     "boto3.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:35:04Z",
@@ -15423,8 +15423,8 @@
    "lanes_touched": [
     "boto3.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:36:34Z",
@@ -15444,8 +15444,8 @@
     "cloudtrail.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "cloudtrail.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:36:44Z",
@@ -15461,8 +15461,8 @@
    "lanes_touched": [
     "cloudtrail.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "cloudtrail.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:37:14Z",
@@ -15497,8 +15497,8 @@
    "lanes_touched": [
     "lambda.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "lambda.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:37:28Z",
@@ -15518,8 +15518,8 @@
     "cloudtrail.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "cloudtrail.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:39:09Z",
@@ -15660,8 +15660,8 @@
     "boto3.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:44:17Z",
@@ -15677,8 +15677,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:44:54Z",
@@ -15694,8 +15694,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:45:13Z",
@@ -15745,8 +15745,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:46:15Z",
@@ -15779,8 +15779,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:48:07Z",
@@ -15796,8 +15796,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:48:15Z",
@@ -15891,8 +15891,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:50:08Z",
@@ -15908,8 +15908,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:50:09Z",
@@ -16073,8 +16073,8 @@
    "lanes_touched": [
     "boto3.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:52:59Z",
@@ -16342,8 +16342,8 @@
    "lanes_touched": [
     "boto3.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:55:39Z",
@@ -16359,8 +16359,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T16:55:44Z",
@@ -16470,8 +16470,8 @@
     "conductor.aws.c",
     "journalist.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "journalist.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T17:09:09Z",
@@ -16539,8 +16539,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T17:20:41Z",
@@ -16574,8 +16574,8 @@
    "lanes_touched": [
     "boto3.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T17:22:23Z",
@@ -16737,8 +16737,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T17:24:52Z",
@@ -16754,8 +16754,8 @@
    "lanes_touched": [
     "boto3.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T17:25:16Z",
@@ -16812,8 +16812,8 @@
     "cloudtrail.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "cloudtrail.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T17:25:56Z",
@@ -16935,8 +16935,8 @@
    "lanes_touched": [
     "boto3.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T17:26:59Z",
@@ -16973,8 +16973,8 @@
     "cloudtrail.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "cloudtrail.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T17:27:49Z",
@@ -17009,8 +17009,8 @@
     "cloudtrail.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "cloudtrail.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T17:28:30Z",
@@ -17030,8 +17030,8 @@
     "cloudtrail.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "cloudtrail.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T17:28:56Z",
@@ -17068,8 +17068,8 @@
     "cloudtrail.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "cloudtrail.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T17:29:27Z",
@@ -17154,8 +17154,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T17:34:21Z",
@@ -17243,8 +17243,8 @@
     "conductor.aws.c",
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T17:48:40Z",
@@ -17281,8 +17281,8 @@
     "billing.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "billing.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T17:59:01Z",
@@ -17373,8 +17373,8 @@
     "billing.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "billing.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:00:43Z",
@@ -17587,8 +17587,8 @@
    "lanes_touched": [
     "boto3.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:03:47Z",
@@ -17677,8 +17677,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:05:03Z",
@@ -17711,8 +17711,8 @@
    "lanes_touched": [
     "boto3.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:05:51Z",
@@ -17815,8 +17815,8 @@
    "lanes_touched": [
     "boto3.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:06:44Z",
@@ -17900,8 +17900,8 @@
    "lanes_touched": [
     "boto3.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:07:37Z",
@@ -17921,8 +17921,8 @@
     "billing.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "billing.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:07:45Z",
@@ -17957,8 +17957,8 @@
     "conductor.aws.c",
     "journalist.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "journalist.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:08:16Z",
@@ -18009,8 +18009,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:09:08Z",
@@ -18083,8 +18083,8 @@
    "lanes_touched": [
     "cloudtrail.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "cloudtrail.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:09:52Z",
@@ -18100,8 +18100,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:10:11Z",
@@ -18134,8 +18134,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:10:22Z",
@@ -18151,8 +18151,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:10:27Z",
@@ -18203,8 +18203,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:11:05Z",
@@ -18220,8 +18220,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:11:07Z",
@@ -18339,8 +18339,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:12:59Z",
@@ -18449,8 +18449,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:13:33Z",
@@ -18483,8 +18483,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:14:00Z",
@@ -18563,8 +18563,8 @@
     "billing.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "billing.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:14:25Z",
@@ -18580,8 +18580,8 @@
    "lanes_touched": [
     "boto3.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:14:31Z",
@@ -18765,8 +18765,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:15:47Z",
@@ -18809,8 +18809,8 @@
     "billing.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "billing.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:16:18Z",
@@ -18885,8 +18885,8 @@
    "lanes_touched": [
     "boto3.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:16:48Z",
@@ -18968,8 +18968,8 @@
    "lanes_touched": [
     "dev.2.aws.a"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:18:02Z",
@@ -18985,8 +18985,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:18:31Z",
@@ -19040,8 +19040,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:19:05Z",
@@ -19057,8 +19057,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:19:34Z",
@@ -19148,8 +19148,8 @@
    "lanes_touched": [
     "dev.2.aws.a"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:22:03Z",
@@ -19185,8 +19185,8 @@
     "conductor.aws.c",
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:23:39Z",
@@ -19344,8 +19344,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:25:44Z",
@@ -19396,8 +19396,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:27:00Z",
@@ -19451,8 +19451,8 @@
     "conductor.aws.c",
     "lambda.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "lambda.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:27:33Z",
@@ -19485,8 +19485,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:28:07Z",
@@ -19519,8 +19519,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:29:06Z",
@@ -19537,8 +19537,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:29:53Z",
@@ -19571,8 +19571,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:32:55Z",
@@ -19609,8 +19609,8 @@
     "conductor.aws.c",
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:34:34Z",
@@ -19632,8 +19632,8 @@
     "cloudtrail.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "cloudtrail.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:34:38Z",
@@ -19666,8 +19666,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:34:59Z",
@@ -19701,8 +19701,8 @@
    "lanes_touched": [
     "dev.2.aws.a"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:35:29Z",
@@ -19737,8 +19737,8 @@
    "lanes_touched": [
     "lambda.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "lambda.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:35:56Z",
@@ -19758,8 +19758,8 @@
     "cloudtrail.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "cloudtrail.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:35:59Z",
@@ -19795,8 +19795,8 @@
     "cloudtrail.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "cloudtrail.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:36:40Z",
@@ -19829,8 +19829,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:37:12Z",
@@ -19881,8 +19881,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:40:39Z",
@@ -19898,8 +19898,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:41:00Z",
@@ -19949,8 +19949,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:41:41Z",
@@ -19966,8 +19966,8 @@
    "lanes_touched": [
     "boto3.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:42:57Z",
@@ -20002,8 +20002,8 @@
     "boto3.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:44:31Z",
@@ -20019,8 +20019,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:44:40Z",
@@ -20036,8 +20036,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:45:08Z",
@@ -20070,8 +20070,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:50:37Z",
@@ -20131,8 +20131,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:52:43Z",
@@ -20148,8 +20148,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:52:46Z",
@@ -20199,8 +20199,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T18:58:19Z",
@@ -20216,8 +20216,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T19:00:19Z",
@@ -20233,8 +20233,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T19:07:52Z",
@@ -20252,8 +20252,8 @@
     "conductor.aws.c",
     "journalist.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "journalist.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T19:08:36Z",
@@ -20323,8 +20323,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T19:20:21Z",
@@ -20377,8 +20377,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T19:27:34Z",
@@ -20532,8 +20532,8 @@
     "conductor.aws.c",
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T19:49:19Z",
@@ -20571,8 +20571,8 @@
     "billing.aws.c",
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "billing.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T19:59:07Z",
@@ -20588,8 +20588,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T19:59:13Z",
@@ -20686,8 +20686,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "journalist.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T20:17:42Z",
@@ -20720,8 +20720,8 @@
    "lanes_touched": [
     "boto3.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "boto3.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T20:20:49Z",
@@ -20772,8 +20772,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T20:21:50Z",
@@ -20823,8 +20823,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T20:22:09Z",
@@ -20876,8 +20876,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T20:22:37Z",
@@ -20893,8 +20893,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "lambda.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T20:22:43Z",
@@ -20981,8 +20981,8 @@
    "lanes_touched": [
     "ux.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "ux.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T20:24:19Z",
@@ -20998,8 +20998,8 @@
    "lanes_touched": [
     "conductor.aws.c"
    ],
-   "signature": "own key",
-   "key_of": "dev.2.aws.a"
+   "signature": "own superseded key",
+   "key_of": null
   },
   {
    "t": "2026-11-23T20:24:28Z",
@@ -21017,6 +21017,169 @@
    ],
    "signature": "own key",
    "key_of": "security.aws.a"
+  },
+  {
+   "t": "2026-11-23T20:25:26Z",
+   "type": "commit",
+   "agent": "sherpa.aws.a",
+   "sha": "b6541ea",
+   "branch": "dev",
+   "subject": "docs/sherpa: walks 3 to 6, Vault deploy step 6 notes, pending checks (from sherpa.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/sherpa/2026-11-23__vault-deploy-01-simplest-path.md",
+    "docs/sherpa/2026-11-23__vault-deploy-02-template-check.md",
+    "docs/sherpa/2026-11-23__walk-03.md",
+    "docs/sherpa/2026-11-23__walk-04.md",
+    "docs/sherpa/2026-11-23__walk-05.md",
+    "docs/sherpa/2026-11-23__walk-06.md",
+    "docs/sherpa/pending-checks.md",
+    "docs/team/from-a/sherpa.aws.a.md",
+    "docs/team/keys/sherpa.aws.a.iac-commit.txt",
+    "docs/team/keys/sherpa.aws.a.iac-entry.json",
+    "docs/team/keys/sherpa.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "sherpa.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "sherpa.aws.a"
+  },
+  {
+   "t": "2026-11-23T20:25:26Z",
+   "type": "handoff",
+   "from": "sherpa.aws.a",
+   "to": "sherpa.aws.a",
+   "sha": "b6541ea"
+  },
+  {
+   "t": "2026-11-23T20:26:36Z",
+   "type": "commit",
+   "agent": "data.aws.a",
+   "sha": "c73ea8d",
+   "branch": "dev",
+   "subject": "data: time window (P5 step 1), host pivot, Firehose names, tests over http with the twin's packs from disk",
+   "signed": true,
+   "files": [
+    "docs/data/status.md",
+    "site/data/extract.js",
+    "site/data/links.js",
+    "site/data/view.js",
+    "test/data/extract.test.mjs",
+    "test/data/view.e2e.cjs",
+    "test/data/view.fixture.js"
+   ],
+   "lanes_touched": [
+    "data.aws.a",
+    "data.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "data.aws.a"
+  },
+  {
+   "t": "2026-11-23T20:26:52Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "7892a5d",
+   "branch": "work/security.aws.a",
+   "subject": "Security: sherpa b6541ea and cloudformation 3cb01d6 on dev cleared; alarm default to reconcile with design 06",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "security.aws.a"
+  },
+  {
+   "t": "2026-11-23T20:26:59Z",
+   "type": "commit",
+   "agent": "pm.aws.a",
+   "sha": "819688d",
+   "branch": "dev",
+   "subject": "docs/board: pm.aws.a's board, decisions page and three decision briefs (presentation and video each)",
+   "signed": true,
+   "files": [
+    "docs/board/README.md",
+    "docs/board/brief/build-video.mjs",
+    "docs/board/brief/decision-video.html",
+    "docs/board/brief/decisions-brief.html",
+    "docs/board/brief/decisions.storyboard.json",
+    "docs/board/brief/guard-rails-brief.html",
+    "docs/board/brief/guard-rails-video.html",
+    "docs/board/brief/guard-rails.storyboard.json",
+    "docs/board/brief/vault-deploy-brief.html",
+    "docs/board/brief/vault-deploy-video.html",
+    "docs/board/brief/vault-deploy.storyboard.json",
+    "docs/board/decisions.md",
+    "docs/board/pipeline.md",
+    "docs/board/tasks.json",
+    "docs/team/from-a/pm.aws.a.md",
+    "docs/team/keys/pm.aws.a.iac-commit.txt",
+    "docs/team/keys/pm.aws.a.iac-entry.json",
+    "docs/team/keys/pm.aws.a.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "pm.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "pm.aws.a"
+  },
+  {
+   "t": "2026-11-23T20:27:23Z",
+   "type": "commit",
+   "agent": "cloudformation.aws.a",
+   "sha": "333df2e",
+   "branch": "dev",
+   "subject": "docs/cloudformation: vault-alarm 0.4.2, threshold rule: the page always fills it, the default is a safety net",
+   "signed": true,
+   "files": [
+    "docs/cloudformation/2026-11-23__vault-stack-04.md",
+    "docs/cloudformation/vault/vault-alarm.yaml"
+   ],
+   "lanes_touched": [
+    "cloudformation.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "cloudformation.aws.a"
+  },
+  {
+   "t": "2026-11-23T20:27:34Z",
+   "type": "commit",
+   "agent": "swarm.aws.a",
+   "sha": "1cce8ec",
+   "branch": "dev",
+   "subject": "docs/swarm: the swarm replay from account A, landed by its author",
+   "signed": true,
+   "files": [
+    "docs/swarm/2026-11-23__storyboard.md",
+    "docs/swarm/README.md",
+    "docs/swarm/data/replay.json",
+    "docs/swarm/data/signatures.json",
+    "docs/swarm/data/summary.json",
+    "docs/swarm/events.jsonl",
+    "docs/swarm/extract.py",
+    "docs/swarm/player-contract.test.mjs",
+    "docs/swarm/steps.mjs",
+    "docs/swarm/steps.test.mjs",
+    "docs/swarm/test_extract.py",
+    "docs/swarm/verify_signatures.py",
+    "docs/swarm/view/index.html",
+    "docs/swarm/view/view.js",
+    "docs/team/from-a/swarm.aws.a.md",
+    "docs/team/keys/swarm.aws.a.iac-commit.txt",
+    "docs/team/keys/swarm.aws.a.iac-entry.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "swarm.aws.c"
+   ],
+   "signature": "own key",
+   "key_of": "swarm.aws.a"
   }
  ],
  "sources": [
