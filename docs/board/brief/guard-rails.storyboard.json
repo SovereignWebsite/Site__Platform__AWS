@@ -169,14 +169,14 @@
   },
   {
    "id": "bk1",
-   "narration": "K1. Recommended: the automatic pause opt-in per Vault, off by default. Anyone who can flood can then switch it off.",
+   "narration": "K1. Recommended: the automatic pause opt-in, off by default. A flood can then switch a Vault off.",
    "visual": {
     "kind": "svg",
     "src": "k1",
     "caption": "K1: Automatic pause",
     "at": 0,
-    "play": 8.6,
-    "end": 8
+    "play": 7.4,
+    "end": 6.8
    },
    "facts": [
     "s-ec2-03",
