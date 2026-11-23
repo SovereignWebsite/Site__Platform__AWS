@@ -1,16 +1,27 @@
 // The log view (site/data/view.js) in Chromium on the twin's logs, all three packs: headline, gaps, vault
 // cards, link mode with provenance, and that hostile log values stay text. Fails if a request leaves the page.
+// Served over http from the repository (design 02 step 2: the twin fetches site/twin/packs/<id>.json from beside
+// itself, which file:// refuses); only /site/ and /test/data/ are served, and only those may be requested.
 const { chromium } = require("playwright");
-const path = require("path");
+const http = require("http"), fs = require("fs"), path = require("path");
 const fail = (m) => { console.error("FAIL", m); process.exit(1); };
+const root = path.join(__dirname, "..", "..");
+const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json" };
+const ALLOWED = /^\/(site|test\/data)\//;
+const srv = http.createServer((q, s) => {
+  const u = decodeURIComponent(q.url.split("?")[0]), p = path.join(root, u);
+  if (!ALLOWED.test(u) || !p.startsWith(root + path.sep) || !fs.existsSync(p) || !fs.statSync(p).isFile()) { s.writeHead(404); return s.end(); }
+  s.writeHead(200, { "content-type": types[path.extname(p)] || "application/octet-stream" }); s.end(fs.readFileSync(p));
+}).listen(0);
 (async () => {
   const browser = await chromium.launch();
-  const url = "file://" + path.resolve(__dirname, "view.fixture.html");
+  const origin = "http://localhost:" + srv.address().port;
+  const url = origin + "/test/data/view.fixture.html";
   for (const pack of ["baseline", "attack", "surge"]) {
     const page = await browser.newPage();
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
-    page.on("request", (r) => { if (!r.url().startsWith("file://")) fail(pack + ": a request left the page: " + r.url()); });
+    page.on("request", (r) => { const u = r.url(); if (!u.startsWith(origin + "/") || !ALLOWED.test(u.slice(origin.length))) fail(pack + ": a request left the page: " + r.url()); });
     await page.goto(url + "?pack=" + pack);
     await page.waitForFunction(() => window.viewResult, null, { timeout: 20000 });
     if (errors.length) fail(pack + ": " + errors.join("; "));
@@ -126,5 +137,6 @@ const fail = (m) => { console.error("FAIL", m); process.exit(1); };
   if (injected.imgs !== 0 || await page.evaluate(() => window.pwned)) fail("a log value was rendered as HTML");
   if (!injected.text) fail("hostile value not shown as text");
   await browser.close();
+  srv.close();
   console.log("ok: log view on 3 packs (headline, gaps, vault cards, link mode with provenance, investigation: refs, pivots, trail, open; time window: drag, step, play) hostile values stay text, __proto__ keys and gzip bombs handled");
 })().catch((e) => fail(e.stack || e));

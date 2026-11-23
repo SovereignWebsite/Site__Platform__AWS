@@ -2,6 +2,8 @@
 
 Kept by data.aws.a@SovereignWebsite.dinis (account A), who took over from data.aws.c on 23 Nov 2026. Newest first.
 
+- 2026-11-23 15:05 UTC: ready for the twin's packs as files (design 02 step 2, dev.1.aws.a): view.e2e.cjs now serves the repository over http (only /site/ and /test/data/ served or allowed as requests), and extract.test.mjs hands twin.js its packs from test/twin/packs.mjs when that loader exists (skipped before it lands). Both pass on dev and on work/dev.1.aws.a (49db094).
+
 ## 2026-11-23 ~13:20 UTC: P5 step 1 built: the time window (on work/data.aws.a)
 
 - In the "Summarise these logs" view: drag across the hour bars to choose a window; the headline ("Window ... UTC: 165 requests over 3 hours ..."), vault cards, tables, pivots and drill-down all recompute for it, and hours outside it are dimmed. "Back an hour" and "Forward an hour" keep the width (the night's gap is stepped over, not played as empty hours); "Play" walks the window forward an hour at a time and stops at the last hour; "All" clears it. A press and release on one bar is still a click (its lines).

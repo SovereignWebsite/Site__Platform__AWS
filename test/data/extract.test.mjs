@@ -5,6 +5,9 @@ import { gzipSync } from "node:zlib";
 const fail = (m) => { console.error("FAIL", m); process.exit(1); };
 const eq = (a, b, m) => { if (JSON.stringify(a) !== JSON.stringify(b)) fail(m + ": got " + JSON.stringify(a) + ", want " + JSON.stringify(b)); };
 globalThis.window = globalThis;
+// The twin's packs from disk (design 02 step 2: dev.1.aws.a's test/twin/packs.mjs), so twin.js makes no fetch.
+// Before that loader lands, twin.js still carries its packs in code and this is skipped.
+try { globalThis.AwsTwinPacks = (await import("../twin/packs.mjs")).packsFromDisk(); } catch (e) { if (e.code !== "ERR_MODULE_NOT_FOUND") throw e; }
 new Function(readFileSync(new URL("../../site/data/extract.js", import.meta.url), "utf8"))();
 const X = globalThis.LogExtract;
 const twinSrc = readFileSync(new URL("../../site/twin.js", import.meta.url), "utf8");
