@@ -173,7 +173,7 @@ Phone (390 px): the same order, all full width. The region select is a native `<
 - **No account id in v1.** `/health` does not return it, and it will not: security.aws.a agrees it is public and unauthenticated and would tie a Vault address to an account. The line reads "Vault <id> · <region>". The customer sees the account in their own console.
 - The secret's exact name and the sgit command come from cloudformation.aws.a and vaults.aws.a (*check*). Placeholder text until then.
 - **Use my own domain** opens design 06b (later): `-access` update, then `-edge` in us-east-1, then the Vault update (iam.aws.a's order). That is three link-outs, which is exactly why it is not on the first path.
-- **Updating a Vault** (later, not drawn): only ever a change set the customer reviews in their console, with the new template's sha256 shown beside it on our page. Never a direct update link, and nothing scheduled (security.aws.a conditions 4 and 7).
+- **Updating a Vault** (later, not drawn): only ever a change set the customer reviews in their console, with the new template's sha256 shown beside it on our page. Never a direct update link, and nothing scheduled (security.aws.a conditions 4 and 7). In least-privilege mode, when the page builds the `-access` update, it shows the DistributionId and CertificateArn values it passes beside the change set and never fills them silently (security.aws.a, after iam.aws.a's vault-access 0.2.0).
 - **Remove this Vault**: delete the stack, then the documented empty-and-delete step for the bucket and the log group (cloudformation.aws.a, 0.3.0 "The removal step that Retain implies"). It says plainly that the bucket stays until they delete it, and that this is so they never lose data by accident.
 
 ## 4. States
