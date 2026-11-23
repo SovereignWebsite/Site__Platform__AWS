@@ -49,3 +49,7 @@ Kept by s3.aws.a@SovereignWebsite.dinis. Newest asks appended; order of work is 
 
 - Reviewed and taken into work/s3.aws.a by fast-forward (07ec424): automatic paging and S3 name search (3f7e901), R-017/R-018 and read-only limits (7f7c371, b5171ea), and sherpa W3-5, the line filter in the viewer (b292d5e). No findings. "/" and Escape work with the line filter, which has the same filter class. All 14 S3 tests, the module, twin and page tests, and test/data/* pass.
 - Left of the first note: errors told apart, with a retry (item 15); sherpa W1-6 (phone row height, a "latest file" shortcut) and W1-7 (status next to what it describes, needs index.html); the bucket graph.
+
+## Done 12:53 wake
+
+- First-note item 15, errors: AccessDenied, NoSuchKey, NoSuchBucket, an expired session, a wrong region, S3 busy (5xx, SlowDown) and the browser refused (CORS or offline) are each said in words, with AWS's code kept at the end, and a Retry button repeats the step (list buckets, open a bucket, list a folder or page, open a file, preview, zip). Test: test/s3/errors.e2e.cjs.

@@ -134,7 +134,11 @@
       press(state.bucket || "");
       P.say(st, names.length + " bucket" + (names.length === 1 ? "" : "s") + ".", "ok");
       if (then) then(names);
-    }).catch(function (e) { if (my === state.view) P.say(st, e.message + (/AccessDenied|not authorized/.test(e.message) ? " (The account needs template v2: see step 3.)" : ""), "bad"); });
+    }).catch(function (e) {
+      if (my !== state.view) return;
+      if (/AccessDenied|not authorized/.test(e.message)) return P.say(st, e.message + " (The account needs template v2: see step 3.)", "bad");
+      fail(st, e, function () { listBuckets(then); });
+    });
   }
 
   // ---- a bucket: check its CORS rule, offer the plan, then list ----
@@ -153,7 +157,7 @@
       var plan = Plans.corsPlan(props, location.origin);
       if (plan.unchanged) { state.prefix = at ? at.prefix : ""; return listObjects(null, at && at.key); }
       showCorsPlan(name, plan);
-    }).catch(function (e) { if (my === state.view) P.say(st, e.message, "bad"); });
+    }).catch(function (e) { if (my === state.view) fail(st, e, function () { openBucket(name, at, focus); }); });
   }
   function showCorsPlan(name, plan) {
     var box = $("s3-objects"), st = P.el("p", { class: "status" });
@@ -324,7 +328,7 @@
       P.say(st, b + "/" + state.prefix + (state.search ? " (names starting with " + state.search + ")" : "") + ": " + countRows() + (nt ? " so far, more in S3" : "") + (got.age ? " (listed " + Math.round(got.age / 1000) + " s ago; Refresh to list again)" : ""), "ok");
       if (openKey) linked(openKey, box, arriving);
       else if (arriving) land(box.querySelector(".crumbs button:last-of-type"));
-    }).catch(function (e) { if (my === state.view) P.say(st, e.message + (/Failed to fetch/.test(e.message) ? " (S3 refused the browser: check the bucket's CORS rule and region " + region + ".)" : ""), "bad"); });
+    }).catch(function (e) { if (my === state.view) fail(st, e, function () { listObjects(token, openKey); }, region); });
   }
   // A file named by a link opens with no click only when the listing gave its size and it is small enough to show
   // (or a zip, read by byte ranges). Otherwise the folder is shown and the file waits for a click, so a link alone
@@ -399,6 +403,27 @@
         if (my === state.file) P.say(st, "Summary of " + b + "/" + prefix + ": read in this browser; nothing was kept or sent.", "ok");
       });
     }).catch(function (e) { if (my === state.file) P.say(st, e.message, "bad"); }).then(function () { btn.disabled = false; });
+  }
+  // ---- errors told apart, with a Retry (first note, item 15) ----
+  // AWS's code stays at the end, so nothing is hidden; the words in front say what it means here and what to do.
+  function explain(msg, region) {
+    var m = String(msg || ""), why =
+      /^AccessDenied|not authorized/i.test(m) ? "S3 refused the read role here: it may not read this bucket, folder or file. Nothing was changed." :
+      /^NoSuchKey/.test(m) ? "This file is no longer in the bucket (moved or deleted since the folder was listed). Refresh the folder." :
+      /^NoSuchBucket/.test(m) ? "This bucket no longer exists." :
+      /ExpiredToken|InvalidToken|TokenRefreshRequired|RequestExpired|Sign in with Google/.test(m) ? "The session ran out. Sign in again, then Retry." :
+      /PermanentRedirect|AuthorizationHeaderMalformed|^HTTP 301/.test(m) ? "The bucket answers in another region than the one asked" + (region ? " (" + region + ")" : "") + "." :
+      /Failed to fetch|NetworkError|Load failed/.test(m) ? "S3 did not answer the browser: this device is offline, or the bucket's CORS rule does not allow this site" + (region ? " (region " + region + ")" : "") + "." :
+      /SlowDown|ServiceUnavailable|InternalError|^HTTP 5\d\d/.test(m) ? "S3 is busy or failed for a moment. Retry." : "";
+    return why ? why + " (" + m + ")" : m;
+  }
+  // Say what went wrong in the status line; with a retry, a button that tries the same step again.
+  function fail(st, e, retry, region) {
+    P.say(st, explain(e && e.message, region), "bad");
+    if (!retry) return;
+    var b = P.el("button", { type: "button", class: "quiet s3-retry", text: "Retry" });
+    b.onclick = function () { b.disabled = true; retry(); };
+    st.appendChild(document.createTextNode(" ")); st.appendChild(b);
   }
   function human(n) { return n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(1) + " MB"; }
 
@@ -618,7 +643,7 @@
         }
         show(box, name, type, u8, st);
       });
-    }).catch(function (e) { if (current()) P.say(st, e.message, "bad"); });
+    }).catch(function (e) { if (current()) fail(st, e, function () { openFile(key, size); }, state.bucketRegion); });
   }
 
   // ---- a large file: the first part by one Range request, never the whole file unless asked ----
@@ -749,7 +774,7 @@
         box.appendChild(P.el("p", { class: "small preview", text: "Preview: the first " + human(lines.length) + " of " + human(size) + ". Download fetches the whole file." }));
         show(box, name, type, lines, st);
       });
-    }).catch(function (e) { if (current()) P.say(st, e.message, "bad"); });
+    }).catch(function (e) { if (current()) fail(st, e, function () { openFile(key, size); }, state.bucketRegion); });
   }
 
   // ---- inside a zip, by byte ranges (zip.js) ----
@@ -799,7 +824,7 @@
       box.appendChild(P.el("div", { class: "s3-wrap" }, [table]));
       box.appendChild(viewer);
       P.say(st, name + ": " + files.length + " files inside.", "ok");
-    }).catch(function (e) { if (current()) P.say(st, e.message, "bad"); });
+    }).catch(function (e) { if (current()) fail(st, e, function () { openFile(key, size); }, state.bucketRegion); });
   }
 
   // JSON, formatted and coloured, built from DOM nodes (never from HTML strings).
