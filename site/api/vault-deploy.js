@@ -5,6 +5,9 @@
 // condition 7).
 //
 //   VaultDeploy.newVaultId(crypto)              -> "3f9a0c21b7d4"   12 hex digits from crypto.getRandomValues
+//       A fresh id for every new deploy, never a reused one (cloudformation.aws.a): a removed Vault keeps its bucket,
+//       bucket policy and log group, so a new stack with the same id fails on the log group's name and rolls back. The
+//       page keeps an id in its URL fragment only to resume that one deploy; "Deploy another" makes a new id.
 //   index = the page's published-template index for one template, { "<version>": { url, versionId, sha256 } }: sha256
 //       the file's 64 hex digits; url the S3 object URL (one bucket serves every region's console, boto3.aws.a note 12)
 //       whose key is templates/<name>/<version>/<name>-<first 12 hex of sha256>.yaml, with no query; versionId the S3
