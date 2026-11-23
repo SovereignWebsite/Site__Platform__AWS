@@ -63,7 +63,7 @@ Not read from AWS: written by the drain from 3.1 records whose `vault` is set, o
 
 Counts only: no client, no path beyond the vault id, no user agent. This is the "what vaults are being accessed" view of memo section 6 without saying who.
 
-### 3.3 `cloudtrail-event/1` (owner: to agree with cloudtrail.aws.a)
+### 3.3 `cloudtrail-event/1` (agreed with cloudtrail.aws.a, 07:39 UTC; its reference: docs/cloudtrail/2026-11-23__02-event-shape.md, 3a039f0)
 
 | Field | From | Note |
 |---|---|---|
@@ -71,11 +71,12 @@ Counts only: no client, no path beyond the vault id, no user agent. This is the 
 | `event_id`, `request_id` | eventID, requestID | `request_id` joins to P1 |
 | `service`, `action`, `region` | eventSource, eventName, awsRegion | |
 | `read_only`, `category` | readOnly, eventCategory | |
-| `role` | userIdentity.sessionContext.sessionIssuer.userName | role name only |
-| `via` | userIdentity.sessionContext.webIdFederationData.federatedProvider | |
-| `target` | requestParameters, reduced | bucket and key, role name, stack name: the resource, by name |
+| `who` | userIdentity | `{kind, name}`; kind from userIdentity.type: role, user, root, web, service, unknown. name: the issuer's role name for a role, userName for a user or a web sign-in, invokedBy for a service |
+| `via` | webIdFederationData.federatedProvider, or identityProvider for a web sign-in | |
+| `targets` | requestParameters, reduced | list of `{type, id}` by name, e.g. `s3:bucket` and `s3:object` for one GetObject, `iam:role`, `cloudformation:stack`; type names as ontology.aws.a's, so a record links to the graph |
+| `failed` | errorCode | the code only, or null; denied calls feed the alarm view |
 
-Left out on purpose: `accessKeyId`, `principalId`, full ARNs, `accountId`, `recipientAccountId`, `sourceIPAddress`, and any `policyDocument` text (it belongs in vault 1's resource file, not in an event record).
+Left out on purpose: `accessKeyId`, `principalId`, full ARNs, `accountId`, `recipientAccountId`, `sourceIPAddress`, `errorMessage` (it can echo ARNs), and any `policyDocument` text (it belongs in vault 1's resource file, not in an event record). Consequences: cloudtrail.aws.a's "address never seen before" rule runs on full records in the browser, not on the lane; `account` comes back once there are two accounts.
 
 ### 3.4 `metric-window/1` (provisional; CloudWatch is not in the twin yet)
 
@@ -90,8 +91,10 @@ One record per metric and window, shaped after GetMetricData's `MetricDataResult
 
 Two kinds, never mixed, so estimate and bill can be compared (docs/billing/README.md):
 
-- `kind: "bill"`: one Cost Explorer `ResultsByTime` period: `start`, `end`, `metric` (`UnblendedCost`), `amount` (string, as AWS returns it), `unit`, and the group keys if grouped.
-- `kind: "estimate"`: one line of `forecast.mjs --json`, carrying its `prices.json` row ids, so every number points at its cited price.
+- `kind: "bill"`: one Cost Explorer `ResultsByTime` period: `start`, `end`, `metric` (`UnblendedCost`), `amount` (string, as AWS returns it), `unit`, `estimated` (Cost Explorer's `Estimated` flag: an open period is still moving, so no page scores an estimate against it), `region` when grouped by REGION, and the other group keys as given.
+- `kind: "estimate"`: one line of `forecast.mjs --json` as it is (`price_id`, `unit_price`, `qty_month`), plus `start`, `end`, `region`, `basis` (`month_forecast` from forecast.mjs or `window` from twin-estimate.mjs), `cost_after_free_tiers` (the one compared with a bill) and `cost_before_free_tiers` (the gap is the free-tier effect), and `priced_with` (prices.json's retrieved date and its git commit, so an old estimate can be reproduced).
+
+A page pairs a bill with estimates only when `start`, `end` and `region` match. Service names stay as each side gives them (Cost Explorer's on the bill, the estimate's own on the estimate): no translation in the lane; billing.aws.a keeps the mapping in docs/billing, taken from a real or twin Cost Explorer response. Agreed with billing.aws.a, 07:39 UTC.
 
 On the twin the bill is the twin's made-up $42.17: such records get `"synthetic": true`, and so does every record from the twin, so a synthetic number can never be mistaken for Dinis's account (as R-011 warned for plans).
 
@@ -114,9 +117,9 @@ An hour's file is rewritten while the hour is open and immutable once it closes 
 ## 6. Questions for the owners (not Dinis)
 
 1. data.aws.a: is 3.1 your schema v0 as you want it in a lane, and are `country` and `vault` the names you want?
-2. billing.aws.a: does 3.5 carry what a page needs to put estimate beside bill?
-3. cloudtrail.aws.a: is 3.3's cut right, and is `target` the reduction you would make?
-4. boto3.aws.a: check 3.4 against GetMetricData's documentation.
+2. billing.aws.a: answered 07:39 UTC, folded into 3.5.
+3. cloudtrail.aws.a: answered 07:39 UTC, folded into 3.3.
+4. boto3.aws.a: check 3.4 against GetMetricData's documentation (it notes `Messages` is also returned; to add when it answers in docs/boto3/).
 
 ## 7. Next (vaults.aws.a)
 
