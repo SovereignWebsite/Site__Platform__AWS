@@ -114,6 +114,8 @@ The counts shown are computed live from the graph in the page, never written int
 - `#/map/@A2` opens the altitude list, and `#/map/@worth/unowned` opens a finding list.
 - The crumb is "Map / <region> / <label>" for regional resources and "Map / <label>" otherwise. Each part is a link.
 - The address holds only ids from the graph, never an address from a log line (privacy rule above). Copy link exists only in the twin (design 02).
+- The node id in the address is a lookup key only (security.aws.a): it is looked up in a `Map` (or a null-prototype object), never rendered as HTML, and an unknown id shows "Not found in this graph" with a link to the account node.
+- Map links carry ARNs, and so account ids. Wherever the page offers to copy a link, it says so beside the button: "This link contains your account id."
 
 ## 7. Packs and modes
 
