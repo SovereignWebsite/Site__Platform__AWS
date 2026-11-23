@@ -1277,8 +1277,11 @@
     if (!(limit >= 1 && limit <= 10000 && limit === Math.floor(limit))) return logsErr("InvalidParameterException", "1 validation error detected: Value at 'limit' failed to satisfy constraint: Member must have value between 1 and 10000");
     var match = logFilter(q.filterPattern);
     if (!match) return logsErr("InvalidParameterException", "Not in the twin yet: JSON, space-delimited and regex filter patterns");
-    var from = 0;
-    if (q.nextToken !== undefined) { var tk = /^twin-(\d+)$/.exec(String(q.nextToken)); if (!tk) return logsErr("InvalidParameterException", "The specified nextToken is invalid."); from = +tk[1]; }
+    // startFromHead (botocore logs 2014-03-28, FilterLogEventsRequest): default true; false gives the latest events first
+    // and is refused when startTime is before 1 Jan 2024; on later pages the direction in nextToken wins over it.
+    var from = 0, head = q.startFromHead !== false;
+    if (q.nextToken !== undefined) { var tk = /^twin-(head|tail)-(\d+)$/.exec(String(q.nextToken)); if (!tk) return logsErr("InvalidParameterException", "The specified nextToken is invalid."); head = tk[1] === "head"; from = +tk[2]; }
+    else if (!head && !(q.startTime >= Date.UTC(2024, 0, 1))) return logsErr("InvalidParameterException", "startFromHead false is supported only when startTime is on or after Jan 1, 2024 00:00:00 UTC."); // message not documented
     if (Array.isArray(q.logStreamNames) && (q.logStreamNames.length < 1 || q.logStreamNames.length > 100))
       return logsErr("InvalidParameterException", "1 validation error detected: Value at 'logStreamNames' failed to satisfy constraint: Member must have length between 1 and 100");
     var names = Array.isArray(q.logStreamNames) ? q.logStreamNames : null, prefix = typeof q.logStreamNamePrefix === "string" ? q.logStreamNamePrefix : null;
@@ -1286,10 +1289,9 @@
       return (q.startTime === undefined || e.timestamp >= q.startTime) && (q.endTime === undefined || e.timestamp <= q.endTime) &&
         (!names || names.indexOf(e.logStreamName) >= 0) && (prefix === null || e.logStreamName.indexOf(prefix) === 0) && match(e.message);
     });
-    // startFromHead false: newest first (AWS supports it for startTime on or after 1 Jan 2024, note 11); the recent invocations list uses it.
-    if (q.startFromHead === false) hit.reverse();
+    if (!head) hit.reverse();
     var page = hit.slice(from, from + limit), out = { events: page.map(function (e) { return Object.assign({}, e); }), searchedLogStreams: [] };
-    if (from + limit < hit.length) out.nextToken = "twin-" + (from + limit);
+    if (from + limit < hit.length) out.nextToken = "twin-" + (head ? "head" : "tail") + "-" + (from + limit);
     return logsJson(out);
   }
 

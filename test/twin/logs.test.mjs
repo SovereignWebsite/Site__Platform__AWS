@@ -81,7 +81,7 @@ const bad = [
   [{ logGroupName: "/aws/lambda/nope" }, 400, "ResourceNotFoundException"],
   [{ logGroupName: "/aws/lambda/demo-handler", logGroupIdentifier: "/aws/lambda/demo-handler" }, 400, "InvalidParameterException"],
   [{ logGroupName: "/aws/lambda/demo-handler", limit: 0 }, 400, "InvalidParameterException"],
-  [{ logGroupName: "/aws/lambda/demo-handler", nextToken: "x" }, 400, "InvalidParameterException"],
+  [{ logGroupName: "/aws/lambda/demo-handler", nextToken: "twin-5" }, 400, "InvalidParameterException"],
   [{ logGroupName: "/aws/lambda/demo-handler", filterPattern: "{ $.level = \"ERROR\" }" }, 400, "InvalidParameterException"],
   [{ logGroupName: "constructor" }, 400, "ResourceNotFoundException"],
   [{ logGroupName: "/aws/lambda/__proto__" }, 400, "ResourceNotFoundException"]];
@@ -93,6 +93,11 @@ if ((await ok(T, "FilterLogEvents", Object.assign({ logGroupName: "/aws/lambda/d
 const newest = await ok(T, "FilterLogEvents", Object.assign({ logGroupName: "/aws/lambda/demo-handler", startFromHead: false, limit: 3 }, day("21")));
 if (newest.events.map((e) => e.eventId).join() !== all.slice(-3).reverse().map((e) => e.eventId).join()) fail("startFromHead false not newest first");
 if (!Array.isArray(newest.searchedLogStreams) || newest.searchedLogStreams.length) fail("searchedLogStreams");
+// startFromHead as botocore documents it: false is refused for a startTime before 2024 (or none); the token's direction wins
+for (const q of [{ startTime: ms("2023-12-31T23:59:59Z") }, {}])
+  if ((await call(T, "FilterLogEvents", Object.assign({ logGroupName: "/aws/lambda/demo-handler", startFromHead: false }, q))).j.__type !== "InvalidParameterException") fail("startFromHead false before 2024 accepted " + JSON.stringify(q));
+{ let got2 = [], t2; do { const p = await ok(T, "FilterLogEvents", Object.assign({ logGroupName: "/aws/lambda/demo-handler", limit: 4 }, day("21"), t2 ? { nextToken: t2, startFromHead: true } : { startFromHead: false })); got2 = got2.concat(p.events); t2 = p.nextToken; } while (t2);
+  if (got2.map((e) => e.eventId).join() !== all.slice().reverse().map((e) => e.eventId).join()) fail("token direction does not win over startFromHead"); }
 if (!all.every((e) => /^\d{56}$/.test(e.eventId))) fail("event id form " + all[0].eventId);
 { const m = await call(T, "FilterLogEvents", {}); if (m.j.__type !== "InvalidParameterException") fail("missing group " + JSON.stringify(m.j)); }
 // DescribeLogGroups: pattern (three fields only), prefix and pattern exclusive, empty prefix refused, limit and paging
