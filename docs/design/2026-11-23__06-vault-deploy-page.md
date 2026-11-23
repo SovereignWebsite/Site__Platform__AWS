@@ -97,7 +97,7 @@ Single column, at most 40rem wide. Content Security Policy (security.aws.a): `sc
 
 - **Region list**: only the regions tested end to end on the twin (vaults.aws.a design 04, "the regions that have been tested"). The default is the first entry in the page's published list. No guessing from the browser and no "nearest" until someone has measured what nearest means. The label shows both names ("Europe (London) eu-west-2"), because AWS's console shows the code.
 - **Vault id**: 12 hex characters, made in the browser (`crypto.getRandomValues`) when the page opens, and shown only inside "What this creates". The customer never types it or needs it.
-- **The button** builds the quick-create link with the stack name `sws-vault-<id>`, the template's immutable URL and the parameters VaultId, ImageUri and DeployPageOrigin (cloudformation.aws.a's group "Filled in by the deploy link"). Domain parameters stay empty. Since vault.yaml 0.4.0 (08dbcf7 on work/cloudformation.aws.a) one template serves both paths: the link sets `param_DeployMode=one-stack` for the main path and `access-stack` for least-privilege mode. It opens in a new tab (`rel="noopener noreferrer"`), and our page moves to screen 2.
+- **The button** builds the quick-create link with the stack name `sws-vault-<id>`, the template's immutable URL and the parameters VaultId, ImageUri and DeployPageOrigin (cloudformation.aws.a's group "Filled in by the deploy link"). Domain parameters stay empty. Since vault.yaml 0.4.0 (08dbcf7 on work/cloudformation.aws.a; 0.4.1, 0f72f91, defaults to one-stack) one template serves both paths: the link sets `param_DeployMode=one-stack` for the main path and `access-stack` for least-privilege mode. It opens in a new tab (`rel="noopener noreferrer"`), and our page moves to screen 2.
 - **"What this creates"** comes from the template's resources, not hand-written (dev.2.aws.a: generated at build from vault.yaml, so it cannot drift). It is collapsed by default but has to be there: it is what a customer reads before trusting a link that opens their console (sherpa.aws.a).
 - **"What it costs"** stays empty until billing.aws.a has a cited figure per region. Until then it reads: "Pay-per-use AWS services; an idle Vault costs little. We will show a cited estimate here." No invented number.
 - **The template line** shows the sha256 from the page's index of published templates (vaults.aws.a 4a option a). View opens the exact file.
@@ -156,7 +156,7 @@ Phone (390 px): the same order, all full width. The region select is a native `<
 +----------------------------------------------------------------------+
 | Your Vault is ready                                                  |
 | https://d1a2b3c4d5e6f7.cloudfront.net        [Copy]                  |
-| Vault 3f9a0c21b7d4 · eu-west-2 · account 1234 5678 9012              |
+| Vault 3f9a0c21b7d4 · eu-west-2                                       |
 |                                                                      |
 | Next                                                                 |
 | 1. Get your access token: in AWS, Secrets Manager, the secret        |
@@ -170,7 +170,7 @@ Phone (390 px): the same order, all full width. The region select is a native `<
 +----------------------------------------------------------------------+
 ```
 
-- **No account id in v1.** `/health` does not return it, and it will not: security.aws.a agrees it is public and unauthenticated and would tie a Vault address to an account. The line reads "Vault <id> · <region>". The customer sees the account in their own console. (The sketch above still shows the account; ignore that part.)
+- **No account id in v1.** `/health` does not return it, and it will not: security.aws.a agrees it is public and unauthenticated and would tie a Vault address to an account. The line reads "Vault <id> · <region>". The customer sees the account in their own console.
 - The secret's exact name and the sgit command come from cloudformation.aws.a and vaults.aws.a (*check*). Placeholder text until then.
 - **Use my own domain** opens design 06b (later): `-access` update, then `-edge` in us-east-1, then the Vault update (iam.aws.a's order). That is three link-outs, which is exactly why it is not on the first path.
 - **Updating a Vault** (later, not drawn): only ever a change set the customer reviews in their console, with the new template's sha256 shown beside it on our page. Never a direct update link, and nothing scheduled (security.aws.a conditions 4 and 7).
