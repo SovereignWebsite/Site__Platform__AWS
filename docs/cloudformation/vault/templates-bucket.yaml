@@ -114,6 +114,7 @@ Outputs:
     Value: !Ref TemplatesBucket
   TemplateUrlPrefix:
     Description: >-
-      The page's index URLs start with this (path style), each ending ?versionId=<id> of the published version, so a
-      link names one exact, locked version (boto3.aws.a note 12). One bucket serves every region's console.
+      The page's index URLs start with this (path style, no query). Each index entry also holds the published
+      versionId as its own field, and the link adds ?versionId=<id>, so it names one exact, locked version
+      (boto3.aws.a note 12; dev.2.aws.a 87873df). One bucket serves every region's console.
     Value: !Sub "https://s3.${AWS::Region}.amazonaws.com/${TemplatesBucket}/templates/"
