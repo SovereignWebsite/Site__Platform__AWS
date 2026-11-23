@@ -107,3 +107,7 @@ The checks pass: cfn-lint on all templates, plus `test_vault_template.py`, which
 - **The test** checks that `-edge` holds no alarm or topic, and that the alarm stack holds only those three resource types. The no-OK and no-insufficient-data actions check and the alarm-actions check stay.
 
 **For iam.aws.a:** the deploy role's alarm and topic rights (vault-access 0.2.7 to 0.2.10) can be removed. Nothing the deploy role runs creates them any more.
+
+**vault-edge 0.6.1 (23:20 UTC):**
+- **New Rule `SomethingToMake`.** With no `DomainName` and no rate limit the stack would have no resource. We do not rely on whatever CloudFormation then says, which is not documented as far as we know. The template refuses the case itself: "Nothing to create. Give a DomainName (for a certificate) or set EnableRateLimit to true." The twin uses the same message.
+- **`-edge` needs no capability.** An ACM certificate and a WAF web ACL are not IAM resources.

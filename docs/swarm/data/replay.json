@@ -440,6 +440,33 @@
    "moved_from": "swarm.aws.c"
   },
   {
+   "id": "dev.1.aws.a",
+   "session": "session_018yvwtLV1iZjUCMEKz1PZ51",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "dev.1.aws.c"
+  },
+  {
+   "id": "s3.aws.a",
+   "session": "session_018yvwtQbTmpHQ839siWGBQP",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "s3.aws.c"
+  },
+  {
+   "id": "conductor.aws.a",
+   "session": "session_018yvwtPiszBTMHKVD4AuDwn",
+   "parent": null,
+   "born": null,
+   "programme": "aws.c",
+   "account": "a",
+   "moved_from": "conductor.aws.c"
+  },
+  {
    "id": "architect.aws.a",
    "session": "session_018yvwtPuQzTBRoKGD45TYFV",
    "parent": null,
@@ -476,33 +503,6 @@
    "moved_from": "cloudtrail.aws.c"
   },
   {
-   "id": "conductor.aws.a",
-   "session": "session_018yvwtPiszBTMHKVD4AuDwn",
-   "parent": null,
-   "born": null,
-   "programme": "aws.c",
-   "account": "a",
-   "moved_from": "conductor.aws.c"
-  },
-  {
-   "id": "s3.aws.a",
-   "session": "session_018yvwtQbTmpHQ839siWGBQP",
-   "parent": null,
-   "born": null,
-   "programme": "aws.c",
-   "account": "a",
-   "moved_from": "s3.aws.c"
-  },
-  {
-   "id": "dev.1.aws.a",
-   "session": "session_018yvwtLV1iZjUCMEKz1PZ51",
-   "parent": null,
-   "born": null,
-   "programme": "aws.c",
-   "account": "a",
-   "moved_from": "dev.1.aws.c"
-  },
-  {
    "id": "dev.2.aws.a",
    "session": "session_018yvwtN79NSkFnwbV7UzFuc",
    "parent": null,
@@ -518,7 +518,7 @@
    "born": null,
    "programme": "aws.c",
    "account": "a",
-   "moved_from": null
+   "moved_from": "ec2.aws.c"
   },
   {
    "id": "iam.aws.a",
@@ -3596,6 +3596,12 @@
    "sha": "1707886"
   },
   {
+   "t": "2026-11-23T07:26Z",
+   "type": "wake",
+   "agent": "conductor.aws.a",
+   "note": "up on account A (key sha256:0b6383e56398ab9e, Factory 5d43946); takes over from conductor.aws.c; A notes routed from work/conductor.aws.a until abp.json named the .a agents"
+  },
+  {
    "t": "2026-11-23T07:27:31Z",
    "type": "commit",
    "agent": "cloudformation.aws.a",
@@ -3982,6 +3988,12 @@
    "key_of": null
   },
   {
+   "t": "2026-11-23T07:30Z",
+   "type": "wake",
+   "agent": "sherpa.aws.a",
+   "note": "up, key sha256:393f5f629f14c82b, Factory 791cf9f, work/sherpa.aws.a; walk 3 958ac89 (walk 2's three items fixed by 8dc815e; five new findings to ux.aws.a, s3.aws.a, aws.c); waits on its key and docs/sherpa/** in abp.json. Ready A key commits now 9."
+  },
+  {
    "t": "2026-11-23T07:31:19Z",
    "type": "commit",
    "agent": "conductor.aws.a",
@@ -4024,6 +4036,12 @@
    ],
    "signature": "own key",
    "key_of": "lambda.aws.a"
+  },
+  {
+   "t": "2026-11-23T07:31Z",
+   "type": "wake",
+   "agent": "security.aws.a",
+   "note": "up, key sha256:b44c5ae2320a37f6, Factory e0b3b0d, work/security.aws.a; 07:28 review 18e5603: R-014 Medium (prototype pollution in data.aws.a's site/data/*.js, fix before merge) and R-015 Low (gzip bomb), both branch-only; dev 5d086db..1707886 clean; dev.2 and lambda branches fine to land from a security view. Ready A key commits now 10. To aws.c: please hold data.aws.a's site/data/** until R-014 is fixed (routed to data.aws.a)."
   },
   {
    "t": "2026-11-23T07:33:07Z",
@@ -4197,6 +4215,12 @@
    "type": "wake",
    "agent": "conductor.aws.c",
    "note": "wave 2 up on account A (07:26); C wakes for conductor, security, architect, s3, sherpa disabled; final hand-over to conductor.aws.a in docs/team/handover/conductor-c-to-a-final.md; going idle"
+  },
+  {
+   "t": "2026-11-23T07:35Z",
+   "type": "wake",
+   "agent": "architect.aws.a",
+   "note": "up, key sha256:8699204a5b3a9875, Factory c4b867a, work/architect.aws.a 7365ea5; wake 2 h at :38; waits on its abp.json name (docs/architecture/**, site/api/**). Ready A key commits now 8 (architect added)."
   },
   {
    "t": "2026-11-23T07:36:10Z",
@@ -4859,6 +4883,12 @@
    "key_of": "pm.aws.a"
   },
   {
+   "t": "2026-11-23T08:20Z",
+   "type": "wake",
+   "agent": "pm.aws.a",
+   "note": "decisions 6 (R-008 boundary, (a) recommended after security.aws.a reviews v2.2; decision 4 folds into 6a) and 7 (branch pushes for iam.aws.a and dev.1.aws.a), work/pm.aws.a 57aaf5b; waits on its abp.json name."
+  },
+  {
    "t": "2026-11-23T08:22:16Z",
    "type": "commit",
    "agent": "sherpa.aws.a",
@@ -4993,6 +5023,12 @@
    ],
    "signature": "own key",
    "key_of": "lambda.aws.a"
+  },
+  {
+   "t": "2026-11-23T08:23Z",
+   "type": "wake",
+   "agent": "sherpa.aws.a",
+   "note": "walk 4 54bdf9b on work/sherpa.aws.a (S3 addresses, 3 findings to s3.aws.a). Correction: sherpa.aws.a force-pushed its own branch once after a rebase (against _common.md; own branch only, nothing lost, push loop fixed); walk 3 is now 2d9e0ec, not 958ac89."
   },
   {
    "t": "2026-11-23T08:24:00Z",
@@ -5629,6 +5665,12 @@
    ],
    "signature": "own key",
    "key_of": "s3.aws.a"
+  },
+  {
+   "t": "2026-11-23T08:55Z",
+   "type": "wake",
+   "agent": "architect.aws.a",
+   "note": "design 02 (the twin's engine: journal-folded world, packs as JSON, scenarios, actors, edits, feeds) and review of work/dev.2.aws.a (agreed), work/architect.aws.a bd8983d; proposed dev.1.aws.a's first engine task (steps 1-2), to sit after dev.1's S3-1 items agreed with s3.aws.a unless pm orders otherwise."
   },
   {
    "t": "2026-11-23T08:59:17Z",
@@ -6502,6 +6544,12 @@
    ],
    "signature": "own key",
    "key_of": "ontology.aws.a"
+  },
+  {
+   "t": "2026-11-23T10:55Z",
+   "type": "wake",
+   "agent": "architect.aws.a",
+   "note": "design 03 (every service in one shape: API rules, Decode, one activity shape, graph built from the APIs with twin-graph.json as the golden test); dev.2.aws.a ee3c03e agreed; work/architect.aws.a 7af86f6."
   },
   {
    "t": "2026-11-23T10:56:31Z",
@@ -8131,6 +8179,12 @@
    "key_of": "video.aws.a"
   },
   {
+   "t": "2026-11-23T11:20Z",
+   "type": "wake",
+   "agent": "architect.aws.a",
+   "note": "design 04 (IAM reads); reviews of dev.2.aws.a's site/api pieces 1, 3, 4, 5 and zip contents (decode, activity, graph with golden equal to ontology's on 3 packs, Lambda/Firehose APIs), all agreed; work/architect.aws.a 77d26be. To aws.c: dev.2.aws.a's CfnApi/Route53Api is blocked until cloudformation.aws.a's twin patch 01 lands, so please land that one early in the queue."
+  },
+  {
    "t": "2026-11-23T11:21:10Z",
    "type": "commit",
    "agent": "pm.aws.a",
@@ -8379,6 +8433,12 @@
    "from": "conductor.aws.a",
    "to": "conductor.aws.a",
    "sha": "4ca85d9"
+  },
+  {
+   "t": "2026-11-23T11:25Z",
+   "type": "wake",
+   "agent": "pm.aws.a",
+   "note": "decision 7 answered; presentation and decision video for decisions 1-6 (docs/board/brief/), work/pm.aws.a 47fa700. Decision 6 cites P-IAM-001 v2.4 as 2107fe5 on work/iam.aws.a."
   },
   {
    "t": "2026-11-23T11:31:59Z",
@@ -9573,6 +9633,12 @@
    "key_of": "architect.aws.a"
   },
   {
+   "t": "2026-11-23T12:50Z",
+   "type": "wake",
+   "agent": "architect.aws.a",
+   "note": "designs 02 and 03 aligned with Dinis's privacy decision (networks, not addresses: urn:sws:actor-net, from.net); R-020 built by dev.2.aws.a (1cb0d20) and closed by security.aws.a; work/architect.aws.a 24e5509. To aws.c (keeper of site/twin.js): every twin client sits in 203.0.113.0/24, so at /24 the attack pack's scanner merges with ordinary visitors; design 03 proposes splitting the twin's client ranges so the attacker stays a separate network."
+  },
+  {
    "t": "2026-11-23T12:54:27Z",
    "type": "commit",
    "agent": "data.aws.a",
@@ -10070,6 +10136,12 @@
    ],
    "signature": "own key",
    "key_of": "aws.c"
+  },
+  {
+   "t": "2026-11-23T13:51Z",
+   "type": "wake",
+   "agent": "aws.c",
+   "note": "added the 22 .a agents to abp.json at Dinis's yes (6ab7233) and landed dev.1/s3 (c0c0d0b), dev.2 (461d422), viz (30155a0), cloudformation patch for review (c87dc92)"
   },
   {
    "t": "2026-11-23T13:53:03Z",
@@ -12661,6 +12733,13 @@
    "from": "ec2.aws.a",
    "to": "ec2.aws.a",
    "sha": "99ed358"
+  },
+  {
+   "t": "2026-11-23T15:00:29Z",
+   "type": "move",
+   "from": "ec2.aws.c",
+   "to": "ec2.aws.a",
+   "source": "docs/team/handover/ec2.aws.md"
   },
   {
    "t": "2026-11-23T15:00:32Z",
@@ -21180,6 +21259,1591 @@
    ],
    "signature": "own key",
    "key_of": "swarm.aws.a"
+  },
+  {
+   "t": "2026-11-23T20:27:37Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "bf8b6f7",
+   "branch": "work/security.aws.a",
+   "subject": "Security: 3cb01d6 signer confirmed as cloudformation.aws.a; dev.1 6de2c4c cleared for dev",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:27:47Z",
+   "type": "commit",
+   "agent": "ux.aws.a",
+   "sha": "5d26afd",
+   "branch": "work/ux.aws.a",
+   "subject": "docs/design: design 06 alarm threshold always filled; outside priced regions labelled not priced (vault-alarm 0.4.2, cloudformation and security)",
+   "signed": true,
+   "files": [
+    "docs/design/2026-11-23__06-vault-deploy-page.md"
+   ],
+   "lanes_touched": [
+    "ux.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:28:06Z",
+   "type": "commit",
+   "agent": "sherpa.aws.a",
+   "sha": "452cb19",
+   "branch": "dev",
+   "subject": "docs/sherpa: deploy a Vault, the unpriced-region answer recorded",
+   "signed": true,
+   "files": [
+    "docs/sherpa/2026-11-23__vault-deploy-02-template-check.md"
+   ],
+   "lanes_touched": [
+    "sherpa.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:28:21Z",
+   "type": "commit",
+   "agent": "cloudformation.aws.a",
+   "sha": "d63aa72",
+   "branch": "dev",
+   "subject": "docs/cloudformation: vault-alarm 0.4.3, no default alarm threshold (ux.aws.a's rule)",
+   "signed": true,
+   "files": [
+    "docs/cloudformation/2026-11-23__vault-stack-04.md",
+    "docs/cloudformation/vault/test_vault_template.py",
+    "docs/cloudformation/vault/vault-alarm.yaml"
+   ],
+   "lanes_touched": [
+    "cloudformation.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:28:28Z",
+   "type": "commit",
+   "agent": "ux.aws.a",
+   "sha": "67c2709",
+   "branch": "work/ux.aws.a",
+   "subject": "docs/design: design 06 alarm threshold final: vault-alarm 0.4.3 has no default; filled where priced, else the customer types it",
+   "signed": true,
+   "files": [
+    "docs/design/2026-11-23__06-vault-deploy-page.md"
+   ],
+   "lanes_touched": [
+    "ux.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:28:46Z",
+   "type": "commit",
+   "agent": "sherpa.aws.a",
+   "sha": "503d12c",
+   "branch": "dev",
+   "subject": "docs/sherpa: deploy a Vault, alarm threshold rule as of vault-alarm 0.4.3",
+   "signed": true,
+   "files": [
+    "docs/sherpa/2026-11-23__vault-deploy-02-template-check.md"
+   ],
+   "lanes_touched": [
+    "sherpa.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:28:49Z",
+   "type": "commit",
+   "agent": "dev.2.aws.a",
+   "sha": "a388a27",
+   "branch": "work/dev.2.aws.a",
+   "subject": "from-a: host-header join (1660a4f) replaces the distribution_id rule",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/dev.2.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:28:52Z",
+   "type": "commit",
+   "agent": "dev.1.aws.a",
+   "sha": "ada3437",
+   "branch": "dev",
+   "subject": "docs/team/from-a: dev.1.aws.a's notes for account C, 23 Nov afternoon and evening",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/dev.1.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:29:32Z",
+   "type": "commit",
+   "agent": "s3.aws.a",
+   "sha": "268cfc7",
+   "branch": "dev",
+   "subject": "S3 browser: line filter, \"Summarise these logs\", errors with a Retry, fold labels, \"Newest file\", the S3-4 panel core (from s3.aws.a and dev.1.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/s3/2026-11-23__s3-4-bucket-graph-plan.md",
+    "docs/s3/backlog.md",
+    "docs/team/from-a/s3.aws.a.md",
+    "site/s3.js",
+    "test/s3/connected.e2e.cjs",
+    "test/s3/errors.e2e.cjs",
+    "test/s3/filter.e2e.cjs",
+    "test/s3/json.e2e.cjs",
+    "test/s3/newest.e2e.cjs",
+    "test/s3/summary.e2e.cjs"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "s3.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:31:11Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "35a082e",
+   "branch": "work/security.aws.a",
+   "subject": "Security: 20:28 wake, dev landings reviewed (swarm Medium, data and pm Low); R-028 watch clean",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md",
+    "docs/team/from-a/security.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:32:40Z",
+   "type": "commit",
+   "agent": "pm.aws.a",
+   "sha": "4a39cd6",
+   "branch": "dev",
+   "subject": "docs/board/brief: escape every '<' in inlined SVGs and the title (security.aws.a's Low on 819688d); videos rebuilt",
+   "signed": true,
+   "files": [
+    "docs/board/README.md",
+    "docs/board/brief/build-video.mjs",
+    "docs/board/brief/decision-video.html",
+    "docs/board/brief/guard-rails-video.html",
+    "docs/board/brief/vault-deploy-video.html"
+   ],
+   "lanes_touched": [
+    "pm.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:32:58Z",
+   "type": "commit",
+   "agent": "data.aws.a",
+   "sha": "ab09423",
+   "branch": "work/data.aws.a",
+   "subject": "data: security.aws.a's review of c73ea8d: test server loopback and normalised allow-list, drill-down stops Play, drag reset",
+   "signed": true,
+   "files": [
+    "docs/data/status.md",
+    "site/data/view.js",
+    "test/data/view.e2e.cjs"
+   ],
+   "lanes_touched": [
+    "data.aws.a",
+    "data.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:33:00Z",
+   "type": "commit",
+   "agent": "data.aws.a",
+   "sha": "918b1e6",
+   "branch": "dev",
+   "subject": "data: security.aws.a's review of c73ea8d: test server loopback and normalised allow-list, drill-down stops Play, drag reset",
+   "signed": true,
+   "files": [
+    "docs/data/status.md",
+    "site/data/view.js",
+    "test/data/view.e2e.cjs"
+   ],
+   "lanes_touched": [
+    "data.aws.a",
+    "data.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:33:04Z",
+   "type": "commit",
+   "agent": "sherpa.aws.a",
+   "sha": "b108bff",
+   "branch": "work/sherpa.aws.a",
+   "subject": "docs/sherpa: walk 7, the S3 browser after 268cfc7",
+   "signed": true,
+   "files": [
+    "docs/sherpa/2026-11-23__walk-07.md"
+   ],
+   "lanes_touched": [
+    "sherpa.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:33:15Z",
+   "type": "commit",
+   "agent": "sherpa.aws.a",
+   "sha": "8893745",
+   "branch": "dev",
+   "subject": "docs/sherpa: walk 7, the S3 browser after 268cfc7",
+   "signed": true,
+   "files": [
+    "docs/sherpa/2026-11-23__walk-07.md"
+   ],
+   "lanes_touched": [
+    "sherpa.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:33:42Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "4574986",
+   "branch": "work/security.aws.a",
+   "subject": "Security: s3 268cfc7 on dev cleared (Summarise, Retry, S3-4 panel, Newest file)",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:34:02Z",
+   "type": "commit",
+   "agent": "swarm.aws.a",
+   "sha": "40f9600",
+   "branch": "work/swarm.aws.a",
+   "subject": "docs/swarm: signature check trusts no bundle that names another agent",
+   "signed": true,
+   "files": [
+    "docs/swarm/README.md",
+    "docs/swarm/data/replay.json",
+    "docs/swarm/data/signatures.json",
+    "docs/swarm/data/summary.json",
+    "docs/swarm/events.jsonl",
+    "docs/swarm/test_verify_signatures.py",
+    "docs/swarm/verify_signatures.py",
+    "docs/team/from-a/swarm.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "swarm.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:34:25Z",
+   "type": "commit",
+   "agent": "swarm.aws.a",
+   "sha": "896b23b",
+   "branch": "dev",
+   "subject": "docs/swarm: signature check trusts no bundle that names another agent",
+   "signed": true,
+   "files": [
+    "docs/swarm/README.md",
+    "docs/swarm/data/replay.json",
+    "docs/swarm/data/signatures.json",
+    "docs/swarm/data/summary.json",
+    "docs/swarm/events.jsonl",
+    "docs/swarm/test_verify_signatures.py",
+    "docs/swarm/verify_signatures.py",
+    "docs/team/from-a/swarm.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "swarm.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:34:47Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "086b87a",
+   "branch": "work/security.aws.a",
+   "subject": "Security: pm 4a39cd6 and data 918b1e6 fixes closed; R-028 fix path updated (retire then -2 entries)",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:35:27Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "041c024",
+   "branch": "work/security.aws.a",
+   "subject": "Security: swarm 896b23b closes the verify_signatures Medium",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:35:37Z",
+   "type": "commit",
+   "agent": "cloudtrail.aws.a",
+   "sha": "5cc769e",
+   "branch": "work/cloudtrail.aws.a",
+   "subject": "docs/cloudtrail: drop-in of a user's own CloudTrail dump, read in the browser with size limits; wrong key landed on the Factory",
+   "signed": true,
+   "files": [
+    "docs/cloudtrail/2026-11-23__05-drop-in.md",
+    "docs/cloudtrail/reader/ct-dropin.js",
+    "docs/cloudtrail/reader/ct-dropin.test.mjs",
+    "docs/team/from-a/cloudtrail.aws.a.md"
+   ],
+   "lanes_touched": [
+    "cloudtrail.aws.c",
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:35:58Z",
+   "type": "commit",
+   "agent": "s3.aws.a",
+   "sha": "40a6cd2",
+   "branch": "dev",
+   "subject": "S3 browser: \"Newest file\" from a bucket's root follows the last folder down to the newest log (sherpa walk 7)",
+   "signed": true,
+   "files": [
+    "docs/s3/backlog.md",
+    "site/s3.js",
+    "test/s3/newest.e2e.cjs"
+   ],
+   "lanes_touched": [
+    "s3.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:36:31Z",
+   "type": "commit",
+   "agent": "cloudtrail.aws.a",
+   "sha": "221edb4",
+   "branch": "work/cloudtrail.aws.a",
+   "subject": "docs/team/from-a: cloudtrail.aws.a key fix shape agreed; waiting for the retire",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/cloudtrail.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:36:34Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "d80b06b",
+   "branch": "work/security.aws.a",
+   "subject": "Security: cloudtrail 5cc769e drop-in cleared as reference; memory ceiling note",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:37:13Z",
+   "type": "commit",
+   "agent": "cloudtrail.aws.a",
+   "sha": "e714b43",
+   "branch": "work/cloudtrail.aws.a",
+   "subject": "docs/cloudtrail: drop-in decodes as chunks arrive; limits 64 MB per file, 256 MB and 500,000 events per drop",
+   "signed": true,
+   "files": [
+    "docs/cloudtrail/2026-11-23__05-drop-in.md",
+    "docs/cloudtrail/reader/ct-dropin.js",
+    "docs/team/from-a/cloudtrail.aws.a.md"
+   ],
+   "lanes_touched": [
+    "cloudtrail.aws.c",
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:37:17Z",
+   "type": "commit",
+   "agent": "ux.aws.a",
+   "sha": "2b1aca6",
+   "branch": "work/ux.aws.a",
+   "subject": "docs/design: design 04 revision 2: three inputs, chips, Vault deployments, raw record, drop-in report (with cloudtrail.aws.a 5cc769e)",
+   "signed": true,
+   "files": [
+    "docs/design/2026-11-23__04-timeline-console-wireframes.md",
+    "docs/team/from-a/ux.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "ux.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:37:20Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "ba51986",
+   "branch": "work/security.aws.a",
+   "subject": "Security: s3 40a6cd2 (Newest file below folders) cleared",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:37:37Z",
+   "type": "commit",
+   "agent": "s3.aws.a",
+   "sha": "e5fc988",
+   "branch": "dev",
+   "subject": "S3 browser: in the S3-4 panel a claimed or curated name carries its mark right beside it (security.aws.a)",
+   "signed": true,
+   "files": [
+    "site/s3.js",
+    "test/s3/connected.e2e.cjs"
+   ],
+   "lanes_touched": [
+    "s3.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:37:57Z",
+   "type": "commit",
+   "agent": "sherpa.aws.a",
+   "sha": "485b41d",
+   "branch": "dev",
+   "subject": "docs/sherpa: walk 7 re-check, Newest file and Retry on dev",
+   "signed": true,
+   "files": [
+    "docs/sherpa/2026-11-23__walk-07.md"
+   ],
+   "lanes_touched": [
+    "sherpa.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:38:06Z",
+   "type": "commit",
+   "agent": "cloudtrail.aws.a",
+   "sha": "248ccb6",
+   "branch": "work/cloudtrail.aws.a",
+   "subject": "docs/team/from-a: cloudtrail.aws.a checked ux.aws.a's timeline wireframe against the data",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/cloudtrail.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:38:07Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "9f9f00c",
+   "branch": "work/security.aws.a",
+   "subject": "Security: cloudtrail e714b43 closes drop-in memory note; ux ce9dabe (design 04 r2) cleared",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:38:26Z",
+   "type": "commit",
+   "agent": "ux.aws.a",
+   "sha": "77f4459",
+   "branch": "work/ux.aws.a",
+   "subject": "docs/design: design 04 rev 2 corrections from cloudtrail.aws.a: no zip, e714b43 limits and words, raw for every event, alarm level and words, global region",
+   "signed": true,
+   "files": [
+    "docs/design/2026-11-23__04-timeline-console-wireframes.md"
+   ],
+   "lanes_touched": [
+    "ux.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:38:42Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "1a4baa7",
+   "branch": "work/security.aws.a",
+   "subject": "Security: s3 e5fc988 closes the claimed-mark note",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:38:53Z",
+   "type": "commit",
+   "agent": "ux.aws.a",
+   "sha": "24d817d",
+   "branch": "work/ux.aws.a",
+   "subject": "docs/design: design 04 Copy link stays twin only, since real-mode chips hold role names (security.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/design/2026-11-23__04-timeline-console-wireframes.md"
+   ],
+   "lanes_touched": [
+    "ux.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:39:16Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "6e013df",
+   "branch": "work/security.aws.a",
+   "subject": "Security: ux 9dfded1 and 8c419a8 (design 04 rev 2 corrections) cleared",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:41:07Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "330fcfc",
+   "branch": "work/security.aws.a",
+   "subject": "Security: R-028 exception, architect predecessor 90ddd61 cleared for aws.c to land (one commit)",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:41:51Z",
+   "type": "commit",
+   "agent": "cloudtrail.aws.a",
+   "sha": "14c8793",
+   "branch": "work/cloudtrail.aws.a",
+   "subject": "docs/team/from-a: cloudtrail.aws.a review of architect.aws.a's design 07 feed",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/cloudtrail.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:42:01Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "de2fe55",
+   "branch": "work/security.aws.a",
+   "subject": "Security: architect 012ebd0 design 07 agreed, with build notes",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:43:52Z",
+   "type": "commit",
+   "agent": "boto3.aws.a",
+   "sha": "e599590",
+   "branch": "work/boto3.aws.a",
+   "subject": "docs/boto3: cloudformation's twin patch 01 reviewed (note 19); wake state in from-a",
+   "signed": true,
+   "files": [
+    "docs/boto3/2026-11-23__19-twin-cloudformation-reads.md",
+    "docs/team/from-a/boto3.aws.a.md"
+   ],
+   "lanes_touched": [
+    "boto3.aws.c",
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:44:32Z",
+   "type": "commit",
+   "agent": "cloudformation.aws.a",
+   "sha": "dbea90c",
+   "branch": "dev",
+   "subject": "docs/cloudformation: twin patch 01 reviewed by boto3.aws.a; three gaps for the journal version",
+   "signed": true,
+   "files": [
+    "docs/cloudformation/2026-11-23__twin-patch-01.md"
+   ],
+   "lanes_touched": [
+    "cloudformation.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:51:25Z",
+   "type": "commit",
+   "agent": "dev.2.aws.a",
+   "sha": "3b3c58a",
+   "branch": "work/dev.1.aws.a",
+   "subject": "Twin ListStacks: StackStatusFilter, NextToken paging, a deleted stack kept (boto3.aws.a's review of patch 01)",
+   "signed": true,
+   "files": [
+    "site/twin.js",
+    "test/twin/cloudformation-reads.test.mjs"
+   ],
+   "lanes_touched": [
+    "dev.1.aws.a"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:51:40Z",
+   "type": "commit",
+   "agent": "dev.2.aws.a",
+   "sha": "0e24265",
+   "branch": "work/dev.2.aws.a",
+   "subject": "from-a: wake 20:40Z, twin ListStacks gaps (3b3c58a), state and blocks",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/dev.2.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T20:53:52Z",
+   "type": "commit",
+   "agent": "dev.2.aws.a",
+   "sha": "4c508f7",
+   "branch": "work/dev.2.aws.a",
+   "subject": "from-a: 3b3c58a in the twin line (dev.1.aws.a fast-forward)",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/dev.2.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:07:08Z",
+   "type": "commit",
+   "agent": "journalist.aws.a",
+   "sha": "a29f547",
+   "branch": "work/journalist.aws.a",
+   "subject": "docs/journal: parity link-mode row for 268cfc7 (wired, tested on the twin, not yet loaded by index.html); wake note",
+   "signed": true,
+   "files": [
+    "docs/journal/parity.md",
+    "docs/team/from-a/journalist.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "journalist.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:07:45Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "88a91fb",
+   "branch": "work/security.aws.a",
+   "subject": "Security: journalist 8dd290c cleared; R-028 watch clean",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:12:00Z",
+   "type": "commit",
+   "agent": "dev.1.aws.a",
+   "sha": "5591cad",
+   "branch": "work/dev.1.aws.a",
+   "subject": "twin: a deleted stack stays, by its id, after its name is used again",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/dev.1.aws.a.md",
+    "site/twin.js",
+    "test/twin/vault-teardown.test.mjs"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "dev.1.aws.a"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:12:24Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "8b659a0",
+   "branch": "work/security.aws.a",
+   "subject": "Security: dev.1 5591cad closes the twin name-reuse gap",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:14:17Z",
+   "type": "commit",
+   "agent": "dev.1.aws.a",
+   "sha": "bacd461",
+   "branch": "work/dev.1.aws.a",
+   "subject": "twin: keep at most 50 deleted stacks per account once their name is reused",
+   "signed": true,
+   "files": [
+    "site/twin.js",
+    "test/twin/vault-teardown.test.mjs"
+   ],
+   "lanes_touched": [
+    "dev.1.aws.a"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:14:35Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "5b85b9f",
+   "branch": "work/security.aws.a",
+   "subject": "Security: dev.1 bacd461 closes the deleted-stacks bound nit",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:29:40Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "4f6dcff",
+   "branch": "work/security.aws.a",
+   "subject": "Security: 21:28 wake, dev clean (R-028 watch: 23 commits, none flagged); dev.2 3b3c58a cleared; 90ddd61 ask withdrawn",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md",
+    "docs/team/from-a/security.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:44:21Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "9b952f2",
+   "branch": "dev",
+   "subject": "docs/team: conductor.aws.a on dev: overdue log lines, schedule owner and A wakes, own note and key files, proposed decisions rule",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/conductor.aws.a.md",
+    "docs/team/keys/conductor.aws.a.iac-commit.txt",
+    "docs/team/keys/conductor.aws.a.iac-entry.json",
+    "docs/team/keys/conductor.aws.a.json",
+    "docs/team/log.md",
+    "docs/team/proposed/_common.decisions.md",
+    "docs/team/schedule.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:44:21Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "0c4d0f7",
+   "branch": "dev",
+   "subject": "docs/team/keys: the 20 .aws.a Factory key commits ready for factory.c, one table",
+   "signed": true,
+   "files": [
+    "docs/team/keys/aws-a-ready.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:44:21Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "284d3f1",
+   "branch": "dev",
+   "subject": "docs/team/handover: conductor.aws.a to its fresh session (context over 500k)",
+   "signed": true,
+   "files": [
+    "docs/team/handover/conductor.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:44:21Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "0edf75e",
+   "branch": "dev",
+   "subject": "docs/team/handover: ux.aws.a (Authored-by ux.aws.a, 97d3b5a)",
+   "signed": true,
+   "files": [
+    "docs/team/handover/ux.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:44:21Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "ecc7e24",
+   "branch": "dev",
+   "subject": "docs/team/handover: architect, lambda, journalist, security, cloudtrail, ontology hand-overs, copied from their branches (context over 500k)",
+   "signed": true,
+   "files": [
+    "docs/team/handover/architect.aws.a.md",
+    "docs/team/handover/cloudtrail.aws.a.md",
+    "docs/team/handover/journalist.aws.a.md",
+    "docs/team/handover/lambda.aws.a.md",
+    "docs/team/handover/ontology.aws.a.md",
+    "docs/team/handover/security.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:44:21Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "aed7ab2",
+   "branch": "dev",
+   "subject": "docs/team/handover: boto3, billing, dev.2 hand-overs copied from their branches; all 11 over-500k sessions now handed over",
+   "signed": true,
+   "files": [
+    "docs/team/handover/billing.aws.a.md",
+    "docs/team/handover/boto3.aws.a.md",
+    "docs/team/handover/dev.2.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:44:21Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "b5453ed",
+   "branch": "dev",
+   "subject": "docs/team: plan for the Vault deploy page, EC2 and ephemeral deployments (Dinis's 14:55 word via maestro.a); start prompt for ec2.aws.a",
+   "signed": true,
+   "files": [
+    "docs/team/handover/ec2.aws.md",
+    "docs/team/plan-vault-deploy.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:44:21Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "0b0449e",
+   "branch": "dev",
+   "subject": "docs/team: ec2.aws.a key in the ready table; abp ask for aws.c (from conductor.aws.a)",
+   "signed": true,
+   "files": [
+    "docs/team/keys/aws-a-ready.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:44:21Z",
+   "type": "handoff",
+   "from": "conductor.aws.a",
+   "to": "conductor.aws.a",
+   "sha": "0b0449e"
+  },
+  {
+   "t": "2026-11-23T21:44:21Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "c63966c",
+   "branch": "dev",
+   "subject": "docs/team/handover: refresh boto3, ux, security, ontology hand-overs from their branch heads (Vault deploy and EC2 items added)",
+   "signed": true,
+   "files": [
+    "docs/team/handover/boto3.aws.a.md",
+    "docs/team/handover/ontology.aws.a.md",
+    "docs/team/handover/security.aws.a.md",
+    "docs/team/handover/ux.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:44:22Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "5ac40bf",
+   "branch": "dev",
+   "subject": "docs/team/handover: final conductor.aws.a update at restart; refreshed hand-overs from branch heads",
+   "signed": true,
+   "files": [
+    "docs/team/handover/architect.aws.a.md",
+    "docs/team/handover/billing.aws.a.md",
+    "docs/team/handover/cloudtrail.aws.a.md",
+    "docs/team/handover/conductor.aws.a.md",
+    "docs/team/handover/dev.2.aws.a.md",
+    "docs/team/handover/journalist.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:45:31Z",
+   "type": "commit",
+   "agent": "conductor.aws.a",
+   "sha": "5f187c4",
+   "branch": "dev",
+   "subject": "docs/team: protocol for archiving an agent, run first on conductor.aws.a",
+   "signed": true,
+   "files": [
+    "docs/team/archive-agent.md",
+    "docs/team/archived/conductor.aws.a.md",
+    "docs/team/log.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:47:18Z",
+   "type": "commit",
+   "agent": "ux.aws.a",
+   "sha": "27436a5",
+   "branch": "work/ux.aws.a",
+   "subject": "docs/design: design 09 alias table (14 aliases onto commands.json's 28 rows); README updated; wake note",
+   "signed": true,
+   "files": [
+    "docs/design/2026-11-23__09-command-console-wireframes.md",
+    "docs/design/README.md",
+    "docs/team/from-a/ux.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "ux.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:49:21Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "fb5ba0b",
+   "branch": "work/security.aws.a",
+   "subject": "Security: R-028 watch flagged conductor.aws.a's 11 archive-landing commits (own session, own key): cleared; Factory retire f0af2f6 checked; ux 7e926da design 09 aliases cleared with two Lows",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md",
+    "docs/team/from-a/security.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:49:39Z",
+   "type": "commit",
+   "agent": "ux.aws.a",
+   "sha": "4bc8bc4",
+   "branch": "work/ux.aws.a",
+   "subject": "docs/design: design 09 aliases: generated rows win, declared options only, cat as text, alias test a must (security.aws.a L1, L2)",
+   "signed": true,
+   "files": [
+    "docs/design/2026-11-23__09-command-console-wireframes.md"
+   ],
+   "lanes_touched": [
+    "ux.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:50:45Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "e9e6e0a",
+   "branch": "work/security.aws.a",
+   "subject": "Security: R-028 strand check: dev.2 852c1fe, 9a689cf, ba4bec5 and 22 ontology commits cleared to land before the retire",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md",
+    "docs/team/from-a/security.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:51:27Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "5515f98",
+   "branch": "work/security.aws.a",
+   "subject": "Security: R-028 lowered to Low: the five predecessor sessions are archived (checked); closes when Factory f0af2f6 lands",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:51:41Z",
+   "type": "commit",
+   "agent": "dev.2.aws.a",
+   "sha": "11e58b7",
+   "branch": "work/dev.2.aws.a",
+   "subject": "from-a: alias table (3bf0c3a) for design 09",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/dev.2.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:51:44Z",
+   "type": "commit",
+   "agent": "ux.aws.a",
+   "sha": "d8c044a",
+   "branch": "work/ux.aws.a",
+   "subject": "docs/design: design 09 records dev.2.aws.a's CommandLine.expand (3bf0c3a, 166 checks)",
+   "signed": true,
+   "files": [
+    "docs/design/2026-11-23__09-command-console-wireframes.md"
+   ],
+   "lanes_touched": [
+    "ux.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:52:08Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "27f52d2",
+   "branch": "work/security.aws.a",
+   "subject": "Security: dev.2 3bf0c3a CommandLine.expand (design 09 aliases) cleared; L1 and L2 met",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:52:32Z",
+   "type": "commit",
+   "agent": "dev.2.aws.a",
+   "sha": "c7c73e9",
+   "branch": "work/dev.2.aws.a",
+   "subject": "from-a: alias rules (c792556)",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/dev.2.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:53:17Z",
+   "type": "commit",
+   "agent": "dev.2.aws.a",
+   "sha": "88dfb3b",
+   "branch": "work/dev.2.aws.a",
+   "subject": "from-a: 3bf0c3a cleared, bucket-name nit fixed; old-key commits land as a fast-forward",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/dev.2.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:53:41Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "f914243",
+   "branch": "work/security.aws.a",
+   "subject": "Security: dev.2 c792556 and efb2960 cleared; bucket-name nit closed",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:54:05Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "0e8a5c2",
+   "branch": "work/security.aws.a",
+   "subject": "Security: R-028 strand check: dev.2 3277f4c (merge carrying my twin Low fixes) cleared with the other three",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:54:36Z",
+   "type": "commit",
+   "agent": "dev.2.aws.a",
+   "sha": "a8efbfc",
+   "branch": "work/dev.2.aws.a",
+   "subject": "from-a: all four old-key commits cleared for aws.c's fast-forward; replay plan retired",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/dev.2.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:55Z",
+   "type": "wake",
+   "agent": "conductor.aws.a",
+   "note": "archived by the new protocol (docs/team/archive-agent.md, record docs/team/archived/conductor.aws.a.md) at Dinis's word; land/conductor.aws.a landed while the key was live; Factory retire waits in conductor.d's A3 (f0af2f6); private key wiped."
+  },
+  {
+   "t": "2026-11-23T21:57:14Z",
+   "type": "commit",
+   "agent": "billing.aws.a",
+   "sha": "d0308ed",
+   "branch": "work/billing.aws.a",
+   "subject": "docs/billing: EBS gp3 prices (storage, IOPS and throughput above the free baseline); EBS leaves not_priced_yet",
+   "signed": true,
+   "files": [
+    "docs/billing/README.md",
+    "docs/billing/prices.json",
+    "docs/billing/vault-cost.test.mjs",
+    "docs/team/from-a/billing.aws.a.md"
+   ],
+   "lanes_touched": [
+    "billing.aws.c",
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:57:44Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "a2c3011",
+   "branch": "work/security.aws.a",
+   "subject": "Security: billing 0b1ad2b (EBS gp3 prices) cleared",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:57:58Z",
+   "type": "commit",
+   "agent": "billing.aws.a",
+   "sha": "7d41a16",
+   "branch": "work/billing.aws.a",
+   "subject": "docs/billing: say the gp3 throughput label is AWS's own wording (security.aws.a's nit)",
+   "signed": true,
+   "files": [
+    "docs/billing/prices.json"
+   ],
+   "lanes_touched": [
+    "billing.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:58:13Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "aa510f6",
+   "branch": "work/security.aws.a",
+   "subject": "Security: billing 3eb7e9b cleared; label nit closed",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:58:24Z",
+   "type": "commit",
+   "agent": "pm.aws.a",
+   "sha": "bd61e67",
+   "branch": "dev",
+   "subject": "docs/board: G6 known month about 21 USD with EBS priced (ec2.aws.a 1507015)",
+   "signed": true,
+   "files": [
+    "docs/board/brief/guard-rails-brief.html",
+    "docs/board/decisions.md"
+   ],
+   "lanes_touched": [
+    "pm.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T21:59:11Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "b01d776",
+   "branch": "work/security.aws.a",
+   "subject": "Security: opinion on ed25519 git signing keys in ssh_signing: acceptable with six conditions",
+   "signed": true,
+   "files": [
+    "docs/security/reviews/2026-11-23__ssh-signing-key-proposal.md",
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T22:14:12Z",
+   "type": "commit",
+   "agent": "dev.1.aws.a",
+   "sha": "1845b40",
+   "branch": "work/dev.1.aws.a",
+   "subject": "twin: the Vault -edge stack in us-east-1 (deploy plan step 4)",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/dev.1.aws.a.md",
+    "site/twin.js",
+    "test/twin/vault-edge.test.mjs"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "dev.1.aws.a"
+   ]
+  },
+  {
+   "t": "2026-11-23T22:14:53Z",
+   "type": "commit",
+   "agent": "cloudformation.aws.a",
+   "sha": "17347cf",
+   "branch": "dev",
+   "subject": "docs/cloudformation: vault-edge 0.6.1, refuses a stack with nothing to create (own message)",
+   "signed": true,
+   "files": [
+    "docs/cloudformation/2026-11-23__vault-flood-guard-01.md",
+    "docs/cloudformation/vault/test_vault_template.py",
+    "docs/cloudformation/vault/vault-edge.yaml"
+   ],
+   "lanes_touched": [
+    "cloudformation.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T22:15:12Z",
+   "type": "commit",
+   "agent": "dev.1.aws.a",
+   "sha": "ef623a8",
+   "branch": "work/dev.1.aws.a",
+   "subject": "twin: -edge refuses nothing-to-make with vault-edge 0.6.1's rule SomethingToMake",
+   "signed": true,
+   "files": [
+    "site/twin.js",
+    "test/twin/vault-edge.test.mjs"
+   ],
+   "lanes_touched": [
+    "dev.1.aws.a"
+   ]
+  },
+  {
+   "t": "2026-11-23T22:15:28Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "6dad4bd",
+   "branch": "work/security.aws.a",
+   "subject": "Security: dev.1 1845b40 (twin -edge stack in us-east-1) cleared; R-025 (b) region bound widened for -edge only",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T22:15:36Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "230a7f1",
+   "branch": "work/security.aws.a",
+   "subject": "Security: R-025 note time corrected",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T22:17:31Z",
+   "type": "commit",
+   "agent": "dev.1.aws.a",
+   "sha": "acf99cf",
+   "branch": "work/dev.1.aws.a",
+   "subject": "twin: an -edge stack waiting on DNS elsewhere can be deleted",
+   "signed": true,
+   "files": [
+    "site/twin.js",
+    "test/twin/vault-edge.test.mjs"
+   ],
+   "lanes_touched": [
+    "dev.1.aws.a"
+   ]
+  },
+  {
+   "t": "2026-11-23T22:17:51Z",
+   "type": "commit",
+   "agent": "iam.aws.a",
+   "sha": "1cf79ca",
+   "branch": "work/iam.aws.a",
+   "subject": "docs/iam: hand-over for a fresh iam.aws.a session (context past the limit)",
+   "signed": true,
+   "files": [
+    "docs/iam/HANDOVER.md"
+   ],
+   "lanes_touched": [
+    "iam.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T22:18:19Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "c1af240",
+   "branch": "work/security.aws.a",
+   "subject": "Security: dev.1 ef623a8 and acf99cf (waiting -edge stack can be deleted) cleared",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T22:18:32Z",
+   "type": "commit",
+   "agent": "iam.aws.a",
+   "sha": "1ef0c23",
+   "branch": "work/iam.aws.a",
+   "subject": "docs/iam: hand-over, archive steps 3 and 4 as they stand (key never live on the Factory)",
+   "signed": true,
+   "files": [
+    "docs/iam/HANDOVER.md"
+   ],
+   "lanes_touched": [
+    "iam.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T22:20:50Z",
+   "type": "commit",
+   "agent": "sherpa.aws.a",
+   "sha": "3b90d68",
+   "branch": "dev",
+   "subject": "docs/sherpa: walk 7, the three remaining error cases walked",
+   "signed": true,
+   "files": [
+    "docs/sherpa/2026-11-23__walk-07.md"
+   ],
+   "lanes_touched": [
+    "sherpa.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T22:24:04Z",
+   "type": "commit",
+   "agent": "s3.aws.a",
+   "sha": "cda0fcb",
+   "branch": "dev",
+   "subject": "S3 browser: error wording, Retry said once, no sign-in asked on the twin (sherpa walk 7)",
+   "signed": true,
+   "files": [
+    "docs/team/from-a/s3.aws.a.md",
+    "site/s3.js",
+    "test/s3/errors.e2e.cjs"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "s3.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T22:24:32Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "d752d35",
+   "branch": "work/security.aws.a",
+   "subject": "Security: dev to cda0fcb cleared (4 commits, R-028 watch clean since 21:46)",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T22:29:05Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "43a1cd8",
+   "branch": "work/security.aws.a",
+   "subject": "Security: 22:28 wake, all reviewed (ec2 1507015, dev.2 notes, iam hand-over cleared); R-028 Low, waits on Factory f0af2f6",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md",
+    "docs/team/from-a/security.aws.a.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c",
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T22:33:14Z",
+   "type": "commit",
+   "agent": "cloudtrail.aws.a",
+   "sha": "ea31fc5",
+   "branch": "work/cloudtrail.aws.a",
+   "subject": "docs/cloudtrail: Vault alarm stack and kill switch in the deployment view (vault-paused notice); scenario options",
+   "signed": true,
+   "files": [
+    "docs/cloudtrail/2026-11-23__03-vault-deploy-audit.md",
+    "docs/cloudtrail/reader/ct-deploy.js",
+    "docs/cloudtrail/reader/ct-deploy.test.mjs",
+    "docs/cloudtrail/scenarios/vault-deploy.js",
+    "docs/team/from-a/cloudtrail.aws.a.md"
+   ],
+   "lanes_touched": [
+    "cloudtrail.aws.c",
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T22:33:49Z",
+   "type": "commit",
+   "agent": "boto3.aws.a",
+   "sha": "0b7b233",
+   "branch": "work/boto3.aws.a",
+   "subject": "docs/boto3: note 17 addendum, CloudTrail names of the kill switch's calls",
+   "signed": true,
+   "files": [
+    "docs/boto3/2026-11-23__17-cost-kill-switch.md"
+   ],
+   "lanes_touched": [
+    "boto3.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T22:33:56Z",
+   "type": "commit",
+   "agent": "security.aws.a",
+   "sha": "a356d1f",
+   "branch": "work/security.aws.a",
+   "subject": "Security: cloudtrail ea31fc5 reviewed: alarm-stack widening OK in principle; two Lows (match named fields; pause direction)",
+   "signed": true,
+   "files": [
+    "docs/security/risks.md"
+   ],
+   "lanes_touched": [
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T22:34:00Z",
+   "type": "commit",
+   "agent": "cloudtrail.aws.a",
+   "sha": "23cbc98",
+   "branch": "work/cloudtrail.aws.a",
+   "subject": "docs/cloudtrail: note 03, kill switch event names confirmed by boto3.aws.a",
+   "signed": true,
+   "files": [
+    "docs/cloudtrail/2026-11-23__03-vault-deploy-audit.md"
+   ],
+   "lanes_touched": [
+    "cloudtrail.aws.c"
+   ]
   }
  ],
  "sources": [
