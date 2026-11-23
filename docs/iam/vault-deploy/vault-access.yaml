@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.2.4 (iam.aws.a, deploy plan step 3; for review by
+  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.2.5 (iam.aws.a, deploy plan step 3; for review by
   security.aws.a and cloudformation.aws.a; not for any real account). Run first, by the customer, from their own
   console. Makes two things only: the deploy role that stacks sws-vault-<id> and sws-vault-<id>-edge run with, and
   the boundary that caps the Vault's own role. Nothing here can reach outside this one Vault's resources.
@@ -362,7 +362,9 @@ Resources:
               - Sid: RollBackAFailedFirstCreateLogs
                 Effect: Allow
                 Action: logs:DeleteLogGroup
-                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/sws-vault-${VaultId}-api*"
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/sws-vault-${VaultId}-api"
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/sws-vault-${VaultId}-api:*"
               - Sid: NeverEmptyTheBucket
                 Effect: Deny
                 # Lifecycle rules could expire objects; versioning stays allowed (needed at create; suspending it deletes nothing).
