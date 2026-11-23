@@ -1,0 +1,8 @@
+{
+  "v": 1,
+  "encrypt": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAp+IbcpM7LjnMlNO6WwrV\nfkYe+6otehlaUzy2MGW85QVDDUKDguLcGZMNKfwAxrvE4mllUlsZoBTnKZMnbHP9\nJoSyHFSLsK+qo1sBAcckYIMKyBdJNBi08ODGs56adQUHwTPB+nJwcdcM/iO0VY9u\no0+siboIV+eagJRLlcxNaFGot1PpBpjEdTClLB9KyQe4mio7hlFwmEf7HONMTlwP\n4MxRtNhx9e3sFHbHFmoKPjMkQ9rkU46BHTLZrTYeYW3MHg/q+w1npwUzA+AB8572\n8VwkV4h3JRRUecO+LAgXmFACOcKOA0dwsSit+D2fYEIxwOzuITUkxtI7A9AnU/VB\nuZC49j4aJVvLC+gTLb21IIxclreVWI9zO0YqObbj039XXW6dZZZkYJrFDQJRqVUV\nH75A+zbbIxtd9aVrIFlFRV5uWd9c3Qd+lBJs4eYNG1tykGKNYJLB7Khvd7ok8GEr\nBCSVoDgLKIgbqdFsIpH2WTMdrMh5Z2DvIYDFWqUhDjYxx5z2eNbTzSsCDVqvwXy0\ndB3Dv19VR3222/OjbnAey37urUVvVr6Bn96mYHkZL0lH2Lc+kUnNysMMJiEonWNP\nTVaIyCfI9aO+Ea6uQoIIJxSrTnaf24zuenunrcj7Ch3k5kS+QlGsLY6vSSy89QaW\nM67vkfPzraIDhoVxvgefjpcCAwEAAQ==\n-----END PUBLIC KEY-----\n",
+  "sign": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEF/QlSGoTRAAlP5uJOPVFNPDC8YbT\nZ839ireuh1U81j8+9ZrzWzIMRRVjpsMNX+rITj0ZouXhjF4R4OeQWWET+A==\n-----END PUBLIC KEY-----\n",
+  "label": "viz.aws.a@SovereignWebsite.dinis",
+  "fingerprint": "sha256:aba99169d253b154",
+  "signing_fingerprint": "sha256:e9881b9482353488"
+}

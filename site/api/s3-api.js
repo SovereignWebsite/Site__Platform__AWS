@@ -11,6 +11,14 @@
 //                                 -> { folders: [prefix], files: [{ key, size, modified }], next: token or null }
 //   api.getObject(bucket, region, key, [start, end])
 //                                 -> { status, contentType, contentRange, bytes: Uint8Array }
+//   api.getBucketCors(bucket, region)
+//                                 -> { CorsRules: [...] } in getBucket's (Cloud Control) shape, or null if none
+//                                    (null is defensive: from a browser, a bucket with no rule for this origin fails
+//                                    with TypeError before S3's 404 NoSuchCORSConfiguration is readable; build no UI on it)
+//                                    For buckets already reachable from this page, for example to re-check after a
+//                                    plan is applied: S3 GetBucketCors needs only s3:GetBucketCORS. It cannot replace
+//                                    getBucket, since a bucket with no CORS rule for this site fails in the browser
+//                                    before S3 can say so (architect.aws.a and dev.2.aws.a, 23 Nov 2026).
 //
 // Errors: an Error whose message is "Code: Message" (as Platform.awsError makes), with .code and .status.
 // A bucket with no CORS rule for this site fails as the browser fails it (TypeError: Failed to fetch); that
@@ -25,7 +33,7 @@
   // ---- a small reader for S3's flat XML (no DOMParser, so it runs in Node too) ----
   function unescape(s) {
     return s.replace(/&(#x[0-9a-fA-F]+|#[0-9]+|amp|lt|gt|quot|apos);/g, function (m, e) {
-      if (e[0] === "#") return String.fromCodePoint(e[1] === "x" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10));
+      if (e[0] === "#") { var c = e[1] === "x" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10); return c >= 0 && c <= 0x10ffff ? String.fromCodePoint(c) : m; }
       return { amp: "&", lt: "<", gt: ">", quot: "\"", apos: "'" }[e];
     });
   }
@@ -48,7 +56,11 @@
     });
   }
 
+  // Names and regions go into a signed host name: check them first (security R-019).
+  var REGION_RE = /^[a-z]{2}(-[a-z]+)+-\d$/, BUCKET_RE = /^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/;
   function bucketUrl(bucket, region, key, query) {
+    if (!BUCKET_RE.test(String(bucket))) throw new TypeError("not an S3 bucket name: " + bucket);
+    if (!REGION_RE.test(String(region))) throw new TypeError("not an AWS region: " + region);
     var path = "/" + (key ? key.split("/").map(uriEncode).join("/") : "");
     // Names with dots do not match S3's certificate as a host name: those take the path form.
     if (bucket.indexOf(".") >= 0) return "https://s3." + region + ".amazonaws.com/" + encodeURIComponent(bucket) + path + (query || "");
@@ -90,6 +102,7 @@
     }
 
     function listObjects(bucket, region, opts) {
+      try { bucketUrl(bucket, region, "", ""); } catch (e) { return Promise.reject(e); }
       opts = opts || {};
       var q = "?list-type=2", delim = opts.delimiter === undefined ? "/" : opts.delimiter;
       if (delim) q += "&delimiter=" + encodeURIComponent(delim);
@@ -111,6 +124,7 @@
     }
 
     function getObject(bucket, region, key, range) {
+      try { bucketUrl(bucket, region, "", ""); } catch (e) { return Promise.reject(e); }
       var h = range ? { range: "bytes=" + range[0] + "-" + range[1] } : {};
       return s3(region, bucketUrl(bucket, region, key), h).then(function (r) {
         if (r.status !== 200 && r.status !== 206) return xmlError(r);
@@ -120,7 +134,26 @@
       });
     }
 
-    return { listBuckets: listBuckets, getBucket: getBucket, listObjects: listObjects, getObject: getObject };
+    function getBucketCors(bucket, region) {
+      try { bucketUrl(bucket, region, "", ""); } catch (e) { return Promise.reject(e); }
+      return s3(region, bucketUrl(bucket, region, "", "?cors")).then(function (r) {
+        if (r.status === 404) return r.clone().text().then(function (t) { return text(t, "Code") === "NoSuchCORSConfiguration" ? null : xmlError(r); });
+        if (!r.ok) return xmlError(r);
+        return r.text().then(function (t) {
+          return { CorsRules: blocks(t, "CORSRule").map(function (b) {
+            var rule = {}, all = function (tag) { return blocks(b, tag).map(unescape); };
+            if (text(b, "ID")) rule.Id = text(b, "ID");
+            rule.AllowedOrigins = all("AllowedOrigin"); rule.AllowedMethods = all("AllowedMethod");
+            if (all("AllowedHeader").length) rule.AllowedHeaders = all("AllowedHeader");
+            if (all("ExposeHeader").length) rule.ExposedHeaders = all("ExposeHeader");
+            if (text(b, "MaxAgeSeconds")) rule.MaxAge = Number(text(b, "MaxAgeSeconds"));
+            return rule;
+          }) };
+        });
+      });
+    }
+
+    return { listBuckets: listBuckets, getBucket: getBucket, listObjects: listObjects, getObject: getObject, getBucketCors: getBucketCors };
   }
   S3Api.bucketUrl = bucketUrl;
   root.S3Api = S3Api;
