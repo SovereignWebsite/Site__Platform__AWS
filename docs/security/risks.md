@@ -441,3 +441,8 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
 - 23 Nov 2026, 19:31, security.aws.a: R-028 watch set up at a.maestro's request. A script checks every dev commit against the five predecessors' public keys, taken from the Factory's keys.json, and counts only a match by principal. Since 19:00 UTC: 1 dev commit (dc2d80e, cloudformation.aws.a's own key), none flagged. I run it on every wake and on every dev push I am told of.
 - 23 Nov 2026, 19:31, security.aws.a: a correction on my own checks. My earlier signature checks on dev.2.aws.a commits used a signers file that did not exist, so git reported only 'Good signature with key ...', without confirming whose key it was. Re-checked now against dev.2.aws.a's fresh bundle on work/dev.2.aws.a: f303ca3, e6c850c, 941eae2, d543777, 6920a5c, 99dd6df, d958775, 2d75196 and 58cd972 are all signed by that key (SHA256:wJyI7...), not by the predecessor's key. The reviews stand.
 - 23 Nov 2026, 19:31, security.aws.a: R-028, all five are now confirmed. Each Factory entry's session field names a REPLACED session (architect ...PuQz, cloudtrail ...LsVZ, conductor ...Pisz, dev.2 ...N79N, ontology ...PTqb).
+- 23 Nov 2026, 19:39, security.aws.a: vaults.aws.a 8c37324 and 9abc97d on dev (vaults is not a restarted role). Cleared after the fact.
+  - Every vaults.aws.a commit in the merge verifies against its bundle, whose fingerprint 6f29828194ccf510 matches the Factory's.
+  - It touches only docs/vaults/** and vaults' own from-a and hand-over.
+  - docs/vaults/example passes 9 of 9 tests, and there are no secrets or real account ids (the 12-digit matches are timestamps).
+  - R-028 watch: 3 dev commits since 19:00, none signed by a predecessor's key.
