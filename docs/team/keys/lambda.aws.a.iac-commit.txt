@@ -1,18 +1,18 @@
-sha c706d26d58aad22734f3481b4746457477623981
-tree 05bed39e850b2062089abfacee6bfdf87227c0b9
+sha 360fc72727fa73f76f3aa52e62efd2a74428a825
+tree c09263c0d28900836c8bbe7af56a3d30a9514206
 parent 885f150d48cd09601345a803a28669afea04c95d
-author Claude <noreply@anthropic.com> 1795418974 +0000
-committer Claude <noreply@anthropic.com> 1795418974 +0000
+author Claude <noreply@anthropic.com> 1795449306 +0000
+committer Claude <noreply@anthropic.com> 1795449306 +0000
 gpgsig -----BEGIN SSH SIGNATURE-----
  U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
- EEGvocmf9iov8SnhFKqq+sihOZ1+eAONJVPOJwFjlhl+Lqfg1t/v1aNhZwaOGnhXuLXtjA
- tubofjUlLdNFqiIe1wAAAANnaXQAAAAAAAAABnNoYTUxMgAAAGQAAAATZWNkc2Etc2hhMi
- 1uaXN0cDI1NgAAAEkAAAAgZjUvq53wcWu1NFXHmzckazQEIA8zzA6sDgo2O6H1bIEAAAAh
- ANBPcplyhERVOWdXXxKjDdeJNGslSTyMolY8TonC1FMZ
+ EEUgJvWEu4xBupxjxjNOW6wJcBh0zQlhzPc71FPNp5XqSzZo7dxZes4Dlb9HHa2RM8Wqnf
+ nxNBGGkbdyKYw6NbLgAAAANnaXQAAAAAAAAABnNoYTUxMgAAAGMAAAATZWNkc2Etc2hhMi
+ 1uaXN0cDI1NgAAAEgAAAAgXcYv9CSWFOJ210ltXo4go1TmCEyQCIWxUdozTciFjU4AAAAg
+ LQzyEBs1D45+VHLE60qjq63FVJ39gtKc/r3kU4tVcpc=
  -----END SSH SIGNATURE-----
 
-Keys: lambda.aws.a publishes its own key
+team/keys.json: add lambda.aws.a's key (fresh session, replaces 628a453a)
 
-Agent: lambda.aws.a@SovereignWebsite.dinis
-Claude-Session: https://claude.ai/code/session_018yvwtLeVUPVXDaPda9ugLD
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Agent: lambda.aws.a@SovereignWebsite.dinis
+Claude-Session: https://claude.ai/code/session_018yvwtQDAqTWaNdEUh78AVN
