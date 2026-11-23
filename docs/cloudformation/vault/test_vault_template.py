@@ -133,6 +133,7 @@ check(not any(r["Type"] in ("AWS::CloudWatch::Alarm", "AWS::SNS::Topic") for r i
 a_t = load("vault-alarm.yaml")
 ER = a_t["Resources"]
 check("OnlyInUsEast1" in a_t["Rules"], "alarm stack us-east-1 rule")
+check("Default" not in a_t["Parameters"]["RequestAlarmThreshold"], "RequestAlarmThreshold has a default (ux.aws.a's rule: the page fills it or the customer chooses)")
 check("Condition" not in ER["CostAlarm"], "cost alarm conditional in its own stack")
 check(ER["CostAlarm"]["Properties"]["AlarmName"] == {"Fn::Sub": "sws-vault-${VaultId}-requests"}, "cost alarm name")
 check(ER["CostAlarmTopic"]["Properties"]["TopicName"] == {"Fn::Sub": "sws-vault-${VaultId}-cost"}, "cost topic name")
