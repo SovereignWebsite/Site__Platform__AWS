@@ -48,7 +48,17 @@ let checks = 0;
   const ev = (await cfn(t, { Action: "DescribeStackEvents", StackName: E })).text;
   assert.ok(tag(ev, "ResourceStatusReason").some((r) => /^Content of DNS Record is: \{Name: _[0-9a-f]{32}\.vault\.example\.org\.,Type: CNAME,Value: _[0-9a-f]{32}\.[a-z]{10}\.acm-validations\.aws\.\}$/.test(r)), "the validation record, in the events");
   assert.ok(!tag(ev, "ResourceStatus").includes("CREATE_COMPLETE"), "nothing completes");
-  checks += 3;
+  // It can be deleted while it waits, so it does not hold one of the account's slots for good (security.aws.a's note).
+  const id = tag((await cfn(t, { Action: "DescribeStacks", StackName: E })).text, "StackId")[0];
+  assert.equal((await cfn(t, { Action: "DeleteStack", StackName: E })).status, 200, "a waiting -edge stack can be deleted");
+  t.clock.tick(5 * 60 * 1000);
+  const after = (await cfn(t, { Action: "DescribeStackEvents", StackName: id })).text;
+  assert.equal(tag((await cfn(t, { Action: "DescribeStacks", StackName: id })).text, "StackStatus")[0], "DELETE_COMPLETE", "and is deleted");
+  assert.ok(/<LogicalResourceId>VaultCertificate<\/LogicalResourceId>(?:(?!<\/member>).)*<ResourceStatus>DELETE_COMPLETE</s.test(after), "with its waiting certificate");
+  // A Vault stack still being created is still refused (the twin's rule for every other case).
+  await cfn(t, { Action: "CreateStack", StackName: "sws-vault-" + ID, TemplateURL: "x", "Capabilities.member.1": "CAPABILITY_NAMED_IAM", "Parameters.member.1.ParameterKey": "VaultId", "Parameters.member.1.ParameterValue": ID }, "eu-west-2");
+  assert.equal((await cfn(t, { Action: "DeleteStack", StackName: "sws-vault-" + ID }, "eu-west-2")).status, 400, "a Vault stack being created still refuses the delete");
+  checks += 7;
 }
 
 // 3. Rate limit only (no domain): the web ACL alone, its output alone.

@@ -968,7 +968,12 @@
       var ok = xml("<DeleteStackResponse" + NS + "><ResponseMetadata><RequestId>twin</RequestId></ResponseMetadata></DeleteStackResponse>");
       // A stack already deleted (found by its id) deletes quietly too, and stays DELETE_COMPLETE (security.aws.a, 5dc4519).
       if (!sd || sd.status === "DELETE_IN_PROGRESS" || sd.status === "DELETE_COMPLETE") return ok;
-      if (/_IN_PROGRESS$/.test(sd.status)) return cfnErr("ValidationError", "Stack [" + sd.name + "] is in " + sd.status + " state and can not be deleted until it settles (the twin's rule).");
+      // The exception: an -edge stack whose certificate waits on DNS elsewhere has nothing more scheduled and would never
+      // settle, so it holds one of the account's slots for good unless it can go (security.aws.a's note on 1845b40). It
+      // can: the waiting certificate is deleted with the rest. AWS lets a stack being created be deleted too; the twin
+      // keeps its stricter rule for every other case.
+      var waitingEdge = sd.kind === "edge" && sd.status === "CREATE_IN_PROGRESS" && !s.pending.some(function (p) { return p.entry.target === sd.stackId; });
+      if (/_IN_PROGRESS$/.test(sd.status) && !waitingEdge) return cfnErr("ValidationError", "Stack [" + sd.name + "] is in " + sd.status + " state and can not be deleted until it settles (the twin's rule).");
       var t0 = nowIso(), at = Date.parse(t0) + 1000, sched = [], base = { account: account, region: region, name: sd.name };
       var ev = function (ms, logical, type, status, extra) { sched.push({ at: new Date(ms).toISOString(), op: "cloudformation.stackEvent", target: sd.stackId,
         data: Object.assign({ logical: logical, type: type, status: status }, base, extra || {}), actor: "aws:cloudformation", why: "clock.settle" }); };
@@ -977,7 +982,7 @@
         ev(at, sd.name, "AWS::CloudFormation::Stack", "DELETE_FAILED", { physical: sd.stackId, reason: "Role " + sd.roleArn + " is invalid or cannot be assumed" });
       } else {
         var made = sd.events.slice().reverse().map(function (x) { return x.logical; })
-          .filter(function (l, i, a) { return l !== sd.name && a.indexOf(l) === i && sd.resources[l] && sd.resources[l].status === "CREATE_COMPLETE"; });
+          .filter(function (l, i, a) { return l !== sd.name && a.indexOf(l) === i && sd.resources[l] && (sd.resources[l].status === "CREATE_COMPLETE" || (waitingEdge && sd.resources[l].status === "CREATE_IN_PROGRESS")); });
         var took = { "AWS::CloudFront::Distribution": 300, "AWS::Route53::RecordSet": 35, "AWS::IAM::Role": 5 };
         made.reverse().forEach(function (l) {
           var rs = sd.resources[l], keep = /^Retain/.test(DELETION[l] || "");
