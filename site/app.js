@@ -159,6 +159,7 @@
     say(out, "Asking STS for one-hour read-only credentials...");
     assume(acct, "sws-aws-platform-read").then(function (c) {
       return queryCall(c, "sts.amazonaws.com", "sts", { Action: "GetCallerIdentity", Version: "2011-06-15" }).then(function (d) {
+        if (!acct.ready) { acct.ready = true; saveAccounts(accounts); }
         var lines = ["Signed in to AWS as " + xmlText(d, "Arn") + ", until " + new Date(c.expiration).toLocaleTimeString() + "."];
         var now = new Date(), start = now.toISOString().slice(0, 8) + "01", end = now.toISOString().slice(0, 10);
         if (start === end) return say(out, lines.join(" "), "ok");
@@ -181,8 +182,10 @@
       var read = el("button", { type: "button", text: "Read this account" }); read.onclick = function () { readAccount(acct, out); };
       var rm = el("button", { type: "button", class: "quiet", text: "Forget on this device" });
       rm.onclick = function () { accounts.splice(i, 1); saveAccounts(accounts); renderAccounts(); renderPlans(); };
-      list.appendChild(el("li", {}, [el("strong", { text: acct.label }), el("span", { class: "small", text: " (account ending " + acct.id.slice(-4) + ")" }),
-        setupLinks(acct), el("div", { class: "row" }, [read, rm]), out]));
+      var setup = setupLinks(acct);
+      if (acct.ready) setup = el("details", {}, [el("summary", { class: "small", text: "Set up again (CloudFormation)" }), setup]);
+      list.appendChild(el("li", {}, [el("strong", { text: acct.label }), el("span", { class: "small", text: " (account ending " + acct.id.slice(-4) + (acct.ready ? ", set up" : "") + ")" }),
+        el("div", { class: "row" }, [read, rm]), out, setup]));
     });
     renderPlans();
   }
@@ -208,7 +211,7 @@
       show.onclick = function () { showPlan(plan, accounts.filter(function (a) { return a.id === sel.value; })[0], out, st); };
       box.appendChild(el("li", {}, [el("strong", { text: plan.title }), el("p", { class: "small", text: plan.why }),
         el("p", { class: "small", text: "Adds: " + plan.add.join(", ") + ". Keeps " + plan.keep + ". Never touches " + plan.never + "." }),
-        el("div", { class: "row" }, [sel, show]), st, out]));
+        el("div", { class: "row" }, [sel, show]), out, st]));
     });
   }
   function showPlan(plan, acct, out, st) {
