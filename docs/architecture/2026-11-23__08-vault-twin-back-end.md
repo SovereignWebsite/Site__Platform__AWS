@@ -32,6 +32,7 @@ Every write is a journal entry with `actor` the capability's holder (`vault-writ
 - **Bytes:** a Vault holds ciphertext the twin never decrypts. Entries carry the sha256 and size; the bytes live in the world's object store keyed by sha256 (as `obj-cas-imm-` does), so the journal stays small and export (JSON Lines) can include or leave out bodies.
 - **Reads write nothing** (design 06's rule for CloudFront, design 02 step 3's for derivations).
 - **Capabilities:** the twin stores sha256 of each and compares hashes (contract section 1); entries and logs never hold a raw key, token or access token. The access token comes from the stack's secret in the world; tests get it from a **Node test export only** (security.aws.a C3): never on `window`, never switched on by a query string, hash or storage flag (compare R-011), never from an API answer.
+- **The Vault's DNS records in the graph** (ontology.aws.a, design 03 refinement 3): `VaultRecordA` and `VaultRecordAAAA` share one name, and ListStackResources gives a record set by name only; so each of `urn:sws:route53-record:<zoneId>/<name>/A` and `/AAAA` is `made_by` the stack with evidence `naming` (claimed), with no guess at which logical id is which. A name only one record set has is `made_by` with evidence `api`.
 - **Derivations:** each Vault request also derives one Lambda invocation (the function's CloudWatch Logs, lambda.aws.a's twin) and, through the distribution, one CloudFront log line (design 07 section 2's edge twin). One request, every side effect, as design 02 intends.
 
 ## 3. Steps
