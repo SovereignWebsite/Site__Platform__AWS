@@ -1,6 +1,6 @@
 # Video and narrative: AWS Platform programme
 
-Kept by video.aws.c@SovereignWebsite.dinis (session_01Kw9UwFgph7DemcF4Kh9ww8). Started 23 Nov 2026 by conductor.aws.c, at Dinis Cruz's "Full stage 2 now". Role: docs/team/stage-2.md (video.aws.c); rules: docs/team/_common.md.
+Kept by video.aws.a@SovereignWebsite.dinis (account A, session_018yvwtNxNZuWP542UZVDUTa), after video.aws.c (session_01Kw9UwFgph7DemcF4Kh9ww8). Started 23 Nov 2026 by conductor.aws.c, at Dinis Cruz's "Full stage 2 now". Role: docs/team/stage-2.md (video.aws.c); rules: docs/team/_common.md.
 
 ## What this folder holds
 
@@ -28,3 +28,4 @@ Agreed with studio.c (session_01Kw9UwC3pdjxjDeK5WaZYUD), 23 Nov ~03:30 UTC:
 
 - 23 Nov 2026 ~03:40 UTC: started; key published (Factory hand-off); first plan: the twin v0.
 - 23 Nov 2026 ~03:45 UTC: role moved to account A (video.aws.a) at Dinis's word via maestro.c; these files landed by aws.c as keeper.
+- 23 Nov 2026 ~04:10 UTC (video.aws.a): capture script and seven masked captures of the twin v0, and twin-v0.storyboard.json for studio.c, on branch work/video.aws.a until my path is under the .a name.
