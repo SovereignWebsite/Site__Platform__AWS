@@ -1,0 +1,1324 @@
+{
+ "schema": "swarm-replay/0.1",
+ "since": "2026-11-23T02:40Z",
+ "agents": [
+  {
+   "id": "maestro.c",
+   "session": "session_01Kw9UwEYkVCthc5KiVo3bAp",
+   "parent": null,
+   "born": "2026-11-22T17:10:32Z",
+   "status": "idle",
+   "programme": "account-c"
+  },
+  {
+   "id": "observability.c",
+   "session": "session_01Kw9UwBmqCafJ2NtqhQPQwu",
+   "parent": "maestro.c",
+   "born": "2026-11-22T17:15:28Z",
+   "status": "blocked",
+   "programme": "account-c"
+  },
+  {
+   "id": "factory.c",
+   "session": "session_01Kw9UwFQ86g2ZeXQ2edTAjh",
+   "parent": "maestro.c",
+   "born": "2026-11-22T17:20:41Z",
+   "status": "working",
+   "programme": "account-c"
+  },
+  {
+   "id": "aws.c",
+   "session": "session_01Kw9UwAzhau7Us55PugP2V2",
+   "parent": "maestro.c",
+   "born": "2026-11-22T22:05:31Z",
+   "status": "working",
+   "programme": "aws.c"
+  },
+  {
+   "id": "conductor.aws.c",
+   "session": "session_01Kw9UwDiqvoswkZCuHe5GTt",
+   "parent": "maestro.c",
+   "born": "2026-11-23T02:40:27Z",
+   "status": "working",
+   "programme": "aws.c",
+   "cron": "58 2-23/4 * * *",
+   "lane_requested": [
+    "docs/team/**"
+   ],
+   "lane_granted": [
+    "docs/team/**"
+   ]
+  },
+  {
+   "id": "pm.aws.c",
+   "session": "session_01Kw9UwBZAwm6766jrG94uX1",
+   "parent": "maestro.c",
+   "born": "2026-11-23T02:40:29Z",
+   "status": "blocked",
+   "programme": "aws.c",
+   "cron": "15 * * * * (pm.aws.c sets its own)",
+   "lane_requested": [
+    "docs/board/**"
+   ],
+   "lane_granted": [
+    "docs/board/**",
+    "site/decisions/**"
+   ]
+  },
+  {
+   "id": "security.aws.c",
+   "session": "session_01Kw9UwDzABFfbMk8PV34a7J",
+   "parent": "conductor.aws.c",
+   "born": "2026-11-23T02:44:19Z",
+   "status": "review_ready",
+   "programme": "aws.c",
+   "cron": "28 */2 * * *",
+   "lane_requested": [
+    "docs/security/**"
+   ],
+   "lane_granted": [
+    "docs/security/**"
+   ]
+  },
+  {
+   "id": "architect.aws.c",
+   "session": "session_01Kw9UwDZKwJdnC3eTunM4uS",
+   "parent": "conductor.aws.c",
+   "born": "2026-11-23T02:44:21Z",
+   "status": "review_ready",
+   "programme": "aws.c",
+   "cron": "38 */4 * * *",
+   "lane_requested": [
+    "docs/architecture/**",
+    "site/api/** (pending aws.c)",
+    "site/twin/** (pending aws.c)"
+   ],
+   "lane_granted": [
+    "docs/architecture/**",
+    "site/api/**"
+   ]
+  },
+  {
+   "id": "s3.aws.c",
+   "session": "session_01Kw9UwD9A8Ev6Ktgofqj9Y6",
+   "parent": "conductor.aws.c",
+   "born": "2026-11-23T02:44:22Z",
+   "status": "review_ready",
+   "programme": "aws.c",
+   "cron": "53 1-23/2 * * *",
+   "lane_requested": [
+    "docs/s3/**",
+    "site/s3*.js (pending aws.c)"
+   ],
+   "lane_granted": [
+    "docs/s3/**",
+    "site/s3.js",
+    "test/s3/**"
+   ]
+  },
+  {
+   "id": "sherpa.aws.c",
+   "session": "session_01Kw9UwCF7nZyeKXUtFHiy7K",
+   "parent": "conductor.aws.c",
+   "born": "2026-11-23T03:21:42Z",
+   "status": "working",
+   "programme": "aws.c",
+   "cron": "19 1-23/2 * * *",
+   "lane_requested": [
+    "docs/sherpa/**"
+   ],
+   "lane_granted": [
+    "docs/sherpa/**"
+   ]
+  },
+  {
+   "id": "journalist.aws.c",
+   "session": "session_01Kw9UwFKRKfwjNjABzDxUhg",
+   "parent": "conductor.aws.c",
+   "born": "2026-11-23T03:21:44Z",
+   "status": "working",
+   "programme": "aws.c",
+   "cron": "06 * * * *",
+   "lane_requested": [
+    "docs/journal/**"
+   ],
+   "lane_granted": [
+    "docs/journal/**"
+   ]
+  },
+  {
+   "id": "ontology.aws.c",
+   "session": "session_01Kw9UwE3CyWyiWSWZt54DGg",
+   "parent": "conductor.aws.c",
+   "born": "2026-11-23T03:21:45Z",
+   "status": "working",
+   "programme": "aws.c",
+   "cron": "11 */2 * * *",
+   "lane_requested": [
+    "docs/ontology/**"
+   ],
+   "lane_granted": [
+    "docs/ontology/**"
+   ]
+  },
+  {
+   "id": "iam.aws.c",
+   "session": "session_01Kw9UwCNBBjF4QFqtci6B6J",
+   "parent": "conductor.aws.c",
+   "born": "2026-11-23T03:21:47Z",
+   "status": "blocked",
+   "programme": "aws.c",
+   "cron": "16 * * * *",
+   "lane_requested": [
+    "docs/iam/**"
+   ],
+   "lane_granted": [
+    "docs/iam/**"
+   ]
+  },
+  {
+   "id": "lambda.aws.c",
+   "session": "session_01Kw9UwFBZ4H4hZJjPwVxwkG",
+   "parent": "conductor.aws.c",
+   "born": "2026-11-23T03:21:48Z",
+   "status": "working",
+   "programme": "aws.c",
+   "cron": "21 */2 * * *",
+   "lane_requested": [
+    "docs/lambda/**"
+   ],
+   "lane_granted": [
+    "docs/lambda/**"
+   ]
+  },
+  {
+   "id": "cloudformation.aws.c",
+   "session": "session_01Kw9UwBfr3eaLwdWsDzwpVT",
+   "parent": "conductor.aws.c",
+   "born": "2026-11-23T03:21:49Z",
+   "status": "working",
+   "programme": "aws.c",
+   "cron": "26 1-23/2 * * *",
+   "lane_requested": [
+    "docs/cloudformation/**"
+   ],
+   "lane_granted": [
+    "docs/cloudformation/**"
+   ]
+  },
+  {
+   "id": "cloudtrail.aws.c",
+   "session": "session_01Kw9UwCr3jpB8Chr1HszjPD",
+   "parent": "conductor.aws.c",
+   "born": "2026-11-23T03:21:51Z",
+   "status": "working",
+   "programme": "aws.c",
+   "cron": "31 */2 * * *",
+   "lane_requested": [
+    "docs/cloudtrail/**"
+   ],
+   "lane_granted": [
+    "docs/cloudtrail/**"
+   ]
+  },
+  {
+   "id": "vaults.aws.c",
+   "session": "session_01Kw9UwCfsZCBz1rXEx4QmRP",
+   "parent": "conductor.aws.c",
+   "born": "2026-11-23T03:21:52Z",
+   "status": "working",
+   "programme": "aws.c",
+   "cron": "36 1-23/2 * * *",
+   "lane_requested": [
+    "docs/vaults/**"
+   ],
+   "lane_granted": [
+    "docs/vaults/**"
+   ]
+  },
+  {
+   "id": "boto3.aws.c",
+   "session": "session_01Kw9UwF18EchMPCKP9cWeJY",
+   "parent": "conductor.aws.c",
+   "born": "2026-11-23T03:21:53Z",
+   "status": "working",
+   "programme": "aws.c",
+   "cron": "41 */2 * * *",
+   "lane_requested": [
+    "docs/boto3/**"
+   ],
+   "lane_granted": [
+    "docs/boto3/**"
+   ]
+  },
+  {
+   "id": "ux.aws.c",
+   "session": "session_01Kw9UwE6VR9TTCLmpmytWvG",
+   "parent": "conductor.aws.c",
+   "born": "2026-11-23T03:21:55Z",
+   "status": "working",
+   "programme": "aws.c",
+   "cron": "46 1-23/2 * * *",
+   "lane_requested": [
+    "docs/design/**"
+   ],
+   "lane_granted": [
+    "docs/design/**"
+   ]
+  },
+  {
+   "id": "data.aws.c",
+   "session": "session_01Kw9UwDiMew98cTowNY73Xj",
+   "parent": "conductor.aws.c",
+   "born": "2026-11-23T03:21:56Z",
+   "status": "working",
+   "programme": "aws.c",
+   "cron": "51 */2 * * *",
+   "lane_requested": [
+    "docs/data/**"
+   ],
+   "lane_granted": [
+    "docs/data/**"
+   ]
+  },
+  {
+   "id": "billing.aws.c",
+   "session": "session_01Kw9UwEcR1KCF6y3dTPP5vr",
+   "parent": "conductor.aws.c",
+   "born": "2026-11-23T03:21:57Z",
+   "status": "working",
+   "programme": "aws.c",
+   "cron": "56 1-23/2 * * *",
+   "lane_requested": [
+    "docs/billing/**"
+   ],
+   "lane_granted": [
+    "docs/billing/**"
+   ]
+  },
+  {
+   "id": "viz.aws.c",
+   "session": "session_01Kw9UwDDKfdXVnkWK6uEL3v",
+   "parent": "conductor.aws.c",
+   "born": "2026-11-23T03:21:59Z",
+   "status": "blocked",
+   "programme": "aws.c",
+   "cron": "01 1-23/2 * * *",
+   "lane_requested": [
+    "docs/viz/**"
+   ],
+   "lane_granted": [
+    "docs/viz/**"
+   ]
+  },
+  {
+   "id": "video.aws.c",
+   "session": "session_01Kw9UwFgph7DemcF4Kh9ww8",
+   "parent": "conductor.aws.c",
+   "born": "2026-11-23T03:22:00Z",
+   "status": "working",
+   "programme": "aws.c",
+   "cron": "04 */4 * * *",
+   "lane_requested": [
+    "docs/video/**"
+   ],
+   "lane_granted": [
+    "docs/video/**"
+   ]
+  },
+  {
+   "id": "dev.1.aws.c",
+   "session": "session_01Kw9UwDM5jdQ2PcHFhrY69L",
+   "parent": "conductor.aws.c",
+   "born": "2026-11-23T03:22:01Z",
+   "status": "blocked",
+   "programme": "aws.c",
+   "cron": "09 * * * *",
+   "lane_requested": [
+    "code as granted"
+   ],
+   "lane_granted": []
+  },
+  {
+   "id": "dev.2.aws.c",
+   "session": "session_01Kw9UwF2SsRwvdTFB77PyjW",
+   "parent": "conductor.aws.c",
+   "born": "2026-11-23T03:22:03Z",
+   "status": "working",
+   "programme": "aws.c",
+   "cron": "39 * * * *",
+   "lane_requested": [
+    "code as granted"
+   ],
+   "lane_granted": []
+  },
+  {
+   "id": "swarm.aws.c",
+   "session": "session_01Kw9UwCUzTn6tV616HZcjmz",
+   "parent": "conductor.aws.c",
+   "born": "2026-11-23T03:23:58Z",
+   "status": "working",
+   "programme": "aws.c",
+   "cron": "34 * * * *",
+   "lane_requested": [
+    "docs/swarm/**"
+   ],
+   "lane_granted": [
+    "docs/swarm/**"
+   ]
+  }
+ ],
+ "events": [
+  {
+   "t": "2026-11-23T02:40:15Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "9a79e83",
+   "subject": "docs: memo part 3, journalist and researcher, parity tracker, decision briefs, no blockers overnight",
+   "signed": true,
+   "files": [
+    "docs/2026-11-23__memo-aws-platform-programme.md"
+   ],
+   "lanes_touched": [
+    "keeper"
+   ]
+  },
+  {
+   "t": "2026-11-23T02:40:27Z",
+   "type": "spawn",
+   "from": "maestro.c",
+   "to": "conductor.aws.c"
+  },
+  {
+   "t": "2026-11-23T02:40:29Z",
+   "type": "spawn",
+   "from": "maestro.c",
+   "to": "pm.aws.c"
+  },
+  {
+   "t": "2026-11-23T02:43:09Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "36a3674",
+   "subject": "docs/team: stage 1 start prompts and schedule for the AWS Platform programme",
+   "signed": true,
+   "files": [
+    "docs/team/_common.md",
+    "docs/team/architect.aws.c.md",
+    "docs/team/s3.aws.c.md",
+    "docs/team/schedule.json",
+    "docs/team/security.aws.c.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T02:43:45Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "89d8698",
+   "subject": "Tests in the repository; the keeper may change test/** (site ABP)",
+   "signed": true,
+   "files": [
+    "site/policy/abp.json",
+    "site/policy/index.html",
+    "test/README.md",
+    "test/fixtures/plain.zip",
+    "test/fixtures/trail.json.gz",
+    "test/fixtures/z64.zip",
+    "test/highlight.test.mjs",
+    "test/mask.test.mjs",
+    "test/page.e2e.cjs",
+    "test/plan.test.mjs",
+    "test/sigv4.test.mjs",
+    "test/zip.test.mjs"
+   ],
+   "lanes_touched": [
+    "keeper"
+   ]
+  },
+  {
+   "t": "2026-11-23T02:43:58Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "e5f90f5",
+   "subject": "docs/team: stage 1 fitted to accountant.c's budget; questions for Dinis via pm.aws.c",
+   "signed": true,
+   "files": [
+    "docs/team/_common.md",
+    "docs/team/architect.aws.c.md",
+    "docs/team/s3.aws.c.md",
+    "docs/team/schedule.json",
+    "docs/team/security.aws.c.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T02:44:19Z",
+   "type": "spawn",
+   "from": "conductor.aws.c",
+   "to": "security.aws.c"
+  },
+  {
+   "t": "2026-11-23T02:44:21Z",
+   "type": "spawn",
+   "from": "conductor.aws.c",
+   "to": "architect.aws.c"
+  },
+  {
+   "t": "2026-11-23T02:44:22Z",
+   "type": "spawn",
+   "from": "conductor.aws.c",
+   "to": "s3.aws.c"
+  },
+  {
+   "t": "2026-11-23T02:44:45Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "ee8259c",
+   "subject": "docs/team: stage 1 sessions and wakes recorded; team log",
+   "signed": true,
+   "files": [
+    "docs/team/log.md",
+    "docs/team/schedule.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T02:44Z",
+   "type": "wake",
+   "agent": "conductor.aws.c",
+   "note": "stage 1 started: security.aws.c, architect.aws.c, s3.aws.c with wakes (schedule.json)"
+  },
+  {
+   "t": "2026-11-23T02:45:46Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "e3d1266",
+   "subject": "docs/team/log: synthetic-first relayed to architect and s3",
+   "signed": true,
+   "files": [
+    "docs/team/log.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T02:45:54Z",
+   "type": "commit",
+   "agent": "s3.aws.c",
+   "sha": "7cc0dd4",
+   "subject": "docs/s3: first note on the S3 browser, and the next three steps",
+   "signed": true,
+   "files": [
+    "docs/s3/2026-11-23__first-note.md"
+   ],
+   "lanes_touched": [
+    "s3.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T02:45Z",
+   "type": "wake",
+   "agent": "s3.aws.c",
+   "note": "first note docs/s3/2026-11-23__first-note.md 7cc0dd4"
+  },
+  {
+   "t": "2026-11-23T02:46:09Z",
+   "type": "commit",
+   "agent": "s3.aws.c",
+   "sha": "4a2cff6",
+   "subject": "docs/team/log.md: s3.aws.c first wake",
+   "signed": true,
+   "files": [
+    "docs/team/log.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T02:46Z",
+   "type": "wake",
+   "agent": "conductor.aws.c",
+   "note": "relayed aws.c's news (synthetic-first twin, test/** allowed) to architect and s3; aws.c builds twin v0, architect designs over it"
+  },
+  {
+   "t": "2026-11-23T02:46Z",
+   "type": "message",
+   "from": "conductor.aws.c",
+   "to": "architect.aws.c",
+   "source": "docs/team/log.md"
+  },
+  {
+   "t": "2026-11-23T02:46Z",
+   "type": "message",
+   "from": "conductor.aws.c",
+   "to": "s3.aws.c",
+   "source": "docs/team/log.md"
+  },
+  {
+   "t": "2026-11-23T02:57:28Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "5371ed9",
+   "subject": "The twin v0: a synthetic AWS in the page, behind one transport",
+   "signed": true,
+   "files": [
+    "site/app.js",
+    "site/index.html",
+    "site/s3.js",
+    "site/style.css",
+    "site/transport.js",
+    "site/twin.js",
+    "test/README.md",
+    "test/twin.e2e.cjs"
+   ],
+   "lanes_touched": [
+    "keeper",
+    "s3.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:00:35Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "d4a63b1",
+   "subject": "docs/board: the AWS Platform board and the decisions page for Dinis (from pm.aws.c)",
+   "signed": true,
+   "files": [
+    "docs/board/README.md",
+    "docs/board/decisions.md",
+    "docs/board/tasks.json"
+   ],
+   "lanes_touched": [
+    "pm.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:00:35Z",
+   "type": "handoff",
+   "from": "pm.aws.c",
+   "to": "aws.c",
+   "sha": "d4a63b1"
+  },
+  {
+   "t": "2026-11-23T03:01:29Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "d67b560",
+   "subject": "Template v2.1: the change role can no longer make itself admin (R-001)",
+   "signed": true,
+   "files": [
+    "site/cloudformation/bootstrap.yaml",
+    "site/plans/2026-11-23__platform-template-v2.json"
+   ],
+   "lanes_touched": [
+    "keeper"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:03:41Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "c8cece5",
+   "subject": "Twin fails closed; the PM's board, pipeline and decisions; s3's addendum",
+   "signed": true,
+   "files": [
+    "docs/board/README.md",
+    "docs/board/decisions.md",
+    "docs/board/pipeline.md",
+    "docs/board/tasks.json",
+    "docs/s3/2026-11-23__first-note.md",
+    "site/app.js",
+    "site/transport.js",
+    "test/twin.e2e.cjs"
+   ],
+   "lanes_touched": [
+    "keeper",
+    "pm.aws.c",
+    "s3.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:05:17Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "d1274c7",
+   "subject": "docs/security: risk register R-001 to R-008 (from security.aws.c); R-003 fixed",
+   "signed": true,
+   "files": [
+    "docs/security/last-reviewed.txt",
+    "docs/security/risks.md",
+    "site/app.js",
+    "site/plans/2026-11-23__platform-template-v2.json",
+    "test/page.e2e.cjs"
+   ],
+   "lanes_touched": [
+    "keeper",
+    "security.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:05:17Z",
+   "type": "handoff",
+   "from": "security.aws.c",
+   "to": "aws.c",
+   "sha": "d1274c7"
+  },
+  {
+   "t": "2026-11-23T03:06:09Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "668cea1",
+   "subject": "docs/architecture: design 01, one transport, two back ends (from architect.aws.c)",
+   "signed": true,
+   "files": [
+    "docs/architecture/2026-11-23__01-one-transport-two-back-ends.md"
+   ],
+   "lanes_touched": [
+    "architect.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:06:09Z",
+   "type": "handoff",
+   "from": "architect.aws.c",
+   "to": "aws.c",
+   "sha": "668cea1"
+  },
+  {
+   "t": "2026-11-23T03:08:19Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "f401359",
+   "subject": "S3 browser: drop stale answers after a newer click (from s3.aws.c)",
+   "signed": true,
+   "files": [
+    "site/s3.js",
+    "test/README.md",
+    "test/s3/stale.e2e.cjs"
+   ],
+   "lanes_touched": [
+    "keeper",
+    "s3.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:08:19Z",
+   "type": "handoff",
+   "from": "s3.aws.c",
+   "to": "aws.c",
+   "sha": "f401359"
+  },
+  {
+   "t": "2026-11-23T03:18:51Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "c32279d",
+   "subject": "site/policy: the AWS team's agents and their paths (Dinis's yes)",
+   "signed": true,
+   "files": [
+    "site/policy/abp.json",
+    "site/policy/index.html"
+   ],
+   "lanes_touched": [
+    "keeper"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:19:08Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "87e7fa2",
+   "subject": "docs: memo part 4, the twin as the place everything is built",
+   "signed": true,
+   "files": [
+    "docs/2026-11-23__memo-aws-platform-programme.md"
+   ],
+   "lanes_touched": [
+    "keeper"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:20:13Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "d686bd0",
+   "subject": "docs/team: stage 2 at Dinis's word; signing with own keys; budget cap lifted",
+   "signed": true,
+   "files": [
+    "docs/team/_common.md",
+    "docs/team/schedule.json",
+    "docs/team/stage-2.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:20:29Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "4433914",
+   "subject": "docs/team: sherpa.aws.c and usability first (Dinis, 23 Nov ~03:25 UTC)",
+   "signed": true,
+   "files": [
+    "docs/team/schedule.json",
+    "docs/team/stage-2.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:21:42Z",
+   "type": "spawn",
+   "from": "conductor.aws.c",
+   "to": "sherpa.aws.c"
+  },
+  {
+   "t": "2026-11-23T03:21:44Z",
+   "type": "spawn",
+   "from": "conductor.aws.c",
+   "to": "journalist.aws.c"
+  },
+  {
+   "t": "2026-11-23T03:21:45Z",
+   "type": "spawn",
+   "from": "conductor.aws.c",
+   "to": "ontology.aws.c"
+  },
+  {
+   "t": "2026-11-23T03:21:47Z",
+   "type": "spawn",
+   "from": "conductor.aws.c",
+   "to": "iam.aws.c"
+  },
+  {
+   "t": "2026-11-23T03:21:48Z",
+   "type": "spawn",
+   "from": "conductor.aws.c",
+   "to": "lambda.aws.c"
+  },
+  {
+   "t": "2026-11-23T03:21:49Z",
+   "type": "spawn",
+   "from": "conductor.aws.c",
+   "to": "cloudformation.aws.c"
+  },
+  {
+   "t": "2026-11-23T03:21:51Z",
+   "type": "spawn",
+   "from": "conductor.aws.c",
+   "to": "cloudtrail.aws.c"
+  },
+  {
+   "t": "2026-11-23T03:21:52Z",
+   "type": "spawn",
+   "from": "conductor.aws.c",
+   "to": "vaults.aws.c"
+  },
+  {
+   "t": "2026-11-23T03:21:53Z",
+   "type": "spawn",
+   "from": "conductor.aws.c",
+   "to": "boto3.aws.c"
+  },
+  {
+   "t": "2026-11-23T03:21:55Z",
+   "type": "spawn",
+   "from": "conductor.aws.c",
+   "to": "ux.aws.c"
+  },
+  {
+   "t": "2026-11-23T03:21:56Z",
+   "type": "spawn",
+   "from": "conductor.aws.c",
+   "to": "data.aws.c"
+  },
+  {
+   "t": "2026-11-23T03:21:57Z",
+   "type": "spawn",
+   "from": "conductor.aws.c",
+   "to": "billing.aws.c"
+  },
+  {
+   "t": "2026-11-23T03:21:59Z",
+   "type": "spawn",
+   "from": "conductor.aws.c",
+   "to": "viz.aws.c"
+  },
+  {
+   "t": "2026-11-23T03:22:00Z",
+   "type": "spawn",
+   "from": "conductor.aws.c",
+   "to": "video.aws.c"
+  },
+  {
+   "t": "2026-11-23T03:22:01Z",
+   "type": "spawn",
+   "from": "conductor.aws.c",
+   "to": "dev.1.aws.c"
+  },
+  {
+   "t": "2026-11-23T03:22:03Z",
+   "type": "spawn",
+   "from": "conductor.aws.c",
+   "to": "dev.2.aws.c"
+  },
+  {
+   "t": "2026-11-23T03:23:41Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "d49102c",
+   "subject": "docs/team: swarm.aws.c, the team visualised (Dinis, 23 Nov ~03:30 UTC)",
+   "signed": true,
+   "files": [
+    "docs/team/schedule.json",
+    "docs/team/stage-2.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:23:58Z",
+   "type": "spawn",
+   "from": "conductor.aws.c",
+   "to": "swarm.aws.c"
+  },
+  {
+   "t": "2026-11-23T03:24:29Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "2a1278a",
+   "subject": "docs/team: stage 2 roster with sessions and wakes",
+   "signed": true,
+   "files": [
+    "docs/team/log.md",
+    "docs/team/schedule.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:25:22Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "9f89cc2",
+   "subject": "docs/team/log: first stage 2 runs; memo part 4 assigned",
+   "signed": true,
+   "files": [
+    "docs/team/log.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:25Z",
+   "type": "wake",
+   "agent": "conductor.aws.c",
+   "note": "stage 2 started at Dinis's word: 17 sessions (sherpa, journalist, ontology, iam, lambda, cloudformation, cloudtrail, vaults, boto3, ux, data, billing, viz, video, dev.1, dev.2, swarm) with wakes; security and s3 hourly, architect 2 h"
+  },
+  {
+   "t": "2026-11-23T03:25Z",
+   "type": "wake",
+   "agent": "conductor.aws.c",
+   "note": "key published on the Factory (IaC dev 885f150, at Dinis's \"Land the AWS keys\")"
+  },
+  {
+   "t": "2026-11-23T03:25Z",
+   "type": "wake",
+   "agent": "first",
+   "note": "runs reported: viz (P1 storyboard, local), ontology (44 nodes, 66 edges, local; key conversion waits on Dinis), cloudformation (first note 8c7cdf3, local), boto3 (S3 map 78f6368, local), data (EX-1 design 8176200, local), cloudtrail (first note 233fd6e, local), vaults (three-vault draft, local; key conversion waits on Dinis); all wait on their paths in abp.json"
+  },
+  {
+   "t": "2026-11-23T03:26:51Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "56e0cf1",
+   "subject": "docs/team/log: more first runs; Amber watch",
+   "signed": true,
+   "files": [
+    "docs/team/log.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:27:26Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "2bdf2e4",
+   "subject": "docs/team/log: dev.2 first build",
+   "signed": true,
+   "files": [
+    "docs/team/log.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:27:46Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "af80334",
+   "subject": "docs/team/log: billing first run",
+   "signed": true,
+   "files": [
+    "docs/team/log.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:27:59Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "6ba1f14",
+   "subject": "docs/team/log: journalist first article",
+   "signed": true,
+   "files": [
+    "docs/team/log.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:27Z",
+   "type": "wake",
+   "agent": "first",
+   "note": "runs reported: lambda (first note 94188e6, local; key fefea6a to factory.c), data (design now 0f4e47e), swarm (data model, extractor of 26 agents and 53 events, 7-scene storyboard, local; sgit-ai install waits on Dinis), video (twin v0 narrative plan e4cc707, local; key 26dd826 to factory.c), sherpa (walk 1, 10 ranked findings, 451bc42, local)"
+  },
+  {
+   "t": "2026-11-23T03:27Z",
+   "type": "wake",
+   "agent": "accountant.c",
+   "note": "forecasts AMBER on account C; conductor.aws.c checks at 04:12 and each :58, halves cadences at the first non-\"allowed\" reading"
+  },
+  {
+   "t": "2026-11-23T03:28:12Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "9df0977",
+   "subject": "docs/team/log: ux design 01",
+   "signed": true,
+   "files": [
+    "docs/team/log.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:28Z",
+   "type": "wake",
+   "agent": "dev.2.aws.c",
+   "note": "key made; S3Api (site/api/s3-api.js) and 27 twin contract tests, local a8af563, awaiting paths site/api/** and test/api/**"
+  },
+  {
+   "t": "2026-11-23T03:28Z",
+   "type": "wake",
+   "agent": "billing.aws.c",
+   "note": "key made (commit to factory.c); price book v1 (26 cited prices) and twin estimate, local 90eb43a, awaiting key and docs/billing/**"
+  },
+  {
+   "t": "2026-11-23T03:28Z",
+   "type": "wake",
+   "agent": "journalist.aws.c",
+   "note": "key made; first user-view article (look inside a zip without downloading it, twin walkthrough) and parity tracker, local 5d5d8f2, awaiting paths"
+  },
+  {
+   "t": "2026-11-23T03:28Z",
+   "type": "wake",
+   "agent": "ux.aws.c",
+   "note": "key made; design 01 (five consoles: Map, Timeline, Files, Desk, Command; S3 next level; 10 usability findings), local 59fbba7, awaiting docs/design/**; split proposed to design.c (ux: product UX; design.c: family look and tokens)"
+  },
+  {
+   "t": "2026-11-23T03:29:12Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "54f8173",
+   "subject": "docs/team/log: ux and design.c split agreed",
+   "signed": true,
+   "files": [
+    "docs/team/log.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:29:56Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "6de93d3",
+   "subject": "Twin: demo packs (normal day, attack in progress, traffic surge)",
+   "signed": true,
+   "files": [
+    "site/app.js",
+    "site/index.html",
+    "site/style.css",
+    "site/twin.js",
+    "test/twin.e2e.cjs"
+   ],
+   "lanes_touched": [
+    "keeper"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:29Z",
+   "type": "wake",
+   "agent": "ux.aws.c",
+   "note": "and design.c agreed the split: ux.aws.c owns console UX (docs/design/**); design.c reviews against design.b's standard, does not edit console UIs; family.css, tokens and landing pages stay aws.c's. ux design 01 updated (3D per console, try the twin, demo packs, sherpa item 8), local ece8734"
+  },
+  {
+   "t": "2026-11-23T03:30Z",
+   "type": "wake",
+   "agent": "conductor.aws.c",
+   "note": "assigned memo part 4 section 23: twin engine to architect (design 02) and dev.1/dev.2; altitudes to ontology with architect; investigation data to data; attack and traffic scenarios to security (writes) and viz (shows); 3D views to ux and viz; swarm events in the wire's schema to docs/team/events.jsonl"
+  },
+  {
+   "t": "2026-11-23T03:31:51Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "0439523",
+   "subject": "docs/team: hand-overs for 16 roles moving to account A; cadences halved on C",
+   "signed": true,
+   "files": [
+    "docs/team/handover/billing.aws.md",
+    "docs/team/handover/boto3.aws.md",
+    "docs/team/handover/cloudformation.aws.md",
+    "docs/team/handover/cloudtrail.aws.md",
+    "docs/team/handover/data.aws.md",
+    "docs/team/handover/dev.1.aws.md",
+    "docs/team/handover/dev.2.aws.md",
+    "docs/team/handover/iam.aws.md",
+    "docs/team/handover/journalist.aws.md",
+    "docs/team/handover/lambda.aws.md",
+    "docs/team/handover/ontology.aws.md",
+    "docs/team/handover/swarm.aws.md",
+    "docs/team/handover/ux.aws.md",
+    "docs/team/handover/vaults.aws.md",
+    "docs/team/handover/video.aws.md",
+    "docs/team/handover/viz.aws.md",
+    "docs/team/log.md",
+    "docs/team/schedule.json"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:33:33Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "b24a5ba",
+   "subject": "docs/team/handover: open items from boto3, journalist, dev.2, cloudtrail, lambda",
+   "signed": true,
+   "files": [
+    "docs/team/handover/boto3.aws.md",
+    "docs/team/handover/cloudtrail.aws.md",
+    "docs/team/handover/dev.2.aws.md",
+    "docs/team/handover/journalist.aws.md",
+    "docs/team/handover/lambda.aws.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:33:55Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "4b955d2",
+   "subject": "docs/team/handover: open items from viz, video, ux, data, cloudformation",
+   "signed": true,
+   "files": [
+    "docs/team/handover/cloudformation.aws.md",
+    "docs/team/handover/data.aws.md",
+    "docs/team/handover/ux.aws.md",
+    "docs/team/handover/video.aws.md",
+    "docs/team/handover/viz.aws.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:34:18Z",
+   "type": "commit",
+   "agent": "pm.aws.c",
+   "sha": "b0ca72d",
+   "subject": "docs/board: 22 owners and first tasks, twin first; decisions down to six",
+   "signed": true,
+   "files": [
+    "docs/board/README.md",
+    "docs/board/decisions.md",
+    "docs/board/pipeline.md",
+    "docs/board/tasks.json"
+   ],
+   "lanes_touched": [
+    "pm.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:34:31Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "3e0ffdf",
+   "subject": "docs/team: Red hold on account C until 06:20; vaults and ontology hand-over items",
+   "signed": true,
+   "files": [
+    "docs/team/handover/ontology.aws.md",
+    "docs/team/handover/vaults.aws.md",
+    "docs/team/log.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:34:45Z",
+   "type": "commit",
+   "agent": "pm.aws.c",
+   "sha": "9bd8fdc",
+   "subject": "docs/board: account C held until after 06:20 UTC (accountant.c RED)",
+   "signed": true,
+   "files": [
+    "docs/board/README.md",
+    "docs/board/tasks.json"
+   ],
+   "lanes_touched": [
+    "pm.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:34:48Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "5cc46d7",
+   "subject": "docs/team/handover: billing and swarm items",
+   "signed": true,
+   "files": [
+    "docs/team/handover/billing.aws.md",
+    "docs/team/handover/swarm.aws.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:35Z",
+   "type": "wake",
+   "agent": "conductor.aws.c",
+   "note": "at Dinis's word (via maestro.c): account C at 60% five-hour; 16 movers' C wakes paused, hand-overs in docs/team/handover/; stayers halved (security 2 h, s3 2 h, sherpa 2 h, architect 4 h, conductor 4 h)"
+  },
+  {
+   "t": "2026-11-23T03:35Z",
+   "type": "wake",
+   "agent": "accountant.c",
+   "note": "forecasts RED on C (60% of five-hour in ~2h15m; limit ~05:00 at that rate, reset ~06:20): s3, architect, sherpa held until after 06:20 (07:53, 08:38, 07:19); security 2 h; no new starts on C"
+  },
+  {
+   "t": "2026-11-23T03:38:51Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "62ec2d9",
+   "subject": "site/policy: docs folders for the 15 stage 2 agents (Dinis's yes)",
+   "signed": true,
+   "files": [
+    "site/policy/abp.json",
+    "site/policy/index.html"
+   ],
+   "lanes_touched": [
+    "keeper"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:38:54Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "063967d",
+   "subject": "zip: read the index from the tail already fetched when it is there",
+   "signed": true,
+   "files": [
+    "site/zip.js",
+    "test/zip.test.mjs"
+   ],
+   "lanes_touched": [
+    "keeper"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:38:54Z",
+   "type": "commit",
+   "agent": "aws.c",
+   "sha": "787735b",
+   "subject": "Twin: usability first, and S3 answers as AWS documents them",
+   "signed": true,
+   "files": [
+    "site/app.js",
+    "site/index.html",
+    "site/s3.js",
+    "site/twin.js",
+    "test/README.md",
+    "test/twin.e2e.cjs",
+    "test/twin/s3-fidelity.test.mjs"
+   ],
+   "lanes_touched": [
+    "keeper",
+    "s3.aws.c"
+   ]
+  },
+  {
+   "t": "2026-11-23T03:39:29Z",
+   "type": "commit",
+   "agent": "conductor.aws.c",
+   "sha": "78d73b0",
+   "subject": "docs/team/handover: aws.c's 03:50 landing and first twin tasks for the .a agents",
+   "signed": true,
+   "files": [
+    "docs/team/handover/billing.aws.md",
+    "docs/team/handover/boto3.aws.md",
+    "docs/team/handover/cloudformation.aws.md",
+    "docs/team/handover/cloudtrail.aws.md",
+    "docs/team/handover/data.aws.md",
+    "docs/team/handover/dev.1.aws.md",
+    "docs/team/handover/dev.2.aws.md",
+    "docs/team/handover/iam.aws.md",
+    "docs/team/handover/journalist.aws.md",
+    "docs/team/handover/lambda.aws.md",
+    "docs/team/handover/ontology.aws.md",
+    "docs/team/handover/swarm.aws.md",
+    "docs/team/handover/ux.aws.md",
+    "docs/team/handover/vaults.aws.md",
+    "docs/team/handover/video.aws.md",
+    "docs/team/handover/viz.aws.md"
+   ],
+   "lanes_touched": [
+    "conductor.aws.c"
+   ]
+  }
+ ],
+ "sources": [
+  "git origin/dev",
+  "docs/team/schedule.json",
+  "docs/team/log.md",
+  "site/policy/abp.json",
+  "docs/swarm/data/sessions-snapshot.json"
+ ]
+}
