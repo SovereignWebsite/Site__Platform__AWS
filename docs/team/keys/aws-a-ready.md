@@ -24,3 +24,4 @@ All on Factory dev 885f150. Files: docs/team/keys/<role>.aws.a.iac-commit.txt an
 | ux.aws.a | 2cee5b10226b40e8338f83b63501faed1d16fa2d | 885f150 | work/ux.aws.a |
 | vaults.aws.a | f5d657a706e61beba0077d08eae6b914bec90a11 | 885f150 | work/vaults.aws.a |
 | video.aws.a | cc9e2914fbfe6e47c79e21fc833cdeff8a11f0fc | 885f150 | work/video.aws.a |
+| ec2.aws.a | dc820edb6f087ff6a84ed881dfec854d4bb69053 | 885f150 | work/ec2.aws.a |
