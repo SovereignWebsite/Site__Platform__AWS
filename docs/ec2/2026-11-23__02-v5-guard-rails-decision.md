@@ -15,7 +15,7 @@ One cap for both would be either too long for ephemeral or too short for the mov
 
 ## 1. The rows to decide
 
-Every price below is from billing.aws.a's docs/billing/prices.json (work/billing.aws.a, retrieved 23 Nov 2026, AWS's public EC2 and VPC price data, list prices, on-demand Linux, USD), worked by multiplication only. **Not counted anywhere below:** the root volume (EBS gp3 is not yet priced), CloudFront, S3, Secrets Manager, logs, data transfer.
+Every price below is from billing.aws.a's docs/billing/prices.json (work/billing.aws.a, retrieved 23 Nov 2026, AWS's public EC2 and VPC price data, list prices, on-demand Linux, USD), worked by multiplication only. **Not counted anywhere below unless said:** CloudFront, S3, Secrets Manager, logs, data transfer.
 
 ### G1. Maximum lifetime of an ephemeral deployment
 
@@ -52,7 +52,7 @@ Every price below is from billing.aws.a's docs/billing/prices.json (work/billing
 
 - **Options for the monthly alert** (an AWS Budgets alert, which the read role can already read): (a) 25 USD; (b) 50 USD; (c) 100 USD.
 - **And, separately, what happens at the cap:** (i) an alert only; (ii) an alert plus an AWS Budgets action at 100% that attaches a Deny on creating `sws-ec2-*` stacks to the scheduler and move roles: an automatic "stop new" that deletes nothing (security.aws.a, d397c1f). Recommended (ii): running deployments end at their time, nothing new starts, and only Dinis removes the Deny.
-- **Recommended:** (a) 25 USD while only G1 to G5 apply. The known part of a month at G5's most (one daily-move copy always on, one ephemeral 2 h a day, overlaps) is about 17.37 + 1.43 + 0.05 x 30, roughly 20 USD before the uncounted items above; 25 leaves a little headroom and flags anything unexpected early. Revisit when EBS and CloudFront are priced.
+- **Recommended:** (a) 25 USD while only G1 to G5 apply. The known part of a month at G5's most: one daily-move copy always on (t4g.small and IPv4, 17.37), its 8 GB gp3 root volume (0.74; billing.aws.a, 0b1ad2b), one ephemeral 2 h a day (about 1.43) and the overlaps (about 1.43), roughly 21 USD before CloudFront, S3, Secrets Manager, logs and data transfer; 25 leaves a little headroom and flags anything unexpected early. Revisit when CloudFront is priced for this path.
 - **Per deployment:** no separate cap; G1, G2 and G4 bound it (largest: 0.6188 for a daily-move copy at its cap).
 - **What the alert does:** tells Dinis; with (ii) it also stops new deployments by itself.
 
