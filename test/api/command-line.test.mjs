@@ -146,6 +146,14 @@ for (const row of table.commands) {
   for (const l of ["ls a b", "cat bkt", "cat bkt/", "cat /k", "who", "who a b", "roles x", "cdn x", "stacks x", "stack", "logs", "logs --newest", "map x", "open", "open /x"]) ok(E(l, ctx1).code === "arity", l + ": usage");
   for (const l of ["rm bkt/k", "ls *", "s3 deleteBucket bkt", ""]) ok(!E(l, ctx1).ok, JSON.stringify(l) + " refused");
   for (const l of ["ls *", "ls b*", "cat */k", "open ../x", "ls __proto__", "ls B", "ls a"]) ok(E(l, ctx1).code === "arity", l + ": not a bucket name, so no lookup is built");
+  // security.aws.a's rules (design 09): no alias shadows a row; an alias takes only its row's declared options.
+  const sample = { region: "eu-west-2", bucket: "bkt", key: "k", name: "n", role: "r", policy: "p", arn: "arn:aws:iam::" + A + ":role/r", stack: "s", exportName: "e", group: "/g", id: "EDEMOTWIN00001" };
+  for (const row of table.commands) {
+    const w = row.command.split(" ").concat(row.params.map((p) => sample[p.name])), x = E(w.join(" "), ctx1);
+    ok(x.ok && x.kind === "commands" && x.steps.length === 1 && JSON.stringify(x.steps[0].words) === JSON.stringify(w), "no alias shadows " + row.command);
+  }
+  ok(E("logs /g --bogus x", ctx1).code === "unknown-option" && E("logs /g --max lots", ctx1).code === "bad-number" && E("logs /g --newest --newest", ctx1).code === "duplicate-option", "logs takes only logs events' own options, checked by its grammar");
+  ok(E("stack " + "x".repeat(10) + " --deleted", ctx1).code === "arity" && E("cat bkt/k --bytes 0-1", ctx1).code === "arity", "aliases with no options refuse any");
   ok(C.completeAlias("st").map((a) => a.alias).join() === "stacks,stack,streams", "alias completion");
   // The steps run on the real API over the twin (a parsed line that never runs proves nothing).
   const t2 = await (await ctx.AwsTransport.fetch("https://sts.amazonaws.com/", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },

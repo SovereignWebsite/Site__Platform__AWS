@@ -15,7 +15,8 @@
 //        | { ok: false, code: "needs-bucket-region", bucket, lookup: { words } }   run the lookup (s3 getBucket),
 //          then expand again with bucketRegions[bucket] set to its region; a region is never guessed
 //        | { ok: false, code: "needs-region", message: "Which region?" } | { ok: false, code, message }
-//       A line whose first two words are a command is that command (kind "commands", one step), alias or not.
+//       A line whose first two words are a command is that command (kind "commands", one step), alias or not; every
+//       step is parsed before it is returned, so an alias takes only its row's declared options (else parse's error).
 //   CommandLine.parseWords(words, table, opts)     -> as parse, for a step's words (no re-quoting)
 //   CommandLine.ALIASES                            -> [{ alias, usage, expands: [command...] | [], summary }]
 //
@@ -140,7 +141,15 @@
     { alias: "timeline", usage: "timeline", expands: [], summary: "Switch to Timeline" }, { alias: "desk", usage: "desk", expands: [], summary: "Switch to Desk" }
   ];
   function own(map, k) { return map && Object.prototype.hasOwnProperty.call(map, k) ? map[k] : undefined; }
+  // Every step is checked by the row's own grammar before it is handed back, so an alias accepts only the target
+  // row's declared options and can never yield a call parse would refuse (security.aws.a, design 09).
   function expand(line, table, ctx) {
+    var x = expandSteps(line, table, ctx);
+    if (!x.ok || x.kind !== "commands") return x;
+    for (var i = 0; i < x.steps.length; i++) { var p = parseWords(x.steps[i].words, table); if (!p.ok) return p; }
+    return x;
+  }
+  function expandSteps(line, table, ctx) {
     ctx = ctx || {};
     var w = split(line);
     if (!Array.isArray(w)) return w;
