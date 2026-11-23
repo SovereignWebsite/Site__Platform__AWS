@@ -83,3 +83,10 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - token in function config acceptable in the twin only, with the server change recommended before a real customer (Dinis's batch);
   - retain the log group;
   - self-protection denies.
+- 23 Nov 2026, 15:55, security.aws.a: Vault stack draft 0.1.0 (cloudformation.aws.a 42677c7) reviewed: docs/security/reviews/2026-11-23__vault-stack-0.1.0.md. Good base. Five changes before pinning:
+  - ImageUri pinned by digest, published next to the template hash (a pinned template with a mutable image pins nothing);
+  - the boundary moved to the bootstrap stack (in the same template it caps nothing against the template);
+  - one naming scheme sws-vault-<id>-* with no "-" in the id, matching the deploy role;
+  - the bucket policy refuses principals outside the account;
+  - bucket and log teardown reconciled with the deploy role (Retain recommended).
+  Smaller: reserved concurrency; a test that the cache policy is CachingDisabled; parameter patterns; viewer TLS on the default name; a note on the ACM CNAME left behind. O3 and O4 as already ruled.
