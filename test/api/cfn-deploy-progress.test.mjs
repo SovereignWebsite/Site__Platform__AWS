@@ -82,7 +82,28 @@ async function follow(id, mode) {
 
 const lp = await follow(ID, "access-stack");
 const one = await follow("0f1e2d3c4b5a", "one-stack");
-// stacks() (ListStacks) waits for ListStacks in the twin's customer account (asked of dev.1.aws.a).
+// A failed deploy: an image the twin has not published makes VaultFunction fail; the stack rolls back with no outputs.
+{
+  const id = "1a2b3c4d5e6f", name = "sws-vault-" + id;
+  ok((await create(name, { VaultId: id, DeployMode: "one-stack", ImageUri: "123456789012.dkr.ecr.eu-west-2.amazonaws.com/other@sha256:" + "0".repeat(64) })).status === 200, "failed deploy: created in the console");
+  let status = "", i = 0;
+  for (; i < 40 && !/_COMPLETE$|_FAILED$/.test(status); i++) { status = (await api.stack(R, name)).status; twin.clock.tick(30 * 1000); }
+  const st = await api.stack(R, name), ev = (await ctx.CfnApi.all((next) => api.events(R, name, { next }))).items;
+  const failed = ev.find((e) => e.status === "CREATE_FAILED");
+  ok(st.status === "ROLLBACK_COMPLETE" && st.outputs.length === 0, "failed deploy: ROLLBACK_COMPLETE, no outputs (" + st.status + ")");
+  ok(failed && failed.logicalId === "VaultFunction" && failed.reason && failed.stackArn === st.arn, "failed deploy: the first failure is VaultFunction, with its reason: " + (failed && failed.reason));
+  ok(ev[0].logicalId === name && ev[0].status === "ROLLBACK_COMPLETE", "failed deploy: the newest event is the stack's ROLLBACK_COMPLETE");
+  const rolled = (await ctx.CfnApi.all((next) => api.resources(R, st.arn, { next }))).items;
+  // Every resource made before the failure is removed (DELETE_COMPLETE) or, if the template retains it, kept (DELETE_SKIPPED);
+  // which applies to the Retain bucket on a create rollback is asked of dev.1.aws.a and boto3.aws.a.
+  ok(rolled.length > 0 && rolled.every((r) => r.status === "DELETE_COMPLETE" || r.status === "DELETE_SKIPPED"), "failed deploy: every resource removed or kept after rollback: " + [...new Set(rolled.map((r) => r.status))].join(", "));
+}
+
+// The page finds a customer's Vault stacks with stacks() (ListStacks, newest first in the twin).
+const listed = (await ctx.CfnApi.all((next) => api.stacks(R, { next }))).items;
+ok(JSON.stringify(listed.map((x) => x.name).sort()) === JSON.stringify(["sws-vault-0a1b2c3d4e5f", "sws-vault-0a1b2c3d4e5f-access", "sws-vault-0f1e2d3c4b5a", "sws-vault-1a2b3c4d5e6f"]), "stacks(): the customer's four stacks " + listed.map((x) => x.name));
+ok(listed.every((x) => x.arn.startsWith("arn:aws:cloudformation:" + R + ":" + ACCT + ":stack/" + x.name + "/") && x.created && x.status), "stacks(): each with its ARN, created and status");
+ok(listed.find((x) => x.name === "sws-vault-1a2b3c4d5e6f").status === "ROLLBACK_COMPLETE", "stacks(): the failed one shows ROLLBACK_COMPLETE");
 
 // CfnApi only read.
 ok(sent.every((a) => /^(List|Describe)/.test(a)), "CfnApi sent only reads: " + [...new Set(sent)].join(", "));
