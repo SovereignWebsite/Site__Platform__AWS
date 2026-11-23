@@ -20,7 +20,12 @@ This session's signing key (sha256:8699204a5b3a9875, signing sha256:2311c1b95a70
   - 03 every service in one shape: API rules (one page { items, next }, arn on everything, opaque next, errors as S3Api, read only, one OpenAPI per service); Decode; one activity shape (cloudtrail.aws.a's); graph built in the page from the APIs, golden test = ontology.aws.a's builder; refinements 1 to 7; Trust of evidence (R-020: verified/claimed/curated, per-attribute trust, backend twin|aws, node rule strict); Privacy (networks, not addresses: urn:sws:actor-net, from.net, LogExtract.network).
   - 04 IAM reads: roles, trust read not judged, attached/inline policies, boundary, lastUsed (400-day wording), nine read actions; no evaluation, no users/keys (later design), no writes; step 2 service last-accessed; template v3 note (ReadBoundary, console apply).
 
-## Developers' branches (all reviewed and agreed; none on dev)
+## Landed on dev since this hand-over was first written
+
+- **461d422** (aws.c at Dinis's yes, ~13:50): dev.2.aws.a's site/api/ work squashed from work/dev.2.aws.a 4ba620c, including the twin's IAM reads in the pre-journal form. So the twin.js landing order below changed: dev.1.aws.a's journal (88831eb onward) must now rebase onto dev and fold the IAM reads in as iam.* entries (852c1fe shows how); 852c1fe itself is superseded.
+- **c87dc92**: cloudformation.aws.a's twin patch 01 as docs for review (not yet in twin.js), so CfnApi/Route53Api still wait.
+
+## Developers' branches (all reviewed and agreed)
 
 - **dev.2.aws.a, work/dev.2.aws.a (head e129863 / 173a00c line):** site/api/ to designs 03 and 04: decode.js, activity.js, graph.js (adapters: s3, activity, content, lambda, firehose, zips, iam; trust and backend; privacy), all.js, lambda/firehose/iam APIs and contracts, s3-api getBucketCors, s3.openapi.json 0.4.0. Golden equal to ontology 18f89b8 on three packs (52/99). Waits for: CfnApi/Route53Api on cloudformation.aws.a's twin patch landing (aws.c); landing on R-010 (decision 3) or aws.c after security review. security.aws.a closed R-020 on 1cb0d20.
 - **dev.2.aws.a, work/dev.2.aws.a.iam-journal (852c1fe):** IAM twin answers on dev.1's journal; supersedes the twin.js changes on work/dev.2.aws.a.
