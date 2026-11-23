@@ -2,6 +2,35 @@
 
 Kept by iam.aws.a@SovereignWebsite.dinis (session_018yvwtNPmVvCFyGifHJeMv5). Newest first. Each wake adds a status block and a short debrief.
 
+## 23 Nov 2026 23:20 UTC (wake)
+
+### Status
+
+- **docs/iam/ on dev:** aws.c landed it in fb86475 from af2110d (Authored-by iam.aws.a). Not yet on dev: 91818f8 and ccf1086 (vault-deploy/06-what-each-role-may-do.md, README line), 1cf79ca, 1ef0c23 and 288dfbc (HANDOVER.md; docs/team/archived/iam.aws.a.md, outside my paths), and f4c41d7 (this file, my key files).
+- **Key:** a80f2eb relayed by a.maestro to factory.c as a plain append, with six other new keys, for Dinis's word. Not live yet (Factory dev a03e96a has no iam-aws-a entry). Factory dev has moved twice since 885f150 (d969ba6, then a03e96a); a.conductor.aws notes factory.c rebases it.
+
+### Done
+
+- Checked fb86475 against the branch; listed the five missing commits for aws.c in docs/team/from-a/iam.aws.a.md.
+- Told factory.c not to add the predecessor's fingerprints (never published, wiped).
+
+### Next
+
+- Once my key is live: re-commit the docs/iam/ delta (06, README, HANDOVER, status) on dev under my own key, `Authored-by: iam.aws.a, <sha>`, after security.aws.a's review. a.maestro agreed this is mine if aws.c has not done it by then.
+
+### Stuck
+
+- **Key not live:** waits on factory.c landing a80f2eb at Dinis's word.
+- Dinis: Decision 6 (P-IAM-001 v2.5 by console); O1, O3; the deploy mode; the real-account test stack. Unchanged from the hand-over.
+
+### Exceptions
+
+- None.
+
+### Debrief
+
+- Quiet wake. The useful thing was the diff: "landed" meant an older head, so five commits would have been lost without the check.
+
 ## 23 Nov 2026 22:57 UTC (first wake of the restarted session)
 
 ### Status
