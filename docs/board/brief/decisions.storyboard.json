@@ -1,355 +1,419 @@
 {
-  "title": "Seven decisions for Dinis",
-  "kind": "decision brief (programmatic animation, played in the browser)",
-  "made_by": "pm.aws.a@SovereignWebsite.dinis",
-  "source": "docs/board/decisions.md on work/pm.aws.a (91d9b9d), Site__Platform__AWS",
-  "player": "docs/board/brief/decisions-brief.html (self-contained; Play, Slides and Storyboard views)",
-  "answer": "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a",
-  "length_s": 202,
-  "note": "Longer than a Reel (studio.c's 45 to 89 s) by design: one scene per decision, for Dinis, not for posting. Beats keep studio.c's {id, narration, visual, facts} shape.",
-  "beats": [
+ "format": "studio-storyboard/0",
+ "slug": "aws-decisions-2026-11-23",
+ "title": "Six AWS decisions for Dinis",
+ "audience": "Dinis",
+ "requested_by": "pm.aws.a@SovereignWebsite.dinis",
+ "summary": "Six open decisions on the AWS Platform programme's decisions page, 23 Nov 2026 11:25 UTC: agent keys, the deploy's signer check (R-009), team code on the hub's origin (R-010), template v2.1 (R-001), the nine area sites, and a permissions boundary (R-008). None stops the team; the agents build on the twin.",
+ "beats": [
+  {
+   "id": "b1",
+   "narration": "Six decisions wait for you on the AWS programme. None stops the team: every agent keeps building on the synthetic twin. Here is each one, with a recommendation.",
+   "visual": {
+    "kind": "svg",
+    "src": "intro",
+    "caption": "Red: a security risk. Amber: access, approval or a merge.",
+    "at": 0,
+    "play": 11.8,
+    "end": 11.2
+   },
+   "facts": [
+    "s-decisions"
+   ]
+  },
+  {
+   "id": "b2",
+   "narration": "One. Agents' keys. factory.c has eight verified key commits waiting, and asks your word for every push. Recommended: one standing word to land every verified key commit.",
+   "visual": {
+    "kind": "svg",
+    "src": "d1",
+    "caption": "Decision 1: the agents publish their keys",
+    "at": 0,
+    "play": 11.4,
+    "end": 10.8
+   },
+   "facts": [
+    "s-decisions",
+    "s-keys"
+   ]
+  },
+  {
+   "id": "b3",
+   "narration": "Two. The deploy's signer check has three ways round it, including a checker that runs from the commit it checks. Recommended: run it from main and drop the override line.",
+   "visual": {
+    "kind": "svg",
+    "src": "d2",
+    "caption": "Decision 2: security R-009 (High)",
+    "at": 0,
+    "play": 12.6,
+    "end": 12
+   },
+   "facts": [
+    "s-decisions",
+    "s-risks"
+   ]
+  },
+  {
+   "id": "b4",
+   "narration": "Three. Team pages on the hub's own origin share it with your signed-in session. Recommended: security reviews every site change now, and team pages move to area sites as they arrive.",
+   "visual": {
+    "kind": "svg",
+    "src": "d3",
+    "caption": "Decision 3: security R-010 (High)",
+    "at": 0,
+    "play": 13,
+    "end": 12.4
+   },
+   "facts": [
+    "s-decisions",
+    "s-risks"
+   ]
+  },
+  {
+   "id": "b5",
+   "narration": "Four. Template v2.1 stops the change role making itself account admin. Recommended: approve it on the site, or let decision six's console apply cover it.",
+   "visual": {
+    "kind": "svg",
+    "src": "d4",
+    "caption": "Decision 4: approve template v2.1",
+    "at": 0,
+    "play": 10.6,
+    "end": 10
+   },
+   "facts": [
+    "s-decisions",
+    "s-risks"
+   ]
+  },
+  {
+   "id": "b6",
+   "narration": "Five. factory.c has the nine area sites ready to merge, each with its own Try the twin link. Recommended: merge all nine.",
+   "visual": {
+    "kind": "svg",
+    "src": "d5",
+    "caption": "Decision 5: the nine area sites",
+    "at": 0,
+    "play": 9.4,
+    "end": 8.8
+   },
+   "facts": [
+    "s-decisions"
+   ]
+  },
+  {
+   "id": "b7",
+   "narration": "Six. A change set, or the DNS role's trust, can still make the change role admin. Recommended: iam's v2.4 boundaries, cleared by security, applied by you in the console.",
+   "visual": {
+    "kind": "svg",
+    "src": "d6",
+    "caption": "Decision 6: security R-008 (High), an AWS change",
+    "at": 0,
+    "play": 12.2,
+    "end": 11.6
+   },
+   "facts": [
+    "s-decisions",
+    "s-risks",
+    "s-sec-v24",
+    "s-iam-v24"
+   ]
+  },
+  {
+   "id": "b8",
+   "narration": "Recommended answers: one a, two a, three c, four a, five a, six a. Answer in pm.aws.a's session. Each decision's options and trade-offs follow.",
+   "visual": {
+    "kind": "svg",
+    "src": "outro",
+    "caption": "Answer in pm.aws.a's session",
+    "at": 0,
+    "play": 10.2,
+    "end": 9.6
+   },
+   "facts": [
+    "s-decisions"
+   ]
+  }
+ ],
+ "decisions": [
+  {
+   "id": "1",
+   "question": "1. Do the agents' verified key commits land on one standing word?",
+   "options": [
     {
-      "id": "intro-1",
-      "scene": "intro",
-      "at_s": 0,
-      "narration": "Seven decisions are waiting for you on the AWS programme's decisions page. This brief walks through each one.",
-      "visual": "Seven numbered tiles appear in a row, each with its short name.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md"
-      ]
+     "id": "a",
+     "label": "a. A standing word in factory.c's session: land every verified agent key commit (and yes in cloudtrail.aws.c's session to read the Factory)",
+     "good": [
+      "Keys land as they are verified; more are coming tonight"
+     ],
+     "bad": [
+      "Each landing is no longer seen by you first"
+     ],
+     "blocks": []
     },
     {
-      "id": "intro-2",
-      "scene": "intro",
-      "at_s": 5.5,
-      "narration": "None of them stops the team. Every agent keeps building on the synthetic twin while you decide.",
-      "visual": "A banner under the tiles: nothing here stops the team.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md"
-      ]
-    },
-    {
-      "id": "intro-3",
-      "scene": "intro",
-      "at_s": 10.5,
-      "narration": "Each scene shows the problem, the options and the recommendation. Answer by number in pm.aws.a's session.",
-      "visual": "The recommended answer line types in at the bottom.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md"
-      ]
-    },
-    {
-      "id": "d1-1",
-      "scene": "d1",
-      "at_s": 0,
-      "narration": "Every agent signs its commits with its own key. A key counts only once it is listed in the Factory's keys file.",
-      "visual": "Key chips, one per agent, on the left; the Factory's keys.json on the right.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md"
-      ]
-    },
-    {
-      "id": "d1-2",
-      "scene": "d1",
-      "at_s": 7,
-      "narration": "factory.c has eight agents' signed key commits verified and waiting, but its session asks your word for every push.",
-      "visual": "The chips slide up to a closed gate marked factory.c, waiting for your word.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md"
-      ]
-    },
-    {
-      "id": "d1-3",
-      "scene": "d1",
-      "at_s": 14,
-      "narration": "Option a: one standing word, land every verified agent key commit. Option b: a word per landing, as now.",
-      "visual": "Option a is shown: the gate opens and the chips flow into keys.json.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md"
-      ]
-    },
-    {
-      "id": "d1-4",
-      "scene": "d1",
-      "at_s": 20,
-      "narration": "Recommended: a. More keys are coming tonight, mine among them.",
-      "visual": "The a option chip lights as recommended.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md"
-      ]
-    },
-    {
-      "id": "d2-1",
-      "scene": "d2",
-      "at_s": 0,
-      "narration": "Every push to dev is checked for an agent's signature, then deployed to the live site that holds the change role.",
-      "visual": "A commit flows through the signer check to the live site.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md",
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/security/risks.md"
-      ]
-    },
-    {
-      "id": "d2-2",
-      "scene": "d2",
-      "at_s": 7,
-      "narration": "Security found three ways round that check: an Owner override line, commits GitHub marks verified, and a checker that runs from the commit it checks.",
-      "visual": "Three red paths go round the check; a loop shows the checker inside the commit it checks.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md",
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/security/risks.md"
-      ]
-    },
-    {
-      "id": "d2-3",
-      "scene": "d2",
-      "at_s": 16,
-      "narration": "Option a: run the checker from main or a pinned commit, and drop the override line. Option b: leave it for now.",
-      "visual": "Option a: the checker is pinned to main, the override line is struck out.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md",
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/security/risks.md"
-      ]
-    },
-    {
-      "id": "d2-4",
-      "scene": "d2",
-      "at_s": 22,
-      "narration": "Recommended: a. It changes .github, which needs your yes.",
-      "visual": "The a option chip lights as recommended.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md",
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/security/risks.md"
-      ]
-    },
-    {
-      "id": "d3-1",
-      "scene": "d3",
-      "at_s": 0,
-      "narration": "Some team paths sit on the hub's own origin: the decisions page, the API layer and the S3 browser's script.",
-      "visual": "The hub's origin as a large frame holding the app, your sealed session and the change role.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md",
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/security/risks.md"
-      ]
-    },
-    {
-      "id": "d3-2",
-      "scene": "d3",
-      "at_s": 7,
-      "narration": "A page there shares the origin with your signed-in session, so a bad change could reach the change role.",
-      "visual": "A team page enters the frame; a red dashed line runs from it to the session and on to the change role.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md",
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/security/risks.md"
-      ]
-    },
-    {
-      "id": "d3-3",
-      "scene": "d3",
-      "at_s": 14,
-      "narration": "Options: a, security reviews every site change before it deploys; b, move team pages to their own area sites; c, both.",
-      "visual": "A review shield wraps the page, then the page moves out to its own area site.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md",
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/security/risks.md"
-      ]
-    },
-    {
-      "id": "d3-4",
-      "scene": "d3",
-      "at_s": 21,
-      "narration": "Recommended: c. Review now, move as the area sites arrive. dev.2.aws.a's code waits on this.",
-      "visual": "The c option chip lights as recommended.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md",
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/security/risks.md"
-      ]
-    },
-    {
-      "id": "d4-1",
-      "scene": "d4",
-      "at_s": 0,
-      "narration": "Template v2.1 fixes R-001, the critical finding: today the change role can make itself account admin.",
-      "visual": "The change role with a red arrow to account admin, marked R-001 Critical.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md"
-      ]
-    },
-    {
-      "id": "d4-2",
-      "scene": "d4",
-      "at_s": 7,
-      "narration": "v2.1 swaps that for thirteen named IAM actions, allowed only through CloudFormation. Security reviewed it.",
-      "visual": "The v2.1 box appears and the arrow to admin is cut.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md"
-      ]
-    },
-    {
-      "id": "d4-3",
-      "scene": "d4",
-      "at_s": 13,
-      "narration": "Option a: approve it when you next sign in. Option b: leave it. No work waits on it.",
-      "visual": "An Approve button appears under the plan.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md"
-      ]
-    },
-    {
-      "id": "d4-4",
-      "scene": "d4",
-      "at_s": 18,
-      "narration": "If you choose 6a, the same console apply covers this one.",
-      "visual": "A note links decision 4 to decision 6.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md"
-      ]
-    },
-    {
-      "id": "d5-1",
-      "scene": "d5",
-      "at_s": 0,
-      "narration": "You said yes to nine area sites. factory.c has the requests ready in the Factory, waiting for your merge.",
-      "visual": "The hub in the centre; nine area sites appear around it as dashed outlines.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md"
-      ]
-    },
-    {
-      "id": "d5-2",
-      "scene": "d5",
-      "at_s": 7,
-      "narration": "Each area gets its own site and its own Try the twin link.",
-      "visual": "The links to each area draw in.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md"
-      ]
-    },
-    {
-      "id": "d5-3",
-      "scene": "d5",
-      "at_s": 11,
-      "narration": "Option a: merge all nine. Option b: only s3 for now. Recommended: a.",
-      "visual": "All nine outlines turn solid; the a option chip lights as recommended.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md"
-      ]
-    },
-    {
-      "id": "d6-1",
-      "scene": "d6",
-      "at_s": 0,
-      "narration": "Even after v2.1, a script in the page could make the change role admin through a change set, in about four calls.",
-      "visual": "A chain draws left to right: script in the page, change role, create change set, execute change set, admin.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md",
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/security/risks.md"
-      ]
-    },
-    {
-      "id": "d6-2",
-      "scene": "d6",
-      "at_s": 8,
-      "narration": "And the change role can rewrite the DNS role's trust. That role can repoint the site's name, so it is a second way out.",
-      "visual": "A second red chain drops from the change role to the DNS role's trust and on to the site's name.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md",
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/security/risks.md"
-      ]
-    },
-    {
-      "id": "d6-3",
-      "scene": "d6",
-      "at_s": 15,
-      "narration": "iam.aws.a's v2.4 adds permissions boundaries that keep each role to today's scopes, and makes the DNS role's trust console only.",
-      "visual": "A boundary ring closes round the change role; both red chains are cut.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md",
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/security/risks.md"
-      ]
-    },
-    {
-      "id": "d6-4",
-      "scene": "d6",
-      "at_s": 23,
-      "narration": "security.aws.a cleared v2.4 on paper. Before any apply: iam.aws.a's two checks, then your own apply in the console.",
-      "visual": "A three-line checklist appears: two checks, your console apply, two DNS plans retired.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md",
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/security/risks.md"
-      ]
-    },
-    {
-      "id": "d6-5",
-      "scene": "d6",
-      "at_s": 30,
-      "narration": "Recommended: a, by iam and security. b keeps DNS trust edits on the page, c defers the boundaries, d relies on splitting the change page.",
-      "visual": "The a option chip lights as recommended; b is marked not recommended.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md",
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/security/risks.md"
-      ]
-    },
-    {
-      "id": "d7-1",
-      "scene": "d7",
-      "at_s": 0,
-      "narration": "Three agents on account A have work their sessions will not push.",
-      "visual": "Three agent boxes on the left, each with a stack of commits; GitHub's work branches on the right.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md"
-      ]
-    },
-    {
-      "id": "d7-2",
-      "scene": "d7",
-      "at_s": 4,
-      "narration": "iam.aws.a and dev.1.aws.a cannot push their work branches. viz.aws.a cannot yet turn its key into a git signing key.",
-      "visual": "Locks appear on the three paths; viz.aws.a shows an extra step, make a signing key.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md"
-      ]
-    },
-    {
-      "id": "d7-3",
-      "scene": "d7",
-      "at_s": 12,
-      "narration": "Option a: say yes in each session. Option b: let viz.aws.a push unsigned. Option c: leave it.",
-      "visual": "Option a: the locks open and the commits move across to GitHub.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md"
-      ]
-    },
-    {
-      "id": "d7-4",
-      "scene": "d7",
-      "at_s": 18,
-      "narration": "Recommended: a. A work branch is not dev or main, and every commit stays signed.",
-      "visual": "The a option chip lights as recommended.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md"
-      ]
-    },
-    {
-      "id": "outro-1",
-      "scene": "outro",
-      "at_s": 0,
-      "narration": "Recommended answers: one a, two a, three c, four a, five a, six a, seven a.",
-      "visual": "The full answer line, large, in the centre.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md"
-      ]
-    },
-    {
-      "id": "outro-2",
-      "scene": "outro",
-      "at_s": 6,
-      "narration": "Type them, or your own, in pm.aws.a's session. I update the page and tell the agents who asked.",
-      "visual": "Under it: where to answer.",
-      "facts": [
-        "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md"
-      ]
+     "id": "b",
+     "label": "b. A word per landing, as now",
+     "good": [
+      "You see every landing"
+     ],
+     "bad": [
+      "Each batch waits for you"
+     ],
+     "blocks": [
+      "Those agents' commits being checked as signed, and anything they push"
+     ]
     }
+   ],
+   "recommendation": "a",
+   "why": "factory.c checks each commit byte for byte and runs the five checks before landing; your word adds a wait, not a check."
+  },
+  {
+   "id": "2",
+   "question": "2. R-009 (High): does the deploy's signer check run from main, without the override line?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. Run the checker from main or a pinned commit, and drop the Owner override line",
+     "good": [
+      "A commit can no longer change the checker that checks it",
+      "No unsigned commit deploys through an override line"
+     ],
+     "bad": [
+      "Changes .github/**, which needs your yes"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. Leave as is for now",
+     "good": [
+      "No change to the pipeline"
+     ],
+     "bad": [
+      "Anyone who can push to dev can get past the check"
+     ],
+     "blocks": [
+      "Trust in what deploys from dev"
+     ]
+    }
+   ],
+   "recommendation": "a",
+   "why": "The live site holds the change role, so what deploys from dev is the trust root of the AWS account."
+  },
+  {
+   "id": "3",
+   "question": "3. R-010 (High): how is team code on the hub's own origin kept safe?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. Keep the code paths; security reviews every site/ change before it deploys",
+     "good": [
+      "Work carries on at once"
+     ],
+     "bad": [
+      "Safety rests on every review being done"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. Move team pages off the hub's origin, to their own area sites",
+     "good": [
+      "A team page can no longer reach your session"
+     ],
+     "bad": [
+      "Waits for the area sites (decision 5)"
+     ],
+     "blocks": [
+      "Team pages until the area sites exist"
+     ]
+    },
+    {
+     "id": "c",
+     "label": "c. Both: review now, move as the area sites arrive",
+     "good": [
+      "Safe now and safer later"
+     ],
+     "bad": [
+      "Two steps to track"
+     ],
+     "blocks": []
+    }
+   ],
+   "recommendation": "c",
+   "why": "Review covers today; separate origins remove the risk once the area sites exist. dev.2.aws.a's code waits on this."
+  },
+  {
+   "id": "4",
+   "question": "4. Approve template v2.1 (the R-001 fix) on the site?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. Approve when next signed in",
+     "good": [
+      "Closes R-001, the critical finding: the change role can no longer make itself admin directly"
+     ],
+     "bad": [
+      "R-008's path through a change set stays open (decision 6)"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. Leave it",
+     "good": [
+      "No AWS change now"
+     ],
+     "bad": [
+      "R-001 stays open"
+     ],
+     "blocks": [
+      "Real AWS changes only"
+     ]
+    }
+   ],
+   "recommendation": "a",
+   "why": "security.aws.c reviewed it. If you choose 6 a or b, the same console apply covers it."
+  },
+  {
+   "id": "5",
+   "question": "5. Merge factory.c's requests for the nine area sites?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. Merge all nine",
+     "good": [
+      "Every area gets its own site and Try the twin link"
+     ],
+     "bad": [
+      "Nine sites to look after"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. Only s3 for now",
+     "good": [
+      "One site to prove the pattern"
+     ],
+     "bad": [
+      "Eight areas wait"
+     ],
+     "blocks": [
+      "The other eight areas' sites"
+     ]
+    }
+   ],
+   "recommendation": "a",
+   "why": "You said yes to the nine areas; the requests are ready on work/factory.c-aws-areas."
+  },
+  {
+   "id": "6",
+   "question": "6. R-008 (High): which permissions boundary goes on the change role?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. One console apply of v2.4: both boundaries, and the DNS role's trust by console only",
+     "good": [
+      "Closes R-008 and R-005 together",
+      "Cleared on paper by security.aws.a"
+     ],
+     "bad": [
+      "The site's two DNS-trust plans stop working; aws.c retires them in the same release"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. As a, but keep DNS trust edits from the page (not advised by iam.aws.a or security.aws.a)",
+     "good": [
+      "DNS-trust plans keep working"
+     ],
+     "bad": [
+      "Whoever controls that role's trust controls the site's name; R-005 stays open"
+     ],
+     "blocks": [
+      "R-008 fully closing"
+     ]
+    },
+    {
+     "id": "c",
+     "label": "c. v2.1 through the page now, boundaries later",
+     "good": [
+      "Closes R-001 sooner"
+     ],
+     "bad": [
+      "R-008 stays open"
+     ],
+     "blocks": [
+      "R-008 closing"
+     ]
+    },
+    {
+     "id": "d",
+     "label": "d. No boundary; rely on splitting off the change page (R-002)",
+     "good": [
+      "No IAM change"
+     ],
+     "bad": [
+      "The change-set path stays open until the split exists"
+     ],
+     "blocks": [
+      "R-008 closing"
+     ]
+    }
+   ],
+   "recommendation": "a",
+   "why": "Before any apply, iam.aws.a finishes two checks (read-boundary coverage; whether CloudFormation calls iam:UpdateRole). The first apply is your own act in the console."
+  }
+ ],
+ "connections": {
+  "asked_by": "pm.aws.a@SovereignWebsite.dinis",
+  "reviewed_by": [],
+  "acts": [
+   "factory.c",
+   "aws.c",
+   "security.aws.a",
+   "iam.aws.a",
+   "dev.2.aws.a"
+  ],
+  "follows": [
+   "docs/board/decisions.md",
+   "Dinis, 23 Nov ~11:15 UTC via maestro.a: a presentation and a decision video for every batch of decisions"
   ]
+ },
+ "sources": [
+  {
+   "id": "s-decisions",
+   "title": "pm.aws.a: decisions for Dinis, AWS Platform (docs/board/decisions.md)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/pm.aws.a/docs/board/decisions.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-risks",
+   "title": "security: risk register, R-001 to R-016 (docs/security/risks.md)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/dev/docs/security/risks.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-sec-v24",
+   "title": "security.aws.a: P-IAM-001 v2.4 cleared on paper (0cfa69f)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/0cfa69f/docs/security/",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-iam-v24",
+   "title": "iam.aws.a: P-IAM-001 v2.4, the DNS role's trust by console only (2107fe5)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/2107fe5/docs/iam/",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-keys",
+   "title": "factory.c: publishing an .aws.a key on the Factory (docs/team/keys/README.md)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/dev/docs/team/keys/README.md",
+   "read": "2026-11-23"
+  }
+ ],
+ "drawn_by": "pm.aws.a@SovereignWebsite.dinis: narration, visuals and decisions from docs/board/decisions.md; the animated SVGs are generated from the presentation (decisions-brief.html) by build-video.mjs; player copied from Site__Agent__Studio 74ed159 site/accounts/d/briefings/default-yes/index.html with two changes (when paused, an SVG beat shows its final frame; Play restarts the current beat)",
+ "voice": "Captions always; voice only if the viewer turns it on, and then it is the browser's built-in synthetic voice. The presenter is synthetic, not a real person."
 }

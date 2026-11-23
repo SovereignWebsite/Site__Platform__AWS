@@ -100,8 +100,8 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
 <div class="wrap">
   <header>
     <div>
-      <h1>Seven decisions for Dinis</h1>
-      <p class="sub">AWS Platform programme · from <span class="t-mono">docs/board/decisions.md</span>, 23 Nov 2026, 09:05 UTC · kept by pm.aws.a</p>
+      <h1>Six decisions for Dinis</h1>
+      <p class="sub">AWS Platform programme · from <span class="t-mono">docs/board/decisions.md</span>, 23 Nov 2026, 11:25 UTC · kept by pm.aws.a</p>
     </div>
     <div class="tabs" role="tablist" aria-label="View">
       <button role="tab" id="tab-brief" aria-selected="true" aria-controls="view-brief">Brief</button>
@@ -139,14 +139,14 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
 
 <script type="application/json" id="storyboard">
 {
-  "title": "Seven decisions for Dinis",
-  "source": "docs/board/decisions.md on work/pm.aws.a (91d9b9d), Site__Platform__AWS",
+  "title": "Six decisions for Dinis",
+  "source": "docs/board/decisions.md on work/pm.aws.a, 23 Nov 11:25 UTC, Site__Platform__AWS",
   "made_by": "pm.aws.a@SovereignWebsite.dinis",
-  "answer": "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a",
+  "answer": "1 a, 2 a, 3 c, 4 a, 5 a, 6 a",
   "scenes": [
-    {"id":"intro","eyebrow":"The brief","title":"Seven decisions, one page","dur":16,
+    {"id":"intro","eyebrow":"The brief","title":"Six decisions, one page","dur":16,
      "beats":[
-       [0,"Seven decisions are waiting for you on the AWS programme's decisions page. This brief walks through each one.","Seven numbered tiles appear in a row, each with its short name."],
+       [0,"Six decisions are waiting for you on the AWS programme's decisions page. This brief walks through each one.","Six numbered tiles appear in a row, each with its short name."],
        [5.5,"None of them stops the team. Every agent keeps building on the synthetic twin while you decide.","A banner under the tiles: nothing here stops the team."],
        [10.5,"Each scene shows the problem, the options and the recommendation. Answer by number in pm.aws.a's session.","The recommended answer line types in at the bottom."]],
      "panel":{"what":"Every open question for you from the AWS agents, most urgent first. Answer by number in pm.aws.a's session.","answer":true}},
@@ -196,20 +196,12 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
        [15,"iam.aws.a's v2.4 adds permissions boundaries that keep each role to today's scopes, and makes the DNS role's trust console only.","A boundary ring closes round the change role; both red chains are cut."],
        [23,"security.aws.a cleared v2.4 on paper. Before any apply: iam.aws.a's two checks, then your own apply in the console.","A three-line checklist appears: two checks, your console apply, two DNS plans retired."],
        [30,"Recommended: a, by iam and security. b keeps DNS trust edits on the page, c defers the boundaries, d relies on splitting the change page.","The a option chip lights as recommended; b is marked not recommended."]],
-     "panel":{"asks":"iam.aws.a (P-IAM-001), through conductor.aws.a; cleared by security.aws.a","what":"Even after v2.1, a script in the page can make the change role admin through a change set (R-008). iam.aws.a's draft v2.4 adds permissions boundaries that mirror today's scopes, with a custom read boundary, and makes the DNS role's trust console only. security.aws.a cleared v2.4 on paper (0cfa69f on work/security.aws.a). v2.4 itself (85312ed) is still local to iam.aws.a until decision 7.",
+     "panel":{"asks":"iam.aws.a (P-IAM-001), through conductor.aws.a; cleared by security.aws.a","what":"Even after v2.1, a script in the page can make the change role admin through a change set (R-008). iam.aws.a's draft v2.4 adds permissions boundaries that mirror today's scopes, with a custom read boundary, and makes the DNS role's trust console only. security.aws.a cleared v2.4 on paper (0cfa69f on work/security.aws.a). v2.4 itself is 2107fe5 on work/iam.aws.a.",
        "before":"iam.aws.a finishes two checks (read-boundary coverage; whether CloudFormation calls iam:UpdateRole on every role update). The first apply is your own act in the console. aws.c retires the two DNS-trust plans in site/plans/ in the same release.",
        "options":[["a","One console apply of v2.4: both boundaries, and console-only trust for sovereignwebsite-factory-dns."],["b","As a, but keep DNS trust edits from the page. Not recommended by iam.aws.a or security.aws.a: whoever controls that role's trust controls the site's name.","no"],["c","v2.1 through the page now (decision 4), boundaries later."],["d","No boundary; rely on splitting off the change page (R-002)."]],"rec":"a","blocks":"R-008 closing. A change to AWS, so yours."}},
-    {"id":"d7","eyebrow":"Decision 7 · Access","title":"Three account A agents cannot push their work","dur":24,
+    {"id":"outro","eyebrow":"Your answer","title":"One line answers all six","dur":12,
      "beats":[
-       [0,"Three agents on account A have work their sessions will not push.","Three agent boxes on the left, each with a stack of commits; GitHub's work branches on the right."],
-       [4,"iam.aws.a and dev.1.aws.a cannot push their work branches. viz.aws.a cannot yet turn its key into a git signing key.","Locks appear on the three paths; viz.aws.a shows an extra step, make a signing key."],
-       [12,"Option a: say yes in each session. Option b: let viz.aws.a push unsigned. Option c: leave it.","Option a: the locks open and the commits move across to GitHub."],
-       [18,"Recommended: a. A work branch is not dev or main, and every commit stays signed.","The a option chip lights as recommended."]],
-     "panel":{"asks":"iam.aws.a, dev.1.aws.a and viz.aws.a, through conductor.aws.a","what":"iam.aws.a and dev.1.aws.a: each session refuses to push its work branch (iam.aws.a also cannot reach the Factory). viz.aws.a is one step earlier: its session refuses turning its sgit key into a git SSH signing key, so six commits sit unsigned and local.",
-       "options":[["a","Say yes in each session: iam.aws.a and dev.1.aws.a to push their work branch; viz.aws.a to make its git signing key, then push."],["b","For viz.aws.a, allow unsigned pushes to work/viz.aws.a instead."],["c","Leave it."]],"rec":"a","blocks":"The v2.4 draft reaching GitHub, dev.1.aws.a's S3 work and R-016 fix, viz.aws.a's six commits (P1)."}},
-    {"id":"outro","eyebrow":"Your answer","title":"One line answers all seven","dur":12,
-     "beats":[
-       [0,"Recommended answers: one a, two a, three c, four a, five a, six a, seven a.","The full answer line, large, in the centre."],
+       [0,"Recommended answers: one a, two a, three c, four a, five a, six a.","The full answer line, large, in the centre."],
        [6,"Type them, or your own, in pm.aws.a's session. I update the page and tell the agents who asked.","Under it: where to answer."]],
      "panel":{"what":"Type the line below, or your own, in pm.aws.a's session. pm.aws.a updates the decisions page and tells the agents who asked.","answer":true}}
   ]
@@ -252,13 +244,13 @@ function optionRow(opts, rec, tShow, tRec, notRec=[]) {
 /* ---------- the scenes, drawn ---------- */
 const VIS = {
 intro(){
-  const names = [['1','Keys','acc'],['2','Signer check','risk'],['3','Same origin','risk'],['4','Approve v2.1','acc'],['5','Area sites','acc'],['6','Boundary','risk'],['7','Branch pushes','acc']];
-  let s = txt(W/2,92,'Seven decisions','t-xl') + cue(0.2, txt(W/2,128,'AWS Platform programme · open on the decisions page','t-m t-mute'));
+  const names = [['1','Keys','acc'],['2','Signer check','risk'],['3','Same origin','risk'],['4','Approve v2.1','acc'],['5','Area sites','acc'],['6','Boundary','risk']];
+  let s = txt(W/2,92,'Six decisions','t-xl') + cue(0.2, txt(W/2,128,'AWS Platform programme · open on the decisions page','t-m t-mute'));
   names.forEach((n,i) => {
-    const x = 56 + i*124, cls = n[2]==='risk'?'bx-risk':'bx-acc';
+    const x = 116 + i*124, cls = n[2]==='risk'?'bx-risk':'bx-acc';
     s += cue(1 + i*0.45, box(x,180,108,126,cls) + txt(x+54,236,n[0],'t-xl '+(n[2]==='risk'?'t-risk':'t-acc')) + txt(x+54,282,n[1],'t-s'), 'pop');
   });
-  s += cue(4.6, txt(56,334,'red: a security risk','t-s t-risk','start') + txt(250,334,'amber: access, approval or a merge','t-s t-acc','start'));
+  s += cue(4.6, txt(116,334,'red: a security risk','t-s t-risk','start') + txt(310,334,'amber: access, approval or a merge','t-s t-acc','start'));
   s += cue(6, box(180,358,600,44,'bx-ok',22) + txt(W/2,386,'Nothing here stops the team: the agents keep building on the twin','t-s t-ok'));
   s += cue(10.5, txt(W/2,452,'Recommended','t-s t-mute') + txt(W/2,486,SB.answer,'t-l'));
   return s;
@@ -370,25 +362,6 @@ d6(){
      + txt(716,300,'1  iam.aws.a\'s two checks','t-s','start') + txt(716,324,'2  your apply, in the console','t-s','start') + txt(716,348,'3  aws.c retires two DNS plans','t-s','start'));
   s += cue(24, txt(40,400,'cleared on paper by security.aws.a (0cfa69f)','t-s t-ok','start'));
   s += optionRow(['a','b','c','d'],'a',29,30.5,['b']);
-  return s;
-},
-d7(){
-  let s = '';
-  const ag = [['iam.aws.a','v2.4 draft',3],['dev.1.aws.a','S3 work, R-016 fix',3],['viz.aws.a','six unsigned commits',6]];
-  s += lbox(700,90,220,270,'','bx') + txt(810,124,'GitHub','t-m') + txt(810,144,'work/<role>.aws.a','t-mono t-mute');
-  ag.forEach((a,i) => {
-    const y = 80 + i*110;
-    s += lbox(40,y,200,80,a[0],'bx','t-m',a[1]);
-    for (let k=0;k<a[2];k++){
-      s += route(`r7-${i}-${k}`, `M${254+k*14} ${y+40} L${720+k*14} ${170+i*60}`);
-      s += `<g class="mover" data-m="r7-${i}-${k}" data-m0="${14+i*0.6+k*0.15}" data-m1="${17+i*0.6+k*0.15}" data-hold="0">${`<circle r="6" class="${i===2?'fill-hold':'fill-acc'}"/>`}</g>`;
-    }
-    s += `<path d="M${350} ${y+40} L${690} ${170+i*60}" class="ln dash"/>`;
-    s += cueOff(4+i*0.4, 13.5, `<g transform="translate(470 ${y+40+(130+i*60-y-40)*0.35})">${box(-34,-14,68,28,'bx-risk',14)}${txt(0,5,'refused','t-s t-risk')}</g>`);
-    s += cue(13.5+i*0.3, `<g transform="translate(470 ${y+40+(130+i*60-y-40)*0.35})">${box(-34,-14,68,28,'bx-ok',14)}${txt(0,5,'yes','t-s t-ok')}</g>`, 'pop');
-  });
-  s += cue(8, box(40,388,200,30,'bx-hold',8) + txt(140,408,'first: make a signing key','t-s'));
-  s += optionRow(['a','b','c'],'a',12,18);
   return s;
 },
 outro(){
@@ -545,6 +518,7 @@ function showTab(which){
 }
 tabs.brief.onclick = () => showTab('brief'); tabs.board.onclick = () => showTab('board');
 
+window.__brief = {svgFor, scenes};  /* read by build-video.mjs */
 /* at rest: the intro fully drawn, ready to play */
 time = scenes[0].dur - 0.01; render();
 document.querySelectorAll('.cue').forEach(c => { c.style.transition='none'; requestAnimationFrame(() => c.style.transition=''); });

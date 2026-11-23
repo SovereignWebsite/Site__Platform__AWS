@@ -1,8 +1,8 @@
 # Decisions for Dinis: AWS Platform
 
-Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 09:05 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 6 a, 7 a".
+Kept by pm.aws.a (took over from pm.aws.c on account A, 23 Nov 07:30 UTC). Updated 23 Nov 2026, 11:25 UTC. Every open question for Dinis from the aws.* agents, in one place, most urgent first. Answer by number in pm.aws.a's session (https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B), for example: "1 a, 2 a, 3 c, 4 a, 5 a, 6 a".
 
-Animated brief of this page (play it, step through it, or read the storyboard): docs/board/brief/decisions-brief.html, published privately at https://claude.ai/artifact/Vpk7NnqQ3sz9MgkC2aDmVP.
+This batch as a presentation (docs/board/brief/decisions-brief.html, https://claude.ai/artifact/Vpk7NnqQ3sz9MgkC2aDmVP) and a decision video in the studio's format (docs/board/brief/decision-video.html, https://claude.ai/artifact/FEaZ96X1APbEPmke5J6ido); both private to Dinis.
 
 Nothing here stops the team: the agents are building on the twin. Decision 3 holds dev.2.aws.a's code (site/api/**, test/api/**) on its branch.
 
@@ -45,18 +45,11 @@ Nothing here stops the team: the agents are building on the twin. Decision 3 hol
 
 ### 6. Security R-008 (High): a permissions boundary on the change role
 - **Asks:** iam.aws.a (P-IAM-001), through conductor.aws.a; cleared by security.aws.a
-- **What:** even after v2.1, a script in the page can make the change role admin through a change set (R-008). iam.aws.a's draft, now v2.4 (85312ed; v2.3 c06d979 plus console-only DNS trust; both local to iam.aws.a, not on GitHub: its push waits on decision 7), adds permissions boundaries that mirror today's scopes, with a custom read boundary. security.aws.a cleared v2.4 on paper (0cfa69f on work/security.aws.a; v2.3 47b48c3, after three gaps in v2.2, a1d2057), so the DNS condition is met inside v2.4.
+- **What:** even after v2.1, a script in the page can make the change role admin through a change set (R-008). iam.aws.a's draft, now v2.4 (2107fe5 on work/iam.aws.a; v2.3 is 2b8ceab), adds permissions boundaries that mirror today's scopes, with a custom read boundary. security.aws.a cleared v2.4 on paper (0cfa69f on work/security.aws.a; v2.3 47b48c3, after three gaps in v2.2, a1d2057), so the DNS condition is met inside v2.4.
 - **Before any apply:** iam.aws.a finishes two checks: that the read boundary covers what the read role needs, and whether CloudFormation calls iam:UpdateRole on every role update. The first apply is your own act in the console.
 - **Options:** (a) one console apply of v2.4: both boundaries, and console-only trust for sovereignwebsite-factory-dns (the change role loses GetRole and UpdateAssumeRolePolicy on it); aws.c retires the two DNS-trust plans in site/plans/ in the same release; (b) not recommended by iam.aws.a or security.aws.a: as (a) but keep DNS trust edits from the page, which leaves R-005 open, since whoever controls that role's trust controls the site's name; (c) v2.1 through the page now (decision 4), boundaries later; (d) no boundary, rely on splitting off the change page (R-002).
 - **Recommended:** (a), by iam.aws.a and security.aws.a (4b7271d on work/security.aws.a): remove TheDnsRoleTrustPolicy from the change role and its boundary in the same apply. A boundary on the DNS role would not make (b) safe, since that role's own rights (the Factory's docs/aws-oidc.md) can repoint the site's CNAME. DNS-trust edits are rare. If (a) or (b), decision 4 folds into it. R-008 stays Open until applied.
 - **Blocks:** R-008 closing. A change to AWS, so yours.
-
-### 7. Three account A agents cannot push their work
-- **Asks:** iam.aws.a, dev.1.aws.a and viz.aws.a, through conductor.aws.a
-- **What:** iam.aws.a and dev.1.aws.a: each session refuses to push its work/<role>.aws.a branch (iam.aws.a also cannot reach the Factory). viz.aws.a is one step earlier: its session refuses turning its sgit signing key into a git SSH signing key (the step _common.md describes and you allowed for every AWS agent at 03:00 UTC), so six commits sit unsigned and local. Their work stays local until then; iam.aws.a's v2.4 (decision 6) is among it.
-- **Options:** (a) say yes in each session: iam.aws.a (https://claude.ai/code/session_018yvwtLi5HNUo32ot6ApGm8) and dev.1.aws.a (https://claude.ai/code/session_018yvwtLV1iZjUCMEKz1PZ51) to push their work branch; viz.aws.a (https://claude.ai/code/session_018yvwtLMhfsoY8D8duFRbSs) to make its git signing key, then push; (b) for viz.aws.a, allow unsigned pushes to work/viz.aws.a instead; (c) leave it.
-- **Recommended:** (a). A work branch is not dev or main, and signed commits keep the rule every agent follows; (b) would need re-signing before anything lands.
-- **Blocks:** the v2.4 draft reaching GitHub, dev.1.aws.a's S3 work and R-016 fix, viz.aws.a's six commits (P1).
 
 ## Not needed yet
 - **Which models scoped access may call (pipeline P7):** recommended, Amazon Bedrock models in your own account, through roles the site issues with budgets; anything outside AWS would need a server, which these sites do not have. Asked when P7 starts.
@@ -67,6 +60,7 @@ Nothing here stops the team: the agents are building on the twin. Decision 3 hol
 - Secure Send S3 API: where its code and deployment live, which clients and regions first. vaults.aws.c with maestro.c.
 
 ## Answered
+- Three account A agents' pushes (was 7): yes in iam.aws.a's and dev.1.aws.a's sessions (both branches pushed, signed); viz.aws.a pushed work/viz.aws.a unsigned at your word in its session (7495e89), so aws.c lands docs/viz/ under its own signature (conductor.aws.a, ~11:12 UTC). Still open in iam.aws.a's session: the Factory repository attached, for its key commit.
 - The PM's wake (was 6): pm.aws.a's wake is every 6 h at :15, created by maestro.a at your word (~03:31 UTC, move to account A); no other schedule.
 - The team commits its own folders: "Yes, to the team paths. So you can commit to their folders" (you, in aws.c's session, ~04:20 UTC); five agents added (c32279d), the rest by aws.c as they come.
 - The first AWS agent keys: "Land the AWS keys" (you, in factory.c's session, ~03:25 UTC); pm.aws.c's key is live (885f150). Agents whose sessions reach only this repository send factory.c their signed commit to land byte for byte.

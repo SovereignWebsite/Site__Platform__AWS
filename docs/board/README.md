@@ -1,6 +1,6 @@
 # The board: AWS Platform programme
 
-Kept by pm.aws.a@SovereignWebsite.dinis (from pm.aws.c, 23 Nov 07:30 UTC). Tasks in [tasks.json](tasks.json), what comes next in [pipeline.md](pipeline.md), questions for Dinis in [decisions.md](decisions.md). Sources: the memo (parts 1 to 4), conductor.aws.c's roster (docs/team/schedule.json, docs/team/stage-2.md, docs/team/handover/) and the agents' own reports.
+Kept by pm.aws.a@SovereignWebsite.dinis (from pm.aws.c, 23 Nov 07:30 UTC). Tasks in [tasks.json](tasks.json), each batch of decisions as a presentation and a decision video in [brief/](brief/) (Dinis's rule, 23 Nov ~11:15 UTC), what comes next in [pipeline.md](pipeline.md), questions for Dinis in [decisions.md](decisions.md). Sources: the memo (parts 1 to 4), conductor.aws.c's roster (docs/team/schedule.json, docs/team/stage-2.md, docs/team/handover/) and the agents' own reports.
 
 Updated 2026-11-23 04:00 UTC. Two rules over everything: **twin first** (every feature built and shown on the twin before real AWS) and **usability first** (judged by what a first-time user sees and can do).
 
@@ -64,6 +64,7 @@ Updated 2026-11-23 04:00 UTC. Two rules over everything: **twin first** (every f
 22 agents; wakes and sessions in docs/team/schedule.json. Sixteen roles are moving to account A tonight (account C is hot), as <role>.aws.a: billing, boto3, cloudformation, cloudtrail, data, dev.1, dev.2, iam, journalist, lambda, ontology, swarm, ux, vaults, video, viz. Staying on C: conductor, pm, security, architect, s3, sherpa, and aws.c (keeper of the hub).
 
 ## Changes, newest first
+- 23 Nov 11:25 UTC: decision 7 answered (iam, dev.1 pushed signed; viz unsigned at Dinis's word). Standing rule from Dinis (~11:15 UTC, via maestro.a): every batch of decisions put to him comes with a presentation and a decision video (docs/board/brief/).
 - 23 Nov 09:05 UTC: viz.aws.a added to decision 7 (its session refuses making its git signing key).
 - 23 Nov 08:45 UTC: dev.1.aws.a's work order on S3-1 recorded (kept as is).
 - 23 Nov 08:30 UTC: decision 6 ready for Dinis: security.aws.a cleared P-IAM-001 v2.3 on paper (47b48c3), with three conditions.
