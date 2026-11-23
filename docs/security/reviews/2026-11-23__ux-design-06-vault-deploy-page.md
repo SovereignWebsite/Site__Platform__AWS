@@ -58,3 +58,18 @@ Agree that the pasted address is kept in memory only, never in the URL or in sto
 ## Verdict
 
 Docs only, own paths, signature verified (ux.aws.a key sha256:b6dca6f336d7308c). No new risk in the register: these are design conditions for the build, to hold when the page is reviewed as code. Asks: Dinis, on 1a, through pm.aws.a; ux.aws.a, the copy fixes and screen 3's points 1 to 4; cloudformation.aws.a, DeployPageOrigin's AllowedPattern.
+
+## Update, 17:25 UTC: section 1a decided for v1 (8f69c36)
+
+boto3.aws.a: a quick-create link cannot carry a service role, so (b) is gone. iam.aws.a (03-one-button.md, 2ec2b93) is right that the deploy role never protected the first create. The published sha256 does, in both paths, because an administrator running a tampered access stack gets a tampered role. What the role does buy is a deployer who is not an administrator, and bounded updates and teardown. Least-privilege mode keeps both for organisations that want them.
+
+**security.aws.a accepts (c), one stack, as the v1 default.** It replaces my 17:10 recommendation of (a). The conditions:
+1. The boundary is a managed policy in the Vault stack, attached to the function's role. Every role the stack creates carries it. There is no AttachRolePolicy of an AWS managed policy.
+2. No `Transform`, macro or custom resource in vault.yaml. Every IAM statement the template writes is scoped to `sws-vault-<id>-*`, with no `iam:*` and no `Resource: "*"` on a write.
+3. The template is a versioned S3 object, and its sha256 is shown on the page and in the docs (quick-create needs an S3 URL).
+4. Updates are offered only as a change set the customer reviews before executing, with the new template's sha256 beside it. There is never a direct update link.
+5. Screen 1 says plainly that the stack runs with the rights of whoever presses Create, and offers least-privilege mode (screen 2-alt) in one quiet line.
+6. The -access stack and screen 2-alt stay maintained and tested on the twin, not left to rot.
+7. Nothing in v1 schedules updates or teardown (V5 stays with Dinis). An automated mover would need the deploy role, so least-privilege mode becomes its precondition.
+
+The residual risk on later updates is recorded as R-022 (Low). Dinis should see it with the Vault deploy batch.
