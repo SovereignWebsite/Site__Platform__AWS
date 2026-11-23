@@ -9,7 +9,7 @@ There are two files, ready to move to `site/twin/data/` when design 02 splits th
 - `seed/cloudformation.json`: four stacks, each with Parameters, Outputs, Resources and Events.
   - `sws-aws-platform` (us-east-1) is the hub's own stack. Its logical ids, role names and Outputs are as in bootstrap.yaml.
   - `demo-site` (eu-west-2) has the site and logs buckets and a CloudFront distribution, and exports its domain.
-  - `demo-dns` (us-east-1) has the `example.com` zone and the `www` alias, and imports that export.
+  - `demo-dns` (eu-west-2, the same region as `demo-site`, because an export is only importable in its own region) has the `example.com` zone and the `www` alias, and imports that export.
   - `demo-lambda` (eu-west-2) has the function, its role and the dependencies bucket, and is in `UPDATE_ROLLBACK_COMPLETE`, so the landing page has a stack to put first.
   - `not_in_any_stack` lists the hand-made resources.
 - `seed/route53.json`: one public zone. Its `www` alias goes to the distribution. `old.example.com` is a CNAME made by no stack, pointing at an S3 website bucket that is not in the account. That gives the "points at nothing" warning something to find.

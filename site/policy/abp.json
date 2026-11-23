@@ -134,6 +134,15 @@
             "docs/data/**"
           ]
         },
+        "data.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/data/**",
+            "site/data/**",
+            "test/data/**",
+            "docs/team/from-a/data.aws.a.md",
+            "docs/team/keys/data.aws.a.*"
+          ]
+        },
         "billing.aws.c@SovereignWebsite.dinis": {
           "may_change": [
             "docs/billing/**"
@@ -153,6 +162,171 @@
           "may_change": [
             "docs/swarm/**"
           ]
+        },
+        "architect.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/architecture/**",
+            "site/api/**",
+            "docs/team/from-a/architect.aws.a.md",
+            "docs/team/keys/architect.aws.a.*"
+          ]
+        },
+        "billing.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/billing/**",
+            "docs/team/from-a/billing.aws.a.md",
+            "docs/team/keys/billing.aws.a.*"
+          ]
+        },
+        "boto3.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/boto3/**",
+            "docs/team/from-a/boto3.aws.a.md",
+            "docs/team/keys/boto3.aws.a.*"
+          ]
+        },
+        "cloudformation.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/cloudformation/**",
+            "docs/team/from-a/cloudformation.aws.a.md",
+            "docs/team/keys/cloudformation.aws.a.*"
+          ]
+        },
+        "cloudtrail.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/cloudtrail/**",
+            "docs/team/from-a/cloudtrail.aws.a.md",
+            "docs/team/keys/cloudtrail.aws.a.*"
+          ]
+        },
+        "conductor.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/team/**",
+            "docs/team/from-a/conductor.aws.a.md",
+            "docs/team/keys/conductor.aws.a.*"
+          ]
+        },
+        "dev.1.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/dev.1/**",
+            "site/s3.js",
+            "test/s3/**",
+            "site/twin*.js",
+            "test/twin/**",
+            "docs/team/from-a/dev.1.aws.a.md",
+            "docs/team/keys/dev.1.aws.a.*"
+          ]
+        },
+        "dev.2.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/dev.2/**",
+            "site/api/**",
+            "test/api/**",
+            "site/twin*.js",
+            "test/twin/**",
+            "docs/team/from-a/dev.2.aws.a.md",
+            "docs/team/keys/dev.2.aws.a.*"
+          ]
+        },
+        "iam.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/iam/**",
+            "docs/team/from-a/iam.aws.a.md",
+            "docs/team/keys/iam.aws.a.*"
+          ]
+        },
+        "journalist.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/journal/**",
+            "docs/team/from-a/journalist.aws.a.md",
+            "docs/team/keys/journalist.aws.a.*"
+          ]
+        },
+        "lambda.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/lambda/**",
+            "docs/team/from-a/lambda.aws.a.md",
+            "docs/team/keys/lambda.aws.a.*"
+          ]
+        },
+        "ontology.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/ontology/**",
+            "docs/team/from-a/ontology.aws.a.md",
+            "docs/team/keys/ontology.aws.a.*"
+          ]
+        },
+        "pm.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/board/**",
+            "site/decisions/**",
+            "docs/team/from-a/pm.aws.a.md",
+            "docs/team/keys/pm.aws.a.*"
+          ]
+        },
+        "s3.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/s3/**",
+            "site/s3.js",
+            "test/s3/**",
+            "docs/team/from-a/s3.aws.a.md",
+            "docs/team/keys/s3.aws.a.*"
+          ]
+        },
+        "security.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/security/**",
+            "docs/team/from-a/security.aws.a.md",
+            "docs/team/keys/security.aws.a.*"
+          ]
+        },
+        "sherpa.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/sherpa/**",
+            "docs/team/from-a/sherpa.aws.a.md",
+            "docs/team/keys/sherpa.aws.a.*"
+          ]
+        },
+        "swarm.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/swarm/**",
+            "docs/team/from-a/swarm.aws.a.md",
+            "docs/team/keys/swarm.aws.a.*"
+          ]
+        },
+        "ux.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/design/**",
+            "docs/team/from-a/ux.aws.a.md",
+            "docs/team/keys/ux.aws.a.*"
+          ]
+        },
+        "vaults.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/vaults/**",
+            "docs/team/from-a/vaults.aws.a.md",
+            "docs/team/keys/vaults.aws.a.*"
+          ]
+        },
+        "video.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/video/**",
+            "docs/team/from-a/video.aws.a.md",
+            "docs/team/keys/video.aws.a.*"
+          ]
+        },
+        "viz.aws.a@SovereignWebsite.dinis": {
+          "may_change": [
+            "docs/viz/**",
+            "docs/team/from-a/viz.aws.a.md",
+            "docs/team/keys/viz.aws.a.*"
+          ]
+        },
+        "design.c@SovereignWebsite.dinis": {
+          "may_change": [
+            "site/designs/**"
+          ],
+          "note": "HTML and CSS only, never JavaScript; every page sets script-src none (security R-010)."
         }
       },
       "needs_owner_yes": [
@@ -177,7 +351,7 @@
         "add a server, cookies or tracking",
         "change AWS itself (only the owner does, by Approve on the site)"
       ],
-      "source": "Dinis Cruz, 23 Nov 2026 ~03:15 UTC in aws.c's session: \"Yes, to the team paths. So you can commit to their folders\", on the option \"docs paths only, aws.c adds each agent as it starts\". Paths as conductor.aws.c proposed (docs/team/stage-2.md); added by the keeper, aws.c. Stage 2 agents added 23 Nov 2026 03:36 UTC, docs paths only. Code paths for new agents wait for Dinis's yes in aws.c's session."
+      "source": "Dinis Cruz, 23 Nov 2026 ~03:15 UTC in aws.c's session: \"Yes, to the team paths. So you can commit to their folders\", on the option \"docs paths only, aws.c adds each agent as it starts\". Paths as conductor.aws.c proposed (docs/team/stage-2.md); added by the keeper, aws.c. Stage 2 agents added 23 Nov 2026 03:36 UTC, docs paths only. Code paths for new agents wait for Dinis's yes in aws.c's session. Dinis Cruz, 23 Nov 2026 ~13:50 UTC in aws.c's session: \"yes to all of the questions above\": every .a agent added with its .c twin's paths, plus its own note and key files; code paths for dev.1 (S3 browser, twin), dev.2 (API layer, twin) and data (site/data); design.c for site/designs/** (HTML and CSS only); and landing the S3 browser update."
     }
   },
   "pipelines": {
