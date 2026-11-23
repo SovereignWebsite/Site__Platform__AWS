@@ -1,0 +1,23 @@
+{
+  "id": "cloudtrail-aws-a-sovereignwebsite",
+  "agent": "cloudtrail.aws.a@SovereignWebsite.dinis",
+  "role": "CloudTrail and CloudWatch on account A (AWS Platform programme): the timeline, per-asset activity and alarms views over the twin's CloudTrail records, drop-in of a user's own CloudTrail dump, and the audit trail of Vault deployments. Replaces the key of the previous cloudtrail.aws.a session (sha256:9ebb596ab7bd764f), which was never published.",
+  "how": "Made by the agent in its own session on 23 November 2026 with sgit pki keygen (sgit-ai 0.27.0); public bundle from sgit pki export. Only the public half is here.",
+  "created": "2026-11-23",
+  "status": "active",
+  "session": "https://claude.ai/code/session_018yvwtPSPYbbAyxHnC3tMKQ",
+  "fingerprint": "sha256:3650b21859bd0f15",
+  "signing_fingerprint": "sha256:fdd1130a398d002e",
+  "bundle": {
+    "v": 1,
+    "encrypt": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAxzM56BtUtIKKXMvP0Tp1\nZp5bIDdFgaRbjIcmbL1OtUOSo4nm4nNaPSlDQ1ZtYuRRwF7ke0zSspTbVgommatd\ntArLJL474/L+BzcPKzWTQ1a8ot8vcwXqDIAH784CisN76quxJ8EpIlEmpQjWHIzs\niGYyyWvAw9n0rzuZ/RwDgfIKWapZwxzfzWONPiLZzv7FbtbVJtRylBn6QElal4cr\nRHIPYuM+Y2AH/7fYREukbRsxoFZ39MgqgQUKFb5NZCkjkP4qFMQVAByUWta7tSU9\nAfg6g2xaKSv4xjN7WEQ/yvhcPjPyVUrgLVQO9vFitVjff5irJl6/sRT76fyYWsUS\nFV6WWTS4mDcRQXPF4NVokwX0U2KT0G548WGPrwEKzgkNUETkYopKAj1UhPs9HzBl\ndFIA0raoL4koCg+o8dfHbpyMq3ctGTXwiM3g98VzQM4NInji2I3DH3bF8Kn4mFJz\nl5J5R2qvWs5SC0t39DAh6exX51dC3VO1YxsEcKtSG2F9duQdbjxSoXQoyVmgh7LU\nP2y/oAW53yCx0uIxDor11yriVx7/Kym9GEd5MyLCQ+xVv2VOs/d4QXpMZXAhLgJh\nzcjkwst0yS2uBf8aHToB+h/huaQi7U5aXZ/GENwpU4+jl2ZF2Ymk81A2oso6uICa\nGtmpfT/BDwIgNETVjJql51cCAwEAAQ==\n-----END PUBLIC KEY-----\n",
+    "sign": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE1HVxJLutwbWuT7E2Fa3sI7vxIIum\nQzUZiIK6WLYWMcVD6GU+wlp4YlGUBAkcP639V8FdDsw3B4tMR1dxZwReWQ==\n-----END PUBLIC KEY-----\n",
+    "label": "cloudtrail.aws.a@SovereignWebsite.dinis",
+    "fingerprint": "sha256:3650b21859bd0f15",
+    "signing_fingerprint": "sha256:fdd1130a398d002e"
+  },
+  "ssh_signing": {
+    "from": "bundle.sign",
+    "note": "build/check-signatures.mjs derives the OpenSSH form from bundle.sign and verifies each commit with git verify-commit."
+  }
+}
