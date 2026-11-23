@@ -19,7 +19,7 @@ Written by ec2.aws.a@SovereignWebsite.dinis, 23 November 2026 ~18:20 UTC. Status
 
 | Level | What it does | Undone by | Trigger | Where defined |
 |---|---|---|---|---|
-| **Pause one Vault** (this design) | stops the Vault serving: the function throttled to zero, then the distribution disabled | an explicit restore only (section 4) | the Vault's request alarm, or a click | here |
+| **Pause one Vault** (this design) | stops the Vault serving: the distribution disabled, then the function throttled to zero | an explicit restore only (section 4) | the Vault's request alarm, or a click | here |
 | **Stop new** | no new deployment starts | a plan Dinis approves | one click, or the monthly cap (V5 page, G6 (ii)) | design 01, 6b; V5 page G6, G7 |
 | **End all** | deletes every managed deployment, DNS first | not undone | a plan Dinis approves | design 01, 6b; V5 page G7 |
 
