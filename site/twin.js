@@ -872,6 +872,31 @@
     ev(at, st.name, "AWS::CloudFormation::Stack", "CREATE_COMPLETE", { physical: st.stackId, outputs: stackOutputs(st) });
     return out;
   }
+  // What CloudFront checks (cloudformation.aws.a): the certificate exists in us-east-1 in this account, is issued, and covers
+  // the domain exactly or by a one-level wildcard; the web ACL exists, CLOUDFRONT scope, in this account. vault.yaml takes
+  // any ARN (a customer may bring their own); the twin knows only the certificates and web ACLs it holds, which today are
+  // those of the account's completed -edge stacks, so any other ARN is not found. Reasons after CloudFront's
+  // InvalidViewerCertificate and InvalidWebACLId; all wording is the twin's until a real call confirms it.
+  function edgeFault(acc, account, p) {
+    var certs = map(), acls = map();
+    Object.keys(acc.stacks).forEach(function (k) {
+      var e = acc.stacks[k];
+      if (e.kind !== "edge" || e.region !== "us-east-1" || e.status !== "CREATE_COMPLETE" || e.account !== account) return;
+      if (e.params.DomainName) certs[physicalOf(e, "VaultCertificate")] = e.params.DomainName;
+      if (e.params.EnableRateLimit === "true") acls[physicalOf(e, "VaultWebAcl")] = true;
+    });
+    var wrap = function (code, m) { return "Resource handler returned message: \"" + m + "\" (Service: CloudFront, Status Code: 400, Error Code: " + code + ") (the twin's wording)"; };
+    if (p.CertificateArn && !own(certs, p.CertificateArn)) return wrap("InvalidViewerCertificate", "The specified SSL certificate doesn't exist, isn't in us-east-1 region, isn't valid, or doesn't include a valid certificate chain.");
+    if (p.CertificateArn && p.DomainName && !covers(certs[p.CertificateArn], p.DomainName)) return wrap("InvalidViewerCertificate", "To add an alternate domain name (CNAME) to a CloudFront distribution, you must attach a trusted certificate that validates your authorization to use the domain name.");
+    if (p.WebAclArn && !own(acls, p.WebAclArn)) return wrap("InvalidWebACLId", "Web ACL is not accessible by the requester.");
+    return null;
+  }
+  // A certificate's name covers a host exactly, or as *.<parent> for one more label (no deeper).
+  function covers(name, host) {
+    if (name === host) return true;
+    if (!/^\*\./.test(name || "")) return false;
+    var i = host.indexOf("."); return i > 0 && host.slice(i + 1) === name.slice(2);
+  }
   function taken(acc, type, physical) { return !!(acc.retained && acc.retained[type + " " + physical]); }
   function cfnErr(code, msg, status) { return xml("<ErrorResponse xmlns=\"http://cloudformation.amazonaws.com/doc/2010-05-15/\"><Error><Type>Sender</Type><Code>" + code + "</Code><Message>" + esc(msg) + "</Message></Error><RequestId>twin</RequestId></ErrorResponse>", status || 400); }
   function formParams(form, prefix) {
@@ -916,6 +941,10 @@
         // One-stack mode makes its own boundary; an -access stack's boundary of the same name makes the create fail.
         collides = mode === "one-stack" && !!access && access.status === "CREATE_COMPLETE";
         params.DeployMode = mode;
+        // vault.yaml's rule DomainNeedsCertificate, and WebAclArn's AllowedPattern, checked before anything is made.
+        if (params.DomainName && !params.CertificateArn) return cfnErr("ValidationError", "With DomainName, CertificateArn (from vault-edge.yaml in us-east-1) is needed.");
+        if (params.WebAclArn && (params.WebAclArn.length > 512 || !/^arn:aws:wafv2:us-east-1:[0-9]{12}:global\/webacl\/sws-vault-[0-9a-f]{12}-waf\/[0-9a-f-]{36}$/.test(params.WebAclArn)))
+          return cfnErr("ValidationError", "Parameter 'WebAclArn' must match pattern ^$|^arn:aws:wafv2:us-east-1:[0-9]{12}:global/webacl/sws-vault-[0-9a-f]{12}-waf/[0-9a-f-]{36}$");
       }
       if (kind === "edge") {
         // vault-edge.yaml's parameter rules, then its rule SomethingToMake (0.6.1): no domain and no rate limit is refused
@@ -937,6 +966,7 @@
         // A VaultId used before: its retained log group (and bucket) are still in the account (cloudformation.aws.a). The
         // log group, the quicker resource, fails first; the page must always make a fresh id.
         reason: "Resource handler returned message: \"Resource of type 'AWS::Logs::LogGroup' with identifier '/aws/lambda/sws-vault-" + m[1] + "-api' already exists.\" (HandlerErrorCode: AlreadyExists)" };
+      else if (kind === "vault" && edgeFault(acc, account, plain)) failure = { logical: "VaultDistribution", after: 20, reason: edgeFault(acc, account, plain) };
       else if (kind === "vault" && plain.ImageUri && plain.ImageUri !== TWIN_IMAGE) failure = { logical: "VaultFunction", after: 3,
         reason: "Resource handler returned message: \"Lambda can't access the image " + plain.ImageUri + ". Check the repository's policy lists this account and the digest is in " + region + ".\" (twin's wording)" };
       var st = { name: name, kind: kind, region: region, account: account, stackId: stackId, params: plain, ids: ids, mode: mode, failure: failure };
@@ -1113,6 +1143,7 @@
   function cfAliases(d) { return cfQty("Aliases", function (a) { return "<CNAME>" + esc(a) + "</CNAME>"; }, d.aliases); }
   function cfArn(account, id) { return "arn:aws:cloudfront::" + account + ":distribution/" + id; }
   function cloudfront(url, init, account) {
+    if (!signed(init)) return cfErr("MissingAuthenticationToken", "Request is missing Authentication Token", 403);
     var s = build(), u = new URL(url), m = /^\/2020-05-31\/(distribution|function)(?:\/([^\/]+))?$/.exec(u.pathname), q = u.searchParams;
     if (!m || (init.method || "GET").toUpperCase() !== "GET" || (m[1] === "function" && m[2] !== undefined))
       return cfErr("NotImplemented", "The twin answers three CloudFront reads only: ListDistributions, GetDistribution and ListFunctions. Twin mode never calls real AWS.", 501);
@@ -1519,6 +1550,7 @@
       : "<TTL>" + r.ttl + "</TTL><ResourceRecords>" + r.values.map(function (v) { return "<ResourceRecord><Value>" + esc(v) + "</Value></ResourceRecord>"; }).join("") + "</ResourceRecords>") + "</ResourceRecordSet>";
   }
   function route53(url, init) {
+    if (!signed(init)) return r53Err("MissingAuthenticationToken", "Request is missing Authentication Token", 403);
     var u = new URL(url), q = u.searchParams, m = /^\/2013-04-01\/hostedzone(?:\/([^\/]+)(\/rrset)?)?$/.exec(u.pathname);
     if (!m || (init.method || "GET").toUpperCase() !== "GET")
       return r53Err("NotImplemented", "The twin answers three Route 53 reads only: ListHostedZones, GetHostedZone and ListResourceRecordSets. Twin mode never calls real AWS.", 501);

@@ -5,6 +5,7 @@
 // access-stack mode a Vault stack whose deploy role went first fails to delete.
 import assert from "node:assert/strict";
 import { loadTwin } from "./golden.mjs";
+import { edgeCertificate } from "./edge.mjs";
 
 const START = "2026-11-24T09:00:00.000Z", ID = "0a1b2c3d4e5f", R = "eu-west-2", ACCT = "444455556666";
 const CUST = { authorization: "AWS4-HMAC-SHA256 Credential=ASIATWINCUSTOMER/20261124/" + R + "/cloudformation/aws4_request, SignedHeaders=host, Signature=twin" };
@@ -23,7 +24,7 @@ let checks = 0;
 
 // 1. A Vault with a domain in this account's zone, made and then deleted.
 const twin = fresh();
-await create(twin, V, { VaultId: ID, DomainName: "vault.example.com", HostedZoneId: "Z0000000000EXAMPLE" });
+await create(twin, V, { VaultId: ID, DomainName: "vault.example.com", HostedZoneId: "Z0000000000EXAMPLE", CertificateArn: await edgeCertificate(twin, ID, "vault.example.com") });
 twin.clock.tick(10 * 60 * 1000);
 const stackId = tag((await cfn(twin, { Action: "DescribeStacks", StackName: V })).text, "StackId")[0];
 assert.equal((await cfn(twin, { Action: "DeleteStack", StackName: V })).status, 200, "DeleteStack accepted");
