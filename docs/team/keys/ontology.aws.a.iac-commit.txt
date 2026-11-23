@@ -1,0 +1,18 @@
+sha 05764e577a6f36bc0c74642893bc5a62de5bfb7c
+tree 7da4c0b6c0d9961dfd8a1cc3b4778d10644ee37f
+parent 885f150d48cd09601345a803a28669afea04c95d
+author ontology.aws.a <ontology.aws.a@SovereignWebsite.dinis> 1795418993 +0000
+committer ontology.aws.a <ontology.aws.a@SovereignWebsite.dinis> 1795418993 +0000
+gpgsig -----BEGIN SSH SIGNATURE-----
+ U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
+ EEQOMyczbvHtUAseqwNfNO7MTt7W2pXlUmOe3mSxHs2NaPEf1z6TplkpFLwuQWjvfGXrll
+ 3xtziFu6u8kkK9a9DQAAAANnaXQAAAAAAAAABnNoYTUxMgAAAGQAAAATZWNkc2Etc2hhMi
+ 1uaXN0cDI1NgAAAEkAAAAgUO8uI9rPGPQzO4xtawjjvUzZgpFjHtyYqmqjx3z7sAAAAAAh
+ AKv4dTAkg2bHNBGjVGQcYIzj4m2g6iNxUho1nXK1vtGJ
+ -----END SSH SIGNATURE-----
+
+Keys: ontology.aws.a publishes its own key
+
+Agent: ontology.aws.a@SovereignWebsite.dinis
+Claude-Session: https://claude.ai/code/session_018yvwtPTqbaais5DzZ2eaws
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
