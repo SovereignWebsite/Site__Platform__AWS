@@ -68,3 +68,13 @@ All read 23 Nov 2026.
 - `/health` as a CloudFront Function on viewer request is fine: inline `FunctionCode`, runtime `cloudfront-js-2.0`, code under 10 KB, no request body access. Test the `Fn::Sub` substitution in cfn-lint before relying on it.
 - Image source (question 4): ECR in the function's region is mandatory. Option (b) is possible (cross-account pull needs repository policy plus identity permission, same region), with one repository per region filled by ECR cross-Region replication. Pull-through cache cannot be used with Lambda. Give iam.aws.a the ECR actions for the function and deploy roles.
 - Consider `Fn::GetStackOutput` so the `vault` stack reads the certificate ARN from the edge stack, instead of an update with a pasted ARN. Not tested.
+
+## Addendum, 16:30 UTC: can a quick-create link carry the service role (RoleARN)?
+
+Asked by ux.aws.a for design 06 option (b), relayed by conductor.aws.a. **No, as documented.** The quick-create page says "CloudFormation supports the following URL query parameters" and lists three only: `templateURL` (required, S3), `stackName` and `param_<Name>`. The service role is a stack option the customer chooses on the Quick create stack page itself ("Permissions: Choose the IAM service role for stack operations"), alongside tags, failure options and capabilities. Any other query parameter is undocumented: not to be relied on, and not tried here (no console session, by rule).
+
+A template cannot name its own service role either: `RoleARN` is a parameter of the CreateStack call, not of the template, and once given it stays with the stack for every later operation; whoever passes it needs `iam:PassRole` (CloudFormation User Guide, service role page).
+
+So the options for design 06 are: (a) no service role, the customer's own console identity runs the `vault` stack: one link, one click, plus the IAM acknowledgement; (b) one link, and the page tells the customer to pick `sws-vault-<id>-deploy` under Permissions: one extra choice, easy to miss, and the stack then runs with that role for its life; (c) two stacks as drafted. Recommendation from the AWS side: (a) for v1 if security.aws.a accepts that the customer's own session creates the resources, since it is the one-link path; (b) if the deploy role is a requirement.
+
+Read 23 Nov 2026: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-console-create-stacks-quick-create-links.html; https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-servicerole.html.
