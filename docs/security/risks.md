@@ -349,3 +349,4 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - vault-edge 0.6.0 (f75842a) has no Alarm or SNS resource.
   - vault-alarm.yaml 0.1.0 holds only SNS::Topic, SNS::TopicPolicy and CloudWatch::Alarm; it runs as the customer's own identity, from our pinned template, and the test asserts no OK or InsufficientData actions.
   - test_vault_template.py OK and cfn-lint clean (run by me in a scratch venv).
+- 23 Nov 2026, 19:30, security.aws.a: ux.aws.a 1cf8e01 (design 06, signature verified). Its R-027 wording predates cloudformation.aws.a f75842a, which moves the alarm, topic and topic policy into their own stack sws-vault-<id>-alarm in us-east-1 for both modes, always run as the customer. Screen 4 should offer that as a separate link-out (DistributionId filled in, email typed in AWS's console) in both modes, not "the stack makes it" in one-stack mode. Asked of ux.aws.a.
