@@ -37,6 +37,17 @@ Patch docs/lambda/patches/2026-11-23__twin-cloudwatch-logs-02.on-dev1-4d86107.pa
 
 Gaps, not done: no 1 MB page cap and never an empty page with a nextToken; ties broken by timestamp only; no Init Duration or Status lines and no JSON log format; `interleaved` and `unmask` ignored; nextToken is the twin's own form. To confirm, as AWS does not document them: the exact error messages, whether terms match whole words (the twin matches substrings), a pattern of only -terms, and whether `__type` comes bare or #-prefixed (the page should split on ':' then '#', as botocore does).
 
+## The browser API (patch for dev.2)
+
+docs/lambda/patches/2026-11-23__logs-api.on-dev2-9daf26e.patch, against work/dev.2.aws.a at 9daf26e, in the shape of LambdaApi and FirehoseApi (design 03, part 1): site/api/logs-api.js, its contract site/api/logs.openapi.json, and test/api/logs-api.test.mjs.
+
+- `LogsApi(send).groups(region, { prefix, next, max })`: DescribeLogGroups, one page `{ items, next }`; limit at most 50; no empty prefix sent.
+- `LogsApi(send).events(region, group, { start, end, pattern, newest, next, max })`: FilterLogEvents; group by name or ARN; start and end as ISO or epoch ms; `newest` sends `startFromHead: false`.
+- `LogsApi.invocations(events)`: no request. Groups START, END and REPORT, plus the runtime's tab-separated `[ERROR]` and `[INFO]` lines, by request id, into `{ requestId, start, end, durationMs, billedMs, memoryMb, maxMemoryMb, initMs, errors, complete, lines }`. An invocation whose REPORT is not in the page is `complete: false`.
+- Errors as the other APIs give them; `__type` cut at ":" then "#" (note 11).
+
+Test: 36 checks over the twin through the real transport and SigV4. Invocations equal the vault API requests, and their mean REPORT Duration equals the metric's Average. In the attack pack the [ERROR] count equals the metric's Errors. Also covered: request shapes, errors, bad arguments making no request, and the contract (one operation per method, exactly logs:DescribeLogGroups and logs:FilterLogEvents). It needs the twin's Logs, so it passes on work/dev.1.aws.a, or on dev.2's branch once that twin is in; dev.2's existing tests all pass with the patch.
+
 ## Security
 
 Log messages carry request paths, and in the attack pack those are the attacker's strings (`../../etc/passwd`, SQL fragments). The page must render every message as text (textContent, never innerHTML), as it does for the CloudFront logs. No new host beyond `*.amazonaws.com`, which the CSP already allows. For a narrowed connect-src later, `logs.<region>.amazonaws.com` joins lambda, firehose and monitoring.
