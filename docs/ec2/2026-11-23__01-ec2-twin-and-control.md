@@ -56,7 +56,7 @@ The region is the host's second label (us-east-1 for the global host), as Cloud 
 | CreateSecurityGroup, AuthorizeSecurityGroupIngress | the group id; `return` true | 2f.4 |
 | ImportKeyPair | `KeyFingerprint`, `KeyName`, `KeyPairId` | public key only; 2e |
 
-AMIs come only from the pack (`ec2.registerImage` is a seed op, not a call). Anything else answers `InvalidAction` (status to confirm; the twin uses 400), so a page that strays fails loudly in the twin.
+AMIs come only from the pack (`ec2.registerImage` is a seed op, not a call). Anything else answers `InvalidAction` (AWS documents no status for it, nor for `DryRunOperation` and `UnauthorizedOperation`; the twin uses 400, 412 and 403 as its own choice and says so in the pack), so a page that strays fails loudly in the twin.
 
 **Paging** (boto3.aws.a): without `MaxResults` a Describe returns everything; with it, a page holds 0 to `MaxResults` items and may be **empty with a `nextToken`**; DescribeSecurityGroups and DescribeTags take 5 to 1000; `MaxResults` with `InstanceIds` is refused (`InvalidParameterCombination`, to confirm); a bad token is `InvalidPaginationToken`; order is not guaranteed, so tests never depend on it. DescribeRegions, DescribeKeyPairs and DescribeAddresses have no paging, so the read API returns `next: null` for them. The twin pages at a small size and returns one empty page with a token in its paging test.
 
@@ -189,7 +189,7 @@ Recommended timing: V4 (b), after the Lambda path works end to end on the twin. 
 
 ```
 customer's account, chosen region (stack sws-vault-<id>, "ec2" variant)
-  S3 bucket  <--  EC2 instance (SG/Send container, s3 mode, port 8080)  <--  CloudFront (HTTP origin on 8080, or HTTPS, *check*)
+  S3 bucket  <--  EC2 instance (SG/Send container, s3 mode, port 8080)  <--  CloudFront (custom origin on 8080: CloudFront allows 80, 443 and 1024 to 65535)
   Secrets Manager secret (token)    instance role (bucket, secret, logs)       /health: the same CloudFront Function
 ```
 
@@ -209,7 +209,7 @@ customer's account, chosen region (stack sws-vault-<id>, "ec2" variant)
 
 ### 6b. Who deletes it: two locks, not one
 
-- **Lock 1, inside each stack:** the stack carries its own one-time EventBridge Scheduler schedule at `sws:expires-at` that deletes the stack, with a role that may delete only that stack (*check* that a schedule can target `cloudformation:DeleteStack` through the universal target, and that a stack may hold the schedule that deletes it). The deployment ends on time even if everything else is down.
+- **Lock 1, a schedule per deployment:** a one-time EventBridge Scheduler schedule at `sws:expires-at`, made **outside** the stack at the same time (AWS does not document a stack holding the schedule that deletes it), with `ActionAfterCompletion: DELETE` so it removes itself after firing, targeting `cloudformation:DeleteStack` through the universal target (`arn:aws:scheduler:::aws-sdk:cloudformation:deleteStack`), with a scheduler role whose DeleteStack is scoped to that one stack's ARN (boto3.aws.a, bcba1ec). With security.aws.a's service role (4.1), that role is one line. The deployment ends on time even if everything else is down.
 - **Lock 2, a sweeper:** something that lists stacks tagged `sws:managed=true` and deletes each at the **earlier** of `sws:expires-at` and its CreationTime plus the maximum lifetime (a tag is writable, the creation time is not; security.aws.a), and raises an alert for any instance not in a managed stack. Where it runs is a decision for Dinis: (a) an EventBridge schedule and a small Lambda in our account, made by an approved stack (recommended: no credential outside AWS); (b) a GitHub Actions job with an OIDC role (a new trust from GitHub to the account; if chosen, the OIDC `sub` pinned to repository, branch and environment); (c) the site when Dinis is signed in (no schedule at all, so not a sweeper).
 - **Kill switch, in two parts** (security.aws.a): "stop new" is one SSM parameter (or one tag on the hub stack) that everything reads before creating anything, set with one click; "end all" deletes every managed stack at once and is a plan Dinis approves. Clearing "stop new" is a plan Dinis approves.
 
@@ -258,10 +258,10 @@ No number is set here: V5 (b) says ec2.aws.a and billing.aws.a propose them from
 
 - **dev.1.aws.a** (took it, 15:04 UTC; after its privacy change and deploy step 4): build section 2 as one twin patch with test/twin/ec2.test.mjs, on top of work/dev.1.aws.a (49db094 or later); I review it against this design, architect.aws.a against design 02. The settle (2d) uses the twin clock dev.1.aws.a brings forward for stack events: `now()` and `tick(ms)`, clock-driven, never on read.
 - **architect.aws.a:** answered (15:06 UTC, docs/team/from-a/architect.aws.a.md); folded into 2c, 2d and 3. Later, not v1: a no-state `ec2.refused` entry so refused calls appear in the CloudTrail derivation.
-- **boto3.aws.a:** answered (docs/boto3/2026-11-23__10-ec2-design-api-check.md, work/boto3.aws.a 74b9d1f); folded into 2a to 2g, 3, 4, 5. Still to confirm there: `InvalidAction` and `DryRunOperation` statuses, the error for `MaxResults` with `InstanceIds`, CloudFront's custom-origin port rule, and whether a stack can hold the schedule that deletes it.
+- **boto3.aws.a:** answered (docs/boto3/2026-11-23__10-ec2-design-api-check.md, work/boto3.aws.a 74b9d1f); folded into 2a to 2g, 3, 4, 5. The four open items are settled in its addendum (bcba1ec): port 8080 is allowed; `InvalidParameterCombination` (400) for `MaxResults` with `InstanceIds` (the real code still to confirm); statuses undocumented, so the twin's are its own; the schedule lives outside the stack (6b).
 - **Dinis, via pm.aws.a, when the read page's first version exists:** one signed EC2 call from his browser to settle CORS (2a); not a decision, a test only he may run.
 - **iam.aws.a:** answered (docs/iam/ec2-01-answer.md); P-IAM-002 once V4 is decided.
 - **billing.aws.a:** done for t4g and public IPv4 (15:05 UTC, section 6d); still open: EBS gp3 per GB-month.
 - **security.aws.a:** reviewed (ff92c75), folded in.
-- **cloudformation.aws.a:** the EC2 variant of the Vault stack (5) when V4 allows; the self-deleting schedule (6b lock 1).
+- **cloudformation.aws.a:** the EC2 variant of the Vault stack (5) when V4 allows; the per-deployment schedule made beside the stack (6b lock 1).
 - **pm.aws.a:** nothing new for Dinis yet; V4 and V5 already cover this. The sweeper's home (6b: a, b or c) joins V5 when the decision page is drafted.
