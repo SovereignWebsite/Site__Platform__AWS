@@ -104,14 +104,14 @@
   },
   {
    "id": "bg6",
-   "narration": "G6. Recommended: alert at 25 dollars a month, against a known 20.",
+   "narration": "G6. Recommended: alert at 25 dollars. Whether it also stops new deployments is your pick.",
    "visual": {
     "kind": "svg",
     "src": "g6",
     "caption": "G6: Cost alert",
     "at": 0,
-    "play": 5.4,
-    "end": 4.8
+    "play": 6.6,
+    "end": 6
    },
    "facts": [
     "s-ec2",
@@ -168,14 +168,14 @@
   },
   {
    "id": "bz",
-   "narration": "All a, except G1, a plus b, and G9, b then a. Answer in pm.aws.a's session.",
+   "narration": "All a, except G1, a plus b, and G9, b then a. For G6, pick alert only or automatic stop. Answer in pm.aws.a's session.",
    "visual": {
     "kind": "svg",
     "src": "outro",
-    "caption": "Recommended: G1 a+b, G2 a, G3 a, G4 a, G5 a, G6 a, G7 a, G8 a, G9 b then a",
+    "caption": "Recommended: G1 a+b, G2 a, G3 a, G4 a, G5 a, G6 a with (i) or (ii), G7 a, G8 a, G9 b then a",
     "at": 0,
-    "play": 7,
-    "end": 6.4
+    "play": 10.2,
+    "end": 9.6
    },
    "facts": [
     "s-ec2"
@@ -334,7 +334,7 @@
     }
    ],
    "recommendation": "a",
-   "why": "Recommended: a. (a) notify only. Security's added option: a Budgets action denies creating new sws-ec2-* stacks at 100%, deleting nothing, undone by detaching the policy."
+   "why": "Recommended: a. At the cap: (i) alert only, recommended by security.aws.a; (ii) alert plus an automatic stop new (Budgets action, deletes nothing, undone by detaching the policy), recommended by ec2.aws.a. Your pick."
   },
   {
    "id": "G7",
@@ -427,8 +427,8 @@
  "sources": [
   {
    "id": "s-ec2",
-   "title": "ec2.aws.a: V5 guard rails decision page draft (21ed4a1)",
-   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/21ed4a1/docs/ec2/2026-11-23__02-v5-guard-rails-decision.md",
+   "title": "ec2.aws.a: V5 guard rails decision page draft (4c55c1f)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/4c55c1f/docs/ec2/2026-11-23__02-v5-guard-rails-decision.md",
    "read": "2026-11-23"
   },
   {

@@ -142,7 +142,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
  "title": "Guard rails: nine numbers",
  "source": "docs/board/decisions.md, batch 3, on work/pm.aws.a",
  "made_by": "pm.aws.a@SovereignWebsite.dinis",
- "answer": "G1 a+b, G2 a, G3 a, G4 a, G5 a, G6 a, G7 a, G8 a, G9 b then a",
+ "answer": "G1 a+b, G2 a, G3 a, G4 a, G5 a, G6 a with (i) or (ii), G7 a, G8 a, G9 b then a",
  "scenes": [
   {
    "id": "intro",
@@ -357,13 +357,13 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
     ],
     [
      7,
-     "Recommended: a.",
+     "Recommended: a. At the cap, alert only (security) or also stop new automatically (ec2): your pick.",
      "The recommended card lights; a note below."
     ]
    ],
    "panel": {
     "asks": "ec2.aws.a (21ed4a1); reviewed by security.aws.a (d397c1f)",
-    "what": "(a) notify only. Security's added option: a Budgets action denies creating new sws-ec2-* stacks at 100%, deleting nothing, undone by detaching the policy.",
+    "what": "(a) 25 USD. At the cap the agents differ: (i) alert only, recommended by security.aws.a; (ii) alert plus an automatic stop new (a Budgets action denies new sws-ec2-* stacks, deletes nothing, undone by detaching the policy), recommended by ec2.aws.a (4c55c1f).",
     "options": [
      [
       "a",
@@ -496,7 +496,7 @@ svg text{font-family:var(--f-body);fill:var(--ink)}
    "beats": [
     [
      0,
-     "Recommended: G1 a plus b, G2 to G8 a, G9 b then a.",
+     "Recommended: G1 a plus b, G2 to G8 a, G9 b then a. For G6, pick alert only or automatic stop new.",
      "The full answer line."
     ],
     [
@@ -548,7 +548,7 @@ function optionRow(opts, rec, tShow, tRec, notRec=[]) {
 }
 
 /* ---------- the scenes, drawn ---------- */
-const GV = {"g1": {"opts": [["a", "2 h", "0.0476"], ["b", "4 h", "0.0952"], ["c", "8 h", ""]], "rec": ["a", "b"], "note": "2 h default, 4 h hard cap"}, "g2": {"opts": [["a", "26 h", "0.6188"], ["b", "30 h", ""], ["c", "no cap", ""]], "rec": ["a"], "note": "26 h backstop"}, "g3": {"opts": [["a", "London + Ireland", ""], ["b", "more, later", ""]], "rec": ["a"], "note": "the only two priced"}, "g4": {"opts": [["a", "nano, micro, small", "0.0047 to 0.0188/h"], ["b", "+ medium", "0.0376/h"]], "rec": ["a"], "note": "medium only if the twin needs it"}, "g5": {"opts": [["a", "3 at most", ""], ["b", "you name", ""]], "rec": ["a"], "note": "one each, plus an overlap"}, "g6": {"opts": [["a", "25 USD", ""], ["b", "50 USD", ""], ["c", "100 USD", ""]], "rec": ["a"], "note": "known month about 20 USD"}, "g7": {"opts": [["a", "stop new: 1 click", ""], ["b", "end all: 1 click", ""]], "rec": ["a"], "note": "end all needs your approval"}, "g8": {"opts": [["a", "AWS schedule + Lambda", ""], ["b", "GitHub Actions", ""], ["c", "only in the site", ""]], "rec": ["a"], "note": "no credential outside AWS"}, "g9": {"opts": [["a", "move role now", ""], ["b", "twin week first", ""]], "rec": ["b"], "note": "a week in the twin first"}};
+const GV = {"g1": {"opts": [["a", "2 h", "0.0476"], ["b", "4 h", "0.0952"], ["c", "8 h", ""]], "rec": ["a", "b"], "note": "2 h default, 4 h hard cap"}, "g2": {"opts": [["a", "26 h", "0.6188"], ["b", "30 h", ""], ["c", "no cap", ""]], "rec": ["a"], "note": "26 h backstop"}, "g3": {"opts": [["a", "London + Ireland", ""], ["b", "more, later", ""]], "rec": ["a"], "note": "the only two priced"}, "g4": {"opts": [["a", "nano, micro, small", "0.0047 to 0.0188/h"], ["b", "+ medium", "0.0376/h"]], "rec": ["a"], "note": "medium only if the twin needs it"}, "g5": {"opts": [["a", "3 at most", ""], ["b", "you name", ""]], "rec": ["a"], "note": "one each, plus an overlap"}, "g6": {"opts": [["a", "25 USD", ""], ["b", "50 USD", ""], ["c", "100 USD", ""]], "rec": ["a"], "note": "at the cap: alert only, or also stop new? your pick"}, "g7": {"opts": [["a", "stop new: 1 click", ""], ["b", "end all: 1 click", ""]], "rec": ["a"], "note": "end all needs your approval"}, "g8": {"opts": [["a", "AWS schedule + Lambda", ""], ["b", "GitHub Actions", ""], ["c", "only in the site", ""]], "rec": ["a"], "note": "no credential outside AWS"}, "g9": {"opts": [["a", "move role now", ""], ["b", "twin week first", ""]], "rec": ["b"], "note": "a week in the twin first"}};
 function gScene(id){
   const v = GV[id]; const n = v.opts.length, w = 240, gap = 30, x0 = (W-(n*w+(n-1)*gap))/2;
   let s = '';
@@ -580,7 +580,7 @@ g8(){ return gScene('g8'); },
 g9(){ return gScene('g9'); },
 outro(){
   let s = txt(W/2,150,'Recommended','t-m t-mute');
-  s += cue(0.3, txt(W/2,236,'G1 a+b · G2 to G8 a · G9 b then a','t-l'), 'pop');
+  s += cue(0.3, txt(W/2,236,'G1 a+b · G2 to G8 a · G9 b then a','t-l') + txt(W/2,274,'G6 at the cap: (i) alert only or (ii) stop new automatically','t-s t-acc'), 'pop');
   s += cue(5, txt(W/2,320,'Answer in pm.aws.a\'s session','t-m'));
   s += cue(5.6, txt(W/2,348,'claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B','t-mono t-mute'));
   return s;
