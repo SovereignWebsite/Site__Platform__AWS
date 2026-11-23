@@ -4,12 +4,12 @@ Description: >-
   vault store, the server as a Lambda behind a Function URL, CloudFront in front (with /health for the deploy page),
   and optionally the customer's own domain. Two modes (DeployMode): access-stack, run with RoleARN = the deploy
   role of stack sws-vault-<id>-access (iam.aws.a, step 3); or one-stack, run as the customer's own console
-  identity with the boundary in this stack. Dinis decides which the page offers. DRAFT 0.4.1 by cloudformation.aws.a, 23 Nov 2026. Not for use on a real account: see
+  identity with the boundary in this stack. Dinis decides which the page offers. DRAFT 0.4.2 by cloudformation.aws.a, 23 Nov 2026. Not for use on a real account: see
   docs/cloudformation/2026-11-23__vault-stack-03.md.
 
 Metadata:
   SovereignWebsite:
-    TemplateVersion: 0.4.1-draft
+    TemplateVersion: 0.4.2-draft
     Pinning: served only as an immutable, versioned object whose sha256 the deploy page shows next to the button.
     CreatesNoRoleForUs: true
   AWS::CloudFormation::Interface:
@@ -57,7 +57,7 @@ Parameters:
     Type: String
     Default: ""
     # A String, not AWS::Route53::HostedZone::Id: that type cannot be empty, and empty means "DNS elsewhere".
-    AllowedPattern: "^$|^Z[A-Z0-9]{1,32}$"
+    AllowedPattern: "^$|^Z[A-Z0-9]{1,31}$"
     Description: The Route 53 hosted zone holding DomainName, if it is in this account. Empty means your DNS is elsewhere.
   CertificateArn:
     Type: String
@@ -288,7 +288,7 @@ Resources:
           if (event.request.method === "OPTIONS") return { statusCode: 204, statusDescription: "No Content", headers: h };
           if (event.request.method !== "GET") return { statusCode: 405, statusDescription: "Method Not Allowed", headers: h };
           return { statusCode: 200, statusDescription: "OK", headers: h,
-            body: { encoding: "text", data: JSON.stringify({ vault_id: "${VaultId}", template_version: "0.4.1-draft" }) } };
+            body: { encoding: "text", data: JSON.stringify({ vault_id: "${VaultId}", template_version: "0.4.2-draft" }) } };
         }
 
   # ---- CloudFront in front, from phase 1 ----
@@ -384,4 +384,4 @@ Outputs:
   DeployMode:
     Value: !Ref DeployMode
   TemplateVersion:
-    Value: 0.4.1-draft
+    Value: 0.4.2-draft

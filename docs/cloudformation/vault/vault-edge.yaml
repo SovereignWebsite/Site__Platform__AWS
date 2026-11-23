@@ -21,7 +21,7 @@ Parameters:
   HostedZoneId:
     Type: String
     Default: ""
-    AllowedPattern: "^$|^Z[A-Z0-9]{1,32}$"
+    AllowedPattern: "^$|^Z[A-Z0-9]{1,31}$"
     Description: >-
       The Route 53 hosted zone holding DomainName, if it is in this account. Empty means DNS is elsewhere. ACM's
       validation record (a CNAME) stays in the zone after this stack is deleted; remove it by hand if wanted.
