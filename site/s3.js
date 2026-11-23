@@ -234,11 +234,110 @@
         if (rows.length) { box.appendChild(jsonView(rows)); return P.say(st, name + ": JSON Lines (" + rows.length + "), formatted.", "ok"); }
       } catch (e) { /* not JSON Lines */ }
     }
+    if (/^\s*\{/.test(text)) {
+      // Firehose writes records back to back ("}{") unless a delimiter is set: read them as a list.
+      var recs = concatenatedJson(text);
+      if (recs) { box.appendChild(jsonView(recs)); return P.say(st, name + ": " + recs.length + " JSON records back to back (as Firehose writes them), formatted.", "ok"); }
+    }
+    var tab = tableOf(name, type, text);
+    if (tab) { box.appendChild(tableView(tab, name, text)); return P.say(st, name + ": " + tab.what + ", " + tab.rows.length + " row" + (tab.rows.length === 1 ? "" : "s") + ".", "ok"); }
     if (/^text\/|xml|javascript|yaml/.test(type) || TEXT.test(name) || !/[\x00-\x08\x0E-\x1F]/.test(text.slice(0, 4096))) {
       var coloured = window.Highlight && Highlight.highlight(name, text, document);
       box.appendChild(coloured || P.el("pre", { text: text })); return P.say(st, name, "ok");
     }
     P.say(st, name + ": not text; use Download.", "ok");
+  }
+
+  // Split text holding JSON values back to back ({..}{..} or {..}\n{..} with no delimiter rule). Returns the list,
+  // or null if it is not at least two whole JSON objects and nothing else.
+  function concatenatedJson(text) {
+    var out = [], depth = 0, inStr = false, esc = false, start = -1;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text.charCodeAt(i);
+      if (inStr) { if (esc) esc = false; else if (ch === 92) esc = true; else if (ch === 34) inStr = false; continue; }
+      if (ch === 34) { if (depth === 0) return null; inStr = true; }
+      else if (ch === 123 || ch === 91) { if (depth === 0) { if (ch !== 123) return null; start = i; } depth++; }
+      else if (ch === 125 || ch === 93) {
+        if (--depth < 0) return null;
+        if (depth === 0) { try { out.push(JSON.parse(text.slice(start, i + 1))); } catch (e) { return null; } }
+      } else if (depth === 0 && !(ch === 32 || ch === 9 || ch === 10 || ch === 13)) return null;
+    }
+    return depth === 0 && out.length > 1 ? out : null;
+  }
+
+  // ---- tables: CSV, TSV and CloudFront logs ----
+  // CSV as RFC 4180 (quotes, doubled quotes, line breaks inside quotes).
+  function parseCsv(text, sep) {
+    var rows = [], row = [], cell = "", q = false, i = 0, c;
+    for (; i < text.length; i++) {
+      c = text[i];
+      if (q) { if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; continue; }
+      if (c === '"' && cell === "") q = true;
+      else if (c === sep) { row.push(cell); cell = ""; }
+      else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; row.push(cell); rows.push(row); row = []; cell = ""; }
+      else cell += c;
+    }
+    if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+    return rows;
+  }
+  // What table, if any, the text is: CloudFront standard logs (#Version / #Fields headers, tab-separated), a .csv,
+  // a .tsv, or text whose first lines all have the same number (two or more) of tabs, as CloudFront real-time logs do.
+  function tableOf(name, type, text) {
+    var lines = text.split(/\r?\n/), fields = null, body = [];
+    if (/^#Version:/.test(lines[0] || "") || lines.slice(0, 5).some(function (l) { return /^#Fields:/.test(l); })) {
+      lines.forEach(function (l) {
+        if (/^#Fields:/.test(l)) fields = l.replace(/^#Fields:\s*/, "").trim().split(/\s+/);
+        else if (l && l[0] !== "#") body.push(l.split("\t"));
+      });
+      return { what: "CloudFront log", head: fields, rows: body };
+    }
+    if (/\.csv$/i.test(name) || type === "text/csv") {
+      var rows = parseCsv(text, ","); if (rows.length < 2) return null;
+      return { what: "CSV", head: rows[0], rows: rows.slice(1) };
+    }
+    var sample = lines.filter(function (l) { return l; }).slice(0, 20);
+    var tabs = sample.map(function (l) { return l.split("\t").length - 1; });
+    var code = /\.(ya?ml|xml|html?|css|m?js|ts|py|sh|toml|ini|cfg|conf|sql|svg|md|go|rs|java|c|h|mk)$/i.test(name) || /^makefile$/i.test(name);
+    if (/\.tsv$/i.test(name) || type === "text/tab-separated-values" || (!code && sample.length > 1 && tabs[0] >= 2 && tabs.every(function (n) { return n === tabs[0]; }))) {
+      body = lines.filter(function (l) { return l; }).map(function (l) { return l.split("\t"); });
+      if (/\.tsv$/i.test(name) && body.length > 1) return { what: "TSV", head: body[0], rows: body.slice(1) };
+      return { what: "tab-separated", head: null, rows: body };
+    }
+    return null;
+  }
+  // A table of the rows, TABLE_PAGE at a time, cells as text only; "Show as text" swaps in the raw file.
+  var TABLE_PAGE = 200;
+  function tableView(tab, name, text) {
+    var wrap = P.el("div", { class: "table-view" }), cols = tab.head ? tab.head.length : 0;
+    tab.rows.forEach(function (r) { if (r.length > cols) cols = r.length; });
+    var head = [];
+    for (var c = 0; c < cols; c++) head.push(P.el("th", { text: tab.head && tab.head[c] != null ? tab.head[c] : String(c + 1) }));
+    var tbody = P.el("tbody", {}), shown = 0;
+    var table = P.el("table", { class: "s3-table data-table" }, [P.el("thead", {}, [P.el("tr", {}, head)]), tbody]);
+    var more = P.el("button", { type: "button", class: "quiet" }), raw = null;
+    function page() {
+      var to = Math.min(tab.rows.length, shown + TABLE_PAGE);
+      for (var i = shown; i < to; i++) {
+        var tds = []; for (var j = 0; j < cols; j++) tds.push(P.el("td", { text: tab.rows[i][j] != null ? tab.rows[i][j] : "" }));
+        tbody.appendChild(P.el("tr", {}, tds));
+      }
+      shown = to;
+      more.hidden = shown >= tab.rows.length;
+      more.textContent = "Show " + Math.min(TABLE_PAGE, tab.rows.length - shown) + " more of " + (tab.rows.length - shown);
+    }
+    more.onclick = page;
+    var asText = P.el("button", { type: "button", class: "quiet", text: "Show as text" });
+    asText.onclick = function () {
+      var t = !raw || raw.hidden;
+      if (!raw) { raw = P.el("pre", { text: text }); wrap.appendChild(raw); }
+      raw.hidden = !t; grid.hidden = t; more.hidden = t || shown >= tab.rows.length;
+      asText.textContent = t ? "Show as a table" : "Show as text";
+    };
+    var grid = P.el("div", { class: "s3-wrap" }, [table]);
+    wrap.appendChild(P.el("p", { class: "row" }, [asText, P.el("span", { class: "small", text: tab.rows.length + " rows, " + cols + " columns" + (tab.head ? "" : " (no header row: numbered)") })]));
+    wrap.appendChild(grid); wrap.appendChild(P.el("div", { class: "row" }, [more]));
+    page();
+    return wrap;
   }
 
   function openFile(key, size) {
@@ -481,6 +580,8 @@
   }
   // Open a bucket at a folder (the twin's "See it in" links): through the address, so Back and reload work too.
   function openAt(bucket, prefix) { var h = route(bucket, prefix || ""); if (location.hash !== h) location.hash = h; else apply(parse(h)); }
-  window.S3Browser = { render: render, jsonView: jsonView, openAt: openAt, limits: LIMITS };
+  // view: show bytes as the browser would (for tests and for other views over the same reader).
+  function view(name, type, u8) { var box = P.el("div", {}), st = P.el("p", { class: "status" }); show(box, name, type || "", u8, st); return { box: box, status: st }; }
+  window.S3Browser = { render: render, jsonView: jsonView, openAt: openAt, view: view, limits: LIMITS };
   init();
 })();
