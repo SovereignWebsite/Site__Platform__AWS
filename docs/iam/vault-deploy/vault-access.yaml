@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.1.6 (iam.aws.a, deploy plan step 3; for review by
+  SG/Send Vault access stack sws-vault-<id>-access, DRAFT 0.2.0 (iam.aws.a, deploy plan step 3; for review by
   security.aws.a and cloudformation.aws.a; not for any real account). Run first, by the customer, from their own
   console. Makes two things only: the deploy role that stacks sws-vault-<id> and sws-vault-<id>-edge run with, and
   the boundary that caps the Vault's own role. Nothing here can reach outside this one Vault's resources.
@@ -26,6 +26,16 @@ Parameters:
     Default: ""
     AllowedPattern: "^$|^arn:aws:ecr:[a-z0-9-]+:[0-9]{12}:repository/[a-z0-9._/-]+$"
     Description: The ECR repository the Vault's image is pulled from (open question O1).
+  DistributionId:
+    Type: String
+    Default: ""
+    AllowedPattern: "^$|^E[A-Z0-9]{8,20}$"
+    Description: Empty on the first deploy; then the Vault stack's CloudFront distribution id (an output), so updates and teardown reach that one distribution only.
+  CertificateArn:
+    Type: String
+    Default: ""
+    AllowedPattern: "^$|^arn:aws:acm:us-east-1:[0-9]{12}:certificate/[0-9a-f-]{36}$"
+    Description: Empty until the -edge stack exists; then its certificate's ARN, so updates and teardown reach that one certificate only.
   ReadTokenAtDeploy:
     Type: String
     Default: "true"
@@ -39,6 +49,8 @@ Conditions:
   HasDomain: !Not [!Equals [!Ref DomainName, ""]]
   HasImageRepo: !Not [!Equals [!Ref ImageRepositoryArn, ""]]
   ReadsToken: !Equals [!Ref ReadTokenAtDeploy, "true"]
+  HasDistribution: !Not [!Equals [!Ref DistributionId, ""]]
+  HasCertificate: !And [!Condition HasDomain, !Not [!Equals [!Ref CertificateArn, ""]]]
 
 Resources:
   # The most the Vault's own role (sws-vault-<id>-api) may ever do, whatever the Vault template says.
@@ -78,14 +90,10 @@ Resources:
           - Effect: Allow
             Principal: { Service: cloudformation.amazonaws.com }
             Action: sts:AssumeRole
-            Condition:
-              StringEquals: { "aws:SourceAccount": !Ref AWS::AccountId }
-              # Whether CloudFormation sets aws:SourceArn when it assumes a service role is open (boto3.aws.a).
-              # If it does not, this condition must go, or the role cannot be assumed: test in the twin first.
-              ArnLike:
-                "aws:SourceArn":
-                  - !Sub "arn:aws:cloudformation:*:${AWS::AccountId}:stack/sws-vault-${VaultId}/*"
-                  - !Sub "arn:aws:cloudformation:*:${AWS::AccountId}:stack/sws-vault-${VaultId}-edge/*"
+            # boto3.aws.a note 09: aws:SourceArn and aws:SourceAccount are documented for CloudFormation's registry
+            # roles and StackSets, not for a stack's service role, and either fails closed if not sent. So no source
+            # condition until a test stack (a plan for Dinis) shows the keys arrive. The role is still usable only by
+            # CloudFormation in this account, by people who can create or update these stacks.
       Policies:
         - PolicyName: vault
           PolicyDocument:
@@ -93,7 +101,7 @@ Resources:
             Statement:
               - Sid: Bucket
                 Effect: Allow
-                Action: [s3:CreateBucket, s3:GetBucketLocation, s3:GetBucketTagging, s3:PutBucketTagging,
+                Action: [s3:CreateBucket, s3:GetBucketTagging, s3:PutBucketTagging,
                   s3:GetBucketPublicAccessBlock, s3:PutBucketPublicAccessBlock, s3:GetEncryptionConfiguration,
                   s3:PutEncryptionConfiguration, s3:GetBucketVersioning, s3:PutBucketVersioning,
                   s3:GetBucketOwnershipControls, s3:PutBucketOwnershipControls, s3:GetBucketPolicy, s3:PutBucketPolicy,
@@ -128,7 +136,7 @@ Resources:
                 Effect: Allow
                 Action: [iam:GetRole, iam:DeleteRole, iam:PutRolePolicy, iam:GetRolePolicy, iam:DeleteRolePolicy,
                   iam:TagRole, iam:UntagRole, iam:ListRoleTags, iam:ListRolePolicies, iam:ListAttachedRolePolicies,
-                  iam:DetachRolePolicy]
+                  iam:DetachRolePolicy, iam:UpdateRole, iam:UpdateRoleDescription]
                 Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/sws-vault-${VaultId}-api"
               - Sid: PassTheVaultsRoleToLambdaOnly
                 Effect: Allow
@@ -138,7 +146,7 @@ Resources:
                   StringEquals: { "iam:PassedToService": lambda.amazonaws.com }
               - Sid: Function
                 Effect: Allow
-                Action: [lambda:CreateFunction, lambda:GetFunction, lambda:GetFunctionConfiguration,
+                Action: [lambda:CreateFunction, lambda:GetFunction,
                   lambda:UpdateFunctionCode, lambda:UpdateFunctionConfiguration, lambda:DeleteFunction,
                   lambda:TagResource, lambda:UntagResource, lambda:ListTags,
                   lambda:PutFunctionConcurrency, lambda:DeleteFunctionConcurrency,
@@ -184,47 +192,60 @@ Resources:
                 - !Ref AWS::NoValue
               - Sid: HealthFunction
                 Effect: Allow
-                Action: [cloudfront:CreateFunction, cloudfront:DescribeFunction, cloudfront:UpdateFunction,
+                Action: [cloudfront:DescribeFunction, cloudfront:UpdateFunction,
                   cloudfront:PublishFunction, cloudfront:DeleteFunction, cloudfront:TagResource, cloudfront:UntagResource,
                   cloudfront:ListTagsForResource]
                 Resource: !Sub "arn:aws:cloudfront::${AWS::AccountId}:function/sws-vault-${VaultId}-health"
               # Tag only in the create request (security.aws.a point 4); change and delete only what carries this id.
-              # security.aws.a review 0.1.0 (1): TagResource on "*" with only aws:RequestTag would let the role tag a
-              # customer's existing distribution and then change or delete it. So create carries no tagging right;
-              # tagging and every change only where the distribution already carries sws-vault = <id>, and an
-              # explicit deny otherwise (NeverTagOthers below). If CreateDistributionWithTags cannot then tag the new
-              # distribution (boto3.aws.a to check), scope by the distribution id instead (an output passed back on update).
-              - Sid: DistributionCreate
+              # cloudfront:CreateFunction has no resource type in the SAR (boto3.aws.a 09), so it can only be "*".
+              # A CloudFront Function does nothing until a distribution uses it, and distributions are scoped below.
+              - Sid: HealthFunctionCreate
                 Effect: Allow
-                Action: cloudfront:CreateDistribution
+                Action: cloudfront:CreateFunction
+                Resource: "*"
+              # security.aws.a review 0.1.0 (1) and boto3.aws.a 09 (3): tagging at create needs TagResource on a
+              # distribution that has no tag yet, so a tag cannot be what scopes changes. Changes and deletion are
+              # scoped instead by the distribution's id, passed back from the Vault stack's output (DistributionId):
+              # a tag is then a label only, and putting it on a customer's distribution gains nothing.
+              - Sid: DistributionCreateTagged
+                Effect: Allow
+                Action: [cloudfront:CreateDistribution, cloudfront:TagResource]
                 Resource: "*"
                 Condition:
                   StringEquals: { "aws:RequestTag/sws-vault": !Ref VaultId }
-              - Sid: DistributionOwnOnly
+              - Sid: DistributionRead
                 Effect: Allow
-                Action: [cloudfront:GetDistribution, cloudfront:GetDistributionConfig, cloudfront:UpdateDistribution,
-                  cloudfront:DeleteDistribution, cloudfront:TagResource, cloudfront:UntagResource, cloudfront:ListTagsForResource]
+                Action: [cloudfront:GetDistribution, cloudfront:GetDistributionConfig, cloudfront:ListTagsForResource]
                 Resource: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/*"
-                Condition:
-                  StringEquals: { "aws:ResourceTag/sws-vault": !Ref VaultId }
+              - !If
+                - HasDistribution
+                - Sid: DistributionThisOneOnly
+                  Effect: Allow
+                  Action: [cloudfront:UpdateDistribution, cloudfront:DeleteDistribution, cloudfront:UntagResource]
+                  Resource: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${DistributionId}"
+                - !Ref AWS::NoValue
               - !If
                 - HasDomain
                 - Sid: CertificateCreateTagged
                   Effect: Allow
-                  Action: acm:RequestCertificate
+                  Action: [acm:RequestCertificate, acm:AddTagsToCertificate]
                   Resource: "*"
                   Condition:
                     StringEquals: { "aws:RequestTag/sws-vault": !Ref VaultId }
                 - !Ref AWS::NoValue
               - !If
                 - HasDomain
-                - Sid: CertificateOwnOnly
+                - Sid: CertificateRead
                   Effect: Allow
-                  Action: [acm:DescribeCertificate, acm:DeleteCertificate, acm:AddTagsToCertificate, acm:RemoveTagsFromCertificate,
-                    acm:ListTagsForCertificate, acm:UpdateCertificateOptions]
+                  Action: [acm:DescribeCertificate, acm:ListTagsForCertificate]
                   Resource: !Sub "arn:aws:acm:us-east-1:${AWS::AccountId}:certificate/*"
-                  Condition:
-                    StringEquals: { "aws:ResourceTag/sws-vault": !Ref VaultId }
+                - !Ref AWS::NoValue
+              - !If
+                - HasCertificate
+                - Sid: CertificateThisOneOnly
+                  Effect: Allow
+                  Action: [acm:DeleteCertificate, acm:RemoveTagsFromCertificate, acm:UpdateCertificateOptions]
+                  Resource: !Ref CertificateArn
                 - !Ref AWS::NoValue
               # security.aws.a point 5: the one zone by id, the Vault's name and the certificate's validation name only,
               # A, AAAA and CNAME only (no NS, no SOA, no delegation). ACM's validation name is "_" plus a fixed-length
@@ -281,11 +302,13 @@ Resources:
                   secretsmanager:PutResourcePolicy, secretsmanager:ReplicateSecretToRegions,
                   lambda:InvokeFunction]
                 Resource: "*"
-              - Sid: NeverTagOthers
+              # A tag is a label now, but never relabel another Vault's distribution.
+              - Sid: NeverRelabelAnotherVault
                 Effect: Deny
                 Action: [cloudfront:TagResource, cloudfront:UntagResource]
                 Resource: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/*"
                 Condition:
+                  "Null": { "aws:ResourceTag/sws-vault": "false" }
                   StringNotEquals: { "aws:ResourceTag/sws-vault": !Ref VaultId }
               # security.aws.a re-review 0.1.2 (2): "?" also matches ".", so the 32-character validation pattern could
               # match a two-label name of that length (_acme-challenge.<16 chars>.<domain>: DNS-01 for a new subdomain).
