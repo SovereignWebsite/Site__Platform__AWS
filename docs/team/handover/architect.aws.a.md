@@ -22,7 +22,7 @@ This session's signing key (sha256:8699204a5b3a9875, signing sha256:2311c1b95a70
 
 ## Landed on dev since this hand-over was first written
 
-- **461d422** (aws.c at Dinis's yes, ~13:50): dev.2.aws.a's site/api/ work squashed from work/dev.2.aws.a 4ba620c, including the twin's IAM reads in the pre-journal form. So the twin.js landing order below changed: dev.1.aws.a's journal (88831eb onward) must now rebase onto dev and fold the IAM reads in as iam.* entries (852c1fe shows how); 852c1fe itself is superseded.
+- **461d422** (aws.c at Dinis's yes, ~13:50): dev.2.aws.a's site/api/ work squashed from work/dev.2.aws.a 4ba620c, including the twin's IAM reads in the pre-journal form. dev.1.aws.a has already merged dev (to c87dc92) into work/dev.1.aws.a at 82a24a5, with the IAM reads as iam.* journal entries (852c1fe, 3277f4c), then Lambda 3e936dc, CloudFormation on the journal ba4bec5, step 2 74c254d, loader a00f63b, f0a5838, 49db094; golden 3690 throughout. That one branch is now the whole twin.js line; it lands (rebase or merge) once keys are live and aws.c reviews.
 - **c87dc92**: cloudformation.aws.a's twin patch 01 as docs for review (not yet in twin.js), so CfnApi/Route53Api still wait.
 
 ## Developers' branches (all reviewed and agreed)
