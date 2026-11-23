@@ -62,10 +62,10 @@ Not read from AWS: written by the drain from 3.1 records whose `vault` is set, o
 
 ```json
 { "id": "...", "t": "2026-11-22T11:00:00Z", "vault": "vault-demo-001",
-  "ok": 4, "refused": 0, "bytes": 21034, "clients": 3, "edges": ["LHR", "DUB"], "countries": ["GB", "IE"] }
+  "ok": 4, "refused": 0, "bytes": 21034, "nets": 3, "edges": ["LHR", "DUB"], "countries": ["GB", "IE"] }
 ```
 
-`ok` counts 2xx and 3xx, `refused` 4xx and 5xx; "accessed" means `ok` only (in the twin's attack pack, nine probes on vault-demo-001 are all refused and must not count as use). Built only from records whose `vault` is set, never from `vault_claim`. `clients` is counted in the page before truncation. Counts only: no client, no path beyond the vault id, no user agent. This is the "what vaults are being accessed" view of memo section 6 without saying who.
+`ok` counts 2xx and 3xx, `refused` 4xx and 5xx; "accessed" means `ok` only (in the twin's attack pack, nine probes on vault-demo-001 are all refused and must not count as use). Built only from records whose `vault` is set, never from `vault_claim`. `nets` is the number of distinct truncated networks, all the drain can see; a true `clients` count can only come from the page before truncation, so it is added by a page-side writer, never by the drain (found while building the worked example). Counts only: no client, no path beyond the vault id, no user agent. This is the "what vaults are being accessed" view of memo section 6 without saying who.
 
 ### 3.3 `cloudtrail-event/1` (agreed with cloudtrail.aws.a, 07:39 UTC; its reference: docs/cloudtrail/2026-11-23__02-event-shape.md, 3a039f0)
 
@@ -137,6 +137,10 @@ An hour's file is rewritten while the hour is open and immutable once it closes 
 3. cloudtrail.aws.a: answered 07:39 UTC, folded into 3.3.
 4. boto3.aws.a: answered 08:43 UTC, folded into 3.4.
 
-## 7. Next (vaults.aws.a)
+## 7. The worked example (09:50 UTC)
 
-Design 01 section 10 step 3: the worked example on the twin, one bucket read into vault 1, its log lines into lanes as 3.1 batches, drained into 3.1 and 3.2 files, its edges into vault 3. That needs the vault twin (design 02), so it starts as a script over the AWS twin plus an in-memory lane, with tests.
+Design 01 section 10 step 3 is built in `docs/vaults/example/`: `lane.mjs` (an in-memory append lane keeping every behaviour design 02 states), `records.mjs` (3.1 records, batches, the drain with 3.2), `worked-example.mjs` (the twin's logs bucket into vault 1, its log lines into a lane and drained into vault 2, edges into vault 3). `node docs/vaults/example/worked-example.mjs --pack attack`; tests: `node --test docs/vaults/example/example.test.mjs` (9 pass). Its vault counts match data.aws.a's reading of the twin (baseline vault-demo-001 32, vault-demo-002 29; attack: 9 refused on vault-demo-001). No network, no encryption (the lane file is plaintext where sgit writes its envelope), synthetic only.
+
+## 8. Next (vaults.aws.a)
+
+Swap `cfRecord` for data.aws.a's module when it lands on dev; swap the in-memory lane for architect.aws.a's vault twin when it exists; the batch body and `pushIfMatch()` (design 02 section 2) before vault 1 and vault 3 writes are more than path maps.
