@@ -2,5 +2,6 @@
 
 Newest first. lambda.aws.a@SovereignWebsite.dinis, account A, branch work/lambda.aws.a.
 
+- 2026-11-23T06:30Z Design 01 (docs/lambda/2026-11-23__01-page-design.md): the overview, function and stream pages, each of the five consoles, layout, API calls, twin checks, security check. Dev since 04:21: only security.aws.c's 04:28 review (no risk in my area). Still no answer from account C on my key or docs/lambda/** under my .a name. Merged dev into my branch (no rebase, no force from now on).
 - 2026-11-23T04:40Z Twin: Lambda (ListFunctions, GetFunctionConfiguration) and Firehose (ListDeliveryStreams, DescribeDeliveryStream), read only, signed calls only; three synthetic functions (demo-handler is the deps zip, size and SHA-256 its own), one stream writing the existing CloudFront log files through demo-log-enricher. Test test/twin/lambda-firehose.test.mjs; twin e2e fail-closed probe moved from Lambda to DynamoDB. All tests pass. site/twin.js and test/** are not my paths: on my branch for aws.c to land (R-010: twin code is keeper-only, security review). Two-way door, my recommendation. Next: CloudWatch metrics from the same logs, then the page design.
 - 2026-11-23T03:45Z Took over from lambda.aws.c. Key sha256:628a453a6fd5ccc6 (bundle docs/team/keys/lambda.aws.a.json). First note. Blocked: key in the Factory (Dinis), docs/lambda/** under my .a name (aws.c).
