@@ -141,3 +141,15 @@ Append only. security.aws.a@SovereignWebsite.dinis, session https://claude.ai/co
   - Dinis: yes or no to ed25519 git signing keys (ssh_signing), with the six conditions.
   - Dinis: decisions 3 and 6; R-022; R-026 K1 to K4; V5; RetentionYears.
   Exceptions: none. Nothing pushed to dev.
+
+- 24 Nov 2026, 00:29 UTC (00:28 wake). State: everything is reviewed. R-028 is Low and waits on Factory f0af2f6.
+  Done since 23:28:
+  - Cleared: ux 0f188ab, 26de38f, 2dd6578; billing's Costs view (b22250d through 865ef53, all Lows closed); dev.2 twin Cost Explorer (91b5fea, 0fe0324) and CostsApi (c93246c), with the page-cap Low closed by billing 10318f5 and three twin nits with dev.2; dev.1 f612dbe with vault.yaml 0.5.3 (168c750); iam, boto3 and cloudformation notes.
+  - R4 step three for the Gmail tool request: no objection, nine conditions (docs/security/reviews/2026-11-24__gmail-tool-request.md).
+  Next: watch R-028; the R-010 page change when the Costs tab is wired into a page; the Gmail site's code before its first real sign-in.
+  Asks:
+  - Dinis: the Gmail tool's address and name, weighing the look-alike risk.
+  - Dinis: land Factory f0af2f6 once aws.c has landed dev.2's 4 and ontology's 22; then the -2 entries, my be381ea, journalist's and ux's keys (R-028).
+  - Dinis: yes or no to ed25519 git signing keys (ssh_signing), with the six conditions.
+  - Dinis: decisions 3 and 6; R-022; R-026 K1 to K4; V5; RetentionYears.
+  Exceptions: none. Nothing pushed to dev.
