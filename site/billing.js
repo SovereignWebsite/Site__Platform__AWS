@@ -93,7 +93,7 @@
         var lim = num(get(b, ["BudgetLimit", "Amount"])), act = num(get(b, ["CalculatedSpend", "ActualSpend", "Amount"]));
         return { name: String(get(b, ["BudgetName"]) || "(unnamed)"), type: get(b, ["BudgetType"]), period: get(b, ["TimeUnit"]), limit: lim, actual: act,
           forecast: num(get(b, ["CalculatedSpend", "ForecastedSpend", "Amount"])), unit: get(b, ["BudgetLimit", "Unit"]) || "USD",
-          used: lim && act !== null ? act / lim : null };
+          used: lim > 0 && act !== null ? act / lim : null };
       });
     });
     m.links = LINKS;
@@ -223,7 +223,7 @@
         var lim = apiMoney(b && b.limit), act = apiMoney(b && b.actual), fc = apiMoney(b && b.forecast);
         var l = lim ? lim.amount : null, ac = act ? act.amount : null;
         return { name: String((b && b.name) || "(unnamed)"), type: b && b.type, period: b && b.timeUnit, limit: l, actual: ac,
-          forecast: fc ? fc.amount : null, unit: lim ? lim.unit : "USD", used: l && ac !== null ? ac / l : null };
+          forecast: fc ? fc.amount : null, unit: lim ? lim.unit : "USD", used: l > 0 && ac !== null ? ac / l : null };
       });
     });
     return m;

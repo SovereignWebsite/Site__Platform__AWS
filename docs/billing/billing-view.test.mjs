@@ -173,3 +173,19 @@ test("budgets read through CostsApi: each budget with how close it is, amounts m
   assert.deepEqual(texts, ["50%"]);
   assert.ok(consoleLink);
 });
+
+test("budget Used is null (shown 'not read') for a limit of 0 or below, or missing spend; never 0% or negative", async () => {
+  const bs = [
+    { name: "zero", limit: { amount: 0, unit: "USD" }, actual: { amount: 1, unit: "USD" } },
+    { name: "negative", limit: { amount: -5, unit: "USD" }, actual: { amount: 1, unit: "USD" } },
+    { name: "no spend", limit: { amount: 10, unit: "USD" }, actual: null },
+    { name: "ok", limit: { amount: 10, unit: "USD" }, actual: { amount: 2.5, unit: "USD" } },
+  ];
+  const m = B.modelFromApi({ budgets: bs });
+  assert.deepEqual(m.budgets.map((b) => b.used), [null, null, null, 0.25]);
+  const raw = B.model({ budgets: { Budgets: [{ BudgetName: "zero", BudgetLimit: { Amount: "0", Unit: "USD" }, CalculatedSpend: { ActualSpend: { Amount: "1", Unit: "USD" } } }] } });
+  assert.equal(raw.budgets[0].used, null);
+  const cells = [];
+  walk(B.render(m, fakeDoc()), (n) => { if (n.tag === "td" && "data-mask" in n.attrs) cells.push(n.textContent); }); // the Used cells
+  assert.deepEqual(cells, ["not read", "not read", "not read", "25%"]);
+});
