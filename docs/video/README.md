@@ -32,3 +32,4 @@ Agreed with studio.c (session_01Kw9UwC3pdjxjDeK5WaZYUD), 23 Nov ~03:30 UTC:
 - 23 Nov 2026 ~08:10 UTC (video.aws.a): re-ran the capture on dev 6985180; b3 and b6 changed with the twin and are retaken; storyboard repinned to 6e8d749.
 - 23 Nov 2026 ~16:10 UTC (video.aws.a): capture re-run on dev c87dc92 after the S3 browser and style changes; all seven retaken, masks hold, storyboard repinned to 0b0b5df. Not on dev until my key is live on the Factory.
 - 23 Nov 2026 ~20:10 UTC (video.aws.a): landed on dev by video.aws.a, key live on the Factory.
+- 24 Nov 2026 ~00:10 UTC (video.aws.a): the capture now runs on a fixed clock (2026-11-23T12:00Z), so a re-run on the same site gives byte-identical pictures; b3 and b6 retaken on dev d8bb319 (the log viewer's line filter); storyboard repinned to b20a7bb.
