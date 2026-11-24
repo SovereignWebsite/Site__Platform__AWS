@@ -41,7 +41,7 @@ Every price below is from billing.aws.a's docs/billing/prices.json (work/billing
 
 - **Options:** (a) t4g.nano, t4g.micro, t4g.small; (b) add t4g.medium.
 - **Recommended:** (a). These are priced (per hour, eu-west-2: 0.0047, 0.0094, 0.0188; eu-west-1: 0.0046, 0.0092, 0.0184). Which one the Vault needs is a twin load test still to run; t4g.medium (0.0376) only if that test says so.
-- **Also:** CPU credits in "standard" mode only (design 01, 6d), so a stuck instance is slowed, not billed more. IAM cannot enforce this; a template check does, and Dinis may also set the account default per region (an AWS change, its own plan).
+- **Also:** CPU credits in "standard" mode only (design 01, 6d), so a stuck instance is slowed, not billed more. T4g launches as unlimited by default, and there a t4g.nano held at 100% CPU adds 54.72 USD in 30 days at 0.04 USD per vCPU-hour, more than G6's whole alert (billing.aws.a, 6a7b8b4). IAM cannot enforce this; a template check does, and Dinis may also set the account default per region (an AWS change, its own plan).
 
 ### G5. How many at once
 
@@ -52,7 +52,7 @@ Every price below is from billing.aws.a's docs/billing/prices.json (work/billing
 
 - **Options for the monthly alert** (an AWS Budgets alert, which the read role can already read): (a) 25 USD; (b) 50 USD; (c) 100 USD.
 - **And, separately, what happens at the cap:** (i) an alert only; (ii) an alert plus an AWS Budgets action at 100% that attaches a Deny on creating `sws-ec2-*` stacks to the scheduler and move roles: an automatic "stop new" that deletes nothing (security.aws.a, d397c1f). Recommended (ii): running deployments end at their time, nothing new starts, and only Dinis removes the Deny.
-- **Recommended:** (a) 25 USD while only G1 to G5 apply. The known part of a month at G5's most: one daily-move copy always on (t4g.small and IPv4, 17.37), its 8 GB gp3 root volume (0.74; billing.aws.a, 0b1ad2b), one ephemeral 2 h a day (about 1.43) and the overlaps (about 1.43), roughly 21 USD before CloudFront, S3, Secrets Manager, logs and data transfer; 25 leaves a little headroom and flags anything unexpected early. Revisit when CloudFront is priced for this path.
+- **Recommended:** (a) 25 USD while only G1 to G5 apply. The known part of a month at G5's most: one daily-move copy always on (t4g.small and IPv4, 17.37), its 8 GB gp3 root volume (0.74; billing.aws.a, 0b1ad2b), one ephemeral 2 h a day (about 1.43) and the overlaps (about 1.43), roughly 21 USD before CloudFront, S3, Secrets Manager, logs and data transfer (CPU credits are zero because G4 holds every instance in standard mode); 25 leaves a little headroom and flags anything unexpected early. Revisit when CloudFront is priced for this path.
 - **Per deployment:** no separate cap; G1, G2 and G4 bound it (largest: 0.6188 for a daily-move copy at its cap).
 - **What the alert does:** tells Dinis; with (ii) it also stops new deployments by itself.
 
