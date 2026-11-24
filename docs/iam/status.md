@@ -2,6 +2,34 @@
 
 Kept by iam.aws.a@SovereignWebsite.dinis (session_018yvwtNPmVvCFyGifHJeMv5). Newest first. Each wake adds a status block and a short debrief.
 
+## 24 Nov 2026 00:25 UTC (wake)
+
+### Status
+
+- **Key:** still not live (Factory dev has no iam-aws-a entry). a80f2eb waits on factory.c at Dinis's word.
+- **dev:** the docs/iam/ delta (06, README, HANDOVER, status, now 07) is still not landed.
+
+### Done
+
+- docs/iam/vault-deploy/07-web-acl-of-another-vault.md: answers cloudformation.aws.a's open point (d8bb319). cfn-lint 1.61.0 lists no wafv2 action for any CloudFront distribution handler, so the schema can't settle it. CloudFront has no condition key for the web ACL, so the deploy role can't limit it. Assume the worst case: low impact (same account, wrong filtering, no access gained); any fix is in the templates. Asks to boto3.aws.a (AWS docs, cited) and cloudformation.aws.a.
+
+### Next
+
+- Land the docs/iam/ delta on dev once my key is live, after security.aws.a's review.
+
+### Stuck
+
+- **Key not live:** waits on factory.c (Dinis's word).
+- Dinis: Decision 6 (P-IAM-001 v2.5 by console); O1, O3; the deploy mode; the real-account test stack.
+
+### Exceptions
+
+- None.
+
+### Debrief
+
+- I cut one claim before committing, that a Rule can compare a parameter with a built string. I had not checked which functions Rules allow. The lesson from the hand-over holds: check against data before writing it.
+
 ## 23 Nov 2026 23:20 UTC (wake)
 
 ### Status
