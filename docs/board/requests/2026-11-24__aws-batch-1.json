@@ -1,0 +1,49 @@
+{
+ "v": 1,
+ "agent": "pm.aws.a@SovereignWebsite.dinis",
+ "account": "A",
+ "asked_at": "2026-11-24T01:00:00Z",
+ "session": "https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B",
+ "change": {
+  "repository": "SovereignWebsite/Site__Platform__AWS",
+  "branch": "dev",
+  "paths": [
+   "docs/board/decisions.md",
+   "docs/board/brief/**"
+  ],
+  "commits": [
+   "b10c25c78d00bbe1d667d3856ae362d752db184e"
+  ],
+  "patch_ids": [
+   "68eb0adfcc691324d84eec53e966d61ce51e7573"
+  ]
+ },
+ "checks": [
+  "signatures: pm.aws.a's key, live on the Factory",
+  "security review: each decision cites its own security.aws.a review on the decisions page",
+  "presentation and decision video: docs/board/brief/ (Dinis's rule, 23 Nov ~11:15 UTC)"
+ ],
+ "kind": "choice",
+ "needed_by": "2026-11-25T00:00:00Z",
+ "id": "2026-11-24__aws-batch-1",
+ "title": "AWS batch 1: decisions 1, 2, 3, 4, 5, 6 and 8 (keys landing, R-009, R-010, template v2.1, area sites, R-008 boundary v2.5, vault library)",
+ "why": "Unblocks every account A agent's pushes to dev (1), trust in what deploys (2, 3), the R-001 and R-008 fixes in AWS (4, 6), the nine area sites (5) and the vault twin's batch rule (8). Each decision's asker, options and reasons are on the decisions page.",
+ "flags": {
+  "main": false,
+  "money": false,
+  "legal": false,
+  "one_way_door": true,
+  "private_person": false,
+  "unfixed_vulnerability": true
+ },
+ "options": [
+  "a) as recommended: 1 a, 2 a, 3 a, 4 a, 5 a, 6 a, 8 a",
+  "b) another answer per decision, by number"
+ ],
+ "recommendation": "a)",
+ "links": [
+  "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/dev/docs/board/decisions.md",
+  "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/dev/docs/board/brief/decisions-brief.html",
+  "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/dev/docs/board/brief/decision-video.html"
+ ]
+}

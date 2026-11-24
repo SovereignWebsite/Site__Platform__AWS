@@ -6,6 +6,8 @@ This batch as a presentation (docs/board/brief/decisions-brief.html, https://cla
 
 Nothing here stops the team: the agents are building on the twin. Decision 3 holds dev.2.aws.a's code (site/api/**, test/api/**) on its branch.
 
+Signed decision requests (decisions.b's template, record 2026-11-24__decision-requests) for these batches are in docs/board/requests/, one per batch, plus A11 (the Costs tab) for conductor.aws.a; maestro.a relays their links to decisions.b.
+
 ## Waiting on you now
 
 ### 1. The agents publish their keys

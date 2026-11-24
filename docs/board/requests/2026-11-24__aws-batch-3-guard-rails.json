@@ -1,0 +1,49 @@
+{
+ "v": 1,
+ "agent": "pm.aws.a@SovereignWebsite.dinis",
+ "account": "A",
+ "asked_at": "2026-11-24T01:00:00Z",
+ "session": "https://claude.ai/code/session_018yvwtLfieUut6hSirZ6W9B",
+ "change": {
+  "repository": "SovereignWebsite/Site__Platform__AWS",
+  "branch": "dev",
+  "paths": [
+   "docs/board/decisions.md",
+   "docs/board/brief/**"
+  ],
+  "commits": [
+   "b10c25c78d00bbe1d667d3856ae362d752db184e"
+  ],
+  "patch_ids": [
+   "68eb0adfcc691324d84eec53e966d61ce51e7573"
+  ]
+ },
+ "checks": [
+  "signatures: pm.aws.a's key, live on the Factory",
+  "security review: each decision cites its own security.aws.a review on the decisions page",
+  "presentation and decision video: docs/board/brief/ (Dinis's rule, 23 Nov ~11:15 UTC)"
+ ],
+ "kind": "choice",
+ "needed_by": "2026-11-25T00:00:00Z",
+ "id": "2026-11-24__aws-batch-3-guard-rails",
+ "title": "AWS batch 3: guard rails for short-lived deployments and the daily move (G1 to G9) and the Vault cost kill switch (K1 to K4)",
+ "why": "Sets the numbers V5 (b) promises and the kill switch's defaults, so ec2.aws.a, cloudformation.aws.a and iam.aws.a can write templates and roles and test them in the twin. Approving creates nothing in AWS; each real change comes back as its own plan.",
+ "flags": {
+  "main": false,
+  "money": true,
+  "legal": false,
+  "one_way_door": false,
+  "private_person": false,
+  "unfixed_vulnerability": false
+ },
+ "options": [
+  "a) as recommended: G1 a+b, G2 a, G3 a, G4 a, G5 a, G6 a with (i) or (ii), G7 a, G8 a, G9 b then a, K1 b, K2 b, K3 both alarms, K4 yes",
+  "b) another answer per row"
+ ],
+ "recommendation": "a)",
+ "links": [
+  "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/dev/docs/board/decisions.md",
+  "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/dev/docs/board/brief/guard-rails-brief.html",
+  "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/dev/docs/board/brief/guard-rails-video.html"
+ ]
+}

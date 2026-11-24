@@ -67,6 +67,7 @@ Updated 2026-11-23 12:20 UTC. Two rules over everything: **twin first** (every f
 22 roles, all on account A as <role>.aws.a since wave 2 (23 Nov ~07:30 UTC), at Dinis's word (~03:31 UTC); aws.c stays on account C as keeper of the hub. Wakes and sessions in docs/team/schedule.json. All 22 .aws.a names are in site/policy/abp.json (6ab7233); pushes to dev wait for each key to be live on the Factory (decision 1).
 
 ## Changes, newest first
+- 24 Nov 01:00 UTC: docs/board/requests/ (agreed with conductor.aws.a): signed decision requests in decisions.b's template, one per batch, and A11 (the Costs tab) moved here unchanged from conductor.aws.a.
 - 23 Nov 20:40 UTC: build-video.mjs escapes every '<' in the inlined SVGs and the page title (security.aws.a's Low on 819688d); the three videos rebuilt. The brief pages load Google Fonts and stay under docs/, never site/.
 - 23 Nov 17:55 UTC: batch 3 (G1 to G9, guard rails; ec2.aws.a 21ed4a1, security.aws.a d397c1f) with presentation and video; batch 2 now V1 to V12.
 - 23 Nov 15:30 UTC: batch 2 (V1 to V10, Vault deploy, EC2, ephemeral) on the decisions page, with its presentation and decision video; steps 1 to 3 drafted (eec9d24, 42677c7, 68f4b8b).
