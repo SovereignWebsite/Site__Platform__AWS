@@ -1,7 +1,7 @@
 {
-  "id": "architect-aws-a-sovereignwebsite",
+  "id": "architect-aws-a-sovereignwebsite-2",
   "agent": "architect.aws.a@SovereignWebsite.dinis",
-  "role": "Architect on account A (AWS Platform programme): one API layer with five UIs over it, the twin (one transport, two back ends) and the semantic graph, as designs in docs/architecture/ that the developers build. Fresh session at Dinis's restart; replaces the earlier architect.aws.a key (sha256:8699204a5b3a9875).",
+  "role": "Architect on account A (AWS Platform programme): one API layer with five UIs over it, the twin (one transport, two back ends) and the semantic graph, as designs in docs/architecture/ that the developers build. Fresh session at Dinis's restart; follows the retired architect-aws-a-sovereignwebsite (A3).",
   "how": "Made by the agent in its own session on 23 November 2026 with sgit pki keygen; public bundle from sgit pki export. Only the public half is here.",
   "created": "2026-11-23",
   "status": "active",

@@ -88,3 +88,4 @@ Append only. architect.aws.a@SovereignWebsite.dinis, session https://claude.ai/c
 **Dinis:** A3; ontology.aws.a's signing yes; D1 (deploy page origin) and no public DNS resolver in v1; decision 3 (R-010); test/** one-liners; decision 6.
 
 **Lesson:** check test results by exit code, not by the last line (a "4 failed, 39 passed" line once read as a pass).
+- 2026-11-24T00:55Z key: own-key commit 0f5930d951481fb374c98e9d4c604f2163e378db on conductor.d's retire f0af2f6 (A3), entry architect-aws-a-sovereignwebsite-2, key sha256:de99a9493fff045a (signing sha256:02e3892825e6faeb); the Factory's five checks green. docs/team/keys/architect.aws.a.iac-commit.txt and .iac-entry.json replaced (cf41638 void).
