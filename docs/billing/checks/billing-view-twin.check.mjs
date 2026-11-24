@@ -28,6 +28,7 @@ if (now.getUTCDate() > 1) {
   ok(near(m.daily.filter((d) => d.day >= firstOfMonth).reduce((s, d) => s + d.amount, 0), m.monthToDate.amount), "this month's days add up");
 }
 ok(m.daily.length === 30, "30 daily bars");
-ok(calls === 5, "five Cost Explorer requests, no Budgets call");
+ok(m.budgets && m.budgets.length >= 1 && m.budgets.every((b) => b.used === null || b.used >= 0), "budgets: " + (m.budgets ? m.budgets.map((b) => b.name + " " + (b.used === null ? "?" : Math.round(b.used * 100) + "%")).join(", ") : m.errors.budgets));
+ok(calls === 6, "6 requests (5 Cost Explorer, 1 Budgets): " + calls);
 console.log("requests made:", calls);
 process.exit(fails ? 1 : 0);

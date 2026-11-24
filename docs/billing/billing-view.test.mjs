@@ -8,26 +8,27 @@ const require = createRequire(import.meta.url);
 const B = require("../../site/billing.js");
 const F = JSON.parse(readFileSync(new URL("./fixtures/costs-synthetic.json", import.meta.url), "utf8"));
 
-test("requests: month to date, by service, by region, daily 30 days, forecast to month end; no Budgets call", () => {
+test("requests: month to date, by service, by region, daily 30 days, forecast to month end, budgets", () => {
   const r = B.requests(new Date("2026-11-24T15:00:00Z"), "123456789012");
   const by = Object.fromEntries(r.map((x) => [x.name, x]));
-  assert.deepEqual(Object.keys(by).sort(), ["byRegion", "byService", "daily", "forecast", "monthToDate"]);
+  assert.deepEqual(Object.keys(by).sort(), ["budgets", "byRegion", "byService", "daily", "forecast", "monthToDate"]);
   assert.deepEqual(by.monthToDate.payload.TimePeriod, { Start: "2026-11-01", End: "2026-11-24" });
   assert.equal(by.byService.payload.GroupBy[0].Key, "SERVICE");
   assert.equal(by.byRegion.payload.GroupBy[0].Key, "REGION");
   assert.deepEqual(by.daily.payload.TimePeriod, { Start: "2026-10-25", End: "2026-11-24" });
   assert.equal(by.daily.payload.Granularity, "DAILY");
   assert.deepEqual(by.forecast.payload.TimePeriod, { Start: "2026-11-24", End: "2026-12-01" });
+  assert.equal(by.budgets.payload.AccountId, "123456789012");
   assert.equal(r.filter((x) => x.service === "ce").length, 5); // at most five charged Cost Explorer requests
 });
 
-test("on the 1st there is no month to date, so those calls are skipped", () => {
+test("on the 1st there is no month to date, so those calls are skipped; no account id, no budgets call", () => {
   const names = B.requests(new Date("2026-12-01T09:00:00Z")).map((x) => x.name);
-  assert.ok(!names.includes("monthToDate") && !names.includes("byService"));
+  assert.ok(!names.includes("monthToDate") && !names.includes("byService") && !names.includes("budgets"));
   assert.ok(names.includes("forecast") && names.includes("daily"));
 });
 
-test("model: totals, end-of-month forecast, groups largest first without zero lines", () => {
+test("model: totals, end-of-month forecast, groups largest first without zero lines, budgets used", () => {
   const m = B.model(F);
   assert.equal(m.monthToDate.amount, 42.17);
   assert.ok(Math.abs(m.endOfMonth.amount - (42.17 + 11.83)) < 1e-9);
@@ -35,6 +36,7 @@ test("model: totals, end-of-month forecast, groups largest first without zero li
   assert.ok(m.byService.every((g, i, a) => i === 0 || a[i - 1].amount >= g.amount));
   assert.ok(!m.byService.some((g) => g.key === "Tax"));
   assert.equal(m.daily.length, 3);
+  assert.ok(Math.abs(m.budgets[0].used - 42.17 / 60) < 1e-9);
 });
 
 test("model: a missing or failed call stays null and is reported, never shown as 0", () => {
@@ -91,7 +93,7 @@ test("odd answers (no Total, no Metrics, no Keys) give 'not read' for that secti
     monthToDate: { ResultsByTime: [{ TimePeriod: { Start: "2026-11-01", End: "2026-11-24" } }] },
     byService: { ResultsByTime: [{ Groups: [{ Keys: ["AWS Lambda"] }, { Metrics: { UnblendedCost: { Amount: "1.00", Unit: "USD" } } }] }] },
     daily: { ResultsByTime: [{ TimePeriod: { Start: "2026-11-23" } }] },
-    byRegion: F.byRegion, forecast: { Total: null },
+    byRegion: F.byRegion, forecast: { Total: null }, budgets: { Budgets: [{ BudgetName: "x" }] },
   };
   const m = B.model(odd);
   assert.equal(m.monthToDate, null);
@@ -101,6 +103,7 @@ test("odd answers (no Total, no Metrics, no Keys) give 'not read' for that secti
   assert.equal(m.daily[0].amount, null);         // missing amount stays null, not 0
   assert.equal(m.byRegion.length, 3);            // a good section is unaffected
   assert.equal(m.forecastRest, null);
+  assert.equal(m.budgets[0].used, null);
   B.render(m, fakeDoc());                        // and the view still renders
 });
 
@@ -129,13 +132,13 @@ test("fetchAll over CostsApi: pages drained, a failed section isolated, model ad
   assert.equal(m.byRegion, null);
   assert.match(m.errors.byRegion, /AccessDenied/);
   assert.equal(m.daily.length, 2);                       // two pages merged
-  assert.ok(!api.calls.some((c) => c[0] === "budgets"));   // v1 never calls Budgets
+  assert.equal(m.budgets[0].used, 0.5);
   assert.deepEqual(api.calls.find((c) => c[0] === "forecast")[1], { start: "2026-11-24", end: "2026-12-01", granularity: "MONTHLY" });
   assert.equal(api.calls.filter((c) => c[0] === "usage").length, 5);   // 3 monthly + 2 daily pages
   B.render(m, fakeDoc());
 });
 
-test("CostsApi v2 shape (numbers, pages merged inside usage, maxPages); Budgets never called, the view links to its console", async () => {
+test("CostsApi v2 shape (numbers, pages merged inside usage, maxPages); a failed Budgets call is 'not read' for that section only, console link kept", async () => {
   const seen = [];
   const api = {
     usage: async (o) => { seen.push(o); return { items: [{ start: "2026-11-01", end: "2026-11-24", estimated: true, total: { amount: 2.5, unit: "USD" },
@@ -147,9 +150,26 @@ test("CostsApi v2 shape (numbers, pages merged inside usage, maxPages); Budgets 
   assert.equal(m.monthToDate.amount, 2.5);
   assert.equal(m.endOfMonth.amount, 3.5);
   assert.deepEqual(m.byService.map((g) => g.key), ["AWS Lambda"]);   // the zero Tax line is dropped
-  assert.equal(Object.keys(m.errors).length, 0);
-  let link = null;
-  walk(B.render(m, fakeDoc()), (n) => { if (n.tag === "a" && /Budgets console/.test(n.textContent)) link = n; });
-  assert.equal(link.attrs.href, "https://console.aws.amazon.com/billing/home#/budgets");
+  assert.equal(m.budgets, null);
+  assert.deepEqual(Object.keys(m.errors), ["budgets"]);              // the other sections are unaffected
+  assert.match(m.errors.budgets, /Failed to fetch/);
   assert.ok(seen.every((o) => o.maxPages === 3 || (o.granularity === "DAILY" && o.maxPages === 5)));
+  let notRead = false, consoleLink = false;
+  walk(B.render(m, fakeDoc()), (n) => {
+    if (n.tag === "td" && n.textContent === "not read") notRead = true;
+    if (n.tag === "a" && n.attrs.href === B.LINKS.budgetsConsole) consoleLink = true;
+  });
+  assert.ok(notRead && consoleLink);
+});
+
+test("budgets read through CostsApi: each budget with how close it is, amounts masked, console link beside", async () => {
+  const m = B.modelFromApi(await B.fetchAll(fakeCostsApi(), new Date("2026-11-24T12:00:00Z"), "123456789012"));
+  assert.deepEqual(m.budgets.map((b) => [b.name, b.limit, b.actual, b.used]), [["cap", 2, 1, 0.5]]);
+  const texts = []; let consoleLink = false;
+  walk(B.render(m, fakeDoc()), (n, masked) => {
+    if (n.textContent === "50%") { texts.push(n.textContent); assert.ok(masked, "unmasked share"); }
+    if (n.tag === "a" && n.attrs.href === B.LINKS.budgetsConsole) consoleLink = true;
+  });
+  assert.deepEqual(texts, ["50%"]);
+  assert.ok(consoleLink);
 });
