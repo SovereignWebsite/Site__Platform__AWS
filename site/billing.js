@@ -169,18 +169,23 @@
     }
     return step(null);
   }
-  function settle(p) { return p.then(function (v) { return v; }, function (e) { return { error: (e && e.message) || String(e) }; }); }
+  // A TypeError from fetch is the browser refusing the call (CORS): Budgets has no CORS (boto3.aws.a, note 21).
+  function settle(p, what) { return p.then(function (v) { return v; }, function (e) {
+    var msg = (e && e.message) || String(e);
+    if (e && e.name === "TypeError" && what === "budgets") msg = "not read: AWS Budgets cannot be read from a browser (" + msg + ")";
+    return { error: msg };
+  }); }
   function fetchAll(api, today, accountId) {
     var t = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
     var start = ymd(monthStart(t)), end = ymd(t), mtd = start !== end, jobs = {};
     if (mtd) {
-      jobs.monthToDate = settle(drain(api.usage, { start: start, end: end, granularity: "MONTHLY" }, 3));
-      jobs.byService = settle(drain(api.usage, { start: start, end: end, granularity: "MONTHLY", groupBy: "SERVICE" }, 3));
-      jobs.byRegion = settle(drain(api.usage, { start: start, end: end, granularity: "MONTHLY", groupBy: "REGION" }, 3));
+      jobs.monthToDate = settle(drain(api.usage, { start: start, end: end, granularity: "MONTHLY", maxPages: 3 }, 3));
+      jobs.byService = settle(drain(api.usage, { start: start, end: end, granularity: "MONTHLY", groupBy: "SERVICE", maxPages: 3 }, 3));
+      jobs.byRegion = settle(drain(api.usage, { start: start, end: end, granularity: "MONTHLY", groupBy: "REGION", maxPages: 3 }, 3));
     }
-    jobs.daily = settle(drain(api.usage, { start: ymd(addDays(t, -30)), end: end, granularity: "DAILY" }, 5));
+    jobs.daily = settle(drain(api.usage, { start: ymd(addDays(t, -30)), end: end, granularity: "DAILY", maxPages: 5 }, 5));
     jobs.forecast = settle(api.forecast({ start: end, end: ymd(nextMonthStart(t)), granularity: "MONTHLY" }));
-    if (accountId) jobs.budgets = settle(drain(api.budgets, { max: 100 }, 3));
+    if (accountId) jobs.budgets = settle(drain(api.budgets, { max: 100 }, 3), "budgets");
     var names = Object.keys(jobs);
     return Promise.all(names.map(function (k) { return jobs[k]; })).then(function (vals) {
       var out = {}; names.forEach(function (k, i) { out[k] = vals[i]; }); return out;

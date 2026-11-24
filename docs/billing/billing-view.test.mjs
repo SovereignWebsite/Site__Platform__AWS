@@ -137,3 +137,20 @@ test("fetchAll over CostsApi: pages drained, a failed section isolated, model ad
   assert.equal(api.calls.filter((c) => c[0] === "usage").length, 5);   // 3 monthly + 2 daily pages
   B.render(m, fakeDoc());
 });
+
+test("CostsApi v2 shape (numbers, pages merged inside usage, maxPages) and Budgets refused by CORS", async () => {
+  const seen = [];
+  const api = {
+    usage: async (o) => { seen.push(o); return { items: [{ start: "2026-11-01", end: "2026-11-24", estimated: true, total: { amount: 2.5, unit: "USD" },
+      groups: [{ key: "Tax", amount: 0, unit: "USD" }, { key: "AWS Lambda", amount: 2.5, unit: "USD" }] }], capped: false }; },
+    forecast: async () => ({ total: { amount: 1, unit: "USD" }, start: "2026-11-24", end: "2026-12-01", items: [] }),
+    budgets: async () => { throw new TypeError("Failed to fetch"); },
+  };
+  const m = B.modelFromApi(await B.fetchAll(api, new Date("2026-11-24T12:00:00Z"), "123456789012"));
+  assert.equal(m.monthToDate.amount, 2.5);
+  assert.equal(m.endOfMonth.amount, 3.5);
+  assert.deepEqual(m.byService.map((g) => g.key), ["AWS Lambda"]);   // the zero Tax line is dropped
+  assert.equal(m.budgets, null);
+  assert.match(m.errors.budgets, /cannot be read from a browser/);
+  assert.ok(seen.every((o) => o.maxPages === 3 || (o.granularity === "DAILY" && o.maxPages === 5)));
+});
