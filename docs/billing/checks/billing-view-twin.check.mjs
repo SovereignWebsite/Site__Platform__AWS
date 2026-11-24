@@ -19,7 +19,7 @@ const m = SwsBilling.modelFromApi(await SwsBilling.fetchAll(api, now, account));
 let fails = 0; const ok = (c, msg) => { if (!c) { fails++; console.error("FAIL", msg); } else console.log("ok  ", msg); };
 const near = (a, b) => Math.abs(a - b) < 1e-6;
 const firstOfMonth = now.toISOString().slice(0, 8) + "01";
-ok(Object.keys(m.errors).every((k) => k === "budgets"), "only budgets may fail (no CORS): " + JSON.stringify(m.errors));
+ok(Object.keys(m.errors).length === 0, "no section failed: " + JSON.stringify(m.errors));
 if (now.getUTCDate() > 1) {
   ok(m.monthToDate && m.monthToDate.amount > 0, "month to date " + SwsBilling.fmt(m.monthToDate));
   ok(m.endOfMonth && m.endOfMonth.amount >= m.monthToDate.amount, "whole month " + SwsBilling.fmt(m.endOfMonth));
@@ -28,6 +28,6 @@ if (now.getUTCDate() > 1) {
   ok(near(m.daily.filter((d) => d.day >= firstOfMonth).reduce((s, d) => s + d.amount, 0), m.monthToDate.amount), "this month's days add up");
 }
 ok(m.daily.length === 30, "30 daily bars");
-ok(m.budgets === null ? /browser/.test(m.errors.budgets || "") : m.budgets.length >= 1, "budgets: " + (m.budgets ? m.budgets.length + " read" : m.errors.budgets));
+ok(calls === 5, "five Cost Explorer requests, no Budgets call");
 console.log("requests made:", calls);
 process.exit(fails ? 1 : 0);

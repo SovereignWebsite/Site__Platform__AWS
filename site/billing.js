@@ -1,5 +1,5 @@
 // Costs view: the owner's real AWS costs, read with the read role the site already has
-// (site/cloudformation/bootstrap.yaml, costs-read: ce:GetCostAndUsage, ce:GetCostForecast, budgets:View*).
+// (site/cloudformation/bootstrap.yaml, costs-read: ce:GetCostAndUsage, ce:GetCostForecast, budgets:View*; Budgets itself cannot be called from a browser, so v1 links to its console).
 // billing.aws.a@SovereignWebsite.dinis, 23 Nov 2026, for Dinis Cruz's "I really want to see the billing of my AWS"
 // (relayed by a.conductor.aws). No new AWS permission, no server code, nothing stored: answers live in page memory.
 // Split in two: requests() and model() are pure and tested (docs/billing/billing-view.test.mjs);
@@ -13,7 +13,8 @@
     console: "https://console.aws.amazon.com/costmanagement/home",
     usage: DOCS + "API_GetCostAndUsage.html",
     forecast: DOCS + "API_GetCostForecast.html",
-    budgets: DOCS + "API_budgets_DescribeBudgets.html",
+    // Budgets sends no CORS headers, so a browser page cannot read it (boto3.aws.a, note 21); v1 links to the console.
+    budgetsConsole: "https://console.aws.amazon.com/billing/home#/budgets",
     pricing: "https://aws.amazon.com/aws-cost-management/aws-cost-explorer/pricing/",
   };
   var METRIC = "UnblendedCost";
@@ -43,8 +44,6 @@
     // GetCostForecast starts today (it cannot start in the past) and runs to the end of the month.
     out.push({ name: "forecast", service: "ce", target: "AWSInsightsIndexService.GetCostForecast",
       payload: { TimePeriod: { Start: end, End: ymd(nextMonthStart(t)) }, Granularity: "MONTHLY", Metric: "UNBLENDED_COST" } });
-    if (accountId) out.push({ name: "budgets", service: "budgets", target: "AWSBudgetServiceGateway.DescribeBudgets",
-      payload: { AccountId: accountId, MaxResults: 100 } });
     return out;
   }
 
@@ -63,7 +62,7 @@
       .sort(function (a, b) { return b.amount - a.amount; });
   }
 
-  // answers: { monthToDate, byService, byRegion, daily, forecast, budgets }, each a raw AWS answer, or an
+  // answers: { monthToDate, byService, byRegion, daily, forecast }, each a raw AWS answer, or an
   // { error } when that call failed, or undefined when it was not made. Missing parts stay null: never shown as 0.
   function model(answers) {
     var a = answers || {}, m = { errors: {} };
@@ -85,14 +84,6 @@
     m.daily = !ok("daily") || !Array.isArray(get(a.daily, ["ResultsByTime"])) ? null : section(m.errors, "daily", function () {
       return a.daily.ResultsByTime.map(function (d) {
         return { day: String(get(d, ["TimePeriod", "Start"]) || ""), amount: num(get(d, ["Total", METRIC, "Amount"])), unit: get(d, ["Total", METRIC, "Unit"]) || "USD", estimated: !!get(d, ["Estimated"]) };
-      });
-    });
-    m.budgets = !ok("budgets") || !Array.isArray(get(a.budgets, ["Budgets"])) ? null : section(m.errors, "budgets", function () {
-      return a.budgets.Budgets.map(function (b) {
-        var lim = num(get(b, ["BudgetLimit", "Amount"])), act = num(get(b, ["CalculatedSpend", "ActualSpend", "Amount"]));
-        return { name: String(get(b, ["BudgetName"]) || "(unnamed)"), type: get(b, ["BudgetType"]), period: get(b, ["TimeUnit"]), limit: lim, actual: act,
-          forecast: num(get(b, ["CalculatedSpend", "ForecastedSpend", "Amount"])), unit: get(b, ["BudgetLimit", "Unit"]) || "USD",
-          used: lim && act !== null ? act / lim : null };
       });
     });
     m.links = LINKS;
@@ -142,22 +133,14 @@
     });
     box.appendChild(el("h3", { text: "Daily, last 30 days" + tag }));
     box.appendChild(m.daily ? days : el("p", { class: "small", text: "not read" }));
-    var bt = el("table", { class: "costs-table" }, [el("caption", {}, [doc.createTextNode("Budgets "), link(m.links.budgets, "(how AWS reports them)")]),
-      el("tr", {}, [el("th", { text: "Budget" }), el("th", { text: "Limit" }), el("th", { text: "Spent" }), el("th", { text: "Used" })])]);
-    if (!m.budgets) bt.appendChild(el("tr", {}, [el("td", { colspan: "4", text: "not read" })]));
-    else if (!m.budgets.length) bt.appendChild(el("tr", {}, [el("td", { colspan: "4", text: "no budgets in this account" })]));
-    else m.budgets.forEach(function (b) {
-      bt.appendChild(el("tr", {}, [el("td", { text: b.name }), el("td", {}, [amount({ amount: b.limit, unit: b.unit })]),
-        el("td", {}, [amount({ amount: b.actual, unit: b.unit })]), el("td", { "data-mask": "", text: b.used === null ? "not read" : Math.round(b.used * 100) + "%" })]));
-    });
-    box.appendChild(bt);
+    box.appendChild(el("p", { class: "small" }, [doc.createTextNode("Budgets: see the "), link(m.links.budgetsConsole, "AWS Budgets console"), doc.createTextNode(".")]));
     Object.keys(m.errors).forEach(function (k) { box.appendChild(el("p", { class: "status bad", text: k + ": " + m.errors[k] })); });
     return box;
   }
 
   // ---- Over dev.2.aws.a's CostsApi (site/api/costs-api.js): the agreed split, CostsApi makes the calls, this file
   // arranges them. fetchAll(api, today) makes the same calls requests() describes, drains NextPageToken pages (at most
-  // 3 per monthly section and for budgets, 5 for the daily one: every page is a paid call, about 20 at worst), and
+  // 3 per monthly section, 5 for the daily one: every page is a paid call, about 14 at worst), and
   // records a failed section as { error } so the others still show. modelFromApi() gives the same model as model().
   function drain(call, args, max) {
     var items = [], n = 0;
@@ -169,12 +152,7 @@
     }
     return step(null);
   }
-  // A TypeError from fetch is the browser refusing the call (CORS): Budgets has no CORS (boto3.aws.a, note 21).
-  function settle(p, what) { return p.then(function (v) { return v; }, function (e) {
-    var msg = (e && e.message) || String(e);
-    if (e && e.name === "TypeError" && what === "budgets") msg = "not read: AWS Budgets cannot be read from a browser (" + msg + ")";
-    return { error: msg };
-  }); }
+  function settle(p) { return p.then(function (v) { return v; }, function (e) { return { error: (e && e.message) || String(e) }; }); }
   function fetchAll(api, today, accountId) {
     var t = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
     var start = ymd(monthStart(t)), end = ymd(t), mtd = start !== end, jobs = {};
@@ -185,7 +163,6 @@
     }
     jobs.daily = settle(drain(api.usage, { start: ymd(addDays(t, -30)), end: end, granularity: "DAILY", maxPages: 5 }, 5));
     jobs.forecast = settle(api.forecast({ start: end, end: ymd(nextMonthStart(t)), granularity: "MONTHLY" }));
-    if (accountId) jobs.budgets = settle(drain(api.budgets, { max: 100 }, 3), "budgets");
     var names = Object.keys(jobs);
     return Promise.all(names.map(function (k) { return jobs[k]; })).then(function (vals) {
       var out = {}; names.forEach(function (k, i) { out[k] = vals[i]; }); return out;
@@ -219,14 +196,6 @@
     m.byRegion = !ok("byRegion") ? null : section(m.errors, "byRegion", function () { return sumGroups(a.byRegion); });
     m.daily = !ok("daily") ? null : section(m.errors, "daily", function () {
       return list(a.daily).map(function (p) { var t = apiMoney(p && p.total); return { day: String((p && p.start) || ""), amount: t ? t.amount : null, unit: t ? t.unit : "USD", estimated: !!(p && p.estimated) }; });
-    });
-    m.budgets = !ok("budgets") ? null : section(m.errors, "budgets", function () {
-      return list(a.budgets).map(function (b) {
-        var lim = apiMoney(b && b.limit), act = apiMoney(b && b.actual), fc = apiMoney(b && b.forecast);
-        var l = lim ? lim.amount : null, ac = act ? act.amount : null;
-        return { name: String((b && b.name) || "(unnamed)"), type: b && b.type, period: b && b.timeUnit, limit: l, actual: ac,
-          forecast: fc ? fc.amount : null, unit: lim ? lim.unit : "USD", used: l && ac !== null ? ac / l : null };
-      });
     });
     return m;
   }
