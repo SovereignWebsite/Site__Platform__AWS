@@ -21,9 +21,9 @@
 // SERVICE, REGION or none; usage metric UnblendedCost, BlendedCost, AmortizedCost or NetUnblendedCost; forecast metric
 // the matching UNBLENDED_COST and so on; every value is checked before a request. Amounts are numbers (billing.aws.a's
 // view sums and formats them); a missing or malformed amount is null, never 0; zero groups are kept (the view drops
-// them). GetCostForecast cannot start in the past: start today. Budgets: boto3.aws.a's note 21 finds the SDK's CORS
-// table does not mark Budgets, so in a browser budgets() is likely refused (a TypeError, passed through); the view
-// shows it as not read. Service and budget names are AWS's or the owner's text: render as text. Errors: an Error "Code: Message" with .code and .status; a CORS TypeError passes
+// them). GetCostForecast cannot start in the past: start today. Budgets: browser CORS is conflicting (the SDK's CORS
+// table does not mark it, note 21; docs/2026-11-23__newsroom-brief.md reports a preflight it answered). If refused,
+// budgets() rejects with the TypeError, passed through; one browser call settles it. The v1 tab does not call it. Service and budget names are AWS's or the owner's text: render as text. Errors: an Error "Code: Message" with .code and .status; a CORS TypeError passes
 // through; answers over 4 MB are refused, by their declared length when they give one.
 (function (root) {
   "use strict";

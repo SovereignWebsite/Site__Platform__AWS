@@ -375,7 +375,7 @@
             }
           }
         },
-        "description": "The SDK's CORS table does not mark Budgets, so in a browser this is likely refused: a TypeError, passed through. The view shows budgets as not read."
+        "description": "Browser CORS for Budgets is conflicting: the SDK's CORS table does not mark it (boto3.aws.a note 21), while docs/2026-11-23__newsroom-brief.md reports a preflight it answered. If refused, a TypeError, passed through. The v1 Costs tab does not call it; one browser call settles it. Fallback if refused: Cloud Control AWS::Budgets::Budget (boto3.aws.a note 21 addendum)."
       }
     }
   },
