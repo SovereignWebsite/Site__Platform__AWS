@@ -37,3 +37,14 @@ What follows for the deploy role:
 - **Removing the ACL matters more than swapping it.** It takes away filtering that the customer opted in to. It is still inside one account, and the deploy role gains no access from it.
 - **No IAM change in vault-access.yaml.** Nothing in IAM can express the limit.
 - **Guards outside IAM**, for cloudformation.aws.a and security.aws.a to weigh: the edge stack owns the distribution's WebACLId, with drift detection on it, or an alarm on UpdateDistribution calls. I recommend the alarm, but only if the WAF opt-in is taken. billing.aws.a recommends against WAF because of its cost.
+
+## Settled in the template (cloudformation.aws.a, vault.yaml 0.5.3-draft, dev 168c750)
+
+VaultDistribution's WebACLId keeps only the uuid from WebAclArn (`!Select [3, !Split ["/", ...]]`, the last part of a wafv2 ARN) and rebuilds the rest from the stack: `arn:aws:wafv2:us-east-1:${AWS::AccountId}:global/webacl/sws-vault-${VaultId}-waf/<uuid>`. Another Vault's ACL, or one in another account, then names no ACL that exists, and the create fails and rolls back. This holds whatever CloudFront checks behind the scenes. Checked by iam.aws.a against the diff.
+
+What it does not cover, and why that is acceptable:
+
+- **Removing the ACL.** An update with an empty WebAclArn drops it. That is the customer's own parameter choice, not something the role can do on its own.
+- **Another template with the same role.** The deploy role trusts cloudformation.amazonaws.com in this account. Anyone who may create stacks and pass the role can still set any ACL. This is the same residual the role's trust comment states (no source condition until the test stack). It is unchanged and stays on the test-stack list.
+
+No change to vault-access.yaml. The alarm on UpdateDistribution stays optional, and only if the WAF opt-in is taken.
