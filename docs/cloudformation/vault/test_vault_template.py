@@ -169,6 +169,21 @@ for st in walk(ER["KillSwitchRole"]["Properties"]["Policies"]):
         check(st.get("Resource") != "*", f"kill switch Allow on *: {st.get('Sid')}")
         check(all(not a.endswith(("Delete", "DeleteFunctionConcurrency")) and "Delete" not in a for a in (st["Action"] if isinstance(st["Action"], list) else [st["Action"]])), f"kill switch may delete: {st.get('Sid')}")
 
+# The web ACL is rebuilt from this Vault's id and account; only the uuid comes from WebAclArn (iam.aws.a 07).
+w = R["VaultDistribution"]["Properties"]["DistributionConfig"]["WebACLId"]["Fn::If"]
+check(w[0] == "HasWebAcl" and w[2] == {"Ref": "AWS::NoValue"}, "web ACL condition")
+sub = w[1]["Fn::Sub"]
+check(sub[0] == "arn:aws:wafv2:us-east-1:${AWS::AccountId}:global/webacl/sws-vault-${VaultId}-waf/${AclUuid}", "web ACL ARN not tied to this Vault")
+sel = sub[1]["AclUuid"]["Fn::Select"]
+check(sel[0] == 3 and sel[1] == {"Fn::Split": ["/", {"Ref": "WebAclArn"}]}, "web ACL uuid not taken from WebAclArn")
+def rebuilt(arn, vid, acct):
+    return sub[0].replace("${AWS::AccountId}", acct).replace("${VaultId}", vid).replace("${AclUuid}", arn.split("/")[sel[0]])
+u = "0123abcd-0123-4567-89ab-0123456789ab"
+own = f"arn:aws:wafv2:us-east-1:111122223333:global/webacl/sws-vault-aaaaaaaaaaaa-waf/{u}"
+check(rebuilt(own, "aaaaaaaaaaaa", "111122223333") == own, "own web ACL changed by the rebuild")
+check(rebuilt(own.replace("aaaaaaaaaaaa", "bbbbbbbbbbbb"), "aaaaaaaaaaaa", "111122223333") == own, "another Vault's ACL not redirected")
+check(re.fullmatch(v["Parameters"]["WebAclArn"]["AllowedPattern"], own) is not None, "pattern refuses own ACL")
+
 if fails:
     print("FAIL\n  " + "\n  ".join(fails)); sys.exit(1)
 print("OK (vault templates: caching off, Retain, names, boundary, no wildcards, trust, bucket policy, DNS order, CORS, own token secret, public invoke via URL only, outputs)")
