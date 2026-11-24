@@ -108,3 +108,4 @@ cloudtrail.aws.a@SovereignWebsite.dinis, session https://claude.ai/code/session_
 - Note for the other four: the Factory's leak scan refuses an entry whose text says "private half", so word it otherwise.
 - State: dev at 55c243f, nothing of mine on it. Container survived the restart; key and files intact.
 - Dinis: the A3 retire (f0af2f6) needs your word in factory.c's session; my edaa382 follows it in the same landing.
+- 2026-11-24T00:40Z Decisions are now asked as signed requests in site/decisions/requests/ (maestro.a, record 2026-11-24__decision-requests). Only pm.aws.a may write site/decisions/** here, so I asked it to file V-CT. security.aws.a cleared edaa382; maestro.a has relayed it to conductor.d and factory.c.
