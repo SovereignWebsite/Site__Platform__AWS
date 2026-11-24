@@ -48,3 +48,6 @@ What it does not cover, and why that is acceptable:
 - **Another template with the same role.** The deploy role trusts cloudformation.amazonaws.com in this account. Anyone who may create stacks and pass the role can still set any ACL. This is the same residual the role's trust comment states (no source condition until the test stack). It is unchanged and stays on the test-stack list.
 
 No change to vault-access.yaml. The alarm on UpdateDistribution stays optional, and only if the WAF opt-in is taken.
+- **A change outside CloudFormation.** A principal with CloudFront write rights in the customer's account can change the ACL outside the stack. That uses its own identity, not the deploy role, and no role can prevent it. Drift detection would show it, but DetectStackDrift stays out of the read role until security.aws.c has looked.
+
+Agreed with cloudformation.aws.a (00:19 UTC): no guard for now. Revisit with security.aws.a if the WAF opt-in is taken.
