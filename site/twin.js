@@ -1182,9 +1182,9 @@
   }
   // ---- Costs (the Costs tab: billing.aws.a's site/billing.js on CostsApi, site/api/costs-api.js) ----
   // Cost Explorer GetCostAndUsage, GetCostForecast and GetDimensionValues for the twin's account, signed calls only
-  // (security.aws.a, R-025 (a)). Every figure is synthetic and every answer says so (x-twin-note). Budgets is answered as a
-  // browser sees it: boto3.aws.a's note 21 finds the SDK's CORS table does not mark Budgets as allowing CORS, so the call
-  // fails as a refused cross-origin request would. Figures (billing.aws.a's choice): small round amounts per service per
+  // (security.aws.a, R-025 (a)). Every figure is synthetic and every answer says so (x-twin-note). Budgets fails as a refused
+  // cross-origin request would: browser CORS for Budgets is conflicting (the SDK's table does not mark it, note 21; the
+  // newsroom brief reports a preflight it answered), the v1 tab does not call it, and the twin takes the cautious case. Figures (billing.aws.a's choice): small round amounts per service per
   // day, in ten-thousandths of a dollar so every view adds up exactly, from 1 September 2026 to today (the twin's clock
   // where it has one); later days are empty, the current month is Estimated, each period echoes the request. The twin's
   // own choices: these services and amounts, region global for CloudFront and Tax, 31 periods a page, a forecast that may
@@ -1260,7 +1260,7 @@
     }
     return costErr("ValidationException", "The twin answers three Cost Explorer reads only: GetCostAndUsage, GetCostForecast and GetDimensionValues.");
   }
-  // Budgets: refused as a browser would refuse a cross-origin call AWS does not allow (no CORS: note 21).
+  // Budgets: refused as a browser would refuse a cross-origin call (the cautious case; CORS conflicting, see above).
   function budgets() { return Promise.reject(new TypeError("Failed to fetch")); }
   function cloudcontrol(target, body, init, host) {
     if (!signed(init)) return json({ __type: "AccessDeniedException", message: "Missing signature" }, 403);
