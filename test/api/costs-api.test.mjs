@@ -1,6 +1,6 @@
 // CostsApi (site/api/costs-api.js) over answers in botocore's shapes (ce 2017-10-25, budgets 2016-10-20), before the
-// twin answers them in full: request shapes (endpoints, signing, targets, bodies), plain objects, paging, amounts kept as
-// AWS's decimal strings, refusals before any request, errors, limits, and the contract. Node 22, no network.
+// twin answers them in full: request shapes (endpoints, signing, targets, bodies), plain objects, every usage page merged,
+// amounts as numbers (null when malformed, never 0), refusals before any request, errors, limits, and the contract. Node 22, no network.
 // Run: node test/api/costs-api.test.mjs
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
@@ -38,25 +38,28 @@ let u = plain(await api.usage({ start: "2026-11-01", end: "2026-11-24" }));
 const r0 = sent[0];
 ok(r0.service === "ce" && r0.region === "us-east-1" && r0.method === "POST" && r0.url === "https://ce.us-east-1.amazonaws.com/" && r0.headers["content-type"] === "application/x-amz-json-1.1" && r0.headers["x-amz-target"] === "AWSInsightsIndexService.GetCostAndUsage", "request: ce, us-east-1, JSON 1.1, its target");
 ok(r0.body === JSON.stringify({ TimePeriod: { Start: "2026-11-01", End: "2026-11-24" }, Granularity: "MONTHLY", Metrics: ["UnblendedCost"] }), "default body: MONTHLY, UnblendedCost, no GroupBy");
-ok(JSON.stringify(u) === JSON.stringify({ items: [{ start: "2026-11-01", end: "2026-11-24", estimated: false, total: { amount: "42.1700000001", unit: "USD" }, groups: [] }], next: null }), "a total: the amount kept as AWS's string");
+ok(JSON.stringify(u) === JSON.stringify({ items: [{ start: "2026-11-01", end: "2026-11-24", estimated: false, total: { amount: 42.1700000001, unit: "USD" }, groups: [] }], capped: false }), "a total: the amount as a number, the unit as AWS gives it");
 u = plain(await api.usage({ start: "2026-11-01", end: "2026-11-02", granularity: "DAILY", groupBy: "SERVICE" }));
 ok(JSON.parse(sent.at(-1).body).GroupBy[0].Type === "DIMENSION" && JSON.parse(sent.at(-1).body).GroupBy[0].Key === "SERVICE" && JSON.parse(sent.at(-1).body).Granularity === "DAILY", "groupBy SERVICE as a DIMENSION group, DAILY");
-ok(u.items[0].estimated === true && u.items[0].total === null && u.items[0].groups.length === 2 && u.items[0].groups[0].amount === "0.1234567891" && u.items[0].groups[1].key === "<b>AWS Lambda</b>" && u.next === "page-2", "groups: key and amount as given (render as text), an empty group dropped, NextPageToken as next");
-u = plain(await api.usage({ start: "2026-11-01", end: "2026-11-02", groupBy: "REGION", next: "page-2" }));
-ok(JSON.parse(sent.at(-1).body).NextPageToken === "page-2" && u.next === null, "next goes back as NextPageToken; null on the last page");
+ok(u.items.length === 2 && u.items[0].estimated === true && u.items[0].total === null && u.items[0].groups.length === 2 && u.items[0].groups[0].amount === 0.1234567891 && u.items[0].groups[1].amount === 1e-7 && u.items[0].groups[1].key === "<b>AWS Lambda</b>" && u.capped === false && !("next" in u), "groups: key as given (render as text), a tiny group kept, an empty group dropped, both pages merged");
+ok(JSON.parse(sent.at(-2).body).NextPageToken === undefined && JSON.parse(sent.at(-1).body).NextPageToken === "page-2" && JSON.parse(sent.at(-1).body).GroupBy[0].Key === "SERVICE", "NextPageToken goes back with the same body");
+const endless = CostsApi(async (req) => j({ ResultsByTime: [{ TimePeriod: { Start: "2026-11-01", End: "2026-11-02" }, Total: { UnblendedCost: { Amount: "1", Unit: "USD" } } }], NextPageToken: "more" }));
+const cap = plain(await endless.usage({ start: "2026-11-01", end: "2026-11-02", maxPages: 3 }));
+ok(cap.items.length === 3 && cap.capped === true, "pages capped at maxPages, capped true");
+ok((await endless.usage({ start: "2026-11-01", end: "2026-11-02", maxPages: 999 })).items.length === 50, "maxPages at most 50");
 ok(JSON.parse((await api.usage({ start: "2026-11-01", end: "2026-11-02", metric: "AmortizedCost" }), sent.at(-1).body)).Metrics[0] === "AmortizedCost", "another metric");
-ok((await CostsApi.all((next) => api.usage({ start: "2026-11-01", end: "2026-11-02", groupBy: "SERVICE", next }))).items.length === 2, "CostsApi.all drains pages");
+ok((await CostsApi.all((next) => api.budgets({ next }))).items.length === 2, "CostsApi.all drains budget pages");
 
 // ---- forecast, dimension values, budgets ----
 const f = plain(await api.forecast({ start: "2026-11-24", end: "2026-12-01" }));
 ok(JSON.parse(sent.at(-1).body).Metric === "UNBLENDED_COST" && sent.at(-1).headers["x-amz-target"] === "AWSInsightsIndexService.GetCostForecast", "forecast: its target, UNBLENDED_COST");
-ok(JSON.stringify(f) === JSON.stringify({ total: { amount: "61.5", unit: "USD" }, items: [{ start: "2026-11-24", end: "2026-12-01", mean: "19.33", low: "15.1", high: "23.9" }] }), "forecast: total and interval as strings");
+ok(JSON.stringify(f) === JSON.stringify({ total: { amount: 61.5, unit: "USD" }, start: "2026-11-24", end: "2026-12-01", items: [{ start: "2026-11-24", end: "2026-12-01", mean: 19.33, low: 15.1, high: 23.9 }] }), "forecast: total, its period and the interval as numbers");
 const d = plain(await api.dimensionValues({ dimension: "REGION", start: "2026-11-01", end: "2026-11-24" }));
 ok(JSON.stringify(d) === JSON.stringify({ items: ["eu-west-2", "us-east-1"], next: null }) && JSON.parse(sent.at(-1).body).Dimension === "REGION", "dimension values: strings only");
 const bg = plain(await api.budgets({ max: 500 }));
 const rb = sent.at(-1);
 ok(rb.service === "budgets" && rb.region === "us-east-1" && rb.url === "https://budgets.amazonaws.com/" && rb.headers["x-amz-target"] === "AWSBudgetServiceGateway.DescribeBudgets" && JSON.stringify(JSON.parse(rb.body)) === JSON.stringify({ AccountId: A, MaxResults: 100 }), "budgets: its endpoint and target, the account id, MaxResults clamped to 100");
-ok(JSON.stringify(bg.items) === JSON.stringify([{ name: "Monthly cap", type: "COST", timeUnit: "MONTHLY", limit: { amount: "10.0", unit: "USD" }, actual: { amount: "4.2", unit: "USD" }, forecast: { amount: "9.1", unit: "USD" }, start: "2025-12-01", end: "2087-06-15" }]) && bg.next === "b2", "a budget: limit, actual and forecast spend, its period; a malformed one dropped");
+ok(JSON.stringify(bg.items) === JSON.stringify([{ name: "Monthly cap", type: "COST", timeUnit: "MONTHLY", limit: { amount: 10, unit: "USD" }, actual: { amount: 4.2, unit: "USD" }, forecast: { amount: 9.1, unit: "USD" }, start: "2025-12-01", end: "2087-06-15" }]) && bg.next === "b2", "a budget: limit, actual and forecast spend, its period; a malformed one dropped");
 
 // ---- refusals before any request ----
 const n0 = sent.length;
@@ -81,7 +84,7 @@ await rejects(CostsApi(async () => ({ ok: true, status: 200, headers: new Header
 ok(!read, "refused before reading");
 await rejects(CostsApi(async () => new Response("x".repeat(4 * 1024 * 1024 + 1))).usage({ start: "2026-11-01", end: "2026-11-24" }), (e) => e.code === "TooLarge", "over 4 MB by length");
 const odd = plain(await CostsApi(async () => j({ ResultsByTime: [{ TimePeriod: { Start: "x", End: "2026-11-02" }, Total: { UnblendedCost: { Amount: "1e309", Unit: "USD" } }, Groups: "no" }], NextPageToken: 5 })).usage({ start: "2026-11-01", end: "2026-11-02" }));
-ok(odd.items[0].start === null && odd.items[0].total === null && odd.items[0].groups.length === 0 && odd.next === null, "odd values are dropped, never passed on");
+ok(odd.items[0].start === null && odd.items[0].total === null && odd.items[0].groups.length === 0 && odd.items.length === 1, "odd values are dropped, never passed on");
 try { CostsApi(); ok(false, "no send"); } catch (e) { ok(e instanceof TypeError, "CostsApi needs a send"); }
 
 // ---- the contract ----

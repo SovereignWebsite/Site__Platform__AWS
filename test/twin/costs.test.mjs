@@ -1,85 +1,77 @@
-// The twin's Cost Explorer answers refuse unsigned calls (security.aws.a, R-025 (a)), as every other twin service does;
-// a signed call gets the synthetic total. Node 22, no network. Run: node test/twin/costs.test.mjs
+// The twin's Cost Explorer answers for the Costs tab (billing.aws.a's site/billing.js on CostsApi): signed calls only
+// (R-025 (a)); synthetic figures marked as such, the same in every view (month to date = daily for the month = by
+// service = by region), each period echoing the request, the current month Estimated, paged; a forecast; dimension
+// values; Budgets refused as a browser sees it (no CORS, boto3.aws.a note 21); reads only. Dates are relative to today
+// (or the twin's clock where it has one). Node 22, no network. Run: node test/twin/costs.test.mjs
 import assert from "node:assert/strict";
-import { loadTwin } from "./golden.mjs";
+import { readFileSync } from "node:fs";
+import vm from "node:vm";
 
-const twin = loadTwin("baseline"), CE = "https://ce.us-east-1.amazonaws.com/";
-const body = JSON.stringify({ TimePeriod: { Start: "2026-11-01", End: "2026-11-24" }, Granularity: "MONTHLY", Metrics: ["UnblendedCost"] });
-const call = async (headers) => { const r = await twin.handle(CE, { method: "POST", headers: Object.assign({ "content-type": "application/x-amz-json-1.1", "x-amz-target": "AWSInsightsIndexService.GetCostAndUsage" }, headers), body }); return { status: r.status, json: await r.json() }; };
+const ctx = { URLSearchParams, URL, TextEncoder, TextDecoder, Response, Headers, Blob, CompressionStream, DecompressionStream, Promise, Math, JSON, Date, Object, Array, String, Number, RegExp, Error, TypeError, Uint8Array, Uint32Array, ArrayBuffer, DataView,
+  setTimeout: (f) => setImmediate(f), location: { search: "?twin", origin: "https://example.test" } };
+ctx.window = ctx; vm.createContext(ctx);
+vm.runInContext(readFileSync(new URL("../../site/twin.js", import.meta.url), "utf8"), ctx, { filename: "twin.js" });
+const T = ctx.AwsTwin, CE = "https://ce.us-east-1.amazonaws.com/", NOTE = "synthetic figures from the twin, not an AWS bill";
+const SIG = { authorization: "AWS4-HMAC-SHA256 Credential=ASIATWINREAD/20261124/us-east-1/ce/aws4_request, SignedHeaders=host, Signature=twin" };
+const call = async (action, b, h = SIG) => { const r = await T.handle(CE, { method: "POST", headers: Object.assign({ "content-type": "application/x-amz-json-1.1", "x-amz-target": "AWSInsightsIndexService." + action }, h), body: JSON.stringify(b) });
+  return { status: r.status, note: r.headers.get("x-twin-note"), json: await r.json() }; };
+const iso = (t) => new Date(t).toISOString().slice(0, 10), DAY = 86400000, now = new Date();
+const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()), m0 = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1), m1 = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1);
+const c = (a) => Math.round(Number(a) * 10000), sum = (xs) => xs.reduce((a, b) => a + b, 0), M = ["UnblendedCost"];
 let checks = 0;
-let r = await call({});
-assert.equal(r.status, 403, "unsigned: refused"); assert.equal(r.json.__type, "AccessDeniedException"); assert.ok(!("ResultsByTime" in r.json), "no figures without a signature");
-r = await call({ authorization: "AWS4-HMAC-SHA256 Credential=AKIAREAL/20261124/us-east-1/ce/aws4_request, SignedHeaders=host, Signature=x" });
-assert.equal(r.status, 403, "a credential that is not the twin's: refused");
+
+// Signed only
+const mtdBody = { TimePeriod: { Start: iso(m0), End: iso(today + DAY) }, Granularity: "MONTHLY", Metrics: M };
+let r = await call("GetCostAndUsage", mtdBody, {});
+assert.equal(r.status, 403); assert.equal(r.json.__type, "AccessDeniedException"); assert.ok(!("ResultsByTime" in r.json), "no figures unsigned");
+assert.equal((await call("GetCostAndUsage", mtdBody, { authorization: SIG.authorization.replace("ASIATWINREAD", "AKIAREALKEY") })).status, 403, "a non-twin credential: refused");
 checks += 4;
-r = await call({ authorization: "AWS4-HMAC-SHA256 Credential=ASIATWINREAD/20261124/us-east-1/ce/aws4_request, SignedHeaders=host, Signature=twin" });
-assert.equal(r.status, 200); assert.equal(r.json.ResultsByTime[0].Total.UnblendedCost.Unit, "USD", "signed: the synthetic total");
-checks += 2;
 
+// Month to date, by service, by region, daily: one set of figures
+r = await call("GetCostAndUsage", mtdBody);
+assert.equal(r.status, 200); assert.equal(r.note, NOTE, "marked synthetic");
+const p0 = r.json.ResultsByTime[0], mtd = c(p0.Total.UnblendedCost.Amount);
+assert.deepEqual(p0.TimePeriod, mtdBody.TimePeriod, "the request's TimePeriod echoed"); assert.equal(p0.Estimated, true, "the current month is Estimated");
+assert.ok(mtd > 0); assert.match(p0.Total.UnblendedCost.Amount, /^\d+\.\d{10}$/);
+const svc = (await call("GetCostAndUsage", Object.assign({}, mtdBody, { GroupBy: [{ Type: "DIMENSION", Key: "SERVICE" }] }))).json.ResultsByTime[0];
+const reg = (await call("GetCostAndUsage", Object.assign({}, mtdBody, { GroupBy: [{ Type: "DIMENSION", Key: "REGION" }] }))).json.ResultsByTime[0];
+assert.deepEqual(svc.Groups.map((g) => g.Keys[0]), ["AWS Cost Explorer", "AWS Lambda", "AWS Secrets Manager", "Amazon CloudFront", "Amazon Simple Storage Service", "Tax"], "billing.aws.a's services, and Tax at zero");
+assert.deepEqual(reg.Groups.map((g) => g.Keys[0]), ["eu-west-2", "global", "us-east-1"]);
+assert.equal(sum(svc.Groups.map((g) => c(g.Metrics.UnblendedCost.Amount))), mtd, "by service adds up to the month to date");
+assert.equal(sum(reg.Groups.map((g) => c(g.Metrics.UnblendedCost.Amount))), mtd, "by region adds up to the month to date");
+assert.equal(c(svc.Groups.find((g) => g.Keys[0] === "Tax").Metrics.UnblendedCost.Amount), 0, "a zero group is kept");
+assert.deepEqual(svc.Total, {}, "grouped: no Total, as Cost Explorer's");
+const dailyBody = { TimePeriod: { Start: iso(today - 30 * DAY), End: iso(today + DAY) }, Granularity: "DAILY", Metrics: M };
+const d1 = await call("GetCostAndUsage", dailyBody);
+assert.equal(d1.json.ResultsByTime.length, 31); assert.equal(d1.json.NextPageToken, undefined, "31 days fit one page");
+assert.equal(sum(d1.json.ResultsByTime.filter((p) => p.TimePeriod.Start >= iso(m0)).map((p) => c(p.Total.UnblendedCost.Amount))), mtd, "the month's days add up to the month to date");
+const long = await call("GetCostAndUsage", { TimePeriod: { Start: iso(today - 40 * DAY), End: iso(today + DAY) }, Granularity: "DAILY", Metrics: M });
+assert.equal(long.json.ResultsByTime.length, 31); assert.equal(long.json.NextPageToken, "twin-costs-31", "41 days: two pages");
+const long2 = await call("GetCostAndUsage", { TimePeriod: { Start: iso(today - 40 * DAY), End: iso(today + DAY) }, Granularity: "DAILY", Metrics: M, NextPageToken: "twin-costs-31" });
+assert.equal(long2.json.ResultsByTime.length, 10); assert.equal(long2.json.NextPageToken, undefined);
+assert.ok((await call("GetCostAndUsage", { TimePeriod: { Start: iso(today + DAY), End: iso(today + 3 * DAY) }, Granularity: "DAILY", Metrics: M })).json.ResultsByTime.every((p) => c(p.Total.UnblendedCost.Amount) === 0), "nothing after today");
+assert.equal(c((await call("GetCostAndUsage", mtdBody)).json.ResultsByTime[0].Total.UnblendedCost.Amount), mtd, "the same every call");
+checks += 22;
 
-// ---- the synthetic figures (the Costs tab): consistent across views, paged, labelled ----
-{
-  const t = loadTwin("baseline"); t.clock.pause(); t.clock.at("2026-11-24T12:00:00.000Z");
-  const SIG = { authorization: "AWS4-HMAC-SHA256 Credential=ASIATWINREAD/20261124/us-east-1/ce/aws4_request, SignedHeaders=host, Signature=twin" };
-  const j0 = t.journal().length;
-  const ce = async (action, b, h = SIG) => { const r = await t.handle(CE, { method: "POST", headers: Object.assign({ "content-type": "application/x-amz-json-1.1", "x-amz-target": "AWSInsightsIndexService." + action }, h), body: JSON.stringify(b) }); return { status: r.status, note: r.headers.get("x-twin-note"), json: await r.json() }; };
-  const cents = (a) => Math.round(Number(a) * 10000), M = ["UnblendedCost"];
-  const sum = (xs) => xs.reduce((a, b) => a + b, 0);
-  let x = await ce("GetCostAndUsage", { TimePeriod: { Start: "2026-11-01", End: "2026-11-25" }, Granularity: "MONTHLY", Metrics: M });
-  assert.equal(x.status, 200); assert.equal(x.note, "synthetic figures from the twin, not an AWS bill", "labelled synthetic");
-  const mtd = cents(x.json.ResultsByTime[0].Total.UnblendedCost.Amount);
-  assert.ok(mtd > 0 && x.json.ResultsByTime[0].Estimated === true, "month to date: a figure, Estimated");
-  assert.match(x.json.ResultsByTime[0].Total.UnblendedCost.Amount, /^\d+\.\d{10}$/, "amounts as AWS writes them, ten decimals");
-  const byService = await ce("GetCostAndUsage", { TimePeriod: { Start: "2026-11-01", End: "2026-11-25" }, Granularity: "MONTHLY", Metrics: M, GroupBy: [{ Type: "DIMENSION", Key: "SERVICE" }] });
-  const byRegion = await ce("GetCostAndUsage", { TimePeriod: { Start: "2026-11-01", End: "2026-11-25" }, Granularity: "MONTHLY", Metrics: M, GroupBy: [{ Type: "DIMENSION", Key: "REGION" }] });
-  const gs = (r) => r.json.ResultsByTime[0].Groups;
-  assert.equal(sum(gs(byService).map((g) => cents(g.Metrics.UnblendedCost.Amount))), mtd, "by service adds up to the total");
-  assert.equal(sum(gs(byRegion).map((g) => cents(g.Metrics.UnblendedCost.Amount))), mtd, "by region adds up to the total");
-  assert.deepEqual(gs(byRegion).map((g) => g.Keys[0]), ["eu-west-2", "global"]); assert.deepEqual(byService.json.GroupDefinitions, [{ Type: "DIMENSION", Key: "SERVICE" }]);
-  assert.deepEqual(byService.json.ResultsByTime[0].Total, {}, "a grouped answer has no Total, as Cost Explorer's");
-  let daily = await ce("GetCostAndUsage", { TimePeriod: { Start: "2026-10-01", End: "2026-11-25" }, Granularity: "DAILY", Metrics: M });
-  assert.equal(daily.json.ResultsByTime.length, 31, "a page of 31 days"); assert.equal(daily.json.NextPageToken, "twin-costs-31");
-  const page2 = await ce("GetCostAndUsage", { TimePeriod: { Start: "2026-10-01", End: "2026-11-25" }, Granularity: "DAILY", Metrics: M, NextPageToken: daily.json.NextPageToken });
-  assert.equal(page2.json.ResultsByTime.length, 24); assert.equal(page2.json.NextPageToken, undefined, "the last page");
-  const nov = page2.json.ResultsByTime.filter((r) => r.TimePeriod.Start >= "2026-11-01").map((r) => cents(r.Total.UnblendedCost.Amount));
-  assert.equal(sum(nov), mtd, "daily figures add up to the month to date");
-  assert.equal(cents(page2.json.ResultsByTime.at(-1).Total.UnblendedCost.Amount), cents(page2.json.ResultsByTime.at(-1).Total.UnblendedCost.Amount), "deterministic");
-  const future = await ce("GetCostAndUsage", { TimePeriod: { Start: "2026-11-25", End: "2026-11-27" }, Granularity: "DAILY", Metrics: M });
-  assert.ok(future.json.ResultsByTime.every((r) => cents(r.Total.UnblendedCost.Amount) === 0), "no cost after the twin's clock");
-  const again = await ce("GetCostAndUsage", { TimePeriod: { Start: "2026-11-01", End: "2026-11-25" }, Granularity: "MONTHLY", Metrics: M });
-  assert.equal(cents(again.json.ResultsByTime[0].Total.UnblendedCost.Amount), mtd, "the same figures every call");
-  checks += 17;
+// Forecast to month end, dimension values
+const f = await call("GetCostForecast", { TimePeriod: { Start: iso(today), End: iso(m1) }, Metric: "UNBLENDED_COST", Granularity: "MONTHLY" });
+assert.equal(f.status, 200); assert.equal(f.note, NOTE);
+const fi = f.json.ForecastResultsByTime[0];
+assert.ok(c(fi.PredictionIntervalLowerBound) < c(fi.MeanValue) && c(fi.MeanValue) < c(fi.PredictionIntervalUpperBound) && c(f.json.Total.Amount) === c(fi.MeanValue), "a forecast with an interval round its mean");
+assert.equal((await call("GetCostForecast", { TimePeriod: { Start: iso(today - DAY), End: iso(m1 + DAY) }, Metric: "UNBLENDED_COST", Granularity: "MONTHLY" })).status, 400, "not from the past");
+const dv = await call("GetDimensionValues", { TimePeriod: mtdBody.TimePeriod, Dimension: "REGION" });
+assert.deepEqual(dv.json.DimensionValues.map((v) => v.Value), ["eu-west-2", "global", "us-east-1"]);
+checks += 6;
 
-  // Forecast, dimension values, Budgets
-  const f = await ce("GetCostForecast", { TimePeriod: { Start: "2026-11-24", End: "2026-12-01" }, Metric: "UNBLENDED_COST", Granularity: "MONTHLY" });
-  assert.equal(f.status, 200); const fi = f.json.ForecastResultsByTime[0];
-  assert.ok(cents(fi.PredictionIntervalLowerBound) < cents(fi.MeanValue) && cents(fi.MeanValue) < cents(fi.PredictionIntervalUpperBound) && cents(f.json.Total.Amount) === cents(fi.MeanValue), "a forecast with an interval around its mean");
-  assert.equal((await ce("GetCostForecast", { TimePeriod: { Start: "2026-11-01", End: "2026-12-01" }, Metric: "UNBLENDED_COST", Granularity: "MONTHLY" })).status, 400, "a forecast may not start in the past");
-  const dv = await ce("GetDimensionValues", { TimePeriod: { Start: "2026-11-01", End: "2026-11-25" }, Dimension: "SERVICE" });
-  assert.deepEqual(dv.json.DimensionValues.map((v) => v.Value), gs(byService).map((g) => g.Keys[0]), "dimension values: the services with costs");
-  const B = { authorization: SIG.authorization.replace("/ce/", "/budgets/") };
-  const bud = async (b, h = B, target = "AWSBudgetServiceGateway.DescribeBudgets") => { const r = await t.handle("https://budgets.amazonaws.com/", { method: "POST", headers: Object.assign({ "content-type": "application/x-amz-json-1.1", "x-amz-target": target }, h), body: JSON.stringify(b) }); return { status: r.status, note: r.headers.get("x-twin-note"), json: await r.json() }; };
-  const bg = await bud({ AccountId: t.account });
-  assert.equal(bg.status, 200); assert.equal(bg.note, "synthetic figures from the twin, not an AWS bill");
-  const b0 = bg.json.Budgets[0];
-  assert.equal(b0.BudgetName, "Monthly cap (synthetic)"); assert.equal(cents(b0.CalculatedSpend.ActualSpend.Amount), mtd, "the budget's actual spend is the month to date");
-  assert.ok(cents(b0.CalculatedSpend.ForecastedSpend.Amount) > mtd, "its forecast spend is more");
-  assert.equal((await bud({ AccountId: "444455556666" })).status, 403, "another account's budgets: refused");
-  assert.equal((await bud({ AccountId: t.account }, {})).status, 403, "Budgets unsigned: refused");
-  assert.equal((await bud({ AccountId: t.account }, B, "AWSBudgetServiceGateway.CreateBudget")).status, 400, "no Budgets writes");
-  checks += 11;
+// Budgets: refused as a browser sees a call without CORS
+let e = null; try { await T.handle("https://budgets.amazonaws.com/", { method: "POST", headers: Object.assign({ "x-amz-target": "AWSBudgetServiceGateway.DescribeBudgets" }, SIG), body: JSON.stringify({ AccountId: T.account }) }); } catch (x) { e = x; }
+assert.ok(e instanceof TypeError && e.message === "Failed to fetch", "Budgets: a CORS refusal, as a browser would see it");
+checks += 1;
 
-  // Refusals; the customer account; nothing written
-  for (const [b, m] of [[{ TimePeriod: { Start: "2026-11-25", End: "2026-11-01" }, Granularity: "MONTHLY", Metrics: M }, "start after end"], [{ TimePeriod: { Start: "2026-02-30", End: "2026-03-01" }, Granularity: "MONTHLY", Metrics: M }, "30 February"],
-    [{ TimePeriod: { Start: "2026-11-01", End: "2026-11-25" }, Granularity: "HOURLY", Metrics: M }, "HOURLY"], [{ TimePeriod: { Start: "2026-11-01", End: "2026-11-25" }, Granularity: "MONTHLY", Metrics: ["UsageQuantity"] }, "a usage metric"],
-    [{ TimePeriod: { Start: "2026-11-01", End: "2026-11-25" }, Granularity: "MONTHLY", Metrics: M, GroupBy: [{ Type: "TAG", Key: "x" }] }, "a tag group"], [{ TimePeriod: { Start: "2026-11-01", End: "2026-11-25" }, Granularity: "MONTHLY", Metrics: M, NextPageToken: "x" }, "a bad token"]])
-    assert.equal((await ce("GetCostAndUsage", b)).status, 400, m);
-  assert.equal((await ce("GetAnomalies", { TimePeriod: { Start: "2026-11-01", End: "2026-11-25" } })).status, 400, "only the three Cost Explorer reads");
-  const cust = { authorization: SIG.authorization.replace("ASIATWINREAD", "ASIATWINCUSTOMER") };
-  const cr = await t.handle(CE, { method: "POST", headers: Object.assign({ "x-amz-target": "AWSInsightsIndexService.GetCostAndUsage" }, cust), body: JSON.stringify({ TimePeriod: { Start: "2026-11-01", End: "2026-11-25" }, Granularity: "MONTHLY", Metrics: M }) });
-  assert.equal(cr.status, 403, "the customer account has no costs in the twin (its existing gate)");
-  assert.equal(t.journal().length, j0, "reads write nothing");
-  checks += 9;
-  console.log("ok twin costs: synthetic, consistent across views, paged, forecast, dimension values, a budget, refusals");
-}
-console.log("OK (twin costs: " + checks + " checks; signatures, synthetic figures consistent across views, paging, forecast, dimension values, a budget, refusals)");
+// Refusals and reads only
+for (const [b, m] of [[{ TimePeriod: { Start: iso(today), End: iso(today) }, Granularity: "MONTHLY", Metrics: M }, "empty period"], [{ TimePeriod: { Start: "2026-02-30", End: "2026-03-02" }, Granularity: "MONTHLY", Metrics: M }, "30 February"],
+  [Object.assign({}, mtdBody, { Granularity: "HOURLY" }), "HOURLY"], [Object.assign({}, mtdBody, { Metrics: ["UsageQuantity"] }), "a usage metric"], [Object.assign({}, mtdBody, { GroupBy: [{ Type: "TAG", Key: "x" }] }), "a tag"], [Object.assign({}, mtdBody, { NextPageToken: "x" }), "a bad token"]])
+  assert.equal((await call("GetCostAndUsage", b)).status, 400, m);
+assert.equal((await call("GetAnomalies", mtdBody)).status, 400, "only the three reads");
+checks += 7;
+console.log("OK (twin costs: " + checks + " checks; signed only, synthetic figures the same in every view, paging, forecast, dimension values, Budgets refused as without CORS)");

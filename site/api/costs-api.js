@@ -8,9 +8,10 @@
 // these when asked, never on a timer.
 //
 //   var api = CostsApi(send, { account });
-//   api.usage({ start, end, granularity, groupBy, metric, next })   -> { items: [period], next }        GetCostAndUsage
+//   api.usage({ start, end, granularity, groupBy, metric, maxPages }) -> { items: [period], capped }    GetCostAndUsage, every
+//       page read (NextPageToken) up to maxPages (default 12), capped true when it stopped with pages left
 //       period = { start, end, estimated, total: { amount, unit } | null, groups: [{ key, amount, unit }] }
-//   api.forecast({ start, end, granularity, metric })               -> { total, items: [{ start, end, mean, low, high }] }   GetCostForecast
+//   api.forecast({ start, end, granularity, metric })               -> { total, start, end, items: [{ start, end, mean, low, high }] }   GetCostForecast
 //   api.dimensionValues({ dimension, start, end, next })            -> { items: [value], next }        GetDimensionValues
 //   api.budgets({ next, max })                                      -> { items: [budget], next }       DescribeBudgets
 //       budget = { name, type, timeUnit, limit, actual, forecast, start, end }   (money as { amount, unit } or null)
@@ -18,9 +19,11 @@
 //
 // Dates are YYYY-MM-DD, start before end (Cost Explorer's End is exclusive); granularity DAILY or MONTHLY; groupBy
 // SERVICE, REGION or none; usage metric UnblendedCost, BlendedCost, AmortizedCost or NetUnblendedCost; forecast metric
-// the matching UNBLENDED_COST and so on; every value is checked before a request. Amounts stay as AWS gives them,
-// decimal strings, so no float rounding reaches a total; the page formats them. Service and budget names are AWS's or
-// the owner's text: render as text. Errors: an Error "Code: Message" with .code and .status; a CORS TypeError passes
+// the matching UNBLENDED_COST and so on; every value is checked before a request. Amounts are numbers (billing.aws.a's
+// view sums and formats them); a missing or malformed amount is null, never 0; zero groups are kept (the view drops
+// them). GetCostForecast cannot start in the past: start today. Budgets: boto3.aws.a's note 21 finds the SDK's CORS
+// table does not mark Budgets, so in a browser budgets() is likely refused (a TypeError, passed through); the view
+// shows it as not read. Service and budget names are AWS's or the owner's text: render as text. Errors: an Error "Code: Message" with .code and .status; a CORS TypeError passes
 // through; answers over 4 MB are refused, by their declared length when they give one.
 (function (root) {
   "use strict";
@@ -37,10 +40,11 @@
     if (s >= e) return "start must be before end (end is exclusive)";
     return { Start: s, End: e };
   }
+  function amount(a) { return typeof a === "string" && /^-?\d{1,15}(\.\d{1,12})?$/.test(a) ? Number(a) : null; }
   function money(m) {
     if (!m || typeof m !== "object") return null;
-    var a = m.Amount, u = m.Unit;
-    return typeof a === "string" && /^-?\d{1,15}(\.\d{1,12})?$/.test(a) ? { amount: a, unit: typeof u === "string" ? u.slice(0, 8) : "" } : null;
+    var a = amount(m.Amount);
+    return a === null ? null : { amount: a, unit: typeof m.Unit === "string" ? m.Unit.slice(0, 8) : null };
   }
   function token(t) { return typeof t === "string" && t ? t : null; }
   function CostsApi(send, opts) {
@@ -69,19 +73,23 @@
       if (!GRAN[g]) return bad("granularity is DAILY or MONTHLY");
       if (!Object.prototype.hasOwnProperty.call(METRIC, m)) return bad("metric is UnblendedCost, BlendedCost, AmortizedCost or NetUnblendedCost");
       if (o.groupBy !== undefined && o.groupBy !== null && !GROUP[o.groupBy]) return bad("groupBy is SERVICE, REGION or none");
-      var body = { TimePeriod: tp, Granularity: g, Metrics: [m] };
+      var body = { TimePeriod: tp, Granularity: g, Metrics: [m] }, maxPages = Math.min(Math.max(1, (o.maxPages | 0) || 12), 50);
       if (o.groupBy) body.GroupBy = [{ Type: "DIMENSION", Key: o.groupBy }];
-      if (o.next) body.NextPageToken = String(o.next);
-      return ce("GetCostAndUsage", body).then(function (j) {
-        return { items: (Array.isArray(j.ResultsByTime) ? j.ResultsByTime : []).map(function (p) {
+      var page = function (next) {
+        var b = next ? Object.assign({}, body, { NextPageToken: next }) : body;
+        return ce("GetCostAndUsage", b).then(function (j) { return { items: periodsOf(j), next: token(j.NextPageToken) }; });
+      };
+      return root.ApiAll(page, { maxPages: maxPages, maxItems: 5000 }).then(function (all) { return { items: all.items, capped: all.capped }; });
+      function periodsOf(j) {
+        return (Array.isArray(j.ResultsByTime) ? j.ResultsByTime : []).map(function (p) {
           var t = p && p.TimePeriod || {}, total = money(p && p.Total && p.Total[m]);
           return { start: day(t.Start), end: day(t.End), estimated: !!(p && p.Estimated), total: total,
             groups: (p && Array.isArray(p.Groups) ? p.Groups : []).map(function (gr) {
               var v = money(gr && gr.Metrics && gr.Metrics[m]);
               return { key: gr && Array.isArray(gr.Keys) && typeof gr.Keys[0] === "string" ? gr.Keys[0] : null, amount: v ? v.amount : null, unit: v ? v.unit : null };
             }).filter(function (x) { return x.key !== null; }) };
-        }), next: token(j.NextPageToken) };
-      });
+        });
+      }
     }
     function forecast(o) {
       o = o || {};
@@ -90,10 +98,9 @@
       if (!GRAN[g]) return bad("granularity is DAILY or MONTHLY");
       if (!FORECAST[m]) return bad("metric is UNBLENDED_COST, BLENDED_COST, AMORTIZED_COST or NET_UNBLENDED_COST");
       return ce("GetCostForecast", { TimePeriod: tp, Metric: m, Granularity: g }).then(function (j) {
-        return { total: money(j.Total), items: (Array.isArray(j.ForecastResultsByTime) ? j.ForecastResultsByTime : []).map(function (f) {
+        return { total: money(j.Total), start: tp.Start, end: tp.End, items: (Array.isArray(j.ForecastResultsByTime) ? j.ForecastResultsByTime : []).map(function (f) {
           var t = f && f.TimePeriod || {};
-          var num = function (v) { return typeof v === "string" && /^-?\d{1,15}(\.\d{1,12})?$/.test(v) ? v : null; };
-          return { start: day(t.Start), end: day(t.End), mean: num(f && f.MeanValue), low: num(f && f.PredictionIntervalLowerBound), high: num(f && f.PredictionIntervalUpperBound) };
+          return { start: day(t.Start), end: day(t.End), mean: amount(f && f.MeanValue), low: amount(f && f.PredictionIntervalLowerBound), high: amount(f && f.PredictionIntervalUpperBound) };
         }) };
       });
     }

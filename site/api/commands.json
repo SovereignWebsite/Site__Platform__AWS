@@ -339,11 +339,11 @@
           "type": "string"
         },
         {
-          "name": "next",
-          "type": "string"
+          "name": "maxPages",
+          "type": "integer"
         }
       ],
-      "summary": "Cost and usage by day or month, optionally by service or region",
+      "summary": "Cost and usage by day or month, optionally by service or region, every page merged",
       "role": "read",
       "actions": [
         "ce:GetCostAndUsage"
