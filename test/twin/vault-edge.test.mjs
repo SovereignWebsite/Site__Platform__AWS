@@ -132,7 +132,13 @@ let checks = 0;
   assert.equal(await status(t), "CREATE_COMPLETE", "with the -edge stack's outputs the Vault completes");
   const dist = await (await t.handle("https://cloudfront.amazonaws.com/2020-05-31/distribution", { headers: H("us-east-1") })).text();
   assert.deepEqual(tag(dist, "WebACLId"), [eo.WebAclArn], "and its distribution carries the web ACL");
-  checks += 15;
+  // Another Vault's web ACL in the same account: the pattern cannot tie its 12 hex to this VaultId, and CloudFront takes
+  // any CLOUDFRONT-scope ACL in the account, so the twin lets it through (a finding, not a failure; cloudformation.aws.a).
+  const ID2 = "fedcba987654", V2 = "sws-vault-" + ID2;
+  await create(t, V2, { VaultId: ID2, WebAclArn: eo.WebAclArn }, VR, { "Capabilities.member.1": "CAPABILITY_NAMED_IAM" });
+  t.clock.tick(20 * 60 * 1000);
+  assert.equal(tag((await cfn(t, { Action: "DescribeStacks", StackName: V2 }, VR)).text, "StackStatus")[0], "CREATE_COMPLETE", "another Vault's web ACL is accepted, as CloudFront would");
+  checks += 16;
 }
 
 console.log("OK (twin vault -edge stack: " + checks + " checks; us-east-1 only, certificate and web ACL by condition, their ARNs as outputs, DNS elsewhere waits with the validation record, refusals write nothing, teardown; the Vault takes its certificate and web ACL, and CloudFront refuses any other)");

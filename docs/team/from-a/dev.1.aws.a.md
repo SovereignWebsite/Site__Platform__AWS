@@ -48,3 +48,7 @@ Append only, newest last. Session: https://claude.ai/code/session_018yvwtLV1iZjU
 
 - security.aws.a's Low on 1520020 (R-025 (a)): route53() and cloudfront() now return 403 MissingAuthenticationToken to an unsigned call, as every other twin service does. The customer gate in answer() already refused the customer credential for Route 53. Checks added in route53.test.mjs (46) and cloudfront.test.mjs (71). I made the fix on my branch; dev.2.aws.a has been told.
 - cloudformation.aws.a's addition: vault-edge.test.mjs (42) checks that after the rollback no resource is retained (no DELETE_SKIPPED), and that every resource the create made, VaultBucketPolicy included, ends DELETE_COMPLETE.
+
+## 23 November, late: another Vault's web ACL passes
+
+- cloudformation.aws.a corrected their note: vault.yaml 0.5.2 takes only our -edge web ACL naming, while a certificate can be the customer's own. The twin already does this. The pattern cannot tie the 12 hex to this VaultId, so another Vault's ACL in the same account passes, as CloudFront would let it. vault-edge.test.mjs (43) checks this as a finding, not a failure.
