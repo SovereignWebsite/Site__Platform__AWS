@@ -70,8 +70,13 @@ checks += 1;
 
 // Refusals and reads only
 for (const [b, m] of [[{ TimePeriod: { Start: iso(today), End: iso(today) }, Granularity: "MONTHLY", Metrics: M }, "empty period"], [{ TimePeriod: { Start: "2026-02-30", End: "2026-03-02" }, Granularity: "MONTHLY", Metrics: M }, "30 February"],
-  [Object.assign({}, mtdBody, { Granularity: "HOURLY" }), "HOURLY"], [Object.assign({}, mtdBody, { Metrics: ["UsageQuantity"] }), "a usage metric"], [Object.assign({}, mtdBody, { GroupBy: [{ Type: "TAG", Key: "x" }] }), "a tag"], [Object.assign({}, mtdBody, { NextPageToken: "x" }), "a bad token"]])
+  [Object.assign({}, mtdBody, { Granularity: "HOURLY" }), "HOURLY"], [Object.assign({}, mtdBody, { Metrics: ["UsageQuantity"] }), "a usage metric"], [Object.assign({}, mtdBody, { GroupBy: [{ Type: "TAG", Key: "x" }] }), "a tag"], [Object.assign({}, mtdBody, { NextPageToken: "x" }), "a bad token"],
+  [Object.assign({}, mtdBody, { Metrics: ["__proto__"] }), "__proto__ is no metric"], [Object.assign({}, mtdBody, { Metrics: ["toString"] }), "toString is no metric"],
+  [{ TimePeriod: { Start: "1000-01-01", End: "9999-01-01" }, Granularity: "DAILY", Metrics: M }, "a range over 14 months"]])
   assert.equal((await call("GetCostAndUsage", b)).status, 400, m);
 assert.equal((await call("GetAnomalies", mtdBody)).status, 400, "only the three reads");
-checks += 7;
+const t0 = Date.now(); await call("GetCostAndUsage", { TimePeriod: { Start: "1000-01-01", End: "9999-01-01" }, Granularity: "DAILY", Metrics: M });
+assert.ok(Date.now() - t0 < 100, "a huge range is refused at once");
+assert.equal((await call("GetCostAndUsage", { TimePeriod: { Start: iso(today - 426 * DAY), End: iso(today + DAY) }, Granularity: "MONTHLY", Metrics: M })).status, 200, "427 days is allowed");
+checks += 12;
 console.log("OK (twin costs: " + checks + " checks; signed only, synthetic figures the same in every view, paging, forecast, dimension values, Budgets refused as without CORS)");
