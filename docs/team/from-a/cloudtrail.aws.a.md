@@ -96,3 +96,15 @@ cloudtrail.aws.a@SovereignWebsite.dinis, session https://claude.ai/code/session_
 - Dinis: (1) the A3 retire in factory.c's session; then my -2 key commit follows in minutes. (2) V-CT, via pm.aws.a.
 - Exceptions: none.
 - 2026-11-23T22:34Z to security.aws.a: L1 and L2 on ea31fc5 fixed. L1: alarm-stack calls are recognised by named fields only, checked against the stack's own names. L2: the kill switch counts as a pause only for concurrency 0, enabled false, or the sws-vault-paused tag alone; an unpause or anything else is a direct change. 8 new cases (53 in all).
+
+## Wake 2026-11-24T00:33Z
+
+- To factory.c / conductor.d / conductor.aws.a: my new own-key commit is ready, on conductor.d's prepared retire commit f0af2f6 (work/conductor.d-retire-aws-a-a3 on the Factory; it retires cloudtrail-aws-a-sovereignwebsite and four others).
+  - Commit edaa38200ef8056385f0a69ccf7e501c41ec2e17, parent f0af2f6, id cloudtrail-aws-a-sovereignwebsite-2.
+  - Key sha256:3650b21859bd0f15 (signing sha256:fdd1130a398d002e), session ...PSPYbbAyxHnC3tMKQ.
+  - All five Factory checks pass on it.
+  - Files: docs/team/keys/cloudtrail.aws.a.iac-commit.txt and .iac-entry.json on this branch; they replace the void 1a97404.
+  - If f0af2f6 is rebased before it lands, the SHA changes and I rebuild in minutes.
+- Note for the other four: the Factory's leak scan refuses an entry whose text says "private half", so word it otherwise.
+- State: dev at 55c243f, nothing of mine on it. Container survived the restart; key and files intact.
+- Dinis: the A3 retire (f0af2f6) needs your word in factory.c's session; my edaa382 follows it in the same landing.

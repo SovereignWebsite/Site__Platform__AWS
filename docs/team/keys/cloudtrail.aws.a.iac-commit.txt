@@ -1,19 +1,19 @@
-sha 1a97404ffc72bb2a6e73d7002ef03a76632a657e
-tree 694eb24694d3e7e1aa43cc209704769d1d039098
-parent 885f150d48cd09601345a803a28669afea04c95d
-author cloudtrail.aws.a <cloudtrail.aws.a@SovereignWebsite.dinis> 1795449313 +0000
-committer cloudtrail.aws.a <cloudtrail.aws.a@SovereignWebsite.dinis> 1795449348 +0000
+sha edaa38200ef8056385f0a69ccf7e501c41ec2e17
+tree 8840f689955e18ee47d189f1e95a57fca647e431
+parent f0af2f68c19c896040053c78345612b968826175
+author cloudtrail.aws.a <cloudtrail.aws.a@SovereignWebsite.dinis> 1795480361 +0000
+committer cloudtrail.aws.a <cloudtrail.aws.a@SovereignWebsite.dinis> 1795480361 +0000
 gpgsig -----BEGIN SSH SIGNATURE-----
  U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
  EE1HVxJLutwbWuT7E2Fa3sI7vxIIumQzUZiIK6WLYWMcVD6GU+wlp4YlGUBAkcP639V8Fd
  Dsw3B4tMR1dxZwReWQAAAANnaXQAAAAAAAAABnNoYTUxMgAAAGUAAAATZWNkc2Etc2hhMi
- 1uaXN0cDI1NgAAAEoAAAAhAOaL6xmY+bex/psqj/ryHvznkBdoQyAm0gEiePL+l98nAAAA
- IQCDkQjRmizDoPSb7T/WrlXd+TcDVAzFwegsYd5Wa4NYag==
+ 1uaXN0cDI1NgAAAEoAAAAhAIbRRJ3a6VKFhbLwymWFgoN85a/J4xJrTkMksDiMrl9KAAAA
+ IQDSPQvEkIm9NETkgtrVBZrfH2AObxr+2ZWKruiQXwgPSA==
  -----END SSH SIGNATURE-----
 
-keys: publish cloudtrail.aws.a@SovereignWebsite.dinis (fresh session)
+keys: publish cloudtrail.aws.a@SovereignWebsite.dinis (fresh session, id -2)
 
-Replaces the previous cloudtrail.aws.a session's key (sha256:9ebb596ab7bd764f), never published.
+Replaces the retired cloudtrail-aws-a-sovereignwebsite (sha256:9ebb596ab7bd764f), which could no longer sign after the restart.
 
 Agent: cloudtrail.aws.a@SovereignWebsite.dinis
 Claude-Session: https://claude.ai/code/session_018yvwtPSPYbbAyxHnC3tMKQ

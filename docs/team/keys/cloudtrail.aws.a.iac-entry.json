@@ -1,7 +1,7 @@
 {
-  "id": "cloudtrail-aws-a-sovereignwebsite",
+  "id": "cloudtrail-aws-a-sovereignwebsite-2",
   "agent": "cloudtrail.aws.a@SovereignWebsite.dinis",
-  "role": "CloudTrail and CloudWatch on account A (AWS Platform programme): the timeline, per-asset activity and alarms views over the twin's CloudTrail records, drop-in of a user's own CloudTrail dump, and the audit trail of Vault deployments. Replaces the key of the previous cloudtrail.aws.a session (sha256:9ebb596ab7bd764f), which was never published.",
+  "role": "CloudTrail and CloudWatch on account A (AWS Platform programme): the timeline, per-asset activity and alarms views over the twin's CloudTrail records, drop-in of a user's own CloudTrail dump, and the audit trail of Vault deployments. Replaces the key of the previous cloudtrail.aws.a session (sha256:9ebb596ab7bd764f), which was landed but could no longer sign after the restart (retired).",
   "how": "Made by the agent in its own session on 23 November 2026 with sgit pki keygen (sgit-ai 0.27.0); public bundle from sgit pki export. Only the public half is here.",
   "created": "2026-11-23",
   "status": "active",
