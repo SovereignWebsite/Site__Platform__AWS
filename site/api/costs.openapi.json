@@ -1,0 +1,580 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "CostsApi (browser)",
+  "version": "0.1.0",
+  "summary": "The browser-side contract of CostsApi (site/api/costs-api.js): Cost Explorer and Budgets reads for the Costs tab.",
+  "description": "This site has no server. The paths are logical names for the methods of the browser object CostsApi, not URLs anything listens on; operationId is the method name and parameters are its arguments in order. Four read actions, all in the read role's costs-read. Cost Explorer: ce.us-east-1.amazonaws.com, JSON 1.1 (AWSInsightsIndexService); Budgets: budgets.amazonaws.com, JSON 1.1 (AWSBudgetServiceGateway); both signed for us-east-1. Cost Explorer charges per request on a real account: called when asked, never on a timer. Browser CORS for both is being checked (boto3.aws.a): twin only until then."
+ },
+ "servers": [],
+ "x-browser-global": "CostsApi",
+ "x-design": "conductor.aws.a's split (billing.aws.a builds the Costs tab; dev.2.aws.a the API and the twin); design 03 one shape; botocore ce 2017-10-25 and budgets 2016-10-20 (boto3.aws.a confirming)",
+ "x-not-in-costsapi": {
+  "budget writes, alerts, anomaly monitors, Savings Plans and reservations": "not read by this page"
+ },
+ "paths": {
+  "/usage": {
+   "get": {
+    "operationId": "usage",
+    "summary": "Cost and usage by day or month, optionally by service or region",
+    "x-arguments": "usage({ start, end, granularity, groupBy, metric, next })",
+    "x-wire": "Cost Explorer GetCostAndUsage (TimePeriod, Granularity, Metrics, GroupBy DIMENSION, NextPageToken)",
+    "x-aws-actions": [
+     "ce:GetCostAndUsage"
+    ],
+    "x-role": "read",
+    "parameters": [
+     {
+      "name": "start",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+      }
+     },
+     {
+      "name": "end",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+      }
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "enum": [
+        "DAILY",
+        "MONTHLY"
+       ]
+      }
+     },
+     {
+      "name": "groupBy",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "enum": [
+        "SERVICE",
+        "REGION"
+       ]
+      }
+     },
+     {
+      "name": "metric",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "enum": [
+        "UnblendedCost",
+        "BlendedCost",
+        "AmortizedCost",
+        "NetUnblendedCost"
+       ]
+      }
+     },
+     {
+      "name": "next",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "One page of periods",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "required": [
+          "items",
+          "next"
+         ],
+         "properties": {
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/Period"
+           }
+          },
+          "next": {
+           "type": [
+            "string",
+            "null"
+           ],
+           "description": "Opaque cursor (NextPageToken); null on the last page"
+          }
+         }
+        }
+       }
+      }
+     },
+     "default": {
+      "description": "An Error \"Code: Message\" with .code and .status; a TypeError for a bad argument, before any request; a CORS TypeError passes through",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AwsError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/forecast": {
+   "get": {
+    "operationId": "forecast",
+    "summary": "A cost forecast for a period from today",
+    "x-arguments": "forecast({ start, end, granularity, metric })",
+    "x-wire": "Cost Explorer GetCostForecast (TimePeriod, Metric, Granularity)",
+    "x-aws-actions": [
+     "ce:GetCostForecast"
+    ],
+    "x-role": "read",
+    "parameters": [
+     {
+      "name": "start",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+      }
+     },
+     {
+      "name": "end",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+      }
+     },
+     {
+      "name": "granularity",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "enum": [
+        "DAILY",
+        "MONTHLY"
+       ]
+      }
+     },
+     {
+      "name": "metric",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "enum": [
+        "UNBLENDED_COST",
+        "BLENDED_COST",
+        "AMORTIZED_COST",
+        "NET_UNBLENDED_COST"
+       ]
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "The forecast",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Forecast"
+        }
+       }
+      }
+     },
+     "default": {
+      "description": "An Error \"Code: Message\" with .code and .status; a TypeError for a bad argument, before any request; a CORS TypeError passes through",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AwsError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/dimensionValues": {
+   "get": {
+    "operationId": "dimensionValues",
+    "summary": "The services or regions that have costs in a period",
+    "x-arguments": "dimensionValues({ dimension, start, end, next })",
+    "x-wire": "Cost Explorer GetDimensionValues (TimePeriod, Dimension, NextPageToken)",
+    "x-aws-actions": [
+     "ce:GetDimensionValues"
+    ],
+    "x-role": "read",
+    "parameters": [
+     {
+      "name": "dimension",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "enum": [
+        "SERVICE",
+        "REGION"
+       ]
+      }
+     },
+     {
+      "name": "start",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+      }
+     },
+     {
+      "name": "end",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+      }
+     },
+     {
+      "name": "next",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "One page of values",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "required": [
+          "items",
+          "next"
+         ],
+         "properties": {
+          "items": {
+           "type": "array",
+           "items": {
+            "type": "string"
+           }
+          },
+          "next": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         }
+        }
+       }
+      }
+     },
+     "default": {
+      "description": "An Error \"Code: Message\" with .code and .status; a TypeError for a bad argument, before any request; a CORS TypeError passes through",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AwsError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/budgets": {
+   "get": {
+    "operationId": "budgets",
+    "summary": "One page of the account's budgets with their spend",
+    "x-arguments": "budgets({ next, max })",
+    "x-wire": "Budgets DescribeBudgets (AccountId, MaxResults, NextToken)",
+    "x-aws-actions": [
+     "budgets:ViewBudget"
+    ],
+    "x-role": "read",
+    "parameters": [
+     {
+      "name": "next",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "max",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 100
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "One page of budgets",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "required": [
+          "items",
+          "next"
+         ],
+         "properties": {
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/Budget"
+           }
+          },
+          "next": {
+           "type": [
+            "string",
+            "null"
+           ],
+           "description": "Opaque cursor (NextToken); null on the last page"
+          }
+         }
+        }
+       }
+      }
+     },
+     "default": {
+      "description": "An Error \"Code: Message\" with .code and .status; a TypeError for a bad argument, before any request; a CORS TypeError passes through",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AwsError"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "AwsError": {
+    "type": "object",
+    "required": [
+     "code",
+     "message",
+     "status"
+    ],
+    "properties": {
+     "code": {
+      "type": "string",
+      "examples": [
+       "NoSuchDistribution",
+       "AccessDenied"
+      ]
+     },
+     "message": {
+      "type": "string"
+     },
+     "status": {
+      "type": "integer"
+     }
+    }
+   },
+   "Money": {
+    "type": [
+     "object",
+     "null"
+    ],
+    "properties": {
+     "amount": {
+      "type": "string",
+      "description": "A decimal string, as AWS gives it"
+     },
+     "unit": {
+      "type": "string"
+     }
+    }
+   },
+   "Period": {
+    "type": "object",
+    "required": [
+     "start",
+     "end",
+     "estimated",
+     "total",
+     "groups"
+    ],
+    "properties": {
+     "start": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "end": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "Exclusive"
+     },
+     "estimated": {
+      "type": "boolean"
+     },
+     "total": {
+      "$ref": "#/components/schemas/Money"
+     },
+     "groups": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "key": {
+         "type": "string",
+         "description": "A service or region name: render as text"
+        },
+        "amount": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "unit": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       }
+      }
+     }
+    }
+   },
+   "Forecast": {
+    "type": "object",
+    "required": [
+     "total",
+     "items"
+    ],
+    "properties": {
+     "total": {
+      "$ref": "#/components/schemas/Money"
+     },
+     "items": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "start": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "end": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "mean": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "low": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "high": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       }
+      }
+     }
+    }
+   },
+   "Budget": {
+    "type": "object",
+    "required": [
+     "name",
+     "type",
+     "timeUnit",
+     "limit",
+     "actual",
+     "forecast",
+     "start",
+     "end"
+    ],
+    "properties": {
+     "name": {
+      "type": "string",
+      "description": "The owner's text: render as text"
+     },
+     "type": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "timeUnit": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "limit": {
+      "$ref": "#/components/schemas/Money"
+     },
+     "actual": {
+      "$ref": "#/components/schemas/Money"
+     },
+     "forecast": {
+      "$ref": "#/components/schemas/Money"
+     },
+     "start": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "end": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    }
+   }
+  }
+ }
+}

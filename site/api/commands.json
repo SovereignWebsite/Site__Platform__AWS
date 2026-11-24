@@ -226,6 +226,130 @@
       ]
     },
     {
+      "command": "costs budgets",
+      "service": "costs",
+      "operationId": "budgets",
+      "global": "CostsApi",
+      "doc": "costs.openapi.json",
+      "params": [],
+      "options": [
+        {
+          "name": "next",
+          "type": "string"
+        },
+        {
+          "name": "max",
+          "type": "integer"
+        }
+      ],
+      "summary": "One page of the account's budgets with their spend",
+      "role": "read",
+      "actions": [
+        "budgets:ViewBudget"
+      ]
+    },
+    {
+      "command": "costs dimensionValues",
+      "service": "costs",
+      "operationId": "dimensionValues",
+      "global": "CostsApi",
+      "doc": "costs.openapi.json",
+      "params": [],
+      "options": [
+        {
+          "name": "dimension",
+          "type": "string"
+        },
+        {
+          "name": "start",
+          "type": "string"
+        },
+        {
+          "name": "end",
+          "type": "string"
+        },
+        {
+          "name": "next",
+          "type": "string"
+        }
+      ],
+      "summary": "The services or regions that have costs in a period",
+      "role": "read",
+      "actions": [
+        "ce:GetDimensionValues"
+      ]
+    },
+    {
+      "command": "costs forecast",
+      "service": "costs",
+      "operationId": "forecast",
+      "global": "CostsApi",
+      "doc": "costs.openapi.json",
+      "params": [],
+      "options": [
+        {
+          "name": "start",
+          "type": "string"
+        },
+        {
+          "name": "end",
+          "type": "string"
+        },
+        {
+          "name": "granularity",
+          "type": "string"
+        },
+        {
+          "name": "metric",
+          "type": "string"
+        }
+      ],
+      "summary": "A cost forecast for a period from today",
+      "role": "read",
+      "actions": [
+        "ce:GetCostForecast"
+      ]
+    },
+    {
+      "command": "costs usage",
+      "service": "costs",
+      "operationId": "usage",
+      "global": "CostsApi",
+      "doc": "costs.openapi.json",
+      "params": [],
+      "options": [
+        {
+          "name": "start",
+          "type": "string"
+        },
+        {
+          "name": "end",
+          "type": "string"
+        },
+        {
+          "name": "granularity",
+          "type": "string"
+        },
+        {
+          "name": "groupBy",
+          "type": "string"
+        },
+        {
+          "name": "metric",
+          "type": "string"
+        },
+        {
+          "name": "next",
+          "type": "string"
+        }
+      ],
+      "summary": "Cost and usage by day or month, optionally by service or region",
+      "role": "read",
+      "actions": [
+        "ce:GetCostAndUsage"
+      ]
+    },
+    {
       "command": "firehose stream",
       "service": "firehose",
       "operationId": "stream",

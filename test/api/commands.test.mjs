@@ -23,7 +23,8 @@ ok(rows.every((r) => /^[a-z0-9]+ [A-Za-z]+$/.test(r.command) && r.command === r.
 
 // Read only, until a change verb is designed on purpose.
 ok(rows.every((r) => r.role === "read"), "every row is x-role read: " + rows.filter((r) => r.role !== "read").map((r) => r.command));
-ok(rows.every((r) => r.actions.length > 0 && r.actions.every((a) => /^[a-z0-9-]+:(List|Get|Describe|Filter)[A-Za-z]*$/.test(a))), "every row's AWS actions are reads");
+// budgets:ViewBudget is Budgets' read action (access level Read in the Service Authorization Reference).
+ok(rows.every((r) => r.actions.length > 0 && r.actions.every((a) => /^[a-z0-9-]+:(List|Get|Describe|Filter)[A-Za-z]*$/.test(a) || a === "budgets:ViewBudget")), "every row's AWS actions are reads");
 
 // Every row maps to a real operation, and to a method of the API object that takes the path parameters first.
 const ctx = { URLSearchParams, URL, Response, Headers, Promise, Error, TypeError, JSON, Object, Array, String, Number, RegExp, Math, Date, TextDecoder, TextEncoder, Uint8Array, crypto: globalThis.crypto };
