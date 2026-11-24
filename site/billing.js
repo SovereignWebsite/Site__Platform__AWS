@@ -156,14 +156,15 @@
   }
 
   // ---- Over dev.2.aws.a's CostsApi (site/api/costs-api.js): the agreed split, CostsApi makes the calls, this file
-  // arranges them. fetchAll(api, today) makes the same calls requests() describes, drains NextPageToken pages, and
+  // arranges them. fetchAll(api, today) makes the same calls requests() describes, drains NextPageToken pages (at most
+  // 3 per monthly section and for budgets, 5 for the daily one: every page is a paid call, about 20 at worst), and
   // records a failed section as { error } so the others still show. modelFromApi() gives the same model as model().
   function drain(call, args, max) {
     var items = [], n = 0;
     function step(next) {
       return call(Object.assign({}, args, next ? { next: next } : {})).then(function (r) {
         items = items.concat(list(r && r.items)); n++;
-        return r && r.next && n < (max || 10) ? step(r.next) : items;
+        return r && r.next && n < (max || 3) ? step(r.next) : items;
       });
     }
     return step(null);
@@ -173,13 +174,13 @@
     var t = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
     var start = ymd(monthStart(t)), end = ymd(t), mtd = start !== end, jobs = {};
     if (mtd) {
-      jobs.monthToDate = settle(drain(api.usage, { start: start, end: end, granularity: "MONTHLY" }));
-      jobs.byService = settle(drain(api.usage, { start: start, end: end, granularity: "MONTHLY", groupBy: "SERVICE" }));
-      jobs.byRegion = settle(drain(api.usage, { start: start, end: end, granularity: "MONTHLY", groupBy: "REGION" }));
+      jobs.monthToDate = settle(drain(api.usage, { start: start, end: end, granularity: "MONTHLY" }, 3));
+      jobs.byService = settle(drain(api.usage, { start: start, end: end, granularity: "MONTHLY", groupBy: "SERVICE" }, 3));
+      jobs.byRegion = settle(drain(api.usage, { start: start, end: end, granularity: "MONTHLY", groupBy: "REGION" }, 3));
     }
-    jobs.daily = settle(drain(api.usage, { start: ymd(addDays(t, -30)), end: end, granularity: "DAILY" }));
+    jobs.daily = settle(drain(api.usage, { start: ymd(addDays(t, -30)), end: end, granularity: "DAILY" }, 5));
     jobs.forecast = settle(api.forecast({ start: end, end: ymd(nextMonthStart(t)), granularity: "MONTHLY" }));
-    if (accountId) jobs.budgets = settle(drain(api.budgets, { max: 100 }));
+    if (accountId) jobs.budgets = settle(drain(api.budgets, { max: 100 }, 3));
     var names = Object.keys(jobs);
     return Promise.all(names.map(function (k) { return jobs[k]; })).then(function (vals) {
       var out = {}; names.forEach(function (k, i) { out[k] = vals[i]; }); return out;
@@ -187,7 +188,7 @@
   }
   function apiMoney(x) { return x && typeof x === "object" ? money(x.amount, x.unit) : null; }
   function sumGroups(periods) {
-    var by = {};
+    var by = Object.create(null);
     list(periods).forEach(function (p) { list(p && p.groups).forEach(function (g) {
       var a = num(g && g.amount); if (a === null || !g.key) return;
       var k = String(g.key); by[k] = by[k] || { key: k, amount: 0, unit: g.unit || "USD" }; by[k].amount += a;
