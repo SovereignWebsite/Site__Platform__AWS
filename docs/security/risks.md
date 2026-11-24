@@ -576,3 +576,4 @@ Severity: Critical, High, Medium, Low. Status: Open, Accepted (the owner chose i
   - cloudformation 6be9f97 and f8fe14c (the same as dev 168c750 and 55c243f).
   - boto3 2f19cfa and 22cdbc5 (note 21, Cost Explorer and Budgets reads; Budgets has no CORS), and fb2f1e9 and c593b02 (note 16 addendum: no wafv2 permission gates WebACLId).
   All are docs or already-reviewed code, with no secrets.
+- 24 Nov 2026, 00:31, security.aws.a: dev.2 5b0a2e6 (costs) and 630a98b (cf-logs), the same change on both (costs-api.js, the Costs twin block and the tests are identical). The three nits are closed. TimePeriod is capped at 427 days; Metrics are own keys only, so __proto__ and toString get a 400; budget times that are not dates or are out of range become null. All three costs suites pass. The Costs work on dev.2's branches is fully cleared.
