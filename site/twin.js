@@ -1173,10 +1173,107 @@
           "<WebACLId>" + esc(d.webAcl || "") + "</WebACLId><HttpVersion>" + d.httpVersion + "</HttpVersion><Staging>false</Staging></DistributionSummary>";
       }).join("") + "</Items>" : "") + "</DistributionList>");
   }
-  // Cost Explorer: signed calls only, as every other twin service (security.aws.a, R-025 (a)); the answer is synthetic.
-  function ce(init) {
-    if (!signed(init)) return json({ __type: "AccessDeniedException", message: "Missing Authentication Token" }, 403);
-    return json({ ResultsByTime: [{ Total: { UnblendedCost: { Amount: "42.17", Unit: "USD" } } }] });
+  // ---- Costs (the Costs tab; billing.aws.a builds it, CostsApi in site/api/costs-api.js) ----
+  // Cost Explorer GetCostAndUsage, GetCostForecast and GetDimensionValues, and Budgets DescribeBudgets, for the platform
+  // account, signed calls only (R-025 (a)). Every figure is synthetic and every answer says so (x-twin-note). Figures are
+  // whole ten-thousandths of a dollar per service per day, so totals add up exactly whatever the grouping: each service's
+  // base, varied by a fixed amount per day, from 1 September 2026 to the twin's clock (later days are empty; the current
+  // month is Estimated). The twin's own choices, where AWS's documentation is not followed or not known: the services
+  // and their bases, the region global for CloudFront and Route 53, 31 periods a page, a forecast that may not start in
+  // the past, and one budget.
+  var COST_NOTE = "synthetic figures from the twin, not an AWS bill", COST_FROM = Date.UTC(2026, 8, 1), DAY_MS = 86400000;
+  var COST_SERVICES = [
+    { name: "Amazon CloudFront", region: "global", base: 1200 }, { name: "Amazon Kinesis Firehose", region: REGION, base: 300 },
+    { name: "Amazon Route 53", region: "global", base: 0, monthly: 5000 }, { name: "Amazon Simple Storage Service", region: REGION, base: 400 },
+    { name: "AmazonCloudWatch", region: REGION, base: 200 }, { name: "AWS Lambda", region: REGION, base: 100 }
+  ];
+  function costJson(o, status) { var r = json(o, status); r.headers.set("content-type", "application/x-amz-json-1.1"); r.headers.set("x-twin-note", COST_NOTE); return r; }
+  function costErr(type, msg, status) { return costJson({ __type: type, message: msg }, status || 400); }
+  function costDay(s) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || "")); if (!m) return null; var t = Date.UTC(+m[1], +m[2] - 1, +m[3]); return new Date(t).toISOString().slice(0, 10) === m[0] ? t : null; }
+  function costIso(t) { return new Date(t).toISOString().slice(0, 10); }
+  function costToday() { var n = new Date(nowMs()); return Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()); }
+  // One service's charge on one day, in ten-thousandths of a dollar: its base, plus or minus up to a quarter, fixed per day.
+  function costOn(svc, t) {
+    if (t < COST_FROM || t > costToday()) return 0;
+    var h = 0, k = svc.name + costIso(t);
+    for (var i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0;
+    var v = svc.base ? svc.base + Math.round(svc.base * ((h % 51) - 25) / 100) : 0;
+    return v + (svc.monthly && new Date(t).getUTCDate() === 1 ? svc.monthly : 0);
+  }
+  function costAmount(n) { return Math.floor(n / 10000) + "." + String(n % 10000).padStart(4, "0") + "000000"; }
+  function costPeriods(start, end, gran) {
+    var out = [], t = start;
+    while (t < end) {
+      var d = new Date(t), next = gran === "DAILY" ? t + DAY_MS : Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+      out.push([t, Math.min(next, end)]); t = Math.min(next, end);
+    }
+    return out;
+  }
+  function costSum(svcs, a, b) { var n = 0; svcs.forEach(function (s) { for (var t = a; t < b; t += DAY_MS) n += costOn(s, t); }); return n; }
+  var COST_METRICS = { UnblendedCost: 1, BlendedCost: 1, AmortizedCost: 1, NetUnblendedCost: 1 };
+  function ce(init, target, body) {
+    if (!signed(init)) return costErr("AccessDeniedException", "Missing Authentication Token", 403);
+    var q; try { q = JSON.parse(body || "{}"); } catch (e) { return costErr("ValidationException", "The body is not JSON."); }
+    var tp = q.TimePeriod || {}, start = costDay(tp.Start), end = costDay(tp.End);
+    if (start === null || end === null || start >= end) return costErr("ValidationException", "TimePeriod needs Start before End, both YYYY-MM-DD (End is exclusive).");
+    var gran = q.Granularity || "MONTHLY";
+    if (gran !== "DAILY" && gran !== "MONTHLY") return costErr("ValidationException", "Granularity is DAILY or MONTHLY in the twin.");
+    var action = String(target || "").replace(/^AWSInsightsIndexService\./, "");
+    if (action === "GetCostAndUsage") {
+      var metrics = Array.isArray(q.Metrics) ? q.Metrics : [];
+      if (!metrics.length || !metrics.every(function (m) { return COST_METRICS[m]; })) return costErr("ValidationException", "Metrics are UnblendedCost, BlendedCost, AmortizedCost or NetUnblendedCost in the twin.");
+      var group = Array.isArray(q.GroupBy) && q.GroupBy[0] ? q.GroupBy[0] : null;
+      if (group && (group.Type !== "DIMENSION" || (group.Key !== "SERVICE" && group.Key !== "REGION") || q.GroupBy.length > 1)) return costErr("ValidationException", "GroupBy is one DIMENSION, SERVICE or REGION, in the twin.");
+      var periods = costPeriods(start, end, gran), from = 0;
+      if (q.NextPageToken) { var pm = /^twin-costs-(\d{1,4})$/.exec(String(q.NextPageToken)); if (!pm || +pm[1] >= periods.length) return costErr("ValidationException", "The NextPageToken is not valid."); from = +pm[1]; }
+      var page = periods.slice(from, from + 31), monthStart = Date.UTC(new Date(costToday()).getUTCFullYear(), new Date(costToday()).getUTCMonth(), 1);
+      var money = function (n) { var o = {}; metrics.forEach(function (m) { o[m] = { Amount: costAmount(n), Unit: "USD" }; }); return o; };
+      var results = page.map(function (p) {
+        var r = { TimePeriod: { Start: costIso(p[0]), End: costIso(p[1]) }, Total: {}, Groups: [], Estimated: p[1] > monthStart };
+        if (!group) r.Total = money(costSum(COST_SERVICES, p[0], p[1]));
+        else {
+          var keys = {};
+          COST_SERVICES.forEach(function (sv) { var k = group.Key === "SERVICE" ? sv.name : sv.region; keys[k] = (keys[k] || 0) + costSum([sv], p[0], p[1]); });
+          r.Groups = Object.keys(keys).sort().filter(function (k) { return keys[k] > 0; }).map(function (k) { return { Keys: [k], Metrics: money(keys[k]) }; });
+        }
+        return r;
+      });
+      var out = { ResultsByTime: results, DimensionValueAttributes: [] };
+      if (group) out.GroupDefinitions = [{ Type: "DIMENSION", Key: group.Key }];
+      if (from + 31 < periods.length) out.NextPageToken = "twin-costs-" + (from + 31);
+      return costJson(out);
+    }
+    if (action === "GetCostForecast") {
+      if (!q.Metric || !/^(UNBLENDED|BLENDED|AMORTIZED|NET_UNBLENDED)_COST$/.test(q.Metric)) return costErr("ValidationException", "Metric is UNBLENDED_COST, BLENDED_COST, AMORTIZED_COST or NET_UNBLENDED_COST in the twin.");
+      if (start < costToday()) return costErr("ValidationException", "The forecast may not start in the past (the twin's rule).");
+      // The mean is each service's base per day (and Route 53's monthly charge on a first), the interval 15 per cent either side.
+      var dayBase = function (t) { var n = 0; COST_SERVICES.forEach(function (sv) { n += sv.base + (sv.monthly && new Date(t).getUTCDate() === 1 ? sv.monthly : 0); }); return n; };
+      var fr = costPeriods(start, end, gran).map(function (p) { var n = 0; for (var t = p[0]; t < p[1]; t += DAY_MS) n += dayBase(t); return [p, n]; }), total = 0;
+      fr.forEach(function (x) { total += x[1]; });
+      return costJson({ Total: { Amount: costAmount(total), Unit: "USD" }, ForecastResultsByTime: fr.map(function (x) {
+        return { TimePeriod: { Start: costIso(x[0][0]), End: costIso(x[0][1]) }, MeanValue: costAmount(x[1]), PredictionIntervalLowerBound: costAmount(Math.round(x[1] * 0.85)), PredictionIntervalUpperBound: costAmount(Math.round(x[1] * 1.15)) };
+      }) });
+    }
+    if (action === "GetDimensionValues") {
+      if (q.Dimension !== "SERVICE" && q.Dimension !== "REGION") return costErr("ValidationException", "Dimension is SERVICE or REGION in the twin.");
+      var vals = {};
+      COST_SERVICES.forEach(function (sv) { if (costSum([sv], start, end) > 0) vals[q.Dimension === "SERVICE" ? sv.name : sv.region] = 1; });
+      var vs = Object.keys(vals).sort();
+      return costJson({ DimensionValues: vs.map(function (v) { return { Value: v, Attributes: {} }; }), ReturnSize: vs.length, TotalSize: vs.length });
+    }
+    return costErr("ValidationException", "The twin answers three Cost Explorer reads only: GetCostAndUsage, GetCostForecast and GetDimensionValues.", 400);
+  }
+  function budgets(init, target, body) {
+    if (!signed(init)) return costErr("AccessDeniedException", "Missing Authentication Token", 403);
+    if (target !== "AWSBudgetServiceGateway.DescribeBudgets") return costErr("ValidationException", "The twin answers one Budgets read only: DescribeBudgets.", 400);
+    var q; try { q = JSON.parse(body || "{}"); } catch (e) { return costErr("ValidationException", "The body is not JSON."); }
+    if (q.AccountId !== ACCOUNT) return costErr("AccessDeniedException", "The account id is not the caller's.", 403);
+    var today = costToday(), d = new Date(today), m0 = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1), m1 = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+    var actual = costSum(COST_SERVICES, m0, today + DAY_MS), rest = 0;
+    for (var t = today + DAY_MS; t < m1; t += DAY_MS) COST_SERVICES.forEach(function (sv) { rest += sv.base; });
+    return costJson({ Budgets: [{ BudgetName: "Monthly cap (synthetic)", BudgetLimit: { Amount: "10.0", Unit: "USD" }, CostFilters: {}, TimeUnit: "MONTHLY", BudgetType: "COST",
+      TimePeriod: { Start: COST_FROM / 1000, End: Date.UTC(2027, 7, 31) / 1000 },
+      CalculatedSpend: { ActualSpend: { Amount: costAmount(actual), Unit: "USD" }, ForecastedSpend: { Amount: costAmount(actual + rest), Unit: "USD" } } }] });
   }
   function cloudcontrol(target, body, init, host) {
     if (!signed(init)) return json({ __type: "AccessDeniedException", message: "Missing signature" }, 403);
@@ -1589,7 +1686,8 @@
       if (host === "sts.amazonaws.com" || /^sts\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = sts(new URLSearchParams(body), init);
       else if (host === "iam.amazonaws.com") p = iam(new URLSearchParams(body), init);
       else if (/^cloudformation\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudformation(new URLSearchParams(body), init, host);
-      else if (/^ce\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = ce(init);
+      else if (/^ce\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = ce(init, hdr(init, "x-amz-target"), body);
+      else if (host === "budgets.amazonaws.com") p = budgets(init, hdr(init, "x-amz-target"), body);
       else if (/^cloudcontrolapi\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudcontrol((hdr(init, "x-amz-target") || "").split(".")[1], body, init, host);
       else if (/^lambda\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = lambda(url, init);
       else if (/^monitoring\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudwatch(new URLSearchParams(body), init);
