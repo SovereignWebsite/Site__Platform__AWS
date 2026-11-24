@@ -375,7 +375,7 @@
             }
           }
         },
-        "description": "Browser CORS for Budgets is conflicting: the SDK's CORS table does not mark it (boto3.aws.a note 21), while docs/2026-11-23__newsroom-brief.md reports a preflight it answered. If refused, a TypeError, passed through. The v1 Costs tab does not call it; one browser call settles it. Fallback if refused: Cloud Control AWS::Budgets::Budget (boto3.aws.a note 21 addendum)."
+        "description": "The SDK's CORS table does not mark Budgets (boto3.aws.a note 21), but conductor.aws.a's CORS preflight at 2026-11-24T00:47Z found budgets.amazonaws.com allows the site's origin, POST and the signing headers, as ce.us-east-1 does. Confirmed on the owner's first load. A refusal is a TypeError, passed through; fallback Cloud Control AWS::Budgets::Budget (note 21 addendum)."
       }
     }
   },

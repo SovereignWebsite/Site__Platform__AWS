@@ -1,7 +1,7 @@
 // The twin's Cost Explorer answers for the Costs tab (billing.aws.a's site/billing.js on CostsApi): signed calls only
 // (R-025 (a)); synthetic figures marked as such, the same in every view (month to date = daily for the month = by
 // service = by region), each period echoing the request, the current month Estimated, paged; a forecast; dimension
-// values; Budgets refused as a browser sees it (no CORS, boto3.aws.a note 21); reads only. Dates are relative to today
+// values; Budgets DescribeBudgets, signed only, one synthetic budget agreeing with Cost Explorer; reads only. Dates are relative to today
 // (or the twin's clock where it has one). Node 22, no network. Run: node test/twin/costs.test.mjs
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -63,10 +63,22 @@ const dv = await call("GetDimensionValues", { TimePeriod: mtdBody.TimePeriod, Di
 assert.deepEqual(dv.json.DimensionValues.map((v) => v.Value), ["eu-west-2", "global", "us-east-1"]);
 checks += 6;
 
-// Budgets: refused as a browser sees a call without CORS
-let e = null; try { await T.handle("https://budgets.amazonaws.com/", { method: "POST", headers: Object.assign({ "x-amz-target": "AWSBudgetServiceGateway.DescribeBudgets" }, SIG), body: JSON.stringify({ AccountId: T.account }) }); } catch (x) { e = x; }
-assert.ok(e instanceof TypeError && e.message === "Failed to fetch", "Budgets: a CORS refusal, as a browser would see it");
-checks += 1;
+// Budgets: one synthetic budget, signed only, the caller's account only
+const bcall = async (b, h = SIG, target = "AWSBudgetServiceGateway.DescribeBudgets") => { const r = await T.handle("https://budgets.amazonaws.com/", { method: "POST", headers: Object.assign({ "content-type": "application/x-amz-json-1.1", "x-amz-target": target }, h), body: JSON.stringify(b) });
+  return { status: r.status, note: r.headers.get("x-twin-note"), json: await r.json() }; };
+let br = await bcall({ AccountId: T.account });
+assert.equal(br.status, 200); assert.equal(br.note, NOTE, "budgets marked synthetic");
+const bud = br.json.Budgets;
+assert.equal(bud.length, 1); assert.equal(bud[0].BudgetName, "Monthly cap (synthetic)"); assert.equal(bud[0].BudgetLimit.Amount, "10.0"); assert.equal(bud[0].TimeUnit, "MONTHLY");
+assert.equal(c(bud[0].CalculatedSpend.ActualSpend.Amount), mtd, "actual spend is the month to date");
+const restDays = (m1 - today - DAY) / DAY;
+assert.ok(c(bud[0].CalculatedSpend.ForecastedSpend.Amount) >= mtd + restDays * 2200, "forecast spend adds the days to month end");
+assert.equal((await bcall({ AccountId: T.account }, {})).status, 403, "unsigned: refused");
+assert.equal((await bcall({ AccountId: "444455556666" })).status, 403, "another account: refused");
+assert.equal((await bcall({ AccountId: T.account, MaxResults: 0 })).status, 400, "MaxResults 0");
+assert.equal((await bcall({ AccountId: T.account, NextToken: "x" })).status, 400, "no second page");
+assert.equal((await bcall({ AccountId: T.account }, SIG, "AWSBudgetServiceGateway.CreateBudget")).status, 400, "reads only");
+checks += 13;
 
 // Refusals and reads only
 for (const [b, m] of [[{ TimePeriod: { Start: iso(today), End: iso(today) }, Granularity: "MONTHLY", Metrics: M }, "empty period"], [{ TimePeriod: { Start: "2026-02-30", End: "2026-03-02" }, Granularity: "MONTHLY", Metrics: M }, "30 February"],
@@ -79,4 +91,4 @@ const t0 = Date.now(); await call("GetCostAndUsage", { TimePeriod: { Start: "100
 assert.ok(Date.now() - t0 < 100, "a huge range is refused at once");
 assert.equal((await call("GetCostAndUsage", { TimePeriod: { Start: iso(today - 426 * DAY), End: iso(today + DAY) }, Granularity: "MONTHLY", Metrics: M })).status, 200, "427 days is allowed");
 checks += 12;
-console.log("OK (twin costs: " + checks + " checks; signed only, synthetic figures the same in every view, paging, forecast, dimension values, Budgets refused as without CORS)");
+console.log("OK (twin costs: " + checks + " checks; signed only, synthetic figures the same in every view, paging, forecast, dimension values, one synthetic budget)");

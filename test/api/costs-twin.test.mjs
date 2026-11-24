@@ -1,6 +1,6 @@
 // CostsApi (site/api/costs-api.js) over the twin's Cost Explorer reads (site/twin.js), signed with the twin's read
 // credential: the Costs tab's views (month to date, by service, by region, 30 days daily over its pages, forecast,
-// dimension values) from one API, adding up across views, every answer synthetic; Budgets refused as a browser sees it
+// dimension values) from one API, adding up across views, every answer synthetic; the one synthetic budget agreeing with the month to date
 // (no CORS), passed through as a TypeError. Dates are relative to today. Node 22, no network.
 // Run: node test/api/costs-twin.test.mjs
 import { readFileSync } from "node:fs";
@@ -36,10 +36,11 @@ ok(f.start === iso(today) && f.end === iso(m1) && f.total && c(f.items[0].low) <
 const dv = await api.dimensionValues({ dimension: "SERVICE", start: S, end: E });
 ok(JSON.stringify(dv.items) === JSON.stringify(svc.filter((g) => g.amount > 0).map((g) => g.key)), "dimension values: the services with costs");
 ok(notes.length === 7 && notes.every((n) => n === NOTE), "every answer marked synthetic (" + notes.length + ")");
-let e = null; try { await api.budgets(); } catch (x) { e = x; }
-ok(e instanceof TypeError && e.message === "Failed to fetch", "budgets: refused as without CORS, a TypeError passed through");
+const b = (await api.budgets()).items;
+ok(b.length === 1 && b[0].name === "Monthly cap (synthetic)" && b[0].limit.amount === 10 && c(b[0].actual.amount) === c(mtd.total.amount) && (iso(today + DAY) === iso(m1) ? b[0].forecast.amount === b[0].actual.amount : b[0].forecast.amount > b[0].actual.amount), "the budget: 10 USD, actual spend equal to the month to date, a forecast to month end");
+let e = null;
 e = null; try { await CostsApi(async (req) => AwsTwin.handle(req.url, { method: req.method, headers: req.headers, body: req.body })).usage({ start: S, end: E }); } catch (x) { e = x; }
 ok(e && e.code === "AccessDeniedException" && e.status === 403, "unsigned: AccessDeniedException, 403");
 
 if (failures) { console.error(failures + " failed, " + passed + " passed"); process.exit(1); }
-console.log("OK (CostsApi over the twin: " + passed + " checks; month to date, by service and region, 41 days over two pages, forecast, dimension values, synthetic, Budgets refused)");
+console.log("OK (CostsApi over the twin: " + passed + " checks; month to date, by service and region, 41 days over two pages, forecast, dimension values, synthetic, the budget)");
