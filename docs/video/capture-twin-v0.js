@@ -4,13 +4,14 @@
 // Every request that is not to the local server is aborted (no Google, no AWS), and the run fails if one is tried
 // other than Google's sign-in script, which the hub loads and the twin does not need.
 // The twin's account id and the real role name it reuses are masked before each capture; the run fails if either
-// is still readable on screen. Output: docs/video/twin-v0/b1.png .. b7.png at 1080x1010 (540x505 CSS px at 2x).
+// is still readable on screen. The page's clock is fixed (CLOCK, default 2026-11-23T12:00Z) so runs repeat exactly. Output: docs/video/twin-v0/b1.png .. b7.png at 1080x1010 (540x505 CSS px at 2x).
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 
 const BASE = process.env.SITE || 'http://127.0.0.1:8765/';
 const OUT = path.join(__dirname, 'twin-v0');
+const CLOCK = process.env.CLOCK || '2026-11-23T12:00:00Z';
 // Costs too: studio.c and the plan keep every cost off screen, even a synthetic one.
 const SECRET = [/111122223333/g, /sovereignwebsite-factory-dns/g, /\d[\d,]*\.\d{2} USD/g];
 const ALLOWED_BLOCKED = ['https://accounts.google.com/gsi/client'];
@@ -88,6 +89,8 @@ async function openFirstFile(page, bucket, fileRe) {
   fs.mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 540, height: 505 }, deviceScaleFactor: 2 });
+  // A fixed clock, so a re-run on the same site gives the same pictures (b3 shows "until" one hour on).
+  await page.clock.setFixedTime(new Date(CLOCK));
   const blocked = [];
   await page.route('**/*', (r) => {
     const u = r.request().url();
