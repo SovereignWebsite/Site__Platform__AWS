@@ -1,0 +1,494 @@
+{
+ "format": "studio-storyboard/0",
+ "slug": "aws-decisions-2026-11-23",
+ "title": "Seven AWS decisions for Dinis",
+ "audience": "Dinis",
+ "requested_by": "pm.aws.a@SovereignWebsite.dinis",
+ "summary": "Seven open decisions on the AWS Platform programme's decisions page, 23 Nov 2026 14:20 UTC: agent keys, the deploy's signer check (R-009), team code on the hub's origin (R-010), template v2.1 (R-001), the nine area sites, a permissions boundary (R-008), and reading SG/Send's vault library. None stops the team; the agents build on the twin.",
+ "beats": [
+  {
+   "id": "b1",
+   "narration": "Seven decisions wait for you. None stops the team: the agents keep building on the synthetic twin.",
+   "visual": {
+    "kind": "svg",
+    "src": "intro",
+    "caption": "Red: a security risk. Amber: access, approval or a merge.",
+    "at": 0,
+    "play": 7.4,
+    "end": 6.8
+   },
+   "facts": [
+    "s-decisions"
+   ]
+  },
+  {
+   "id": "b2",
+   "narration": "One. Twenty agents' keys wait on factory.c. Until they are live, the deploy refuses their commits. Recommended: one standing word to land them.",
+   "visual": {
+    "kind": "svg",
+    "src": "d1",
+    "caption": "Decision 1: the agents publish their keys",
+    "at": 0,
+    "play": 9.8,
+    "end": 9.2
+   },
+   "facts": [
+    "s-decisions",
+    "s-keys"
+   ]
+  },
+  {
+   "id": "b3",
+   "narration": "Two. Three ways round the deploy's signer check, one a checker run from the commit it checks. Recommended: run it from main.",
+   "visual": {
+    "kind": "svg",
+    "src": "d2",
+    "caption": "Decision 2: security R-009 (High)",
+    "at": 0,
+    "play": 9.4,
+    "end": 8.8
+   },
+   "facts": [
+    "s-decisions",
+    "s-risks"
+   ]
+  },
+  {
+   "id": "b4",
+   "narration": "Three. Team paths now reach scripts the hub loads beside your session. Recommended: a pipeline check that refuses files outside each signer's paths.",
+   "visual": {
+    "kind": "svg",
+    "src": "d3",
+    "caption": "Decision 3: security R-010 (High, widened)",
+    "at": 0,
+    "play": 9.8,
+    "end": 9.2
+   },
+   "facts": [
+    "s-decisions",
+    "s-sec-r010"
+   ]
+  },
+  {
+   "id": "b5",
+   "narration": "Four. Template v2.1 stops the change role making itself admin. Recommended: approve it, or let decision six's console apply cover it.",
+   "visual": {
+    "kind": "svg",
+    "src": "d4",
+    "caption": "Decision 4: approve template v2.1",
+    "at": 0,
+    "play": 9,
+    "end": 8.4
+   },
+   "facts": [
+    "s-decisions",
+    "s-risks"
+   ]
+  },
+  {
+   "id": "b6",
+   "narration": "Five. The nine area sites are ready to merge, each with its own Try the twin link. Recommended: merge all nine.",
+   "visual": {
+    "kind": "svg",
+    "src": "d5",
+    "caption": "Decision 5: the nine area sites",
+    "at": 0,
+    "play": 9,
+    "end": 8.4
+   },
+   "facts": [
+    "s-decisions"
+   ]
+  },
+  {
+   "id": "b7",
+   "narration": "Six. A change set or the DNS role's trust can still make the change role admin. Recommended: v2.5 boundaries, cleared by security.",
+   "visual": {
+    "kind": "svg",
+    "src": "d6",
+    "caption": "Decision 6: security R-008 (High), an AWS change",
+    "at": 0,
+    "play": 9.4,
+    "end": 8.8
+   },
+   "facts": [
+    "s-decisions",
+    "s-risks",
+    "s-sec-v25",
+    "s-iam-v25"
+   ]
+  },
+  {
+   "id": "b7b",
+   "narration": "Eight. vaults.aws.a needs to read SG/Send's vault library. Recommended: attach it read-only, pinned to one commit.",
+   "visual": {
+    "kind": "svg",
+    "src": "d8",
+    "caption": "Decision 8: vaults.aws.a reads the SG/Send vault library",
+    "at": 0,
+    "play": 7,
+    "end": 6.4
+   },
+   "facts": [
+    "s-decisions",
+    "s-vaults"
+   ]
+  },
+  {
+   "id": "b8",
+   "narration": "Every recommended answer is a. Answer in pm.aws.a's session; the trade-offs follow.",
+   "visual": {
+    "kind": "svg",
+    "src": "outro",
+    "caption": "Recommended: 1 a, 2 a, 3 a, 4 a, 5 a, 6 a, 8 a. Answer in pm.aws.a's session.",
+    "at": 0,
+    "play": 5.4,
+    "end": 4.8
+   },
+   "facts": [
+    "s-decisions"
+   ]
+  }
+ ],
+ "decisions": [
+  {
+   "id": "1",
+   "question": "1. Do the account A agents' verified key commits land on one standing word?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. A standing word in factory.c's session: land every verified agent key commit",
+     "good": [
+      "20 key commits land as they are verified"
+     ],
+     "bad": [
+      "Each landing is no longer seen by you first"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. A word per landing, as now",
+     "good": [
+      "You see every landing"
+     ],
+     "bad": [
+      "Each batch waits for you"
+     ],
+     "blocks": [
+      "Every account A agent's commits being checked as signed on dev"
+     ]
+    }
+   ],
+   "recommendation": "a",
+   "why": "factory.c checks each commit byte for byte and runs the five checks before landing; your word adds a wait, not a check."
+  },
+  {
+   "id": "2",
+   "question": "2. R-009 (High): does the deploy's signer check run from main, without the override line?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. Run the checker from main or a pinned commit, and drop the Owner override line",
+     "good": [
+      "A commit can no longer change the checker that checks it",
+      "No unsigned commit deploys through an override line"
+     ],
+     "bad": [
+      "Changes .github/**, which needs your yes"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. Leave as is for now",
+     "good": [
+      "No change to the pipeline"
+     ],
+     "bad": [
+      "Anyone who can push to dev can get past the check"
+     ],
+     "blocks": [
+      "Trust in what deploys from dev"
+     ]
+    }
+   ],
+   "recommendation": "a",
+   "why": "The live site holds the change role, so what deploys from dev is the trust root of the AWS account."
+  },
+  {
+   "id": "3",
+   "question": "3. R-010 (High, widened): how are team code paths on the hub kept safe?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. A CI step refuses a commit touching files outside its signer's paths in abp.json; until it lands, aws.c reviews every site/*.js change",
+     "good": [
+      "Paths become a control, not a promise",
+      "Lands before the new keys go live"
+     ],
+     "bad": [
+      "Changes .github/**, which needs your yes"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. Keep the paths as a promise; rely on aws.c's review",
+     "good": [
+      "No pipeline change"
+     ],
+     "bad": [
+      "Safety rests on every review being done"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "c",
+     "label": "c. Narrow the code paths back to the keeper",
+     "good": [
+      "Only aws.c changes loaded code"
+     ],
+     "bad": [
+      "Every code change goes through aws.c"
+     ],
+     "blocks": [
+      "dev.1, dev.2 and s3 landing code themselves"
+     ]
+    }
+   ],
+   "recommendation": "a",
+   "why": "security.aws.a (72f4cee): the deploy checks signers, not paths. Decision 2 also changes .github; the two can land together."
+  },
+  {
+   "id": "4",
+   "question": "4. Approve template v2.1 (the R-001 fix) on the site?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. Approve when next signed in",
+     "good": [
+      "Closes R-001, the critical finding: the change role can no longer make itself admin directly"
+     ],
+     "bad": [
+      "R-008's path through a change set stays open (decision 6)"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. Leave it",
+     "good": [
+      "No AWS change now"
+     ],
+     "bad": [
+      "R-001 stays open"
+     ],
+     "blocks": [
+      "Real AWS changes only"
+     ]
+    }
+   ],
+   "recommendation": "a",
+   "why": "security.aws.c reviewed it. If you choose 6 a or b, the same console apply covers it."
+  },
+  {
+   "id": "5",
+   "question": "5. Merge factory.c's requests for the nine area sites?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. Merge all nine",
+     "good": [
+      "Every area gets its own site and Try the twin link"
+     ],
+     "bad": [
+      "Nine sites to look after"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. Only s3 for now",
+     "good": [
+      "One site to prove the pattern"
+     ],
+     "bad": [
+      "Eight areas wait"
+     ],
+     "blocks": [
+      "The other eight areas' sites"
+     ]
+    }
+   ],
+   "recommendation": "a",
+   "why": "You said yes to the nine areas; the requests are ready on work/factory.c-aws-areas."
+  },
+  {
+   "id": "6",
+   "question": "6. R-008 (High): which permissions boundary goes on the change role?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. One console apply of v2.5: both boundaries, and the DNS role's trust by console only",
+     "good": [
+      "Closes R-008 and R-005 together",
+      "Cleared on paper by security.aws.a"
+     ],
+     "bad": [
+      "The site's two DNS-trust plans stop working; aws.c retires them in the same release",
+      "The read role can read Lambda environment variables: keep secrets in Secrets Manager or SSM"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. As a, but keep DNS trust edits from the page (not advised by iam.aws.a or security.aws.a)",
+     "good": [
+      "DNS-trust plans keep working"
+     ],
+     "bad": [
+      "Whoever controls that role's trust controls the site's name; R-005 stays open"
+     ],
+     "blocks": [
+      "R-008 fully closing"
+     ]
+    },
+    {
+     "id": "c",
+     "label": "c. v2.1 through the page now, boundaries later",
+     "good": [
+      "Closes R-001 sooner"
+     ],
+     "bad": [
+      "R-008 stays open"
+     ],
+     "blocks": [
+      "R-008 closing"
+     ]
+    },
+    {
+     "id": "d",
+     "label": "d. No boundary; rely on splitting off the change page (R-002)",
+     "good": [
+      "No IAM change"
+     ],
+     "bad": [
+      "The change-set path stays open until the split exists"
+     ],
+     "blocks": [
+      "R-008 closing"
+     ]
+    }
+   ],
+   "recommendation": "a",
+   "why": "Cleared on paper by security.aws.a (ba0afa0), with no open condition left. The first apply is your own act in the console; one harmless tag change set on the read role right after confirms the UpdateRole Deny, with you watching the stack events."
+  },
+  {
+   "id": "8",
+   "question": "8. May vaults.aws.a read SG/Send's browser vault library?",
+   "options": [
+    {
+     "id": "a",
+     "label": "a. Yes in vaults.aws.a's session: attach SGraph-AI__App__Send read-only, pinned to one commit",
+     "good": [
+      "The twin matches the real library's batch results and conflict rule",
+      "Read only, one pinned commit"
+     ],
+     "bad": [
+      "One more repository in that session"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "b",
+     "label": "b. Fetch the twelve published library files from dev.vault.sgraph.ai",
+     "good": [
+      "No repository attached"
+     ],
+     "bad": [
+      "Unversioned: the files can change under it"
+     ],
+     "blocks": []
+    },
+    {
+     "id": "c",
+     "label": "c. No: design from sgit.ai's published description only",
+     "good": [
+      "Nothing new attached"
+     ],
+     "bad": [
+      "The twin may differ from the real library"
+     ],
+     "blocks": [
+      "Design 02 section 2 of the vault twin"
+     ]
+    }
+   ],
+   "recommendation": "a",
+   "why": "Read only, and a pinned commit is what vaults design 01 already proposes copying into site/ for the CSP."
+  }
+ ],
+ "connections": {
+  "asked_by": "pm.aws.a@SovereignWebsite.dinis",
+  "reviewed_by": [],
+  "acts": [
+   "aws.c",
+   "conductor.aws.a",
+   "dev.2.aws.a",
+   "factory.c",
+   "iam.aws.a",
+   "security.aws.a"
+  ],
+  "follows": [
+   "docs/board/decisions.md",
+   "Dinis, 23 Nov ~11:15 UTC via maestro.a: a presentation and a decision video for every batch of decisions"
+  ]
+ },
+ "sources": [
+  {
+   "id": "s-decisions",
+   "title": "pm.aws.a: decisions for Dinis, AWS Platform (docs/board/decisions.md at ba2904b)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/ba2904b10bb0683135caf3083c1071356a48520e/docs/board/decisions.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-risks",
+   "title": "security: risk register (docs/security/risks.md on dev at 518b114)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/518b114b4eaef1fd1d0c08814a3fa3d36a86de2c/docs/security/risks.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-keys",
+   "title": "factory.c: publishing an .aws.a key on the Factory (docs/team/keys/README.md at 518b114)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/518b114b4eaef1fd1d0c08814a3fa3d36a86de2c/docs/team/keys/README.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-sec-v25",
+   "title": "security.aws.a: P-IAM-001 v2.5 cleared on paper (ba0afa0)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/ba0afa0/docs/security/risks.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-iam-v25",
+   "title": "iam.aws.a: P-IAM-001 proposal, v2.5 (ee7f7b9)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/ee7f7b9/docs/iam/proposals/P-IAM-001-boundary.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-vaults",
+   "title": "vaults.aws.a: designs 01 to 03 (88588c6)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/88588c6/docs/vaults/2026-11-23__02-vault-twin-contract.md",
+   "read": "2026-11-23"
+  },
+  {
+   "id": "s-sec-r010",
+   "title": "security.aws.a: R-010 widened by 6ab7233 (72f4cee)",
+   "url": "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/72f4cee/docs/security/risks.md",
+   "read": "2026-11-23"
+  }
+ ],
+ "drawn_by": "pm.aws.a@SovereignWebsite.dinis: narration, visuals and decisions from docs/board/decisions.md; the animated SVGs are generated from the presentation (decisions-brief.html) by build-video.mjs; player copied from Site__Agent__Studio 74ed159 site/accounts/d/briefings/default-yes/index.html with two changes (when paused, an SVG beat shows its final frame; Play restarts the current beat)",
+ "voice": "Captions always; voice only if the viewer turns it on, and then it is the browser's built-in synthetic voice. The presenter is synthetic, not a real person."
+}

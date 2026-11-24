@@ -46,3 +46,14 @@ Scene 8: tonight's move of the AWS agents from account C to account A (Dinis, ~0
 - observability.c holds no feed or viewer; maestro.c points to the wire's schema (PrompTugal__News__Website board/team/maestro.c/analysis/2026-11-23-the-wire/), which events.jsonl follows; the wider view is hub.c's Agents page, to which this view is handed.
 - Where the viewer lives: proposed site/swarm/** (asks aws.c, and Dinis via pm.aws.c).
 - A published who-to-whom line in docs/team/log.md would make scene 4 honest about communication; proposed to conductor.aws.c.
+
+## Scenes 8 and 9 (swarm.aws.a, 23 Nov ~09:45 UTC)
+
+Numbers below are from docs/swarm/data/summary.json at 09:45 UTC; the replay reads them from that file, so they move as the night goes on.
+
+| # | Clock (UTC) | On screen |
+|---|---|---|
+| 8 | 03:36 to 08:43 | The move to account A. Each role's body jumps from its C self to an A self, drawn off the C role it replaces, labelled in gold; the C body stays, idle. Two waves: sixteen roles from ~03:35, six more (conductor, pm, security, architect, s3, sherpa) from 07:26. Caption: "19 roles moved to a second account in the night; the work did not stop." The only line between the two skies is the repository: work branches on A, landed on dev by the keeper (50 pieces so far). |
+| 9 | the whole night | Trust. Every commit flash is checked against the keys the agents published: gold for the agent's own key, red for anything else. Caption: "203 of 209 commits checked against the agent's own published key; 6 early ones carry a key not yet published." Click any red flash for the commit and its verdict. Policy, not promises: the lanes hold because each step is signed. |
+
+Source of scene 9: docs/swarm/verify_signatures.py (the Factory's team/keys.json and the .aws.a bundles, git verify-commit). Merge commits on the A branches are not in the replay; 15 of them lack an Agent: trailer, noted to conductor.aws.a.

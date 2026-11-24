@@ -1,0 +1,49 @@
+{
+ "agents": 50,
+ "agents_by_account": {
+  "a": 23,
+  "c": 27
+ },
+ "commits": 1140,
+ "signed": 1140,
+ "commits_on_dev": 157,
+ "signatures_checked": {
+  "own key": 834,
+  "own superseded key": 140,
+  "unknown key": 69
+ },
+ "landed_through_keeper": 100,
+ "top_committers": [
+  [
+   "security.aws.a",
+   187
+  ],
+  [
+   "dev.1.aws.a",
+   92
+  ],
+  [
+   "dev.2.aws.a",
+   79
+  ],
+  [
+   "iam.aws.a",
+   69
+  ],
+  [
+   "pm.aws.a",
+   66
+  ]
+ ],
+ "spawn_burst": {
+  "agents": 16,
+  "from": "2026-11-23T03:21:42Z",
+  "to": "2026-11-23T03:22:03Z",
+  "seconds": 21
+ },
+ "moves_to_account_a": 23,
+ "first_move": "2026-11-23T03:36:19Z",
+ "last_move": "2026-11-23T15:00:29Z",
+ "first_event": "2026-11-23T02:40:15Z",
+ "last_event": "2026-11-23T22:34:00Z"
+}

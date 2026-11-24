@@ -134,7 +134,11 @@
       press(state.bucket || "");
       P.say(st, names.length + " bucket" + (names.length === 1 ? "" : "s") + ".", "ok");
       if (then) then(names);
-    }).catch(function (e) { if (my === state.view) P.say(st, e.message + (/AccessDenied|not authorized/.test(e.message) ? " (The account needs template v2: see step 3.)" : ""), "bad"); });
+    }).catch(function (e) {
+      if (my !== state.view) return;
+      if (/AccessDenied|not authorized/.test(e.message)) return P.say(st, e.message + " (The account needs template v2: see step 3.)", "bad");
+      fail(st, e, function () { listBuckets(then); });
+    });
   }
 
   // ---- a bucket: check its CORS rule, offer the plan, then list ----
@@ -153,7 +157,7 @@
       var plan = Plans.corsPlan(props, location.origin);
       if (plan.unchanged) { state.prefix = at ? at.prefix : ""; return listObjects(null, at && at.key); }
       showCorsPlan(name, plan);
-    }).catch(function (e) { if (my === state.view) P.say(st, e.message, "bad"); });
+    }).catch(function (e) { if (my === state.view) fail(st, e, function () { openBucket(name, at, focus); }); });
   }
   function showCorsPlan(name, plan) {
     var box = $("s3-objects"), st = P.el("p", { class: "status" });
@@ -284,7 +288,18 @@
         }
         var refresh = P.el("button", { type: "button", class: "quiet", text: "Refresh", title: "List this folder from S3 again" });
         refresh.onclick = function () { clearListCache(); state.fresh = true; state.keepSearch = true; listObjects(); };
-        box.appendChild(P.el("div", { class: "toolbar" }, [filter, search].concat(clear ? [clear] : []).concat([refresh])));
+        var sum = summariseButton(b, region, state.prefix);
+        // Sherpa walk 1, item 6: a log folder is several levels deep; "Newest file" opens the most recently changed
+        // file listed here, as a click on it would (its listed size goes through the same gates).
+        var newest = P.el("button", { type: "button", class: "quiet s3-newest", text: "Newest file", title: "Open the most recently changed file listed here" });
+        newest.onclick = function () {
+          var best = null;
+          Array.prototype.forEach.call($("s3-list").querySelectorAll("tr.file"), function (tr) { if (!best || tr.dataset.when > best.dataset.when) best = tr; });
+          if (best) return best.querySelector("button").click();
+          if (state.more) return P.say(st, "No files listed in this folder yet; Load more, or open a folder.", "ok");
+          newestBelow(b, region, state.prefix, newest);
+        };
+        box.appendChild(P.el("div", { class: "toolbar" }, [filter, search].concat(clear ? [clear] : []).concat([refresh, newest]).concat(sum ? [sum] : [])));
         var table = P.el("table", { class: "s3-table" });
         var head = P.el("thead", {}, [P.el("tr", {}, [sortHead("Name", "name"), sortHead("Size", "size"), sortHead("Modified (UTC)", "when")])]);
         table.appendChild(head); table.appendChild(P.el("tbody", { id: "s3-list" }));
@@ -323,12 +338,53 @@
       P.say(st, b + "/" + state.prefix + (state.search ? " (names starting with " + state.search + ")" : "") + ": " + countRows() + (nt ? " so far, more in S3" : "") + (got.age ? " (listed " + Math.round(got.age / 1000) + " s ago; Refresh to list again)" : ""), "ok");
       if (openKey) linked(openKey, box, arriving);
       else if (arriving) land(box.querySelector(".crumbs button:last-of-type"));
-    }).catch(function (e) { if (my === state.view) P.say(st, e.message + (/Failed to fetch/.test(e.message) ? " (S3 refused the browser: check the bucket's CORS rule and region " + region + ".)" : ""), "bad"); });
+    }).catch(function (e) { if (my === state.view) fail(st, e, function () { listObjects(token, openKey); }, region); });
   }
   // A file named by a link opens with no click only when the listing gave its size and it is small enough to show
   // (or a zip, read by byte ranges). Otherwise the folder is shown and the file waits for a click, so a link alone
   // cannot make the page download a large object (R-016, security.aws.a).
+  // "Newest file" in a folder of folders (sherpa walk 7): follow the last folder by name at each level (for date-named
+  // log folders, .../2026/11/23/18/, that is the newest) until a folder holds files, then open its most recently
+  // changed file, as a click on it would. Bounded: at most NEWEST_DEPTH levels and NEWEST_PAGES listing pages each,
+  // through the listing cache. The file opens once its folder is listed, through the address.
+  var NEWEST_DEPTH = 8, NEWEST_PAGES = 10, clicked = null;
+  function newestBelow(b, region, prefix, btn) {
+    var st = $("s3-status"), my = state.view;
+    btn.disabled = true; P.say(st, "Looking for the newest file under " + b + "/" + prefix + "...");
+    function level(pfx, depth) {
+      var files = [], folders = [];
+      function page(token, n) {
+        return fetchList(b, region, pfx, token, false).then(function (got) {
+          var d = got.d;
+          Array.prototype.forEach.call(d.getElementsByTagName("CommonPrefixes"), function (cp) { folders.push(cp.getElementsByTagName("Prefix")[0].textContent); });
+          Array.prototype.forEach.call(d.getElementsByTagName("Contents"), function (o) {
+            var k = o.getElementsByTagName("Key")[0].textContent; if (k === pfx) return;
+            files.push({ key: k, size: +o.getElementsByTagName("Size")[0].textContent, when: (o.getElementsByTagName("LastModified")[0] || {}).textContent || "" });
+          });
+          var nt = d.getElementsByTagName("NextContinuationToken")[0];
+          if (nt && n + 1 < NEWEST_PAGES && my === state.view) return page(nt.textContent, n + 1);
+        });
+      }
+      return page(null, 0).then(function () {
+        if (my !== state.view) return null;
+        if (files.length) return files.reduce(function (a, f) { return f.when > a.when ? f : a; });
+        if (!folders.length || depth + 1 >= NEWEST_DEPTH) return null;
+        folders.sort();
+        return level(folders[folders.length - 1], depth + 1);
+      });
+    }
+    level(prefix, 0).then(function (f) {
+      btn.disabled = false;
+      if (my !== state.view) return;
+      if (!f) return P.say(st, "No file found under " + b + "/" + prefix + " (looked " + NEWEST_DEPTH + " folders deep, following the last folder by name).", "ok");
+      // A click: the file opens with its listed size once its folder is listed, whatever the link gates say.
+      clicked = { key: f.key, size: f.size };
+      state.prefix = f.key.slice(0, f.key.lastIndexOf("/") + 1); arrive = true; listObjects(null, f.key);
+    }).catch(function (e) { btn.disabled = false; if (my === state.view) fail(st, e, function () { newestBelow(b, region, prefix, btn); }, region); });
+  }
   function linked(key, box, arriving) {
+    if (clicked && clicked.key === key) { var c = clicked; clicked = null; openFile(key, c.size); if (arriving !== false) land($("s3-file").firstChild); return; }
+    clicked = null;
     var size = state.sizes[key], name = key.split("/").pop(), zip = window.Zip && Zip.isZip(key) && size > 22;
     var why = !(size >= 0) ? name + " is not in the part of this folder listed so far; find it in the list (Load more) and click it to open it."
       : !zip && size > LIMITS.show ? name + " is " + human(size) + ", more than a link opens by itself; click it in the list to open it." : "";
@@ -336,6 +392,188 @@
     state.file++; $("s3-file").textContent = "";
     P.say($("s3-status"), why, "ok");
     if (arriving !== false) land(box.querySelector(".crumbs button:last-of-type"));
+  }
+  // ---- "Summarise these logs" (data.aws.a's LogView, docs/data/2026-11-23__01-extract-workflow-first-design.md) ----
+  // Offered on a folder of hourly logs (a year, month, day or hour folder: .../2026/11/21/10/) when the page has
+  // loaded site/data/extract.js and view.js. Every file under the folder is listed (no delimiter), then LogView
+  // reads them one at a time through the read role, in this browser only: nothing is kept or sent. Ceilings: at
+  // most SUM_MAX files (LogView refuses more and asks for a smaller folder), no file over SUM_FILE is fetched, and
+  // the listing stops once past SUM_MAX keys.
+  // SUM_TOTAL: bytes one click may fetch in all (security.aws.a: 200 files of 32 MB would be 6.4 GB); the total is
+  // shown before anything is read, and a folder over it is refused with a request for a smaller one.
+  var LOG_FOLDER = /(^|\/)\d{4}\/(\d{2}\/){0,3}$/, SUM_MAX = 200, SUM_FILE = 32 * 1048576, SUM_TOTAL = 500 * 1048576;
+  function summariseButton(b, region, prefix) {
+    if (!window.LogView || !window.LogExtract || !LOG_FOLDER.test(prefix)) return null;
+    var btn = P.el("button", { type: "button", class: "quiet", text: "Summarise these logs", title: "Read every log file under " + prefix + " in this browser" });
+    btn.onclick = function () { summarise(b, region, prefix, btn); };
+    return btn;
+  }
+  function summarise(b, region, prefix, btn) {
+    var my = ++state.file, box = $("s3-file"), st = $("s3-status"), objs = [], sizes = noProto();
+    // The account is taken once, at the click: every read is signed with its read role, and the summary stops if
+    // another account is chosen meanwhile (security.aws.a: the other account's role against this account's bucket).
+    var acct = state.acct;
+    function readAs() { return P.assume(acct, "sws-aws-platform-read"); }
+    function sameAcct() { return !!state.acct && !!acct && state.acct.id === acct.id; }
+    function same() { return my === state.file && sameAcct(); }
+    box.textContent = ""; state.key = ""; go(b, prefix);
+    var head = P.el("h4", { text: "Summary of " + b + "/" + prefix }), out = P.el("div", {});
+    box.appendChild(head); box.appendChild(out); land(head);
+    btn.disabled = true; P.say(st, "Listing every log file under " + prefix + "...");
+    readAs().then(function (c) {
+      function page(token) {
+        var q = "?list-type=2&max-keys=1000&prefix=" + encodeURIComponent(prefix) + (token ? "&continuation-token=" + encodeURIComponent(token) : "");
+        return s3get(c, bucketUrl(b, region, q), region).then(function (r) {
+          return r.text().then(function (t) {
+            var d = new DOMParser().parseFromString(t, "text/xml"); if (!r.ok) throw P.awsError(d, r.status);
+            Array.prototype.forEach.call(d.getElementsByTagName("Contents"), function (o) {
+              var k = o.getElementsByTagName("Key")[0].textContent, z = +o.getElementsByTagName("Size")[0].textContent;
+              if (k === prefix) return;
+              objs.push({ Key: k, Size: z }); sizes[k] = z;
+            });
+            var nt = d.getElementsByTagName("NextContinuationToken")[0];
+            if (nt && objs.length <= SUM_MAX && same()) return page(nt.textContent);
+          });
+        });
+      }
+      return page(null);
+    }).then(function () {
+      if (!same()) return;
+      var total = objs.reduce(function (a, o) { return a + (o.Size <= SUM_FILE ? o.Size : 0); }, 0), fetched = 0;
+      var many = objs.length + " file" + (objs.length === 1 ? "" : "s");
+      if (total > SUM_TOTAL) return P.say(st, prefix + ": " + many + ", " + human(total) + " in all, more than " + human(SUM_TOTAL) + " for one summary; open a smaller folder (a day or an hour).", "bad");
+      P.say(st, "Summarising " + many + " under " + prefix + " (" + human(total) + " to read)...");
+      // A value in the summary that names a log file opens it through the address, so it gets every check a link
+      // gets (a valid bucket of this account, no climbing out, the size gate); the values come from the logs.
+      var opts = { maxFiles: SUM_MAX, maxFileBytes: SUM_FILE, context: { logsBucket: b },
+        open: function (ref) { if (ref && ref.bucket && ref.key) location.hash = route(String(ref.bucket), String(ref.key)); } };
+      return LogView.run(out, objs, function (key) {
+        if (my !== state.file) return Promise.reject(new Error("stopped: another place was opened"));
+        if (!sameAcct()) return Promise.reject(new Error("stopped: another account was chosen"));
+        if (!(sizes[key] <= SUM_FILE)) return Promise.reject(new Error("larger than " + human(SUM_FILE) + "; not read"));
+        if (fetched + sizes[key] > SUM_TOTAL) return Promise.reject(new Error("past " + human(SUM_TOTAL) + " read in all; not read"));
+        fetched += sizes[key];
+        return readAs().then(function (c) { return s3get(c, bucketUrl(b, region, "", key), region); }).then(function (r) {
+          if (!r.ok) throw new Error("S3 answered " + r.status);
+          return r.arrayBuffer();
+        }).then(function (ab) { return new Uint8Array(ab); });
+      }, opts).then(function () {
+        if (my === state.file) P.say(st, "Summary of " + b + "/" + prefix + ": read in this browser; nothing was kept or sent.", "ok");
+      });
+    }).catch(function (e) { if (my === state.file) P.say(st, e.message, "bad"); }).then(function () { btn.disabled = false; });
+  }
+  // ---- errors told apart, with a Retry (first note, item 15) ----
+  // AWS's code stays at the end, so nothing is hidden; the words in front say what it means here and what to do.
+  function explain(msg, region) {
+    var m = String(msg || ""), why =
+      /^AccessDenied|not authorized/i.test(m) ? "S3 refused the read role here: it may not read this bucket, folder or file. Nothing was changed." :
+      /^NoSuchKey/.test(m) ? "This file is no longer in the bucket (moved or deleted since the folder was listed). Refresh the folder." :
+      /^NoSuchBucket/.test(m) ? "This bucket no longer exists." :
+      /ExpiredToken|InvalidToken|TokenRefreshRequired|RequestExpired|Sign in with Google/.test(m) ? (window.AwsTransport && AwsTransport.isTwin() ? "The session ran out." : "The session ran out. Sign in again at the top of the page, then Retry.") :
+      /PermanentRedirect|AuthorizationHeaderMalformed|^HTTP 301/.test(m) ? "The bucket answers in another region than the one asked" + (region ? " (" + region + ")" : "") + "." :
+      /Failed to fetch|NetworkError|Load failed/.test(m) ? "S3 did not answer the browser: this device is offline, or the bucket's CORS rule does not allow this site" + (region ? " (region " + region + ")" : "") + "." :
+      /SlowDown|ServiceUnavailable|InternalError|^HTTP 5\d\d/.test(m) ? "S3 is busy or failed for a moment. Try again in a moment." : "";
+    return why ? why + " (" + m + ")" : m;
+  }
+  // Say what went wrong in the status line; with a retry, a button that tries the same step again.
+  function fail(st, e, retry, region) {
+    P.say(st, explain(e && e.message, region), "bad");
+    if (!retry) return;
+    // The step is retried only in the bucket it failed in, at the folder it failed at (security.aws.a: a Retry
+    // clicked after moving to another bucket must not ask that bucket for the old key).
+    var at = { bucket: state.bucket, prefix: state.prefix }, b = P.el("button", { type: "button", class: "quiet s3-retry", text: "Retry" });
+    b.onclick = function () {
+      b.disabled = true;
+      if (state.bucket !== at.bucket) return P.say(st, "That Retry was for " + (at.bucket || "the list of buckets") + "; open it again to retry there.", "ok");
+      state.prefix = at.prefix; retry();
+    };
+    st.appendChild(document.createTextNode(" ")); st.appendChild(b);
+  }
+  // ---- S3-4: "Connected to this bucket" (docs/s3/2026-11-23__s3-4-bucket-graph-plan.md) ----
+  // Words: ontology.aws.a's READ table (docs/ontology/explain.mjs), each relation read from either end, so this panel,
+  // the Map and explain.mjs say the same thing. Links come from dev.2.aws.a's Graph.neighbours(json, id): one hop,
+  // and a second hop through the bucket's files (via). Order and marks by trust: AWS-confirmed first with no mark,
+  // then "?" claimed (from files or names: check before acting), then "~" the ontologist's word. More than three
+  // links of one kind read as one line with a count, the first and the last.
+  var READ = {
+    in: ["is in", "contains"], holds: ["holds", "is held by"], made_by: ["was made by", "made"],
+    writes_to: ["writes to", "receives from"], logs_to: ["sends its logs to", "receives logs from"],
+    serves_from: ["serves from", "is the origin of"], packages: ["is the code of", "runs code from"],
+    trusts: ["trusts", "is trusted by"], allows_subject: ["may be assumed by", "may assume"],
+    has_policy: ["has", "is attached to"], acted_as: ["was done as", "did"], acted_on: ["acted on", "was acted on by"],
+    records: ["records", "is recorded in"], refers_to: ["names", "is named in"], part_of: ["is part of", "is made of"],
+    signed_in_via: ["signed in via", "was used to sign in for"], seen_in: ["is seen in", "shows"],
+    targeted: ["targeted", "was targeted by"], runs_as: ["runs as", "is the role of"],
+    transforms_with: ["transforms records with", "transforms records for"]
+  };
+  var HOW = { api: "AWS answered", template: "the stack's template says", content: "read from inside a file",
+    naming: "guessed from a name", comment: "only a code comment says", curated: "the ontologist says" };
+  var MARK_SAYS = { "?": "claimed, check before acting", "~": "the ontologist's word" };
+  function nodeName(n) { var l = String(n && n.label != null ? n.label : n && n.id); return n && n.type === "object" ? l.split("/").pop() : l; }
+  // Graph.neighbours result -> lines: { mark, words, via, otype, nodes: [..], how }. Pure.
+  function connections(nb) {
+    if (!nb || !nb.links) return [];
+    var lines = nb.links.map(function (l) {
+      var r = READ[l.rel], rank = l.trust === "verified" ? 0 : l.trust === "curated" ? 2 : 1, type = String(l.node.type || "unknown");
+      var words = r ? r[l.direction === "out" ? 0 : 1] : String(l.rel).replace(/_/g, " ");
+      return { rank: rank, mark: rank === 0 ? "" : rank === 2 ? "~" : "?", words: words, via: !!l.via, otype: type.replace(/_/g, " "), node: l.node,
+        how: (HOW[l.evidence] || String(l.evidence)) + ": " + String(l.source || ""), g: [l.via ? 1 : 0, rank, words, type, l.evidence, l.source].join("|") };
+    });
+    lines.sort(function (a, b) {
+      var x = [a.via ? 1 : 0, a.rank, a.words, nodeName(a.node)].join("\u0000"), y = [b.via ? 1 : 0, b.rank, b.words, nodeName(b.node)].join("\u0000");
+      return x < y ? -1 : x > y ? 1 : 0;
+    });
+    var out = [], run = [];
+    function flush() {
+      if (!run.length) return;
+      var f = run[0];
+      if (run.length <= 3) run.forEach(function (l) { out.push({ mark: l.mark, words: l.words, via: l.via, otype: l.otype, nodes: [l.node], how: l.how }); });
+      else out.push({ mark: f.mark, words: f.words, via: f.via, otype: f.otype, nodes: run.map(function (l) { return l.node; }), how: f.how });
+      run = [];
+    }
+    lines.forEach(function (l) { if (run.length && run[0].g !== l.g) flush(); run.push(l); });
+    flush();
+    return out;
+  }
+  // An S3 node opens through the address (so every link check applies); other kinds are text for now.
+  function s3Target(n) {
+    var m = /^arn:aws:s3:::([^/]+)(?:\/(.*))?$/.exec(String(n && n.id || ""));
+    return m && (n.type === "bucket" || n.type === "object" || n.type === "prefix") ? { bucket: m[1], key: m[2] || "" } : null;
+  }
+  // mark: "?" or "~" for a claimed or curated line, put right after the name as well as at the line's start, so a
+  // clickable claimed name is never read as fact (security.aws.a on 268cfc7).
+  function nameEl(n, mark) {
+    var t = s3Target(n), label = nodeName(n), el = nameOnly(n, t, label);
+    if (!mark) return el;
+    return P.el("span", { class: "c-named" }, [el, P.el("span", { class: "c-mark", text: mark, title: MARK_SAYS[mark], "aria-label": MARK_SAYS[mark] })]);
+  }
+  function nameOnly(n, t, label) {
+    if (!t) return P.el("span", { class: "c-name", text: label });
+    var b = P.el("button", { type: "button", class: "linkish c-name", text: label, title: t.bucket + "/" + t.key });
+    b.onclick = function () { location.hash = route(t.bucket, t.key); };
+    return b;
+  }
+  // The panel, built from DOM nodes as text only (labels come from bucket contents and logs).
+  function connectedPanel(nb, opts) {
+    opts = opts || {};
+    var box = P.el("section", { class: "connected", "aria-label": "Connected to this bucket" });
+    if (!nb) { box.appendChild(P.el("p", { class: "small", text: "Nothing is known about this bucket's connections yet." })); return box; }
+    box.appendChild(P.el("h4", { text: "Connected to " + nodeName(nb.node) + (opts.twin ? " (synthetic)" : "") }));
+    var ul = P.el("ul", { class: "c-lines" });
+    connections(nb).forEach(function (l) {
+      var li = P.el("li", {});
+      if (l.mark) li.appendChild(P.el("span", { class: "c-mark", text: l.mark + " ", title: MARK_SAYS[l.mark], "aria-label": MARK_SAYS[l.mark] }));
+      li.appendChild(document.createTextNode((l.via ? "A file here " : "") + l.words + " "));
+      if (l.nodes.length > 3) {
+        li.appendChild(document.createTextNode(l.nodes.length + " " + l.otype + "s: "));
+        li.appendChild(nameEl(l.nodes[0], l.mark)); li.appendChild(document.createTextNode(" ... ")); li.appendChild(nameEl(l.nodes[l.nodes.length - 1], l.mark));
+      } else { li.appendChild(nameEl(l.nodes[0], l.mark)); li.appendChild(document.createTextNode(" (" + l.otype + ")")); }
+      li.appendChild(P.el("span", { class: "small c-how", text: "  [" + l.how + "]" }));
+      ul.appendChild(li);
+    });
+    box.appendChild(ul);
+    box.appendChild(P.el("p", { class: "small", text: "No mark: AWS confirmed. ?: claimed, from files or names; check before acting. ~: the ontologist's word." }));
+    return box;
   }
   function human(n) { return n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(1) + " MB"; }
 
@@ -368,19 +606,21 @@
     if (/\.(jsonl|ndjson)$/i.test(name) || /^\s*\{/.test(text)) {
       try {
         var rows = text.split("\n").filter(function (l) { return l.trim(); }).map(function (l) { return JSON.parse(l); });
-        if (rows.length) { box.appendChild(jsonView(rows)); return P.say(st, name + ": JSON Lines (" + rows.length + "), formatted.", "ok"); }
+        if (rows.length) { box.appendChild(filteredView(rows, JSON.stringify, jsonView, "lines")); return P.say(st, name + ": JSON Lines (" + rows.length + "), formatted.", "ok"); }
       } catch (e) { /* not JSON Lines */ }
     }
     if (/^\s*\{/.test(text)) {
       // Firehose writes records back to back ("}{") unless a delimiter is set: read them as a list.
       var recs = concatenatedJson(text);
-      if (recs) { box.appendChild(jsonView(recs)); return P.say(st, name + ": " + recs.length + " JSON records back to back (as Firehose writes them), formatted.", "ok"); }
+      if (recs) { box.appendChild(filteredView(recs, JSON.stringify, jsonView, "records")); return P.say(st, name + ": " + recs.length + " JSON records back to back (as Firehose writes them), formatted.", "ok"); }
     }
     var tab = tableOf(name, type, text);
     if (tab) { box.appendChild(tableView(tab, name, text)); return P.say(st, name + ": " + tab.what + ", " + tab.rows.length + " row" + (tab.rows.length === 1 ? "" : "s") + ".", "ok"); }
     if (/^text\/|xml|javascript|yaml/.test(type) || TEXT.test(name) || !/[\x00-\x08\x0E-\x1F]/.test(text.slice(0, 4096))) {
       var coloured = window.Highlight && Highlight.highlight(name, text, document);
-      box.appendChild(coloured || P.el("pre", { text: text })); return P.say(st, name, "ok");
+      var whole = coloured || P.el("pre", { text: text }), lines = text.split("\n");
+      box.appendChild(lines.length > 2 ? filteredView(lines, String, function (sub) { return sub === lines ? whole : P.el("pre", { text: sub.join("\n") }); }, "lines") : whole);
+      return P.say(st, name, "ok");
     }
     P.say(st, name + ": not text; use Download.", "ok");
   }
@@ -444,6 +684,33 @@
   }
   // A table of the rows, TABLE_PAGE at a time, cells as text only; "Show as text" swaps in the raw file.
   var TABLE_PAGE = 200, MAX_COLS = 200;
+  // ---- W3-5: a line filter in the viewer (sherpa walk 3, finding 5) ----
+  // Keeps the rows (JSON Lines, records, table rows) or text lines that contain what is typed, in any case, and says
+  // "N of M lines match". Plain text matching (no patterns); the file is only read, never changed.
+  function filterBox(unit, total, onChange) {
+    var input = P.el("input", { type: "search", class: "filter line-filter", placeholder: "Filter " + unit, "aria-label": "Filter " + unit });
+    var count = P.el("span", { class: "small line-count", "aria-live": "polite" }), timer = null;
+    input.oninput = function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () { var q = input.value.toLowerCase(), n = onChange(q); count.textContent = q ? n + " of " + total + " " + unit + " match" : ""; }, 120);
+    };
+    return P.el("div", { class: "toolbar" }, [input, count]);
+  }
+  function filteredView(items, keyOf, render, unit) {
+    var wrap = P.el("div", { class: "filtered" }), holder = P.el("div", {}), keys = null, first = render(items);
+    holder.appendChild(first);
+    wrap.appendChild(filterBox(unit, items.length, function (q) {
+      holder.textContent = "";
+      if (!q) { holder.appendChild(first); return items.length; }
+      if (!keys) keys = items.map(function (x) { return String(keyOf(x)).toLowerCase(); });
+      var sub = items.filter(function (x, i) { return keys[i].indexOf(q) >= 0; });
+      holder.appendChild(sub.length ? render(sub) : P.el("p", { class: "small", text: "No " + unit + " match." }));
+      return sub.length;
+    }));
+    wrap.appendChild(holder);
+    return wrap;
+  }
+
   function tableView(tab, name, text) {
     var wrap = P.el("div", { class: "table-view" }), cols = tab.head ? tab.head.length : 0;
     tab.rows.forEach(function (r) { if (r.length > cols) cols = r.length; });
@@ -451,30 +718,36 @@
     var allCols = cols; if (cols > MAX_COLS) cols = MAX_COLS;
     var head = [];
     for (var c = 0; c < cols; c++) head.push(P.el("th", { text: tab.head && tab.head[c] != null ? tab.head[c] : String(c + 1) }));
-    var tbody = P.el("tbody", {}), shown = 0;
+    var tbody = P.el("tbody", {}), shown = 0, rows = tab.rows, keys = null;
     var table = P.el("table", { class: "s3-table data-table" }, [P.el("thead", {}, [P.el("tr", {}, head)]), tbody]);
     var more = P.el("button", { type: "button", class: "quiet" }), raw = null;
     function page() {
-      var to = Math.min(tab.rows.length, shown + TABLE_PAGE);
+      var to = Math.min(rows.length, shown + TABLE_PAGE);
       for (var i = shown; i < to; i++) {
-        var tds = []; for (var j = 0; j < cols; j++) tds.push(P.el("td", { text: tab.rows[i][j] != null ? tab.rows[i][j] : "" }));
+        var tds = []; for (var j = 0; j < cols; j++) tds.push(P.el("td", { text: rows[i][j] != null ? rows[i][j] : "" }));
         tbody.appendChild(P.el("tr", {}, tds));
       }
       shown = to;
-      more.hidden = shown >= tab.rows.length;
-      more.textContent = "Show " + Math.min(TABLE_PAGE, tab.rows.length - shown) + " more of " + (tab.rows.length - shown);
+      more.hidden = shown >= rows.length;
+      more.textContent = "Show " + Math.min(TABLE_PAGE, rows.length - shown) + " more of " + (rows.length - shown);
     }
+    var lineFilter = filterBox("rows", tab.rows.length, function (q) {
+      if (!keys) keys = tab.rows.map(function (r) { return r.join("\t").toLowerCase(); });
+      rows = q ? tab.rows.filter(function (r, i) { return keys[i].indexOf(q) >= 0; }) : tab.rows;
+      tbody.textContent = ""; shown = 0; page();
+      return rows.length;
+    });
     more.onclick = page;
     var asText = P.el("button", { type: "button", class: "quiet", text: "Show as text" });
     asText.onclick = function () {
       var t = !raw || raw.hidden;
       if (!raw) { raw = P.el("pre", { text: text }); wrap.appendChild(raw); }
-      raw.hidden = !t; grid.hidden = t; more.hidden = t || shown >= tab.rows.length;
+      raw.hidden = !t; grid.hidden = t; lineFilter.hidden = t; more.hidden = t || shown >= rows.length;
       asText.textContent = t ? "Show as a table" : "Show as text";
     };
     var grid = P.el("div", { class: "s3-wrap" }, [table]);
     wrap.appendChild(P.el("p", { class: "row" }, [asText, P.el("span", { class: "small", text: tab.rows.length + " rows, " + (allCols > cols ? "the first " + cols + " of " + allCols + " columns (Show as text has them all)" : cols + " columns") + (tab.head ? "" : " (no header row: numbered)") })]));
-    wrap.appendChild(grid); wrap.appendChild(P.el("div", { class: "row" }, [more]));
+    wrap.appendChild(lineFilter); wrap.appendChild(grid); wrap.appendChild(P.el("div", { class: "row" }, [more]));
     page();
     return wrap;
   }
@@ -520,7 +793,7 @@
         }
         show(box, name, type, u8, st);
       });
-    }).catch(function (e) { if (current()) P.say(st, e.message, "bad"); });
+    }).catch(function (e) { if (current()) fail(st, e, function () { openFile(key, size); }, state.bucketRegion); });
   }
 
   // ---- a large file: the first part by one Range request, never the whole file unless asked ----
@@ -651,7 +924,7 @@
         box.appendChild(P.el("p", { class: "small preview", text: "Preview: the first " + human(lines.length) + " of " + human(size) + ". Download fetches the whole file." }));
         show(box, name, type, lines, st);
       });
-    }).catch(function (e) { if (current()) P.say(st, e.message, "bad"); });
+    }).catch(function (e) { if (current()) fail(st, e, function () { openFile(key, size); }, state.bucketRegion); });
   }
 
   // ---- inside a zip, by byte ranges (zip.js) ----
@@ -701,7 +974,7 @@
       box.appendChild(P.el("div", { class: "s3-wrap" }, [table]));
       box.appendChild(viewer);
       P.say(st, name + ": " + files.length + " files inside.", "ok");
-    }).catch(function (e) { if (current()) P.say(st, e.message, "bad"); });
+    }).catch(function (e) { if (current()) fail(st, e, function () { openFile(key, size); }, state.bucketRegion); });
   }
 
   // JSON, formatted and coloured, built from DOM nodes (never from HTML strings).
@@ -751,6 +1024,8 @@
         body.hidden = !open; shut.textContent = open ? "" : " " + what + " ";
         fold.setAttribute("aria-expanded", open ? "true" : "false");
         fold.title = (open ? "Fold " : "Unfold ") + what;
+        // The bracket is what shows; its name is what it does (sherpa walk 6: a screen reader said "left brace").
+        fold.setAttribute("aria-label", fold.title);
       }
       fold.onclick = function () { setOpen(fold.getAttribute("aria-expanded") !== "true"); };
       to.appendChild(fold); to.appendChild(body); to.appendChild(shut); text(to, arr ? "]" : "}");
@@ -833,10 +1108,11 @@
   function view(name, type, u8) { var box = P.el("div", {}), st = P.el("p", { class: "status" }); show(box, name, type || "", u8, st); return { box: box, status: st }; }
   // limits are read as a copy and changed only through setLimits, which takes known keys with positive numbers.
   function setLimits(o) {
-    Object.keys(o || {}).forEach(function (k) { if (k in LIMITS && typeof o[k] === "number" && o[k] >= 0 && isFinite(o[k])) LIMITS[k] = o[k]; });
+    Object.keys(o || {}).forEach(function (k) { if (Object.prototype.hasOwnProperty.call(LIMITS, k) && typeof o[k] === "number" && o[k] >= 0 && isFinite(o[k])) LIMITS[k] = o[k]; });
     return Object.freeze(Object.assign({}, LIMITS));
   }
   window.S3Browser = { render: render, jsonView: jsonView, openAt: openAt, view: view, setLimits: setLimits,
+    connections: connections, connectedPanel: connectedPanel,
     get limits() { return Object.freeze(Object.assign({}, LIMITS)); } };
   init();
 })();

@@ -1,16 +1,37 @@
 // The log view (site/data/view.js) in Chromium on the twin's logs, all three packs: headline, gaps, vault
 // cards, link mode with provenance, and that hostile log values stay text. Fails if a request leaves the page.
+// Served over http from the repository (design 02 step 2: the twin fetches site/twin/packs/<id>.json from beside
+// itself, which file:// refuses); only /site/ and /test/data/ are served, and only those may be requested.
 const { chromium } = require("playwright");
-const path = require("path");
+const http = require("http"), fs = require("fs"), path = require("path");
 const fail = (m) => { console.error("FAIL", m); process.exit(1); };
+const root = path.join(__dirname, "..", "..");
+const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json" };
+const ALLOWED = /^\/(site|test\/data)\//;
+// Loopback only; the allow-list is tested on the path after normalising (so /site/../CLAUDE.md is refused), and a
+// bad % escape answers 400 instead of crashing the server (security.aws.a, review of c73ea8d).
+const SERVED = /^(site|test\/data)\//;
+const srv = http.createServer((q, s) => {
+  let u;
+  try { u = decodeURIComponent(q.url.split("?")[0]); } catch (e) { s.writeHead(400); return s.end(); }
+  const p = path.resolve(root, "." + u), rel = path.relative(root, p).split(path.sep).join("/");
+  if (!SERVED.test(rel) || rel.startsWith("..") || path.isAbsolute(rel) || !fs.existsSync(p) || !fs.statSync(p).isFile()) { s.writeHead(404); return s.end(); }
+  s.writeHead(200, { "content-type": types[path.extname(p)] || "application/octet-stream" }); s.end(fs.readFileSync(p));
+}).listen(0, "127.0.0.1");
 (async () => {
   const browser = await chromium.launch();
-  const url = "file://" + path.resolve(__dirname, "view.fixture.html");
+  const origin = "http://127.0.0.1:" + srv.address().port;
+  // the server itself: traversal, a hidden folder and a bad escape are refused; the fixture is served
+  const status = (u) => new Promise((ok) => http.get({ host: "127.0.0.1", port: srv.address().port, path: u }, (r) => { r.resume(); ok(r.statusCode); }));
+  for (const [u, want] of [["/site/../CLAUDE.md", 404], ["/site/%2e%2e/CLAUDE.md", 404], ["/test/data/../../.git/HEAD", 404], ["/.git/HEAD", 404], ["/site/%E0%A4%A", 400], ["/test/data/view.fixture.html", 200]]) {
+    const got = await status(u); if (got !== want) fail("test server: " + u + " gave " + got + ", want " + want);
+  }
+  const url = origin + "/test/data/view.fixture.html";
   for (const pack of ["baseline", "attack", "surge"]) {
     const page = await browser.newPage();
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
-    page.on("request", (r) => { if (!r.url().startsWith("file://")) fail(pack + ": a request left the page: " + r.url()); });
+    page.on("request", (r) => { const u = r.url(); if (!u.startsWith(origin + "/") || !ALLOWED.test(u.slice(origin.length))) fail(pack + ": a request left the page: " + r.url()); });
     await page.goto(url + "?pack=" + pack);
     await page.waitForFunction(() => window.viewResult, null, { timeout: 20000 });
     if (errors.length) fail(pack + ": " + errors.join("; "));
@@ -26,7 +47,7 @@ const fail = (m) => { console.error("FAIL", m); process.exit(1); };
     const n = await page.$$eval(".log-lines tr", (rs) => rs.length - 1);
     if (n !== Math.min(res.vault1, 500)) fail(pack + ": vault lines " + n + ", summary says " + res.vault1);
     const from = await page.textContent(".log-lines tr:nth-child(2) td:last-child");
-    if (!/^demo-distribution-1-2026-11-\d\d-\d\d-00-00\.gz:\d+$/.test(from)) fail(pack + ": provenance '" + from + "'");
+    if (!/^(demo-distribution-1-2026-11-\d\d-\d\d-00-00|demo-cloudfront-logs-1-2026-11-\d\d-\d\d-\d\d-\d\d-[0-9a-f-]{36})\.gz:\d+$/.test(from)) fail(pack + ": provenance '" + from + "'");
     // an hour bar is a link too
     await page.click('button[data-field="hour"]');
     if (!/where hour is 2026-11-20T09/.test(await page.textContent(".log-lines h4"))) fail(pack + ": hour link");
@@ -53,7 +74,44 @@ const fail = (m) => { console.error("FAIL", m); process.exit(1); };
     const refusedCards = await page.$$(".log-vault-refused");
     if (pack === "attack" ? refusedCards.length < 1 : refusedCards.length !== 0) fail(pack + ": refused line on vault cards " + refusedCards.length);
     if (!/^\d+ served to \d+ clients?$/.test(await page.textContent(".log-vault-ok"))) fail(pack + ": served line");
+    // the time window: drag across 22 Nov 09 to 11, everything recomputes for those hours
+    const bar = (h) => page.locator('button.log-hour[data-value="' + h + '"]');
+    await bar("2026-11-22T09").scrollIntoViewIfNeeded();
+    const b1 = await bar("2026-11-22T09").boundingBox(), b3 = await bar("2026-11-22T11").boundingBox();
+    await page.mouse.move(b1.x + b1.width / 2, b1.y + b1.height - 2); await page.mouse.down();
+    await page.mouse.move(b3.x + b3.width / 2, b3.y + b3.height - 2); await page.mouse.up();
+    const inWin = await page.evaluate(() => window.allRecords.filter((r) => r.hour >= "2026-11-22T09" && r.hour <= "2026-11-22T11").length);
+    let headW = await page.textContent(".log-headline");
+    if (!headW.startsWith("Window 2026-11-22 09:00 to 2026-11-22 11:59 UTC: " + inWin + " requests over 3 hours")) fail(pack + ": window headline '" + headW + "'");
+    if (!(await page.textContent(".log-window-label")).endsWith(inWin + " lines")) fail(pack + ": window label");
+    if (await page.$eval('button[data-field="hour"][data-value="2026-11-20T09"]', (b) => b.style.opacity) !== "0.3") fail(pack + ": hours outside the window not dimmed");
+    // drill-down stays inside the window
+    await page.click('.log-vault button[data-value="vault-demo-001"]');
+    const vWin = await page.evaluate(() => window.allRecords.filter((r) => r.hour >= "2026-11-22T09" && r.vault === "vault-demo-001").length);
+    if (await page.$$eval(".log-lines tr", (rs) => rs.length - 1) !== Math.min(vWin, 500)) fail(pack + ": vault lines in the window");
+    // step back an hour keeps the width: 21 Nov 11 to 22 Nov 10 (the night's gap is stepped over)
+    await page.click('button[data-window="back"]');
+    if (!(await page.textContent(".log-window-label")).startsWith("2026-11-21 11:00 to 2026-11-22 10:59 UTC")) fail(pack + ": step back '" + (await page.textContent(".log-window-label")) + "'");
+    // play from the start runs to the last hour and stops
+    await page.click('button[data-window="all"]');
+    if (await page.textContent(".log-window-label") !== "All hours" || !(await page.textContent(".log-headline")).startsWith(res.requests + " requests")) fail(pack + ": All");
+    await page.click('button[data-window="play"]');
+    await page.waitForFunction(() => document.querySelector('button[data-window="play"]').textContent === "Play", null, { timeout: 10000 });
+    if (!(await page.textContent(".log-window-label")).startsWith("2026-11-22 11:00 to 2026-11-22 11:59 UTC")) fail(pack + ": play did not reach the last hour");
+    // a drill-down during Play stops it, so the next tick does not wipe the lines
+    await page.click('button[data-window="all"]');
+    await page.click('button[data-window="play"]');
+    await page.click('.log-vault button[data-value="vault-demo-002"]');
+    await page.waitForTimeout(300);
+    if (await page.textContent('button[data-window="play"]') !== "Play") fail(pack + ": Play kept running after a drill-down");
+    if (!/where vault is vault-demo-002/.test(await page.textContent(".log-lines h4"))) fail(pack + ": drill-down wiped by Play");
+    await page.click('button[data-window="all"]'); await page.click('button[data-window="play"]');
+    await page.waitForFunction(() => document.querySelector('button[data-window="play"]').textContent === "Play", null, { timeout: 10000 });
     if (pack === "attack") {
+      // the attack grows hour by hour: refused lines on vault-demo-001 only in the last window
+      const refusedLast = await page.$$(".log-vault-refused");
+      if (refusedLast.length < 1) fail("attack: refused probes in the last hour");
+      await page.click('button[data-window="all"]');
       // follow the attacker: client > its paths; traversal is not a resource
       await page.evaluate(() => { const b = [...document.querySelectorAll('button[data-field="client"]')].find((x) => x.dataset.value === "203.0.113.66"); b && b.click(); });
       const pv = await page.textContent(".log-pivots");
@@ -98,5 +156,6 @@ const fail = (m) => { console.error("FAIL", m); process.exit(1); };
   if (injected.imgs !== 0 || await page.evaluate(() => window.pwned)) fail("a log value was rendered as HTML");
   if (!injected.text) fail("hostile value not shown as text");
   await browser.close();
-  console.log("ok: log view on 3 packs (headline, gaps, vault cards, link mode with provenance, investigation: refs, pivots, trail, open) hostile values stay text, __proto__ keys and gzip bombs handled");
+  srv.close();
+  console.log("ok: log view on 3 packs (headline, gaps, vault cards, link mode with provenance, investigation: refs, pivots, trail, open; time window: drag, step, play) hostile values stay text, __proto__ keys and gzip bombs handled");
 })().catch((e) => fail(e.stack || e));

@@ -125,6 +125,7 @@ check(all("SecretString" not in str(o) for o in v["Outputs"].values()), "token i
 e = load("vault-edge.yaml")
 check(e["Parameters"]["VaultId"]["AllowedPattern"] == "^[0-9a-f]{12}$", "edge VaultId pattern")
 check("OnlyInUsEast1" in e["Rules"], "edge us-east-1 rule")
+check("SomethingToMake" in e["Rules"], "edge stack can be created with nothing in it")
 check(e["Parameters"]["EnableRateLimit"]["Default"] == "false", "rate limit on by default before Dinis decides")
 check(e["Resources"]["VaultWebAcl"]["Properties"]["Scope"] == "CLOUDFRONT", "web ACL scope")
 check(e["Resources"]["VaultWebAcl"]["Properties"]["Name"] == {"Fn::Sub": "sws-vault-${VaultId}-waf"}, "web ACL name")
@@ -133,6 +134,7 @@ check(not any(r["Type"] in ("AWS::CloudWatch::Alarm", "AWS::SNS::Topic") for r i
 a_t = load("vault-alarm.yaml")
 ER = a_t["Resources"]
 check("OnlyInUsEast1" in a_t["Rules"], "alarm stack us-east-1 rule")
+check("Default" not in a_t["Parameters"]["RequestAlarmThreshold"], "RequestAlarmThreshold has a default (ux.aws.a's rule: the page fills it or the customer chooses)")
 check("Condition" not in ER["CostAlarm"], "cost alarm conditional in its own stack")
 check(ER["CostAlarm"]["Properties"]["AlarmName"] == {"Fn::Sub": "sws-vault-${VaultId}-requests"}, "cost alarm name")
 check(ER["CostAlarmTopic"]["Properties"]["TopicName"] == {"Fn::Sub": "sws-vault-${VaultId}-cost"}, "cost topic name")
