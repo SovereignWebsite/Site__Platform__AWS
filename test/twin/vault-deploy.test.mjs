@@ -77,7 +77,7 @@ assert.equal(v.status, "CREATE_COMPLETE");
 assert.deepEqual(Object.keys(v.out).sort(), ["AccountId", "BucketName", "DeployCheck", "DeployMode", "DistributionId", "Endpoint", "HealthCheck", "Region", "TemplateVersion", "TokenSecretArn", "VaultId"], "the eleven outputs (no DnsRecords: the zone is in this account)");
 assert.equal(v.out.DeployMode, "access-stack"); assert.ok(!ev.some((e) => e.logical === "VaultBoundary"), "access-stack mode: the boundary is the -access stack's");
 assert.equal(v.out.Endpoint, "https://vault.example.com"); assert.match(v.out.DeployCheck, /^https:\/\/d[a-z0-9]{13}\.cloudfront\.net\/health$/);
-assert.equal(v.out.BucketName, "sws-vault-0a1b2c3d4e5f-data-444455556666-eu-west-2"); assert.equal(v.out.TemplateVersion, "0.4.7-draft");
+assert.equal(v.out.BucketName, "sws-vault-0a1b2c3d4e5f-data-444455556666-eu-west-2"); assert.equal(v.out.TemplateVersion, "0.5.3-draft");
 assert.match(v.out.DistributionId, /^E[A-Z0-9]{13}$/); assert.match(v.out.TokenSecretArn, /:secret:sws-vault-0a1b2c3d4e5f-token-[A-Za-z]{6}$/);
 checks += 24;
 

@@ -132,13 +132,19 @@ let checks = 0;
   assert.equal(await status(t), "CREATE_COMPLETE", "with the -edge stack's outputs the Vault completes");
   const dist = await (await t.handle("https://cloudfront.amazonaws.com/2020-05-31/distribution", { headers: H("us-east-1") })).text();
   assert.deepEqual(tag(dist, "WebACLId"), [eo.WebAclArn], "and its distribution carries the web ACL");
-  // Another Vault's web ACL in the same account: the pattern cannot tie its 12 hex to this VaultId, and CloudFront takes
-  // any CLOUDFRONT-scope ACL in the account, so the twin lets it through (a finding, not a failure; cloudformation.aws.a).
-  const ID2 = "fedcba987654", V2 = "sws-vault-" + ID2;
-  await create(t, V2, { VaultId: ID2, WebAclArn: eo.WebAclArn }, VR, { "Capabilities.member.1": "CAPABILITY_NAMED_IAM" });
-  t.clock.tick(20 * 60 * 1000);
-  assert.equal(tag((await cfn(t, { Action: "DescribeStacks", StackName: V2 }, VR)).text, "StackStatus")[0], "CREATE_COMPLETE", "another Vault's web ACL is accepted, as CloudFront would");
-  checks += 16;
+  // vault.yaml 0.5.3 rebuilds WebACLId from this account and this VaultId, keeping only the uuid: another Vault's web ACL,
+  // or one from another account, then names no ACL the twin holds, so CloudFront refuses and the Vault rolls back.
+  for (const [ID2, acl, why] of [["fedcba987654", eo.WebAclArn, "another Vault's web ACL"],
+    ["fedcba987655", eo.WebAclArn.replace(":444455556666:", ":999988887777:"), "a web ACL ARN from another account"]]) {
+    const V2 = "sws-vault-" + ID2;
+    await create(t, V2, { VaultId: ID2, WebAclArn: acl }, VR, { "Capabilities.member.1": "CAPABILITY_NAMED_IAM" });
+    t.clock.tick(20 * 60 * 1000);
+    const evs = (await cfn(t, { Action: "DescribeStackEvents", StackName: V2 }, VR)).text;
+    assert.equal(tag((await cfn(t, { Action: "DescribeStacks", StackName: V2 }, VR)).text, "StackStatus")[0], "ROLLBACK_COMPLETE", why + " rolls the Vault back");
+    assert.match(evs, /<LogicalResourceId>VaultDistribution<\/LogicalResourceId>(?:(?!<\/member>).)*<ResourceStatus>CREATE_FAILED</s, why + ": VaultDistribution CREATE_FAILED");
+    assert.match(tag(evs, "ResourceStatusReason").join(" | "), /InvalidWebACLId/, why + ": with CloudFront's reason");
+  }
+  checks += 21;
 }
 
 console.log("OK (twin vault -edge stack: " + checks + " checks; us-east-1 only, certificate and web ACL by condition, their ARNs as outputs, DNS elsewhere waits with the validation record, refusals write nothing, teardown; the Vault takes its certificate and web ACL, and CloudFront refuses any other)");

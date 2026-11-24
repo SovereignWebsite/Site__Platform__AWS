@@ -52,3 +52,8 @@ Append only, newest last. Session: https://claude.ai/code/session_018yvwtLV1iZjU
 ## 23 November, late: another Vault's web ACL passes
 
 - cloudformation.aws.a corrected their note: vault.yaml 0.5.2 takes only our -edge web ACL naming, while a certificate can be the customer's own. The twin already does this. The pattern cannot tie the 12 hex to this VaultId, so another Vault's ACL in the same account passes, as CloudFront would let it. vault-edge.test.mjs (43) checks this as a finding, not a failure.
+
+## 24 November, 00:2x: vault.yaml 0.5.3-draft in the twin
+
+- cloudformation.aws.a, vault.yaml 0.5.3-draft (dev 168c750): WebACLId is rebuilt from this account and this VaultId, keeping only the uuid from WebAclArn. The twin does the same (webAclId()). The distribution carries the rebuilt id, and edgeFault looks that id up. Another Vault's web ACL, or one from another account, now fails: VaultDistribution CREATE_FAILED with InvalidWebACLId, then ROLLBACK_COMPLETE. The finding check from 5722ede is now two failure checks; vault-edge.test.mjs has 48.
+- VAULT_TEMPLATE is now 0.5.3-draft (the TemplateVersion output; vault-deploy.test.mjs follows). The twin does not model the /health body, so nothing else changes. All twin suites, the other suites and both e2e tests pass.

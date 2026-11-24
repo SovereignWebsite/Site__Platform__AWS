@@ -741,7 +741,7 @@
   // Resources appear wave by wave on
   // the twin clock (the distribution takes minutes), then the stack completes with its outputs. Not yet here: the
   // -edge stack, DNS and the health address answering, DeleteStack, and the CloudTrail records derived from these.
-  var CUSTOMER = "444455556666", VAULT_TEMPLATE = "0.4.7-draft";
+  var CUSTOMER = "444455556666", VAULT_TEMPLATE = "0.5.3-draft";
   // DeletionPolicy per vault.yaml 0.4.7: all three RetainExceptOnCreate, so kept on a later DeleteStack
   // (DELETE_SKIPPED) and deleted when the first create rolls back (AWS's DeletionPolicy page). Retain, kept on any
   // delete, is handled too, for templates that use it.
@@ -881,9 +881,12 @@
     var wrap = function (code, m) { return "Resource handler returned message: \"" + m + "\" (Service: CloudFront, Status Code: 400, Error Code: " + code + ") (the twin's wording)"; };
     if (p.CertificateArn && !own(certs, p.CertificateArn)) return wrap("InvalidViewerCertificate", "The specified SSL certificate doesn't exist, isn't in us-east-1 region, isn't valid, or doesn't include a valid certificate chain.");
     if (p.CertificateArn && p.DomainName && !covers(certs[p.CertificateArn], p.DomainName)) return wrap("InvalidViewerCertificate", "To add an alternate domain name (CNAME) to a CloudFront distribution, you must attach a trusted certificate that validates your authorization to use the domain name.");
-    if (p.WebAclArn && !own(acls, p.WebAclArn)) return wrap("InvalidWebACLId", "Web ACL is not accessible by the requester.");
+    // vault.yaml 0.5.3: WebACLId is rebuilt from this account and this VaultId, keeping only the uuid from WebAclArn, so
+    // another Vault's ACL, or one in another account, names an ACL that does not exist (cloudformation.aws.a, iam.aws.a 07).
+    if (p.WebAclArn && !own(acls, webAclId(account, p))) return wrap("InvalidWebACLId", "Web ACL is not accessible by the requester.");
     return null;
   }
+  function webAclId(account, p) { return p.WebAclArn ? "arn:aws:wafv2:us-east-1:" + account + ":global/webacl/sws-vault-" + p.VaultId + "-waf/" + p.WebAclArn.split("/")[3] : ""; }
   // A certificate's name covers a host exactly, or as *.<parent> for one more label (no deeper).
   function covers(name, host) {
     if (name === host) return true;
@@ -1090,7 +1093,7 @@
       if (!r || !(r.status === "CREATE_COMPLETE" || r.status === "DELETE_IN_PROGRESS" || r.status === "DELETE_FAILED")) return;
       var done = r.status === "CREATE_COMPLETE", p = st.params;
       out.push({ id: st.ids.distribution, domain: st.ids.cfDomain, aliases: p.DomainName ? [p.DomainName] : [], status: done ? "Deployed" : "InProgress", enabled: done,
-        modified: r.t, comment: "sws-vault-" + p.VaultId, priceClass: "PriceClass_100", httpVersion: "http2and3", defaultRoot: "", webAcl: p.WebAclArn || "",
+        modified: r.t, comment: "sws-vault-" + p.VaultId, priceClass: "PriceClass_100", httpVersion: "http2and3", defaultRoot: "", webAcl: webAclId(account, p),
         origins: [{ id: "vault-api", domain: st.ids.url + ".lambda-url." + st.region + ".on.aws", s3: false }],
         behaviours: [{ path: "/health", fn: physicalOf(st, "HealthFunction"), event: "viewer-request" }] });
     });
