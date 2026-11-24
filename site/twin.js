@@ -1182,9 +1182,9 @@
   }
   // ---- Costs (the Costs tab: billing.aws.a's site/billing.js on CostsApi, site/api/costs-api.js) ----
   // Cost Explorer GetCostAndUsage, GetCostForecast and GetDimensionValues for the twin's account, signed calls only
-  // (security.aws.a, R-025 (a)). Every figure is synthetic and every answer says so (x-twin-note). Budgets fails as a refused
-  // cross-origin request would: browser CORS for Budgets is conflicting (the SDK's table does not mark it, note 21; the
-  // newsroom brief reports a preflight it answered), the v1 tab does not call it, and the twin takes the cautious case. Figures (billing.aws.a's choice): small round amounts per service per
+  // (security.aws.a, R-025 (a)), and Budgets DescribeBudgets (conductor.aws.a's preflight at 2026-11-24T00:47Z found
+  // budgets.amazonaws.com allows the site's origin, as ce.us-east-1 does; the SDK's table does not mark it, note 21).
+  // Every figure is synthetic and every answer says so (x-twin-note). Figures (billing.aws.a's choice): small round amounts per service per
   // day, in ten-thousandths of a dollar so every view adds up exactly, from 1 September 2026 to today (the twin's clock
   // where it has one); later days are empty, the current month is Estimated, each period echoes the request. The twin's
   // own choices: these services and amounts, region global for CloudFront and Tax, 31 periods a page, a forecast that may
@@ -1204,6 +1204,7 @@
   function costToday() { var n = new Date(typeof nowMs === "function" ? nowMs() : Date.now()); return Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()); }
   function costOn(svc, t) { return t < COST_FROM || t > costToday() ? 0 : (svc.daily || 0) + (svc.monthly && new Date(t).getUTCDate() === 1 ? svc.monthly : 0); }
   function costSum(svcs, a, b) { var n = 0; svcs.forEach(function (sv) { for (var t = a; t < b; t += DAY_MS) n += costOn(sv, t); }); return n; }
+  function costExpected(t) { var n = 0; COST_SERVICES.forEach(function (sv) { n += (sv.daily || 0) + (sv.monthly && new Date(t).getUTCDate() === 1 ? sv.monthly : 0); }); return n; }
   function costAmount(n) { return Math.floor(n / 10000) + "." + String(n % 10000).padStart(4, "0") + "000000"; }
   function costPeriods(start, end, gran) {
     var out = [], t = start;
@@ -1244,7 +1245,7 @@
     if (action === "GetCostForecast") {
       if (!/^(UNBLENDED|BLENDED|AMORTIZED|NET_UNBLENDED)_COST$/.test(String(q.Metric || ""))) return costErr("ValidationException", "Metric is UNBLENDED_COST, BLENDED_COST, AMORTIZED_COST or NET_UNBLENDED_COST in the twin.");
       if (start < costToday()) return costErr("ValidationException", "The forecast may not start in the past (the twin's rule).");
-      var expected = function (t) { var n = 0; COST_SERVICES.forEach(function (sv) { n += (sv.daily || 0) + (sv.monthly && new Date(t).getUTCDate() === 1 ? sv.monthly : 0); }); return n; };
+      var expected = costExpected;
       var fr = costPeriods(start, end, gran).map(function (p) { var n = 0; for (var t = p[0]; t < p[1]; t += DAY_MS) n += expected(t); return [p, n]; }), total = 0;
       fr.forEach(function (x) { total += x[1]; });
       return costJson({ Total: { Amount: costAmount(total), Unit: "USD" }, ForecastResultsByTime: fr.map(function (x) {
@@ -1260,8 +1261,23 @@
     }
     return costErr("ValidationException", "The twin answers three Cost Explorer reads only: GetCostAndUsage, GetCostForecast and GetDimensionValues.");
   }
-  // Budgets: refused as a browser would refuse a cross-origin call (the cautious case; CORS conflicting, see above).
-  function budgets() { return Promise.reject(new TypeError("Failed to fetch")); }
+  // Budgets DescribeBudgets: signed only, the caller's account only, one synthetic budget (the twin's choice): a 10 USD
+  // monthly cap whose actual spend is this month's Cost Explorer total to today and whose forecast adds the expected
+  // days to month end, so it agrees with the Costs tab's other views. One page; MaxResults 1 to 100.
+  function budgets(init, target, body) {
+    if (!signed(init)) return costErr("AccessDeniedException", "Missing Authentication Token", 403);
+    if (target !== "AWSBudgetServiceGateway.DescribeBudgets") return costErr("ValidationException", "The twin answers one Budgets read only: DescribeBudgets.");
+    var q; try { q = JSON.parse(body || "{}"); } catch (e) { return costErr("ValidationException", "The body is not JSON."); }
+    if (!q || q.AccountId !== ACCOUNT) return costErr("AccessDeniedException", "The account id is not the caller's.", 403);
+    if (q.MaxResults !== undefined && !(Number.isInteger(q.MaxResults) && q.MaxResults >= 1 && q.MaxResults <= 100)) return costErr("InvalidParameterException", "MaxResults is 1 to 100.");
+    if (q.NextToken !== undefined) return costErr("InvalidNextTokenException", "The twin's budgets are one page.");
+    var today = costToday(), d = new Date(today), m0 = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1), m1 = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+    var actual = costSum(COST_SERVICES, m0, today + DAY_MS), rest = 0;
+    for (var day = today + DAY_MS; day < m1; day += DAY_MS) rest += costExpected(day);
+    return costJson({ Budgets: [{ BudgetName: "Monthly cap (synthetic)", BudgetLimit: { Amount: "10.0", Unit: "USD" }, TimeUnit: "MONTHLY", BudgetType: "COST",
+      TimePeriod: { Start: COST_FROM / 1000, End: Date.UTC(2027, 7, 31) / 1000 },
+      CalculatedSpend: { ActualSpend: { Amount: costAmount(actual), Unit: "USD" }, ForecastedSpend: { Amount: costAmount(actual + rest), Unit: "USD" } } }] });
+  }
   function cloudcontrol(target, body, init, host) {
     if (!signed(init)) return json({ __type: "AccessDeniedException", message: "Missing signature" }, 403);
     var s = build(), q = JSON.parse(body || "{}"), region = host.split(".")[1];
@@ -1674,7 +1690,7 @@
       else if (host === "iam.amazonaws.com") p = iam(new URLSearchParams(body), init);
       else if (/^cloudformation\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudformation(new URLSearchParams(body), init, host);
       else if (/^ce\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = ce(init, hdr(init, "x-amz-target"), body);
-      else if (host === "budgets.amazonaws.com") p = budgets();
+      else if (host === "budgets.amazonaws.com") p = budgets(init, hdr(init, "x-amz-target"), body);
       else if (/^cloudcontrolapi\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudcontrol((hdr(init, "x-amz-target") || "").split(".")[1], body, init, host);
       else if (/^lambda\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = lambda(url, init);
       else if (/^monitoring\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudwatch(new URLSearchParams(body), init);
