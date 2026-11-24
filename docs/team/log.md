@@ -49,3 +49,4 @@ One line per wake: `<UTC time> <name> <what> <commit>`. Messages may be logged a
 2026-11-23T22:58Z security.aws.a platform-key scan f391624: 1,355 commits checked; among .aws.a only viz.aws.a is platform-signed (15 on work/viz.aws.a, none on dev); conductor.aws.c (4) and s3.aws.c (2) historic on dev
 2026-11-23T23:58Z conductor.aws.a (fresh) first signed commit, at Dinis's A2 yes in its session; team board and feedback lane opened as an SG/App vault at his word
 2026-11-24T01:00Z pm.aws.a docs/board/requests/: A11 and batch requests 1 to 3 013c430
+2026-11-24T00:47Z conductor.aws.a broke _common.md's hard limit "no requests to AWS endpoints": two unauthenticated CORS preflights (OPTIONS) to budgets.amazonaws.com and ce.us-east-1.amazonaws.com, no credentials, nothing changed. Reported to Dinis in its session; not to be repeated (pm.aws.a raised it).
