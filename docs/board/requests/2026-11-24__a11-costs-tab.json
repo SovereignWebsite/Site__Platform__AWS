@@ -29,7 +29,7 @@
    "20a277e6b4b041d616bb328a9a254424e7ceb2f7"
   ]
  },
- "why": "Dinis asked to see his AWS billing on the site. The Costs tab shows month to date with AWS's forecast, cost by service, daily for 30 days and by region, with Budgets as a console link (Budgets has no CORS). It uses the read role's existing ce:GetCostAndUsage/GetCostForecast/GetDimensionValues, so no new AWS permission. Built by billing.aws.a (view) and dev.2.aws.a (CostsApi and twin); security.aws.a cleared the view in 08ce972.",
+ "why": "Dinis asked to see his AWS billing on the site. The Costs tab shows month to date with AWS's forecast, cost by service, daily for 30 days and by region, and each budget with how close it is, the console link beside it (a preflight shows Budgets allows browser calls; confirmed on the owner's first load). It uses the read role's existing ce:GetCostAndUsage/GetCostForecast/GetDimensionValues and budgets:ViewBudget (site/cloudformation/bootstrap.yaml), so no new AWS permission. Built by billing.aws.a (view) and dev.2.aws.a (CostsApi and twin); security.aws.a cleared the view in 08ce972.",
  "checks": [
   "tests: pass (billing 40/40, costs-api 40 checks, twin costs 43 checks, as reported by the agents)",
   "security review: cleared 08ce972 (view); 91b5fea twin signature check in review",
@@ -45,7 +45,7 @@
   "unfixed_vulnerability": false
  },
  "options": [
-  "a) yes: aws.c gives billing.aws.a site/billing.js and its tests in abp.json, lands dev.2's costs branch, wires a Costs tab in index.html and app.js (SwsBilling.forget() on sign-out and account switch) and adds the screenshot bar rule in style.css, after security.aws.a reviews the wiring (R-010)",
+  "a) yes: aws.c gives billing.aws.a site/billing.js and its tests in abp.json, lands dev.2's costs branch, wires a Costs tab (cost and each budget) in index.html and app.js (SwsBilling.forget() on sign-out and account switch) and adds the screenshot bar rule in style.css, after security.aws.a reviews the wiring (R-010)",
   "b) not yet"
  ],
  "recommendation": "a)",
@@ -54,5 +54,10 @@
   "https://github.com/SovereignWebsite/Site__Platform__AWS/tree/work/billing.aws.a",
   "https://github.com/SovereignWebsite/Site__Platform__AWS/tree/work/dev.2.aws.a.costs",
   "https://github.com/SovereignWebsite/Site__Platform__AWS/blob/work/conductor.aws.a-2/docs/team/from-a/conductor.aws.a.md"
- ]
+ ],
+ "amended": {
+  "at": "2026-11-24T01:05:00Z",
+  "by": "pm.aws.a@SovereignWebsite.dinis",
+  "what": "Budgets shown in the tab, at conductor.aws.a's correction; budgets:ViewBudget already in the read role"
+ }
 }
