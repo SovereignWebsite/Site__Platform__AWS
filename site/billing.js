@@ -48,13 +48,18 @@
     return out;
   }
 
-  function num(x) { var n = Number(x); return isFinite(n) ? n : null; }
-  function money(amount, unit) { return { amount: num(amount), unit: unit || "USD" }; }
+  // A missing value is null, never 0 (Number(null) would be 0).
+  function num(x) { if (x === null || x === undefined || x === "") return null; var n = Number(x); return isFinite(n) ? n : null; }
+  function money(amount, unit) { return { amount: num(amount), unit: typeof unit === "string" && unit ? unit : "USD" }; }
+  // Safe read of a nested field: any missing step gives undefined instead of throwing (security.aws.a, L1).
+  function get(o, path) { for (var i = 0; i < path.length; i++) { if (o === null || o === undefined) return undefined; o = o[path[i]]; } return o; }
+  function list(x) { return Array.isArray(x) ? x : []; }
+  // One section's odd answer must not blank the others: a section that throws is "not read".
+  function section(errors, name, fn) { try { return fn(); } catch (e) { errors[name] = "answer not understood"; return null; } }
   function groups(answer) {
-    var r = answer && answer.ResultsByTime && answer.ResultsByTime[0];
-    var gs = (r && r.Groups) || [];
-    return gs.map(function (g) { var m = g.Metrics[METRIC]; return { key: g.Keys[0], amount: num(m.Amount), unit: m.Unit }; })
-      .filter(function (g) { return g.amount !== null && g.amount !== 0; })
+    return list(get(answer, ["ResultsByTime", 0, "Groups"])).map(function (g) {
+      return { key: String(get(g, ["Keys", 0]) || ""), amount: num(get(g, ["Metrics", METRIC, "Amount"])), unit: get(g, ["Metrics", METRIC, "Unit"]) || "USD" };
+    }).filter(function (g) { return g.amount !== null && g.amount !== 0; })
       .sort(function (a, b) { return b.amount - a.amount; });
   }
 
@@ -63,25 +68,33 @@
   function model(answers) {
     var a = answers || {}, m = { errors: {} };
     Object.keys(a).forEach(function (k) { if (a[k] && a[k].error) m.errors[k] = String(a[k].error); });
-    var r = a.monthToDate && a.monthToDate.ResultsByTime && a.monthToDate.ResultsByTime[0];
-    m.monthToDate = r ? Object.assign(money(r.Total[METRIC].Amount, r.Total[METRIC].Unit), { start: r.TimePeriod && r.TimePeriod.Start, end: r.TimePeriod && r.TimePeriod.End, estimated: !!r.Estimated }) : null;
-    var f = a.forecast && a.forecast.Total;
-    m.forecastRest = f ? money(f.Amount, f.Unit) : null;
+    var ok = function (k) { return a[k] && !a[k].error; };
+    m.monthToDate = !ok("monthToDate") ? null : section(m.errors, "monthToDate", function () {
+      var r = get(a.monthToDate, ["ResultsByTime", 0]), t = get(r, ["Total", METRIC]);
+      if (!t || num(t.Amount) === null) throw new Error("no total");
+      return Object.assign(money(t.Amount, t.Unit), { start: get(r, ["TimePeriod", "Start"]), end: get(r, ["TimePeriod", "End"]), estimated: !!get(r, ["Estimated"]) });
+    });
+    m.forecastRest = !ok("forecast") ? null : section(m.errors, "forecast", function () {
+      var f = get(a.forecast, ["Total"]); if (!f || num(f.Amount) === null) throw new Error("no total"); return money(f.Amount, f.Unit);
+    });
     // End-of-month figure: month to date plus the forecast of the rest; only when both are there and in one currency.
     m.endOfMonth = m.monthToDate && m.forecastRest && m.monthToDate.unit === m.forecastRest.unit && m.monthToDate.amount !== null && m.forecastRest.amount !== null
       ? money(m.monthToDate.amount + m.forecastRest.amount, m.monthToDate.unit) : null;
-    m.byService = a.byService && !a.byService.error ? groups(a.byService) : null;
-    m.byRegion = a.byRegion && !a.byRegion.error ? groups(a.byRegion) : null;
-    m.daily = a.daily && a.daily.ResultsByTime ? a.daily.ResultsByTime.map(function (d) {
-      var t = d.Total[METRIC]; return { day: d.TimePeriod.Start, amount: num(t.Amount), unit: t.Unit, estimated: !!d.Estimated };
-    }) : null;
-    m.budgets = a.budgets && a.budgets.Budgets ? a.budgets.Budgets.map(function (b) {
-      var lim = b.BudgetLimit ? num(b.BudgetLimit.Amount) : null;
-      var act = b.CalculatedSpend && b.CalculatedSpend.ActualSpend ? num(b.CalculatedSpend.ActualSpend.Amount) : null;
-      var fc = b.CalculatedSpend && b.CalculatedSpend.ForecastedSpend ? num(b.CalculatedSpend.ForecastedSpend.Amount) : null;
-      return { name: b.BudgetName, type: b.BudgetType, period: b.TimeUnit, limit: lim, actual: act, forecast: fc,
-        unit: b.BudgetLimit ? b.BudgetLimit.Unit : "USD", used: lim && act !== null ? act / lim : null };
-    }) : null;
+    m.byService = !ok("byService") ? null : section(m.errors, "byService", function () { return groups(a.byService); });
+    m.byRegion = !ok("byRegion") ? null : section(m.errors, "byRegion", function () { return groups(a.byRegion); });
+    m.daily = !ok("daily") || !Array.isArray(get(a.daily, ["ResultsByTime"])) ? null : section(m.errors, "daily", function () {
+      return a.daily.ResultsByTime.map(function (d) {
+        return { day: String(get(d, ["TimePeriod", "Start"]) || ""), amount: num(get(d, ["Total", METRIC, "Amount"])), unit: get(d, ["Total", METRIC, "Unit"]) || "USD", estimated: !!get(d, ["Estimated"]) };
+      });
+    });
+    m.budgets = !ok("budgets") || !Array.isArray(get(a.budgets, ["Budgets"])) ? null : section(m.errors, "budgets", function () {
+      return a.budgets.Budgets.map(function (b) {
+        var lim = num(get(b, ["BudgetLimit", "Amount"])), act = num(get(b, ["CalculatedSpend", "ActualSpend", "Amount"]));
+        return { name: String(get(b, ["BudgetName"]) || "(unnamed)"), type: get(b, ["BudgetType"]), period: get(b, ["TimeUnit"]), limit: lim, actual: act,
+          forecast: num(get(b, ["CalculatedSpend", "ForecastedSpend", "Amount"])), unit: get(b, ["BudgetLimit", "Unit"]) || "USD",
+          used: lim && act !== null ? act / lim : null };
+      });
+    });
     m.links = LINKS;
     return m;
   }
@@ -119,7 +132,9 @@
     box.appendChild(table("By service", m.byService, "Service", m.links.usage));
     box.appendChild(table("By region", m.byRegion, "Region", m.links.usage));
     // Daily: bars whose heights are relative to the dearest day; amounts only in the masked title text.
-    var days = el("div", { class: "costs-daily", role: "img", "aria-label": "Daily cost, last 30 days" });
+    // data-mask and the costs-daily class let screenshot mode hide the bars' shape too
+    // (style.css, with aws.c: body.screenshot .costs-daily .bar { height: 50% !important; }).
+    var days = el("div", { class: "costs-daily", "data-mask": "", role: "img", "aria-label": "Daily cost, last 30 days" });
     var max = (m.daily || []).reduce(function (s, d) { return Math.max(s, d.amount || 0); }, 0);
     (m.daily || []).forEach(function (d) {
       var h = max > 0 ? Math.round(((d.amount || 0) / max) * 100) : 0;
@@ -143,17 +158,24 @@
   // Each Cost Explorer request costs the owner $0.01, so answers are kept in page memory for the tab session:
   // switching tabs shows the kept answers; only refresh: true asks AWS again. Keyed by account and UTC day.
   // Nothing is stored beyond this page's memory.
-  var kept = {};
+  // Refresh is manual only (no timer, no refresh on focus) and at most once per REFRESH_MS per key, so a stuck
+  // button or a loop cannot run up a bill (security.aws.a, L2). opts.now is for tests.
+  var kept = {}, at = {}, REFRESH_MS = 5 * 60 * 1000;
   function load(key, fetchAll, opts) {
-    if (!(opts && opts.refresh) && kept[key]) return kept[key];
+    opts = opts || {};
+    var now = opts.now !== undefined ? opts.now : Date.now();
+    var fresh = kept[key] && now - at[key] < REFRESH_MS;
+    if (kept[key] && (!opts.refresh || fresh)) return kept[key];
     var p = Promise.resolve().then(fetchAll);
-    kept[key] = p;
-    p.catch(function () { if (kept[key] === p) delete kept[key]; }); // a failed load is not kept
+    kept[key] = p; at[key] = now;
+    p.catch(function () { if (kept[key] === p) { delete kept[key]; delete at[key]; } }); // a failed load is not kept
     return p;
   }
+  function refreshAllowedIn(key, now) { if (!kept[key]) return 0; var left = REFRESH_MS - ((now !== undefined ? now : Date.now()) - at[key]); return left > 0 ? left : 0; }
   function cacheKey(accountId, today) { return String(accountId || "") + "|" + ymd(today); }
-  function forget() { kept = {}; }
+  function forget() { kept = {}; at = {}; }
 
-  var api = { requests: requests, model: model, render: render, fmt: fmt, LINKS: LINKS, load: load, cacheKey: cacheKey, forget: forget };
+  var api = { requests: requests, model: model, render: render, fmt: fmt, LINKS: LINKS, load: load, cacheKey: cacheKey, forget: forget,
+    refreshAllowedIn: refreshAllowedIn, REFRESH_MS: REFRESH_MS };
   if (typeof module === "object" && module.exports) module.exports = api; else root.SwsBilling = api;
 })(typeof window !== "undefined" ? window : globalThis);

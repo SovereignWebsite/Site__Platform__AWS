@@ -78,9 +78,31 @@ test("load keeps answers for the tab session; only refresh asks AWS again; a fai
   const key = B.cacheKey("123456789012", new Date("2026-11-24T10:00:00Z"));
   assert.equal((await B.load(key, fetchAll)).n, 1);
   assert.equal((await B.load(key, fetchAll)).n, 1);
-  assert.equal((await B.load(key, fetchAll, { refresh: true })).n, 2);
+  assert.equal((await B.load(key, fetchAll, { refresh: true })).n, 1); // refresh within 5 minutes: kept answer
+  const later = Date.now() + B.REFRESH_MS + 1;
+  assert.equal((await B.load(key, fetchAll, { refresh: true, now: later })).n, 2);
+  assert.equal(B.refreshAllowedIn(key, later + 1000), B.REFRESH_MS - 1000);
   assert.notEqual(key, B.cacheKey("123456789012", new Date("2026-11-25T10:00:00Z")));
   const bad = "bad|2026-11-24";
   await assert.rejects(B.load(bad, () => { throw new Error("AccessDenied"); }));
   assert.equal((await B.load(bad, () => "ok")), "ok");
+});
+
+test("odd answers (no Total, no Metrics, no Keys) give 'not read' for that section only, never throw (L1)", () => {
+  const odd = {
+    monthToDate: { ResultsByTime: [{ TimePeriod: { Start: "2026-11-01", End: "2026-11-24" } }] },
+    byService: { ResultsByTime: [{ Groups: [{ Keys: ["AWS Lambda"] }, { Metrics: { UnblendedCost: { Amount: "1.00", Unit: "USD" } } }] }] },
+    daily: { ResultsByTime: [{ TimePeriod: { Start: "2026-11-23" } }] },
+    byRegion: F.byRegion, forecast: { Total: null }, budgets: { Budgets: [{ BudgetName: "x" }] },
+  };
+  const m = B.model(odd);
+  assert.equal(m.monthToDate, null);
+  assert.ok(m.errors.monthToDate);
+  assert.equal(m.byService.length, 1);           // the group without Metrics is dropped, the other kept
+  assert.equal(m.byService[0].key, "");
+  assert.equal(m.daily[0].amount, null);         // missing amount stays null, not 0
+  assert.equal(m.byRegion.length, 3);            // a good section is unaffected
+  assert.equal(m.forecastRest, null);
+  assert.equal(m.budgets[0].used, null);
+  B.render(m, fakeDoc());                        // and the view still renders
 });
