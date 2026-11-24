@@ -155,6 +155,76 @@
     return box;
   }
 
+  // ---- Over dev.2.aws.a's CostsApi (site/api/costs-api.js): the agreed split, CostsApi makes the calls, this file
+  // arranges them. fetchAll(api, today) makes the same calls requests() describes, drains NextPageToken pages, and
+  // records a failed section as { error } so the others still show. modelFromApi() gives the same model as model().
+  function drain(call, args, max) {
+    var items = [], n = 0;
+    function step(next) {
+      return call(Object.assign({}, args, next ? { next: next } : {})).then(function (r) {
+        items = items.concat(list(r && r.items)); n++;
+        return r && r.next && n < (max || 10) ? step(r.next) : items;
+      });
+    }
+    return step(null);
+  }
+  function settle(p) { return p.then(function (v) { return v; }, function (e) { return { error: (e && e.message) || String(e) }; }); }
+  function fetchAll(api, today, accountId) {
+    var t = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+    var start = ymd(monthStart(t)), end = ymd(t), mtd = start !== end, jobs = {};
+    if (mtd) {
+      jobs.monthToDate = settle(drain(api.usage, { start: start, end: end, granularity: "MONTHLY" }));
+      jobs.byService = settle(drain(api.usage, { start: start, end: end, granularity: "MONTHLY", groupBy: "SERVICE" }));
+      jobs.byRegion = settle(drain(api.usage, { start: start, end: end, granularity: "MONTHLY", groupBy: "REGION" }));
+    }
+    jobs.daily = settle(drain(api.usage, { start: ymd(addDays(t, -30)), end: end, granularity: "DAILY" }));
+    jobs.forecast = settle(api.forecast({ start: end, end: ymd(nextMonthStart(t)), granularity: "MONTHLY" }));
+    if (accountId) jobs.budgets = settle(drain(api.budgets, { max: 100 }));
+    var names = Object.keys(jobs);
+    return Promise.all(names.map(function (k) { return jobs[k]; })).then(function (vals) {
+      var out = {}; names.forEach(function (k, i) { out[k] = vals[i]; }); return out;
+    });
+  }
+  function apiMoney(x) { return x && typeof x === "object" ? money(x.amount, x.unit) : null; }
+  function sumGroups(periods) {
+    var by = {};
+    list(periods).forEach(function (p) { list(p && p.groups).forEach(function (g) {
+      var a = num(g && g.amount); if (a === null || !g.key) return;
+      var k = String(g.key); by[k] = by[k] || { key: k, amount: 0, unit: g.unit || "USD" }; by[k].amount += a;
+    }); });
+    return Object.keys(by).map(function (k) { return by[k]; }).filter(function (g) { return g.amount !== 0; })
+      .sort(function (a, b) { return b.amount - a.amount; });
+  }
+  function modelFromApi(r) {
+    var a = r || {}, m = { errors: {}, links: LINKS };
+    Object.keys(a).forEach(function (k) { if (a[k] && a[k].error) m.errors[k] = String(a[k].error); });
+    var ok = function (k) { return a[k] && !a[k].error; };
+    m.monthToDate = !ok("monthToDate") ? null : section(m.errors, "monthToDate", function () {
+      var p = list(a.monthToDate)[0], t = apiMoney(p && p.total);
+      if (!t || t.amount === null) throw new Error("no total");
+      return Object.assign(t, { start: p.start, end: p.end, estimated: !!p.estimated });
+    });
+    m.forecastRest = !ok("forecast") ? null : section(m.errors, "forecast", function () {
+      var f = apiMoney(a.forecast.total); if (!f || f.amount === null) throw new Error("no total"); return f;
+    });
+    m.endOfMonth = m.monthToDate && m.forecastRest && m.monthToDate.unit === m.forecastRest.unit
+      ? money(m.monthToDate.amount + m.forecastRest.amount, m.monthToDate.unit) : null;
+    m.byService = !ok("byService") ? null : section(m.errors, "byService", function () { return sumGroups(a.byService); });
+    m.byRegion = !ok("byRegion") ? null : section(m.errors, "byRegion", function () { return sumGroups(a.byRegion); });
+    m.daily = !ok("daily") ? null : section(m.errors, "daily", function () {
+      return list(a.daily).map(function (p) { var t = apiMoney(p && p.total); return { day: String((p && p.start) || ""), amount: t ? t.amount : null, unit: t ? t.unit : "USD", estimated: !!(p && p.estimated) }; });
+    });
+    m.budgets = !ok("budgets") ? null : section(m.errors, "budgets", function () {
+      return list(a.budgets).map(function (b) {
+        var lim = apiMoney(b && b.limit), act = apiMoney(b && b.actual), fc = apiMoney(b && b.forecast);
+        var l = lim ? lim.amount : null, ac = act ? act.amount : null;
+        return { name: String((b && b.name) || "(unnamed)"), type: b && b.type, period: b && b.timeUnit, limit: l, actual: ac,
+          forecast: fc ? fc.amount : null, unit: lim ? lim.unit : "USD", used: l && ac !== null ? ac / l : null };
+      });
+    });
+    return m;
+  }
+
   // Each Cost Explorer request costs the owner $0.01, so answers are kept in page memory for the tab session:
   // switching tabs shows the kept answers; only refresh: true asks AWS again. Keyed by account and UTC day.
   // Nothing is stored beyond this page's memory.
@@ -176,6 +246,7 @@
   function forget() { kept = {}; at = {}; }
 
   var api = { requests: requests, model: model, render: render, fmt: fmt, LINKS: LINKS, load: load, cacheKey: cacheKey, forget: forget,
+    fetchAll: fetchAll, modelFromApi: modelFromApi,
     refreshAllowedIn: refreshAllowedIn, REFRESH_MS: REFRESH_MS };
   if (typeof module === "object" && module.exports) module.exports = api; else root.SwsBilling = api;
 })(typeof window !== "undefined" ? window : globalThis);

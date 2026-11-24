@@ -106,3 +106,34 @@ test("odd answers (no Total, no Metrics, no Keys) give 'not read' for that secti
   assert.equal(m.budgets[0].used, null);
   B.render(m, fakeDoc());                        // and the view still renders
 });
+
+// CostsApi (dev.2.aws.a, site/api/costs-api.js) answers: amounts as decimal strings, pages via next.
+function fakeCostsApi() {
+  const calls = [];
+  const usage = async (o) => {
+    calls.push(["usage", o]);
+    if (o.granularity === "DAILY") return o.next ? { items: [{ start: "2026-11-23", end: "2026-11-24", estimated: true, total: { amount: "0.40", unit: "USD" }, groups: [] }], next: null }
+      : { items: [{ start: "2026-11-22", end: "2026-11-23", estimated: true, total: { amount: "0.60", unit: "USD" }, groups: [] }], next: "p2" };
+    if (o.groupBy === "SERVICE") return { items: [{ start: "2026-11-01", end: "2026-11-24", estimated: true, total: null, groups: [{ key: "AWS Lambda", amount: "0.25", unit: "USD" }, { key: "Amazon CloudFront", amount: "0.75", unit: "USD" }] }], next: null };
+    if (o.groupBy === "REGION") throw Object.assign(new Error("AccessDeniedException: not allowed"), { code: "AccessDeniedException" });
+    return { items: [{ start: "2026-11-01", end: "2026-11-24", estimated: true, total: { amount: "1.00", unit: "USD" }, groups: [] }], next: null };
+  };
+  return { calls, usage, forecast: async (o) => { calls.push(["forecast", o]); return { total: { amount: "0.50", unit: "USD" }, items: [] }; },
+    budgets: async (o) => { calls.push(["budgets", o]); return { items: [{ name: "cap", type: "COST", timeUnit: "MONTHLY", limit: { amount: "2.00", unit: "USD" }, actual: { amount: "1.00", unit: "USD" }, forecast: null }], next: null }; } };
+}
+
+test("fetchAll over CostsApi: pages drained, a failed section isolated, model adds up", async () => {
+  const api = fakeCostsApi();
+  const r = await B.fetchAll(api, new Date("2026-11-24T12:00:00Z"), "123456789012");
+  const m = B.modelFromApi(r);
+  assert.equal(m.monthToDate.amount, 1);
+  assert.equal(m.endOfMonth.amount, 1.5);
+  assert.deepEqual(m.byService.map((g) => g.key), ["Amazon CloudFront", "AWS Lambda"]);
+  assert.equal(m.byRegion, null);
+  assert.match(m.errors.byRegion, /AccessDenied/);
+  assert.equal(m.daily.length, 2);                       // two pages merged
+  assert.equal(m.budgets[0].used, 0.5);
+  assert.deepEqual(api.calls.find((c) => c[0] === "forecast")[1], { start: "2026-11-24", end: "2026-12-01", granularity: "MONTHLY" });
+  assert.equal(api.calls.filter((c) => c[0] === "usage").length, 5);   // 3 monthly + 2 daily pages
+  B.render(m, fakeDoc());
+});
