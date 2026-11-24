@@ -326,6 +326,7 @@
     { name: "AWS Secrets Manager", region: "us-east-1", monthly: 4000 }, { name: "Amazon CloudFront", region: "global", daily: 1000 },
     { name: "Amazon Simple Storage Service", region: REGION, daily: 500 }, { name: "Tax", region: "global", daily: 0 }
   ];
+  var COST_SPAN_DAYS = 427; // about 14 months: the twin's own bound (security.aws.a), so no request builds a huge answer
   var COST_METRICS = { UnblendedCost: 1, BlendedCost: 1, AmortizedCost: 1, NetUnblendedCost: 1 };
   function costJson(o, status) { var r = new Response(JSON.stringify(o), { status: status || 200, headers: { "content-type": "application/x-amz-json-1.1", "x-twin-note": COST_NOTE } }); return r; }
   function costErr(type, msg, status) { return costJson({ __type: type, message: msg }, status || 400); }
@@ -345,11 +346,12 @@
     var q; try { q = JSON.parse(body || "{}"); } catch (e) { return costErr("ValidationException", "The body is not JSON."); }
     var tp = q.TimePeriod || {}, start = costDay(tp.Start), end = costDay(tp.End), gran = q.Granularity || "MONTHLY";
     if (start === null || end === null || start >= end) return costErr("ValidationException", "TimePeriod needs Start before End, both YYYY-MM-DD (End is exclusive).");
+    if (end - start > COST_SPAN_DAYS * DAY_MS) return costErr("ValidationException", "TimePeriod is at most " + COST_SPAN_DAYS + " days (about 14 months) in the twin.");
     if (gran !== "DAILY" && gran !== "MONTHLY") return costErr("ValidationException", "Granularity is DAILY or MONTHLY in the twin.");
     var action = String(target || "").replace(/^AWSInsightsIndexService\./, "");
     if (action === "GetCostAndUsage") {
       var metrics = Array.isArray(q.Metrics) ? q.Metrics : [];
-      if (!metrics.length || !metrics.every(function (m) { return COST_METRICS[m]; })) return costErr("ValidationException", "Metrics are UnblendedCost, BlendedCost, AmortizedCost or NetUnblendedCost in the twin.");
+      if (!metrics.length || !metrics.every(function (m) { return typeof m === "string" && Object.prototype.hasOwnProperty.call(COST_METRICS, m); })) return costErr("ValidationException", "Metrics are UnblendedCost, BlendedCost, AmortizedCost or NetUnblendedCost in the twin.");
       var group = Array.isArray(q.GroupBy) && q.GroupBy[0] ? q.GroupBy[0] : null;
       if (group && (q.GroupBy.length > 1 || group.Type !== "DIMENSION" || (group.Key !== "SERVICE" && group.Key !== "REGION"))) return costErr("ValidationException", "GroupBy is one DIMENSION, SERVICE or REGION, in the twin.");
       var periods = costPeriods(start, end, gran), from = 0;

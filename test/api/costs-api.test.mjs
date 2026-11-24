@@ -28,7 +28,8 @@ function answer(req) {
   if (t === "AWSInsightsIndexService.GetCostForecast") return j({ Total: { Amount: "61.5", Unit: "USD" }, ForecastResultsByTime: [{ TimePeriod: { Start: "2026-11-24", End: "2026-12-01" }, MeanValue: "19.33", PredictionIntervalLowerBound: "15.1", PredictionIntervalUpperBound: "23.9" }] });
   if (t === "AWSInsightsIndexService.GetDimensionValues") return j({ DimensionValues: [{ Value: "eu-west-2", Attributes: {} }, { Value: "us-east-1", Attributes: {} }, { Value: 7 }], ReturnSize: 2, TotalSize: 2 });
   if (t === "AWSBudgetServiceGateway.DescribeBudgets") return j({ Budgets: [{ BudgetName: "Monthly cap", BudgetLimit: { Amount: "10.0", Unit: "USD" }, TimeUnit: "MONTHLY", BudgetType: "COST",
-    CalculatedSpend: { ActualSpend: { Amount: "4.2", Unit: "USD" }, ForecastedSpend: { Amount: "9.1", Unit: "USD" } }, TimePeriod: { Start: 1764547200, End: 3706473600 } }, { BudgetName: 3 }], NextToken: b.NextToken ? undefined : "b2" });
+    CalculatedSpend: { ActualSpend: { Amount: "4.2", Unit: "USD" }, ForecastedSpend: { Amount: "9.1", Unit: "USD" } }, TimePeriod: { Start: 1764547200, End: 3706473600 } }, { BudgetName: 3 },
+    { BudgetName: "Odd times", TimePeriod: { Start: 1e300, End: "never" } }], NextToken: b.NextToken ? undefined : "b2" });
   return j({ __type: "com.amazon.coral.service#UnknownOperationException", message: "no" }, 400);
 }
 const api = CostsApi(async (req) => answer(req), { account: A });
@@ -48,7 +49,7 @@ const cap = plain(await endless.usage({ start: "2026-11-01", end: "2026-11-02", 
 ok(cap.items.length === 3 && cap.capped === true, "pages capped at maxPages, capped true");
 ok((await endless.usage({ start: "2026-11-01", end: "2026-11-02", maxPages: 999 })).items.length === 50, "maxPages at most 50");
 ok(JSON.parse((await api.usage({ start: "2026-11-01", end: "2026-11-02", metric: "AmortizedCost" }), sent.at(-1).body)).Metrics[0] === "AmortizedCost", "another metric");
-ok((await CostsApi.all((next) => api.budgets({ next }))).items.length === 2, "CostsApi.all drains budget pages");
+ok((await CostsApi.all((next) => api.budgets({ next }))).items.length === 4, "CostsApi.all drains budget pages");
 
 // ---- forecast, dimension values, budgets ----
 const f = plain(await api.forecast({ start: "2026-11-24", end: "2026-12-01" }));
@@ -59,7 +60,8 @@ ok(JSON.stringify(d) === JSON.stringify({ items: ["eu-west-2", "us-east-1"], nex
 const bg = plain(await api.budgets({ max: 500 }));
 const rb = sent.at(-1);
 ok(rb.service === "budgets" && rb.region === "us-east-1" && rb.url === "https://budgets.amazonaws.com/" && rb.headers["x-amz-target"] === "AWSBudgetServiceGateway.DescribeBudgets" && JSON.stringify(JSON.parse(rb.body)) === JSON.stringify({ AccountId: A, MaxResults: 100 }), "budgets: its endpoint and target, the account id, MaxResults clamped to 100");
-ok(JSON.stringify(bg.items) === JSON.stringify([{ name: "Monthly cap", type: "COST", timeUnit: "MONTHLY", limit: { amount: 10, unit: "USD" }, actual: { amount: 4.2, unit: "USD" }, forecast: { amount: 9.1, unit: "USD" }, start: "2025-12-01", end: "2087-06-15" }]) && bg.next === "b2", "a budget: limit, actual and forecast spend, its period; a malformed one dropped");
+ok(JSON.stringify(bg.items.slice(0, 1)) === JSON.stringify([{ name: "Monthly cap", type: "COST", timeUnit: "MONTHLY", limit: { amount: 10, unit: "USD" }, actual: { amount: 4.2, unit: "USD" }, forecast: { amount: 9.1, unit: "USD" }, start: "2025-12-01", end: "2087-06-15" }]) && bg.next === "b2", "a budget: limit, actual and forecast spend, its period; a malformed one dropped");
+ok(bg.items.length === 2 && bg.items[1].name === "Odd times" && bg.items[1].start === null && bg.items[1].end === null, "a budget time too large to be a date, or not a date: null, never a RangeError");
 
 // ---- refusals before any request ----
 const n0 = sent.length;

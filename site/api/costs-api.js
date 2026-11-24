@@ -125,7 +125,11 @@
       return call("budgets", "budgets.amazonaws.com", "AWSBudgetServiceGateway.DescribeBudgets", body).then(function (j) {
         return { items: (Array.isArray(j.Budgets) ? j.Budgets : []).map(function (b) {
           var cs = b && b.CalculatedSpend || {}, tp = b && b.TimePeriod || {};
-          var when = function (v) { return typeof v === "string" ? v.slice(0, 10) : typeof v === "number" ? new Date(v * 1000).toISOString().slice(0, 10) : null; };
+          var when = function (v) {
+            if (typeof v === "string") return /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : null;
+            if (typeof v !== "number" || !isFinite(v) || Math.abs(v) > 8.64e12) return null;
+            var d = new Date(v * 1000); return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+          };
           return { name: b && typeof b.BudgetName === "string" ? b.BudgetName : null, type: b && b.BudgetType || null, timeUnit: b && b.TimeUnit || null,
             limit: money(b && b.BudgetLimit), actual: money(cs.ActualSpend), forecast: money(cs.ForecastedSpend), start: when(tp.Start), end: when(tp.End) };
         }).filter(function (b) { return b.name !== null; }), next: token(j.NextToken) };
