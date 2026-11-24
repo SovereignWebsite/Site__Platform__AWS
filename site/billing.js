@@ -106,7 +106,7 @@
       el("div", { class: "stat" }, [el("span", { class: "k", text: "Forecast for the whole month" + tag }), amount(m.endOfMonth)]),
     ]));
     box.appendChild(el("p", { class: "small" }, [doc.createTextNode("From AWS Cost Explorer (unblended cost, before credits are netted out in the console). "),
-      link(m.links.console, "Open Cost Explorer"), doc.createTextNode(". Each refresh makes up to five Cost Explorer requests, which AWS charges for: "),
+      link(m.links.console, "Open Cost Explorer"), doc.createTextNode(". Answers are kept while this page is open; each refresh makes up to five Cost Explorer requests, which AWS charges for: "),
       link(m.links.pricing, "pricing"), doc.createTextNode(".")]));
     function table(title, rows, keyName, href) {
       var t = el("table", { class: "costs-table" }, [el("caption", {}, [doc.createTextNode(title + " "), link(href, "(how AWS reports it)")]),
@@ -140,6 +140,20 @@
     return box;
   }
 
-  var api = { requests: requests, model: model, render: render, fmt: fmt, LINKS: LINKS };
+  // Each Cost Explorer request costs the owner $0.01, so answers are kept in page memory for the tab session:
+  // switching tabs shows the kept answers; only refresh: true asks AWS again. Keyed by account and UTC day.
+  // Nothing is stored beyond this page's memory.
+  var kept = {};
+  function load(key, fetchAll, opts) {
+    if (!(opts && opts.refresh) && kept[key]) return kept[key];
+    var p = Promise.resolve().then(fetchAll);
+    kept[key] = p;
+    p.catch(function () { if (kept[key] === p) delete kept[key]; }); // a failed load is not kept
+    return p;
+  }
+  function cacheKey(accountId, today) { return String(accountId || "") + "|" + ymd(today); }
+  function forget() { kept = {}; }
+
+  var api = { requests: requests, model: model, render: render, fmt: fmt, LINKS: LINKS, load: load, cacheKey: cacheKey, forget: forget };
   if (typeof module === "object" && module.exports) module.exports = api; else root.SwsBilling = api;
 })(typeof window !== "undefined" ? window : globalThis);

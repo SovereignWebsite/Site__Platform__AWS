@@ -70,3 +70,17 @@ test("render: every amount is inside a data-mask element, so screenshot mode hid
   });
   assert.ok(amounts >= 10);
 });
+
+test("load keeps answers for the tab session; only refresh asks AWS again; a failure is not kept", async () => {
+  B.forget();
+  let calls = 0;
+  const fetchAll = () => { calls++; return { n: calls }; };
+  const key = B.cacheKey("123456789012", new Date("2026-11-24T10:00:00Z"));
+  assert.equal((await B.load(key, fetchAll)).n, 1);
+  assert.equal((await B.load(key, fetchAll)).n, 1);
+  assert.equal((await B.load(key, fetchAll, { refresh: true })).n, 2);
+  assert.notEqual(key, B.cacheKey("123456789012", new Date("2026-11-25T10:00:00Z")));
+  const bad = "bad|2026-11-24";
+  await assert.rejects(B.load(bad, () => { throw new Error("AccessDenied"); }));
+  assert.equal((await B.load(bad, () => "ok")), "ok");
+});
