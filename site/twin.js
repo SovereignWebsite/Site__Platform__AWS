@@ -1173,7 +1173,11 @@
           "<WebACLId>" + esc(d.webAcl || "") + "</WebACLId><HttpVersion>" + d.httpVersion + "</HttpVersion><Staging>false</Staging></DistributionSummary>";
       }).join("") + "</Items>" : "") + "</DistributionList>");
   }
-  function ce() { return json({ ResultsByTime: [{ Total: { UnblendedCost: { Amount: "42.17", Unit: "USD" } } }] }); }
+  // Cost Explorer: signed calls only, as every other twin service (security.aws.a, R-025 (a)); the answer is synthetic.
+  function ce(init) {
+    if (!signed(init)) return json({ __type: "AccessDeniedException", message: "Missing Authentication Token" }, 403);
+    return json({ ResultsByTime: [{ Total: { UnblendedCost: { Amount: "42.17", Unit: "USD" } } }] });
+  }
   function cloudcontrol(target, body, init, host) {
     if (!signed(init)) return json({ __type: "AccessDeniedException", message: "Missing signature" }, 403);
     var s = build(), q = JSON.parse(body || "{}"), region = host.split(".")[1];
@@ -1585,7 +1589,7 @@
       if (host === "sts.amazonaws.com" || /^sts\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = sts(new URLSearchParams(body), init);
       else if (host === "iam.amazonaws.com") p = iam(new URLSearchParams(body), init);
       else if (/^cloudformation\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudformation(new URLSearchParams(body), init, host);
-      else if (/^ce\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = ce();
+      else if (/^ce\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = ce(init);
       else if (/^cloudcontrolapi\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudcontrol((hdr(init, "x-amz-target") || "").split(".")[1], body, init, host);
       else if (/^lambda\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = lambda(url, init);
       else if (/^monitoring\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudwatch(new URLSearchParams(body), init);
