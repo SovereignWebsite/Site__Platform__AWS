@@ -311,7 +311,86 @@
       return xmlErr("InvalidAction", "Not in the twin yet: cloudformation " + A);
     });
   }
-  function ce() { return json({ ResultsByTime: [{ Total: { UnblendedCost: { Amount: "42.17", Unit: "USD" } } }] }); }
+  // ---- Costs (the Costs tab: billing.aws.a's site/billing.js on CostsApi, site/api/costs-api.js) ----
+  // Cost Explorer GetCostAndUsage, GetCostForecast and GetDimensionValues for the twin's account, signed calls only
+  // (security.aws.a, R-025 (a)). Every figure is synthetic and every answer says so (x-twin-note). Budgets is answered as a
+  // browser sees it: boto3.aws.a's note 21 finds the SDK's CORS table does not mark Budgets as allowing CORS, so the call
+  // fails as a refused cross-origin request would. Figures (billing.aws.a's choice): small round amounts per service per
+  // day, in ten-thousandths of a dollar so every view adds up exactly, from 1 September 2026 to today (the twin's clock
+  // where it has one); later days are empty, the current month is Estimated, each period echoes the request. The twin's
+  // own choices: these services and amounts, region global for CloudFront and Tax, 31 periods a page, a forecast that may
+  // not start in the past, the error wording.
+  var COST_NOTE = "synthetic figures from the twin, not an AWS bill", COST_FROM = Date.UTC(2026, 8, 1), DAY_MS = 86400000;
+  var COST_SERVICES = [
+    { name: "AWS Cost Explorer", region: "us-east-1", daily: 500 }, { name: "AWS Lambda", region: REGION, daily: 200 },
+    { name: "AWS Secrets Manager", region: "us-east-1", monthly: 4000 }, { name: "Amazon CloudFront", region: "global", daily: 1000 },
+    { name: "Amazon Simple Storage Service", region: REGION, daily: 500 }, { name: "Tax", region: "global", daily: 0 }
+  ];
+  var COST_METRICS = { UnblendedCost: 1, BlendedCost: 1, AmortizedCost: 1, NetUnblendedCost: 1 };
+  function costJson(o, status) { var r = new Response(JSON.stringify(o), { status: status || 200, headers: { "content-type": "application/x-amz-json-1.1", "x-twin-note": COST_NOTE } }); return r; }
+  function costErr(type, msg, status) { return costJson({ __type: type, message: msg }, status || 400); }
+  function costDay(v) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v || "")); if (!m) return null; var t = Date.UTC(+m[1], +m[2] - 1, +m[3]); return new Date(t).toISOString().slice(0, 10) === m[0] ? t : null; }
+  function costIso(t) { return new Date(t).toISOString().slice(0, 10); }
+  function costToday() { var n = new Date(typeof nowMs === "function" ? nowMs() : Date.now()); return Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()); }
+  function costOn(svc, t) { return t < COST_FROM || t > costToday() ? 0 : (svc.daily || 0) + (svc.monthly && new Date(t).getUTCDate() === 1 ? svc.monthly : 0); }
+  function costSum(svcs, a, b) { var n = 0; svcs.forEach(function (sv) { for (var t = a; t < b; t += DAY_MS) n += costOn(sv, t); }); return n; }
+  function costAmount(n) { return Math.floor(n / 10000) + "." + String(n % 10000).padStart(4, "0") + "000000"; }
+  function costPeriods(start, end, gran) {
+    var out = [], t = start;
+    while (t < end) { var d = new Date(t), next = gran === "DAILY" ? t + DAY_MS : Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1); out.push([t, Math.min(next, end)]); t = Math.min(next, end); }
+    return out;
+  }
+  function ce(init, target, body) {
+    if (!signed(init)) return costErr("AccessDeniedException", "Missing Authentication Token", 403);
+    var q; try { q = JSON.parse(body || "{}"); } catch (e) { return costErr("ValidationException", "The body is not JSON."); }
+    var tp = q.TimePeriod || {}, start = costDay(tp.Start), end = costDay(tp.End), gran = q.Granularity || "MONTHLY";
+    if (start === null || end === null || start >= end) return costErr("ValidationException", "TimePeriod needs Start before End, both YYYY-MM-DD (End is exclusive).");
+    if (gran !== "DAILY" && gran !== "MONTHLY") return costErr("ValidationException", "Granularity is DAILY or MONTHLY in the twin.");
+    var action = String(target || "").replace(/^AWSInsightsIndexService\./, "");
+    if (action === "GetCostAndUsage") {
+      var metrics = Array.isArray(q.Metrics) ? q.Metrics : [];
+      if (!metrics.length || !metrics.every(function (m) { return COST_METRICS[m]; })) return costErr("ValidationException", "Metrics are UnblendedCost, BlendedCost, AmortizedCost or NetUnblendedCost in the twin.");
+      var group = Array.isArray(q.GroupBy) && q.GroupBy[0] ? q.GroupBy[0] : null;
+      if (group && (q.GroupBy.length > 1 || group.Type !== "DIMENSION" || (group.Key !== "SERVICE" && group.Key !== "REGION"))) return costErr("ValidationException", "GroupBy is one DIMENSION, SERVICE or REGION, in the twin.");
+      var periods = costPeriods(start, end, gran), from = 0;
+      if (q.NextPageToken) { var pm = /^twin-costs-(\d{1,4})$/.exec(String(q.NextPageToken)); if (!pm || +pm[1] >= periods.length) return costErr("ValidationException", "The NextPageToken is not valid."); from = +pm[1]; }
+      var today = new Date(costToday()), monthStart = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1);
+      var money = function (n) { var o = {}; metrics.forEach(function (m) { o[m] = { Amount: costAmount(n), Unit: "USD" }; }); return o; };
+      var out = { ResultsByTime: periods.slice(from, from + 31).map(function (p) {
+        var r = { TimePeriod: { Start: costIso(p[0]), End: costIso(p[1]) }, Total: {}, Groups: [], Estimated: p[1] > monthStart };
+        if (!group) r.Total = money(costSum(COST_SERVICES, p[0], p[1]));
+        else {
+          var keys = {};
+          COST_SERVICES.forEach(function (sv) { var k = group.Key === "SERVICE" ? sv.name : sv.region; keys[k] = (keys[k] || 0) + costSum([sv], p[0], p[1]); });
+          r.Groups = Object.keys(keys).sort().map(function (k) { return { Keys: [k], Metrics: money(keys[k]) }; });
+        }
+        return r;
+      }), DimensionValueAttributes: [] };
+      if (group) out.GroupDefinitions = [{ Type: "DIMENSION", Key: group.Key }];
+      if (from + 31 < periods.length) out.NextPageToken = "twin-costs-" + (from + 31);
+      return costJson(out);
+    }
+    if (action === "GetCostForecast") {
+      if (!/^(UNBLENDED|BLENDED|AMORTIZED|NET_UNBLENDED)_COST$/.test(String(q.Metric || ""))) return costErr("ValidationException", "Metric is UNBLENDED_COST, BLENDED_COST, AMORTIZED_COST or NET_UNBLENDED_COST in the twin.");
+      if (start < costToday()) return costErr("ValidationException", "The forecast may not start in the past (the twin's rule).");
+      var expected = function (t) { var n = 0; COST_SERVICES.forEach(function (sv) { n += (sv.daily || 0) + (sv.monthly && new Date(t).getUTCDate() === 1 ? sv.monthly : 0); }); return n; };
+      var fr = costPeriods(start, end, gran).map(function (p) { var n = 0; for (var t = p[0]; t < p[1]; t += DAY_MS) n += expected(t); return [p, n]; }), total = 0;
+      fr.forEach(function (x) { total += x[1]; });
+      return costJson({ Total: { Amount: costAmount(total), Unit: "USD" }, ForecastResultsByTime: fr.map(function (x) {
+        return { TimePeriod: { Start: costIso(x[0][0]), End: costIso(x[0][1]) }, MeanValue: costAmount(x[1]), PredictionIntervalLowerBound: costAmount(Math.round(x[1] * 0.9)), PredictionIntervalUpperBound: costAmount(Math.round(x[1] * 1.1)) };
+      }) });
+    }
+    if (action === "GetDimensionValues") {
+      if (q.Dimension !== "SERVICE" && q.Dimension !== "REGION") return costErr("ValidationException", "Dimension is SERVICE or REGION in the twin.");
+      var vals = {};
+      COST_SERVICES.forEach(function (sv) { if (costSum([sv], start, end) > 0) vals[q.Dimension === "SERVICE" ? sv.name : sv.region] = 1; });
+      var vs = Object.keys(vals).sort();
+      return costJson({ DimensionValues: vs.map(function (v) { return { Value: v, Attributes: {} }; }), ReturnSize: vs.length, TotalSize: vs.length });
+    }
+    return costErr("ValidationException", "The twin answers three Cost Explorer reads only: GetCostAndUsage, GetCostForecast and GetDimensionValues.");
+  }
+  // Budgets: refused as a browser would refuse a cross-origin call AWS does not allow (no CORS: note 21).
+  function budgets() { return Promise.reject(new TypeError("Failed to fetch")); }
   function cloudcontrol(target, body, init, host) {
     if (!signed(init)) return json({ __type: "AccessDeniedException", message: "Missing signature" }, 403);
     var s = build(), q = JSON.parse(body || "{}"), region = host.split(".")[1];
@@ -454,7 +533,8 @@
       if (host === "sts.amazonaws.com" || /^sts\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = sts(new URLSearchParams(body), init);
       else if (host === "iam.amazonaws.com") p = iam(new URLSearchParams(body), init);
       else if (/^cloudformation\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudformation(new URLSearchParams(body), init);
-      else if (/^ce\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = ce();
+      else if (/^ce\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = ce(init, hdr(init, "x-amz-target"), body);
+      else if (host === "budgets.amazonaws.com") p = budgets();
       else if (/^cloudcontrolapi\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudcontrol((hdr(init, "x-amz-target") || "").split(".")[1], body, init, host);
       else if (/^lambda\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = lambda(url, init);
       else if (/^firehose\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = firehose((hdr(init, "x-amz-target") || "").split(".")[1], body, init);
