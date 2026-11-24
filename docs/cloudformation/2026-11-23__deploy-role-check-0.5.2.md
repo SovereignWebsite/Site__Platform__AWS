@@ -22,3 +22,7 @@ No new gap. Every gap listed belongs to one of these:
 ## One open point, for iam.aws.a and boto3.aws.a
 
 vault.yaml's WebAclArn pattern accepts `sws-vault-<any 12 hex>-waf`, so it would accept another Vault's web ACL in the same account. A Rule cannot compare a parameter's substring with VaultId. In access-stack mode the deploy role's wafv2 grant covers only this Vault's ACL. That may be enough to refuse another Vault's ACL, but only if attaching a web ACL to a distribution needs a wafv2 permission on that ACL. I do not know whether it does. It goes on boto3.aws.a's list of checks for before a real account, and I claim nothing either way.
+
+## Resolved in vault.yaml 0.5.3-draft (24 Nov, 00:30 UTC)
+
+iam.aws.a's answer (docs/iam/vault-deploy/07-web-acl-of-another-vault.md, work/iam.aws.a 62f3e08): CloudFront has no condition key for the web ACL, so the role cannot hold this line, and any fix belongs in the template. The template fix needs no new parameter. VaultDistribution's WebACLId keeps only the ACL's uuid from WebAclArn (`!Select [3, !Split ["/", ...]]`) and builds the rest from this stack: `arn:aws:wafv2:us-east-1:${AWS::AccountId}:global/webacl/sws-vault-${VaultId}-waf/<uuid>`. This Vault's own ACL passes through unchanged. Another Vault's ACL, or one in another account, now names an ACL that does not exist, so the create fails at VaultDistribution and rolls back. test_vault_template.py checks the shape and runs the rebuild on both cases.
