@@ -1,20 +1,20 @@
 {
-  "id": "conductor-aws-a-sovereignwebsite",
+  "id": "conductor-aws-a-sovereignwebsite-2",
   "agent": "conductor.aws.a@SovereignWebsite.dinis",
   "role": "Conductor of the AWS Platform programme on account A: runs the team schedule and log, routes each agent's asks (paths to aws.c, keys to factory.c, Dinis's decisions to pm). Takes over from conductor.aws.c (wave 2).",
-  "how": "Made by the agent in its own session on 23 November 2026 with sgit pki keygen; public bundle from sgit pki export. Only the public half is here.",
+  "how": "Made by the agent in its own session (the fresh conductor.aws.a, restarted at Dinis's word) on 23 November 2026 with sgit pki keygen; public bundle from sgit pki export. Only the public half is here. Follows the retire of conductor-aws-a-sovereignwebsite.",
   "created": "2026-11-23",
   "status": "active",
-  "session": "https://claude.ai/code/session_018yvwtPiszBTMHKVD4AuDwn",
-  "fingerprint": "sha256:0b6383e56398ab9e",
-  "signing_fingerprint": "sha256:85fa5ecd69349cb4",
+  "session": "https://claude.ai/code/session_018yvwtN2ue8At6tkGQsBnKM",
+  "fingerprint": "sha256:a2cb00586d4ba2c4",
+  "signing_fingerprint": "sha256:521366ef3df9df53",
   "bundle": {
     "v": 1,
-    "encrypt": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAjKd6ThjyWyEnG0QNBC9F\n/4LFgywpV30fbLBhW4e8h97pYycUfaZ7+kQ+kqG+gNv+N6bIhJjGokJVW93qwRsr\nkcErMSvvtiAfOqy3bjpX9nFlQ0NYrki2HijHjCJKadVSjF8h8x+TEHVolCxw7qFT\nIy7X0zXAqc6iN7MHjDZo1t1BSRcbhrx7sCvbrUGN0E3TTU6Knp7MscwTIFJpDJsX\nMMXbSYjO8NK0F9ZsM8XmbP65Tdzmtpku4brewxg2xE7pCteCGzeTfqi/r+41m/w9\nD8c0N+6F9+vKN/fbA+DI3jFG6K6SjPkwK5VZnDhT3nKyU5GSi7VJszB2ZBKGXZpm\n0SV7jhCeVz3DqScnT+doUcp85Vhm5U/TSnAnGfwfM97YykqUznhrncbJKnCOUGxA\nhNpJixrCRdlYCMF3JetTVDle9tzlH/ULlMkEZY4pz54FtvNYsHNG2ckab8T6QSQt\n75oMISRL+wh3sTHRSC+8vdGNmVSPSKMR9g7igqyTGE8EAkqUusaszRxa64zwr4pT\niMCPoqW//fzbU88Ngj5z/RJtFfbRfPbDZrkZReg4VVrlCmihc524VYzI/aSwQHXw\n8cT+gWmxcEurJBiWrqKIlZ59eOL75qt9pKQoquSB69Jb6JVBV3dLXSw5KbzVdBIi\nPQX/S2JEG5j3Q8YtrJjC+/cCAwEAAQ==\n-----END PUBLIC KEY-----\n",
-    "sign": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDPPiEbnI+5uhF6QrxRVmeaT9axom\nHfptdPKK0ee1aIpjcWruOC2ih9d8V+8WIYd8fl3PyIqieOlCqVnUJmVLmw==\n-----END PUBLIC KEY-----\n",
+    "encrypt": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAxtQEuQxknb+Ih/DXMdx2\nXi0OBcqd+i+0cX/Oktc1rX6YCot9JimqeHsE+pR2mSfYikIBdzCbgCAQUFfPBreW\n1w2/DmDHj4xlrLAGkREkf9KF4vXlaYSZMsohOwRUBwAXSycflaBzhtzEFjjt+xqo\nq17OFXlYl1j4Tna5+Ib++r1Wvr9P4znTwXcqsChnO1r/I4OilXvSjx23/KGjVkVM\n2Ng+xbTxGCRbqgFXfvlJpO30zbgkJ2tMFAR9BxoS52ovF7cDVmzdmkow6fB6pDWf\noQaKfNK6QL0GlhYjlsnyJKSwehUzhs2Yf0/6sMVG11sTFe6nnpvUUVstIc283r9f\niY0WjlafZvMO+XuS/9XLyni7WBCTwT2EoqTFjZNIgu4cyNkj2yu4Gp7UEbQoaNq1\nV/0hjqnnA7bVWX6LqvPlIGQCt2VSwxRZxTtUarucxjGFUcD4VzTBvo0nkt6rtj6r\n8VolpglnMa3PfN7bKYJzyMR3PyKx8QDRlH+AC7z/AHDsP8aIeje/IPRYmIS9jPtx\nddfXx5saPei/WUjKptXHptsOYQPw1EWygYPMnkZTU5vQkIXVChQsjcpdblo8M0/1\nZ2tFo5l/KUl3MkNbadVaFPny/YZnFr1cj+FOAaogenqt4Wl3MPPfYv8eviwzGKwx\nKUHiKRgbIdxqxxdTXtmUDKMCAwEAAQ==\n-----END PUBLIC KEY-----\n",
+    "sign": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEoFgnyUEVWBjQSMiwtDnFoL19cQ6V\nDg9fibaD3mXFA3tbd7F+tRb074FerK04jV+7LzPuBWKbByGAotR8RfkECA==\n-----END PUBLIC KEY-----\n",
     "label": "conductor.aws.a@SovereignWebsite.dinis",
-    "fingerprint": "sha256:0b6383e56398ab9e",
-    "signing_fingerprint": "sha256:85fa5ecd69349cb4"
+    "fingerprint": "sha256:a2cb00586d4ba2c4",
+    "signing_fingerprint": "sha256:521366ef3df9df53"
   },
   "ssh_signing": {
     "from": "bundle.sign",

@@ -1,18 +1,20 @@
-sha 5d439465d316c88881676901f94e98e7732a93ac
-tree c6197dbb129484c45fc876ee7aab5bcc45b79afe
-parent 885f150d48cd09601345a803a28669afea04c95d
-author Claude <noreply@anthropic.com> 1795418849 +0000
-committer Claude <noreply@anthropic.com> 1795418849 +0000
+sha cb376c7834bbb84eec14e54151c45936ecf2c0df
+tree 6b2b0126cb255b2e827b59703b27213bb5318ff7
+parent dbe7dfadc6c234ad8f3d851b47957d45a0da398c
+author conductor.aws.a@SovereignWebsite.dinis <conductor.aws.a@SovereignWebsite.dinis> 1795478377 +0000
+committer conductor.aws.a@SovereignWebsite.dinis <conductor.aws.a@SovereignWebsite.dinis> 1795478377 +0000
 gpgsig -----BEGIN SSH SIGNATURE-----
  U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
- EEDPPiEbnI+5uhF6QrxRVmeaT9axomHfptdPKK0ee1aIpjcWruOC2ih9d8V+8WIYd8fl3P
- yIqieOlCqVnUJmVLmwAAAANnaXQAAAAAAAAABnNoYTUxMgAAAGQAAAATZWNkc2Etc2hhMi
- 1uaXN0cDI1NgAAAEkAAAAgRIZ27Mrf4zpXfAJ8l2sbDqoitzyh4GuIImpvVlt+/KAAAAAh
- APa92lfDwOQNSBeqhM3AgixLFqiXZ/7F6eNikZsETTSY
+ EEoFgnyUEVWBjQSMiwtDnFoL19cQ6VDg9fibaD3mXFA3tbd7F+tRb074FerK04jV+7LzPu
+ BWKbByGAotR8RfkECAAAAANnaXQAAAAAAAAABnNoYTUxMgAAAGMAAAATZWNkc2Etc2hhMi
+ 1uaXN0cDI1NgAAAEgAAAAgGJBeI2xXEyG4tWFgPlnc5W0qF21RzxwnRcM3LXX4mtQAAAAg
+ IPflgVx82nznpIP2Egh63F5cxBSa26yBHoXLPFtxKIw=
  -----END SSH SIGNATURE-----
 
-Keys: conductor.aws.a publishes its own key
+team/keys.json: conductor-aws-a-sovereignwebsite-2, the fresh conductor.aws.a's key
+
+Lands on top of the retire of conductor-aws-a-sovereignwebsite (A3, conductor.d), per
+docs/team/archive-agent.md in Site__Platform__AWS.
 
 Agent: conductor.aws.a@SovereignWebsite.dinis
-Claude-Session: https://claude.ai/code/session_018yvwtPiszBTMHKVD4AuDwn
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_018yvwtN2ue8At6tkGQsBnKM
