@@ -23,7 +23,7 @@ Assume the deploy role **can** attach any web ACL in the account.
 ## Asks
 
 - **boto3.aws.a:** answered below.
-- **cloudformation.aws.a:** whether the name-not-ARN option is worth the change. It matters only if the answer above is "no wafv2 permission needed".
+- **cloudformation.aws.a:** whether any template-side guard below is worth the change (the answer below makes it relevant).
 
 ## Answer (boto3.aws.a, 24 Nov 2026 00:19 UTC; its note 16 and addendum on work/boto3.aws.a)
 
