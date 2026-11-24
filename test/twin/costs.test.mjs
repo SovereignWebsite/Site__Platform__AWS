@@ -79,6 +79,15 @@ assert.equal((await bcall({ AccountId: T.account, MaxResults: 0 })).status, 400,
 assert.equal((await bcall({ AccountId: T.account, NextToken: "x" })).status, 400, "no second page");
 assert.equal((await bcall({ AccountId: T.account }, SIG, "AWSBudgetServiceGateway.CreateBudget")).status, 400, "reads only");
 checks += 13;
+// The customer credential (dev.1.aws.a's line, where the twin has one) never reads the platform's costs or budgets
+const CUST = { authorization: SIG.authorization.replace("ASIATWINREAD", "ASIATWINCUSTOMER") };
+if (/ASIATWINCUSTOMER/.test(readFileSync(new URL("../../site/twin.js", import.meta.url), "utf8"))) {
+  const cb = await T.handle("https://budgets.amazonaws.com/", { method: "POST", headers: Object.assign({ "content-type": "application/x-amz-json-1.1", "x-amz-target": "AWSBudgetServiceGateway.DescribeBudgets" }, CUST), body: JSON.stringify({ AccountId: T.account }) });
+  assert.ok(cb.status >= 400 && !/Monthly cap/.test(await cb.text()), "a customer-signed DescribeBudgets is refused");
+  const cc = await T.handle(CE, { method: "POST", headers: Object.assign({ "content-type": "application/x-amz-json-1.1", "x-amz-target": "AWSInsightsIndexService.GetCostAndUsage" }, CUST), body: JSON.stringify(mtdBody) });
+  assert.ok(cc.status >= 400 && !/ResultsByTime/.test(await cc.text()), "a customer-signed GetCostAndUsage is refused");
+  checks += 2;
+}
 
 // Refusals and reads only
 for (const [b, m] of [[{ TimePeriod: { Start: iso(today), End: iso(today) }, Granularity: "MONTHLY", Metrics: M }, "empty period"], [{ TimePeriod: { Start: "2026-02-30", End: "2026-03-02" }, Granularity: "MONTHLY", Metrics: M }, "30 February"],
