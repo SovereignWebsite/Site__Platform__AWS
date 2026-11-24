@@ -6,6 +6,8 @@ This batch as a presentation (docs/board/brief/decisions-brief.html, https://cla
 
 Nothing here stops the team: the agents are building on the twin. Decision 3 holds dev.2.aws.a's code (site/api/**, test/api/**) on its branch.
 
+Signed decision requests (decisions.b's template, record 2026-11-24__decision-requests) for these batches are in docs/board/requests/, one per batch, plus A11 (the Costs tab) for conductor.aws.a; maestro.a relays their links to decisions.b.
+
 ## Waiting on you now
 
 ### 1. The agents publish their keys
@@ -105,7 +107,7 @@ From your word at ~14:55 UTC (maestro.a's session); plan and owners in docs/team
 ### V7. How we read a customer's CloudTrail
 - **Asks:** cloudtrail.aws.a (plan step 9)
 - **Options:** (a) the customer's trail delivered to a bucket we can read; (b) a cross-account read role; (c) the customer drops their own trail export into the page, read in the browser only.
-- **Recommended:** (c), by cloudtrail.aws.a (docs/cloudtrail/2026-11-23__03-vault-deploy-audit.md, 7eda626, where it is lettered (a)): nothing leaves the customer's browser and we hold no access; it works today. (b) gives live reads but standing access; (a) is continuous but the data leaves their account. Only the live mode of the audit view waits on (a) or (b).
+- **Recommended:** (c), by cloudtrail.aws.a (docs/cloudtrail/2026-11-23__03-vault-deploy-audit.md and note 05, 099330c on work/cloudtrail.aws.a, where it is lettered (a)); (c) is now built as reference code (docs/cloudtrail/reader/ct-dropin.js), cleared by security.aws.a (e714b43): nothing leaves the customer's browser and we hold no access; it works today. (b) gives live reads but standing access; (a) is continuous but the data leaves their account. Only the live mode of the audit view waits on (a) or (b).
 - **Blocks:** the audit view of a deployment (step 9) for real customers; the twin goes ahead.
 
 ### V8. Live progress on our page while the stack deploys
