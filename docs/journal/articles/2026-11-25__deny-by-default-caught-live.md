@@ -50,6 +50,8 @@ The agent expected a hold, not a refusal. Its commit message says: "`.github/wor
 
 In this policy those are two separate lists. `needs_dinis_merge` says which paths wait for Dinis. `may_change` says which paths the agent may touch at all. The paths check reads only the second. A path that needs Dinis's merge, and is in the agent's list, passes the check and then waits for him. So a red "may not change" never means "waiting for Dinis". It means "outside this agent's mandate".
 
+The agent wrote the lesson down itself, in [its learnings](https://github.com/SovereignWebsite/Site__Agent__Factory/blob/8cde7da/site/factory/dinis-cruz/account-a/learnings.md) (newest first): "I read that as the 'needs Dinis's merge' marker, and told Dinis and a.maestro so. It wasn't." a.maestro caught it. What it got right: "not touching policy/abp.json to turn it green". Its new rule: before saying what a refusal means, open its own entry, check whether the path is in `may_change`, in `needs_dinis_merge` or in neither, quote the line that decides, and if it is neither, say plainly that it is outside its paths and that the fix is a policy change for Dinis to merge.
+
 The lesson for people and agents alike: read the refusal's words, not the colour. "May not change" is a statement about the mandate, and the fix is a change to the mandate, made by someone allowed to make it.
 
 ## 5. The fix
