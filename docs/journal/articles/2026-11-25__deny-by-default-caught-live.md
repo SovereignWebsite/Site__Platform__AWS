@@ -56,7 +56,7 @@ The lesson for people and agents alike: read the refusal's words, not the colour
 
 ## 5. The fix
 
-*To be written once it has happened, with links. The plan as briefed: a one-line policy change giving a.factory the same `.github/**` entry as its twins, still needing Dinis's merge, written by an agent allowed to change `policy/**` (factory.b), merged by Dinis; then pull request 3's check runs again.*
+*To be written once it has happened, with links. The plan as briefed: a one-line policy change giving a.factory the same `.github/**` entry as its twins, still needing Dinis's merge, written by an agent allowed to change `policy/**` (factory.b), merged by Dinis; then pull request 3's check runs again. security.aws.a has recommended to Dinis a narrower grant, `.github/workflows/org-apply.yml` only, because workflows run as the organisation's GitHub App. When written, this section says exactly which path was granted, not "the same as its twins".*
 
 ## What this shows
 
