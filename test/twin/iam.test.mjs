@@ -101,6 +101,40 @@ ok(r.status === 404 && one(r.text, "Code") === "NoSuchEntity", "GetPolicy NoSuch
 r = await iam({ Action: "ListRoles" }, false);
 ok(r.status === 403, "unsigned is refused");
 
+// Request values that name prototype keys are missing entries; a Marker the twin did not issue is a 400 InvalidInput
+// (security.aws.a's Low notes on 852c1fe).
+for (const [params, code] of [[{ Action: "GetRole", RoleName: "__proto__" }, "NoSuchEntity"], [{ Action: "GetRole", RoleName: "constructor" }, "NoSuchEntity"],
+  [{ Action: "GetPolicy", PolicyArn: "__proto__" }, "NoSuchEntity"], [{ Action: "GetPolicy", PolicyArn: "toString" }, "NoSuchEntity"],
+  [{ Action: "GetRolePolicy", RoleName: "sws-aws-platform-read", PolicyName: "__proto__" }, "NoSuchEntity"], [{ Action: "GetRolePolicy", RoleName: "sws-aws-platform-read", PolicyName: "hasOwnProperty" }, "NoSuchEntity"],
+  [{ Action: "ListRoles", Marker: "!!not base64" }, "InvalidInput"], [{ Action: "ListRoles", Marker: btoa("-1") }, "InvalidInput"], [{ Action: "ListRolePolicies", RoleName: "sws-aws-platform-read", Marker: "%%%" }, "InvalidInput"]]) {
+  const x = await iam(params);
+  ok(one(x.text, "Code") === code && (code === "InvalidInput" ? x.status === 400 : x.status === 404), JSON.stringify(params) + " -> " + code + " (got " + x.status + " " + one(x.text, "Code") + ")");
+}
+
+// Writes go through the journal (design 02): an UpdateAssumeRolePolicy is an iam.updateAssumeRolePolicy entry with
+// the caller as actor, and a refold of the journal gives the same world, IAM details included.
+const change = await assume("sws-aws-platform-change");
+{
+  const body = new URLSearchParams({ Action: "UpdateAssumeRolePolicy", Version: "2010-05-08", RoleName: "demo-handler-role", PolicyDocument: JSON.stringify({ Version: "2012-10-17", Statement: [{ Effect: "Allow", Principal: { Service: "lambda.amazonaws.com" }, Action: "sts:AssumeRole" }] }) }).toString();
+  const url = "https://iam.amazonaws.com/", headers = { "content-type": "application/x-www-form-urlencoded; charset=utf-8" };
+  const w = await ctx.AwsTransport.fetch(url, { method: "POST", headers: await ctx.SigV4.sign({ method: "POST", url, headers, body }, change, "us-east-1", "iam"), body });
+  ok(w.status === 200 && (await w.text()).includes("<UpdateAssumeRolePolicyResponse " + NS + ">"), "UpdateAssumeRolePolicy answers");
+  const j = ctx.AwsTwin.journal(), last = j[j.length - 1];
+  ok(last.op === "iam.updateAssumeRolePolicy" && last.actor === "role:sws-aws-platform-change" && last.data.name === "demo-handler-role", "a journal entry with the caller as actor " + JSON.stringify({ op: last.op, actor: last.actor }));
+  ok(j.filter((e) => e.op === "iam.createRole").length === 7 && j.filter((e) => e.op === "iam.createRole").every((e) => e.data.details && e.why === "pack.seed"), "seven roles seeded with their details");
+  const r = await iam({ Action: "ListRolePolicies", RoleName: "demo-handler-role" });
+  ok(JSON.stringify(tag(one(r.text, "PolicyNames"), "member")) === JSON.stringify(["logs-write"]), "details survive a trust update");
+}
+
+// The hub's stack ARN in self-update names the region the page calls CloudFormation in (${AWS::Region} of that
+// stack), not the twin's resource region (cloudformation.aws.a's note on 461d422).
+{
+  const appRegion = /CFN = "cloudformation\.([a-z0-9-]+)\.amazonaws\.com"/.exec(readFileSync(new URL("../../site/app.js", import.meta.url), "utf8"))[1];
+  const su = JSON.parse(decodeURIComponent(one((await iam({ Action: "GetRolePolicy", RoleName: "sws-aws-platform-change", PolicyName: "self-update" })).text, "PolicyDocument")));
+  const res = su.Statement.find((x) => x.Sid === "ThisStackOnly").Resource;
+  ok(res === "arn:aws:cloudformation:" + appRegion + ":" + A + ":stack/sws-aws-platform/*", "ThisStackOnly in the page's CloudFormation region (" + appRegion + "): " + res);
+}
+
 // Drift: the platform roles' policies are bootstrap.yaml's.
 const yaml = readFileSync(new URL("../../site/cloudformation/bootstrap.yaml", import.meta.url), "utf8");
 for (const [logical, role] of [["PlatformRead", "sws-aws-platform-read"], ["PlatformChange", "sws-aws-platform-change"]]) {

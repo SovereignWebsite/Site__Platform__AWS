@@ -1,0 +1,17 @@
+{
+  "id": "attack",
+  "title": "Attack in progress",
+  "about": "One address scanning for secrets and admin pages, then trying path traversal on the vault API, among normal visitors.",
+  "seed": 20261123,
+  "see": {"label":"the CloudFront logs of 22 Nov, 11:00","bucket":"logs","prefix":"cloudfront/2026/11/22/11/"},
+  "generate": [
+    {"gen":"s3.cors"},
+    {"gen":"site.static"},
+    {"gen":"cloudfront.traffic","days":[20,21,22],"hours":[9,10,11],"perHour":25,"probe":{"day":22,"ip":"203.0.113.66","perHourStep":15}},
+    {"gen":"lambda.dependencies"},
+    {"gen":"cloudtrail.demo"},
+    {"gen":"site.archive","pages":1203},
+    {"gen":"site.dotted"},
+    {"gen":"iam.roles"}
+  ]
+}

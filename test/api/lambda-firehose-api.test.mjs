@@ -40,7 +40,9 @@ const page = await lam.functions(R);
 ok(page.next === null && page.items.map((f) => f.name).join() === "demo-handler,demo-log-enricher,demo-nightly-report", "functions page " + JSON.stringify(page.items.map((f) => f.name)));
 const h = page.items[0];
 ok(h.arn === "arn:aws:lambda:" + R + ":" + A + ":function:demo-handler" && h.region === R && h.runtime === "python3.12" && h.role === "arn:aws:iam::" + A + ":role/demo-handler-role" && h.memory === 256 && /^[A-Za-z0-9+/]{43}=$/.test(h.codeSha256), "function shape " + JSON.stringify(h));
-ok(JSON.stringify(await lam.function(R, "demo-handler")) === JSON.stringify(h), "function() equals the list item");
+// ListFunctions has no State (AWS's reference; lambda.aws.a's twin patch), GetFunction has it: otherwise equal.
+const one = await lam.function(R, "demo-handler");
+ok(h.state === null && one.state === "Active" && JSON.stringify(Object.assign({}, one, { state: null })) === JSON.stringify(h), "function() equals the list item, with State only in function()");
 ok((await lam.function(R, h.arn)).name === "demo-handler", "function() by ARN");
 ok(seen[seen.length - 1].url === "https://lambda." + R + ".amazonaws.com/2015-03-31/functions/" + encodeURIComponent(h.arn) + "/configuration", "ARN encoded in the path");
 await rejects(lam.function(R, "nope"), (e) => e.code === "ResourceNotFoundException" && e.status === 404, "missing function");
