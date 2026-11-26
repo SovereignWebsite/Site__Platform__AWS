@@ -21,13 +21,12 @@ const fail = (m) => { throw new Error(m); };
   const { logs, deps } = await pg.evaluate(() => window.AwsTwin.buckets);
   const day = `#/s3/${logs}/cloudfront/2026/11/21/`;
 
-  // 1. Without the data scripts: no button.
+  // 1. The page loads the log view itself (index.html): the button is there on a day of logs.
+  if (!(await pg.evaluate(() => !!(window.LogView && window.LogExtract)))) fail("the page did not load LogView");
   await pg.evaluate((h) => { location.hash = h; }, day);
-  await pg.waitForSelector("#s3-list button");
-  if (await pg.$("#s3-objects button:has-text('Summarise these logs')")) fail("button shown without LogView");
+  await pg.waitForSelector("#s3-objects button:has-text('Summarise these logs')");
 
-  // 2. With them: offered on a day of logs, not on a non-log folder.
-  for (const f of ["data/extract.js", "data/links.js", "data/view.js"]) await pg.addScriptTag({ url: f });
+  // 2. Offered on a day of logs, not on a non-log folder.
   await pg.evaluate((b) => { location.hash = "#/s3/" + b + "/lambdas-dependencies/"; }, deps);
   await pg.waitForSelector("#s3-list button:has-text('.zip')");
   if (await pg.$("#s3-objects button:has-text('Summarise these logs')")) fail("button shown on a folder that is not logs");
@@ -90,6 +89,6 @@ const fail = (m) => { throw new Error(m); };
   if (asks.some((a) => /\.gz(\?|$)/.test(a))) fail("a file was read past the total ceiling");
 
   if (errors.length) fail("page errors: " + errors.join(" | "));
-  console.log("OK (s3 summary: offered on a folder of hourly logs only when LogView is loaded; " + files.length + " files read in the page, GETs to the logs bucket only; file:line opens the log; over 500 MB refused before reading; stops when the account is chosen again)");
+  console.log("OK (s3 summary: offered on a folder of hourly logs, with LogView loaded by the page; " + files.length + " files read in the page, GETs to the logs bucket only; file:line opens the log; over 500 MB refused before reading; stops when the account is chosen again)");
   await br.close(); srv.close();
 })().catch((e) => { console.error("FAIL", e.message); process.exit(1); });
