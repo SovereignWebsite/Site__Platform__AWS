@@ -25,6 +25,7 @@
     try { localStorage.setItem("sws-aws-tab", name); } catch (e) { /* none */ }
     Array.prototype.forEach.call(document.querySelectorAll("[data-tab]"), function (b) { var on = b.getAttribute("data-tab") === name; b.setAttribute("aria-selected", on ? "true" : "false"); b.tabIndex = on ? 0 : -1; });
     Array.prototype.forEach.call(document.querySelectorAll("[data-panel]"), function (p) { p.classList.toggle("off", !!mem.idToken && p.getAttribute("data-panel") !== name); });
+    if (window.Consoles) Consoles.opened(name);
   }
   Array.prototype.forEach.call(document.querySelectorAll("[data-tab]"), function (b) { b.onclick = function () { setTab(b.getAttribute("data-tab")); }; });
   // Arrow keys move between tabs (WAI-ARIA tabs pattern); only the selected tab is in the Tab order.
@@ -281,6 +282,7 @@
     });
     renderPlans();
     if (window.S3Browser) S3Browser.render();
+    if (window.Consoles) Consoles.render();
     setTab(currentTab);
   }
   $("copy-accounts").onclick = function () {
@@ -520,7 +522,7 @@
     // A pack is a whole world: loading one reloads the page on it.
     ps.onchange = function () { AwsTwin.usePack(ps.value); location.href = location.pathname + "?twin&pack=" + ps.value; };
   }
-  window.Platform = { diffView: diffView, jsonLine: jsonLine, assume: assume, jsonCall: jsonCall, xmlText: xmlText, awsError: awsError, el: el, say: say,
+  window.Platform = { enterTwin: enterTwin, diffView: diffView, jsonLine: jsonLine, assume: assume, jsonCall: jsonCall, xmlText: xmlText, awsError: awsError, el: el, say: say,
     accounts: function () { return accounts; }, signedIn: function () { return !!mem.idToken; } };
   initGoogle();
   loadAccounts().then(restore).then(renderAccounts).then(function () { return gisReady; }).then(autoSignIn);

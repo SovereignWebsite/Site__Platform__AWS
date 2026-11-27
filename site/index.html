@@ -99,6 +99,11 @@
   <button type="button" role="tab" id="tab-accounts" data-tab="accounts" aria-controls="step2">Accounts</button>
   <button type="button" role="tab" id="tab-s3" data-tab="s3" aria-controls="step4">S3</button>
   <button type="button" role="tab" id="tab-plans" data-tab="plans" aria-controls="step3">Plans</button>
+  <button type="button" role="tab" id="tab-costs" data-tab="costs" aria-controls="console-costs">Costs</button>
+  <button type="button" role="tab" id="tab-stacks" data-tab="stacks" aria-controls="console-stacks">Stacks and DNS</button>
+  <button type="button" role="tab" id="tab-iam" data-tab="iam" aria-controls="console-iam">IAM roles</button>
+  <button type="button" role="tab" id="tab-lambda" data-tab="lambda" aria-controls="console-lambda">Lambda</button>
+  <button type="button" role="tab" id="tab-cloudfront" data-tab="cloudfront" aria-controls="console-cloudfront">CloudFront</button>
   <button type="button" role="tab" id="tab-about" data-tab="about" aria-controls="about">How it works</button>
 </nav>
 
@@ -150,6 +155,41 @@
   </details>
 </section>
 
+<section class="panel console" id="console-costs" data-panel="costs" role="tabpanel" aria-labelledby="tab-costs" hidden>
+  <div class="panel-head"><h2>Costs</h2><p class="small">This month so far, by service and by region, the last 30 days, the forecast to the month end and your budgets. Read with the read role (Cost Explorer and Budgets). Reads only.</p></div>
+  <div class="row console-controls"></div>
+  <p class="status" role="status"></p>
+  <div class="console-body"></div>
+</section>
+
+<section class="panel console" id="console-stacks" data-panel="stacks" role="tabpanel" aria-labelledby="tab-stacks" hidden>
+  <div class="panel-head"><h2>Stacks and DNS</h2><p class="small">Each CloudFormation stack in a region and what it made, its outputs and latest events; and your Route 53 zones with their records. Reads only.</p></div>
+  <div class="row console-controls"></div>
+  <p class="status" role="status"></p>
+  <div class="console-body"></div>
+</section>
+
+<section class="panel console" id="console-iam" data-panel="iam" role="tabpanel" aria-labelledby="tab-iam" hidden>
+  <div class="panel-head"><h2>IAM roles</h2><p class="small">Every role, who may assume it, when it was last used, and the policies attached to it. Reads only.</p></div>
+  <div class="row console-controls"></div>
+  <p class="status" role="status"></p>
+  <div class="console-body"></div>
+</section>
+
+<section class="panel console" id="console-lambda" data-panel="lambda" role="tabpanel" aria-labelledby="tab-lambda" hidden>
+  <div class="panel-head"><h2>Lambda</h2><p class="small">Functions in a region with their recent runs from CloudWatch Logs, and the Firehose streams with where they write. Reads only.</p></div>
+  <div class="row console-controls"></div>
+  <p class="status" role="status"></p>
+  <div class="console-body"></div>
+</section>
+
+<section class="panel console" id="console-cloudfront" data-panel="cloudfront" role="tabpanel" aria-labelledby="tab-cloudfront" hidden>
+  <div class="panel-head"><h2>CloudFront</h2><p class="small">Distributions, their domains and aliases, and the origins behind them. Reads only.</p></div>
+  <div class="row console-controls"></div>
+  <p class="status" role="status"></p>
+  <div class="console-body"></div>
+</section>
+
 <section class="panel" id="about" data-panel="about" role="tabpanel" aria-labelledby="tab-about">
   <div class="panel-head"><h2>How it works</h2></div>
   <ul class="explain">
@@ -184,6 +224,17 @@ A sovereign website, made with the <a href="https://sovereignwebsite.org/">open 
 <script src="data/links.js"></script>
 <script src="data/view.js"></script>
 <script src="s3.js"></script>
+<script src="api/all.js"></script>
+<script src="api/costs-api.js"></script>
+<script src="api/cfn-api.js"></script>
+<script src="api/route53-api.js"></script>
+<script src="api/iam-api.js"></script>
+<script src="api/lambda-api.js"></script>
+<script src="api/firehose-api.js"></script>
+<script src="api/logs-api.js"></script>
+<script src="api/cloudfront-api.js"></script>
+<script src="billing.js"></script>
+<script src="consoles.js"></script>
 <script src="mask.js"></script>
 </body>
 </html>

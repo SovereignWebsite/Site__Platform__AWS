@@ -137,6 +137,12 @@ const flip = (p) => { const q = JSON.parse(JSON.stringify(p)); if (flips++ % 2) 
   if (seen.cs["Capabilities.member.1"] !== "CAPABILITY_NAMED_IAM" || seen.cs["Parameters.member.2.UsePreviousValue"] !== "true" || !seen.cs.TemplateBody.includes("s3-browse")) throw new Error("change set request " + JSON.stringify(seen.cs).slice(0, 300));
   await pg.click("text=2. Approve: execute the change set");
   await pg.waitForSelector("text=Applied and checked: sws-aws-platform is UPDATE_COMPLETE.");
+  // Live AWS: the consoles for services not yet checked from a browser say so and offer the twin; nothing is asked.
+  for (const t of ["lambda", "cloudfront"]) {
+    await pg.click("#tab-" + t); await pg.click("#console-" + t + " .console-controls button");
+    await pg.waitForSelector("#console-" + t + " .twin-only >> text=not read from live AWS yet");
+  }
+  if (calls.some((c) => /lambda|cloudfront|firehose|logs:/.test(c))) throw new Error("a twin-only service was called live: " + calls.join(" "));
   // The S3 browser: list buckets, add the CORS rule on Approve, list, open JSON formatted (and never run it).
   await pg.click("#tab-s3");
   await pg.click("#s3-list-buckets");

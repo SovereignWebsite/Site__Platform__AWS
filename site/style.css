@@ -132,3 +132,12 @@ main.doc ol.steps li, main.doc ul li { margin-bottom: .45rem; }
 /* twin mode */
 .twin-bar { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; justify-content: space-between; background: var(--accent-soft); color: var(--fg); border: 1px solid var(--accent); border-radius: var(--radius); padding: .6rem .9rem; margin-bottom: .8rem; }
 .twin-bar .pack { display: inline-flex; gap: .4rem; align-items: center; font-weight: 600; }
+
+/* The consoles (consoles.js) */
+.console-controls { flex-wrap: wrap; gap: .5rem; align-items: center; }
+.console-body h3 { margin: 1.4rem 0 .5rem; font-size: 1.05rem; }
+.console-body h4 { margin: 1rem 0 .4rem; font-size: .95rem; }
+.console-detail { margin-top: 1rem; padding: .8rem 1rem; border-left: 3px solid var(--accent); }
+dl.kv { display: grid; grid-template-columns: max-content 1fr; gap: .2rem 1rem; margin: .4rem 0; font-size: .9rem; }
+dl.kv dt { color: var(--muted); } dl.kv dd { margin: 0; overflow-wrap: anywhere; }
+.twin-only { padding: .8rem 1rem; }
