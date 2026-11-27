@@ -1,0 +1,450 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CloudFrontApi (browser)",
+    "version": "0.1.0",
+    "summary": "The browser-side contract of CloudFrontApi (site/api/cloudfront-api.js): CloudFront distribution and function reads.",
+    "description": "This site has no server. The paths are logical names for the methods of the browser object CloudFrontApi, not URLs anything listens on; operationId is the method name and parameters are its arguments in order. Three read actions, Resource * (the list actions have no resource type). CloudFront is global: cloudfront.amazonaws.com/2020-05-31, signed for us-east-1, REST with XML answers. CORS on the real endpoint is not known: twin only until aws.c checks it with Dinis's approval."
+  },
+  "servers": [],
+  "x-browser-global": "CloudFrontApi",
+  "x-design": "docs/architecture/2026-11-23__06-cloudfront-reads.md (work/architect.aws.a.s2); AWS shapes from botocore cloudfront 2020-05-31 (boto3.aws.a, docs/boto3/2026-11-23__18-cloudfront-reads.md)",
+  "x-not-in-cloudfrontapi": {
+    "DescribeFunction": "returns function code",
+    "GetFunction": "returns function code",
+    "origin custom header values": "discarded while the XML is read (iam.aws.a, security.aws.a)"
+  },
+  "components": {
+    "schemas": {
+      "AwsError": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "status"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "examples": [
+              "NoSuchDistribution",
+              "AccessDenied"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      },
+      "Origin": {
+        "type": "object",
+        "required": [
+          "id",
+          "domain",
+          "kind",
+          "target",
+          "customHeaders"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string",
+            "description": "Shown as text, never fetched"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "s3",
+              "s3-website",
+              "lambda-url",
+              "custom"
+            ]
+          },
+          "target": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The bucket's ARN for s3 and s3-website; null otherwise (never a guess)"
+          },
+          "path": {
+            "type": "string"
+          },
+          "oac": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "customHeaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Header names only: values are discarded while the XML is read"
+          }
+        }
+      },
+      "Distribution": {
+        "type": "object",
+        "required": [
+          "id",
+          "arn",
+          "domain",
+          "origins",
+          "functions"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "arn": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "priceClass": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "comment": {
+            "type": "string",
+            "description": "The owner's text: render as text"
+          },
+          "lastModified": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "origins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Origin"
+            }
+          },
+          "functions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "arn",
+                "event",
+                "behaviour"
+              ],
+              "properties": {
+                "arn": {
+                  "type": "string"
+                },
+                "event": {
+                  "type": "string"
+                },
+                "behaviour": {
+                  "type": "string",
+                  "description": "* for the default behaviour, else the path pattern"
+                }
+              }
+            }
+          }
+        }
+      },
+      "DistributionDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Distribution"
+          },
+          {
+            "type": "object",
+            "required": [
+              "logging",
+              "defaultRoot"
+            ],
+            "properties": {
+              "logging": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "bucket": {
+                    "type": "string"
+                  },
+                  "prefix": {
+                    "type": "string"
+                  }
+                },
+                "description": "Legacy standard logging when on; logging v2 is CloudWatch Logs' (design 06, step 3)"
+              },
+              "defaultRoot": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "Function": {
+        "type": "object",
+        "required": [
+          "name",
+          "arn"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "arn": {
+            "type": "string"
+          },
+          "runtime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stage": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lastModified": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "responses": {
+      "AwsError": {
+        "description": "The promise rejects with an Error ('Code: Message', .code, .status), or the browser's TypeError for a CORS refusal",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AwsError"
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/distributions": {
+      "get": {
+        "operationId": "distributions",
+        "summary": "One page of the account's distributions",
+        "x-arguments": "distributions({ next, max })",
+        "x-wire": "CloudFront ListDistributions (GET /2020-05-31/distribution, Marker, MaxItems)",
+        "x-aws-actions": [
+          "cloudfront:ListDistributions"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "next",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of distributions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "next"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Distribution"
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Opaque cursor (NextMarker, when IsTruncated); null at the end"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        }
+      }
+    },
+    "/distributions/{id}": {
+      "get": {
+        "operationId": "distribution",
+        "summary": "One distribution with its logging and default root",
+        "x-arguments": "distribution(id)",
+        "x-wire": "CloudFront GetDistribution (GET /2020-05-31/distribution/{Id})",
+        "x-aws-actions": [
+          "cloudfront:GetDistribution"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Z0-9]{1,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The distribution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DistributionDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        }
+      }
+    },
+    "/functions": {
+      "get": {
+        "operationId": "functions",
+        "summary": "One page of the account's CloudFront Functions (metadata, never code)",
+        "x-arguments": "functions({ next, max, stage })",
+        "x-wire": "CloudFront ListFunctions (GET /2020-05-31/function, Marker, MaxItems, Stage)",
+        "x-aws-actions": [
+          "cloudfront:ListFunctions"
+        ],
+        "x-role": "read",
+        "parameters": [
+          {
+            "name": "next",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            }
+          },
+          {
+            "name": "stage",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DEVELOPMENT",
+                "LIVE"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of functions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "next"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Function"
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Opaque cursor (NextMarker; FunctionList has no IsTruncated); null at the end"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/AwsError"
+          }
+        }
+      }
+    }
+  }
+}

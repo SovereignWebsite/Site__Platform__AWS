@@ -18,7 +18,11 @@ const ok = async (T, target, q) => { const r = await call(T, target, q); if (r.s
 const ms = (iso) => Date.parse(iso);
 const day = (d) => ({ startTime: ms("2026-11-" + d + "T00:00:00Z"), endTime: ms("2026-11-" + d + "T23:59:59Z") });
 const lines = async (T, d, h) => {
-  const key = "cloudfront/2026/11/" + d + "/" + h + "/demo-distribution-1-2026-11-" + d + "-" + h + "-00-00.gz";
+  // The hour's one file, by listing its folder (Firehose's names end in a uuid, design 06).
+  const ls = await (await T.handle("https://" + T.buckets.logs + ".s3.eu-west-2.amazonaws.com/?list-type=2&prefix=" + encodeURIComponent("cloudfront/2026/11/" + d + "/" + h + "/"), { method: "GET", headers: auth })).text();
+  const keys = [...ls.matchAll(/<Key>([^<]*)<\/Key>/g)].map((m) => m[1]);
+  if (keys.length !== 1 || !/\/demo-cloudfront-logs-1-2026-11-\d{2}-\d{2}-00-00-[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}\.gz$/.test(keys[0])) fail("one Firehose-named file per hour: " + keys.join());
+  const key = keys[0];
   const r = await T.handle("https://" + T.buckets.logs + ".s3.eu-west-2.amazonaws.com/" + key, { method: "GET", headers: auth });
   return (await new Response(r.body.pipeThrough(new DecompressionStream("gzip"))).text()).trim().split("\n").map((l) => JSON.parse(l));
 };

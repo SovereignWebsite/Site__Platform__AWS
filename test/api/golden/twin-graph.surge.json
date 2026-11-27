@@ -10,14 +10,14 @@
   "curated"
  ],
  "counts": {
-  "nodes": 56,
-  "edges": 116,
+  "nodes": 55,
+  "edges": 104,
   "by_evidence": {
    "api": 52,
-   "curated": 7,
+   "curated": 6,
    "template": 6,
-   "naming": 11,
-   "content": 40
+   "content": 39,
+   "naming": 1
   }
  },
  "nodes": [
@@ -47,7 +47,7 @@
    "cfn_type": "AWS::S3::Bucket",
    "browser_readable": true,
    "requests": 2250,
-   "visitors": 473,
+   "visitors": 239,
    "countries": {
     "GB": 766,
     "IE": 754,
@@ -102,17 +102,6 @@
    "label": "A visitor reads a vault's files",
    "altitude": "A5",
    "trust": "curated",
-   "backend": "twin"
-  },
-  {
-   "id": "urn:sws:cloudfront-distribution:demo-distribution-1",
-   "type": "distribution",
-   "label": "demo-distribution-1",
-   "altitude": "A2",
-   "cfn_type": "AWS::CloudFront::Distribution",
-   "inferred": true,
-   "note": "no CloudFront API in the twin; named by its log files",
-   "trust": "claimed",
    "backend": "twin"
   },
   {
@@ -227,11 +216,11 @@
    "backend": "twin"
   },
   {
-   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/09/demo-distribution-1-2026-11-20-09-00-00.gz",
+   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/09/demo-cloudfront-logs-1-2026-11-20-09-00-00-60d0b979-a047-e548-d287-b047f387d3e9.gz",
    "type": "object",
-   "label": "cloudfront/2026/11/20/09/demo-distribution-1-2026-11-20-09-00-00.gz",
+   "label": "cloudfront/2026/11/20/09/demo-cloudfront-logs-1-2026-11-20-09-00-00-60d0b979-a047-e548-d287-b047f387d3e9.gz",
    "altitude": "A1",
-   "bytes": 4674,
+   "bytes": 4714,
    "modified": "2026-11-20T09:59:00.000Z",
    "requests": 250,
    "first": "2026-11-20T09:00:19Z",
@@ -241,11 +230,11 @@
    "backend": "twin"
   },
   {
-   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/10/demo-distribution-1-2026-11-20-10-00-00.gz",
+   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/10/demo-cloudfront-logs-1-2026-11-20-10-00-00-41aafbe3-fec3-1996-b62c-59d67c5e2b08.gz",
    "type": "object",
-   "label": "cloudfront/2026/11/20/10/demo-distribution-1-2026-11-20-10-00-00.gz",
+   "label": "cloudfront/2026/11/20/10/demo-cloudfront-logs-1-2026-11-20-10-00-00-41aafbe3-fec3-1996-b62c-59d67c5e2b08.gz",
    "altitude": "A1",
-   "bytes": 4649,
+   "bytes": 4717,
    "modified": "2026-11-20T10:59:00.000Z",
    "requests": 250,
    "first": "2026-11-20T10:00:15Z",
@@ -255,11 +244,11 @@
    "backend": "twin"
   },
   {
-   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/11/demo-distribution-1-2026-11-20-11-00-00.gz",
+   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/11/demo-cloudfront-logs-1-2026-11-20-11-00-00-26f3ecff-4be1-0a3b-7462-85576c577bfa.gz",
    "type": "object",
-   "label": "cloudfront/2026/11/20/11/demo-distribution-1-2026-11-20-11-00-00.gz",
+   "label": "cloudfront/2026/11/20/11/demo-cloudfront-logs-1-2026-11-20-11-00-00-26f3ecff-4be1-0a3b-7462-85576c577bfa.gz",
    "altitude": "A1",
-   "bytes": 4683,
+   "bytes": 4732,
    "modified": "2026-11-20T11:59:00.000Z",
    "requests": 250,
    "first": "2026-11-20T11:00:06Z",
@@ -269,11 +258,11 @@
    "backend": "twin"
   },
   {
-   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/09/demo-distribution-1-2026-11-21-09-00-00.gz",
+   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/09/demo-cloudfront-logs-1-2026-11-21-09-00-00-24167f31-57bf-554c-9845-3d4dc736240a.gz",
    "type": "object",
-   "label": "cloudfront/2026/11/21/09/demo-distribution-1-2026-11-21-09-00-00.gz",
+   "label": "cloudfront/2026/11/21/09/demo-cloudfront-logs-1-2026-11-21-09-00-00-24167f31-57bf-554c-9845-3d4dc736240a.gz",
    "altitude": "A1",
-   "bytes": 4654,
+   "bytes": 4674,
    "modified": "2026-11-21T09:59:00.000Z",
    "requests": 250,
    "first": "2026-11-21T09:00:06Z",
@@ -283,11 +272,11 @@
    "backend": "twin"
   },
   {
-   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/10/demo-distribution-1-2026-11-21-10-00-00.gz",
+   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/10/demo-cloudfront-logs-1-2026-11-21-10-00-00-07439fbe-f46c-0ab0-93ae-3d50fb64f81d.gz",
    "type": "object",
-   "label": "cloudfront/2026/11/21/10/demo-distribution-1-2026-11-21-10-00-00.gz",
+   "label": "cloudfront/2026/11/21/10/demo-cloudfront-logs-1-2026-11-21-10-00-00-07439fbe-f46c-0ab0-93ae-3d50fb64f81d.gz",
    "altitude": "A1",
-   "bytes": 4721,
+   "bytes": 4780,
    "modified": "2026-11-21T10:59:00.000Z",
    "requests": 250,
    "first": "2026-11-21T10:00:06Z",
@@ -297,11 +286,11 @@
    "backend": "twin"
   },
   {
-   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/11/demo-distribution-1-2026-11-21-11-00-00.gz",
+   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/11/demo-cloudfront-logs-1-2026-11-21-11-00-00-fe69b346-d460-947d-fdc8-b19a00644d15.gz",
    "type": "object",
-   "label": "cloudfront/2026/11/21/11/demo-distribution-1-2026-11-21-11-00-00.gz",
+   "label": "cloudfront/2026/11/21/11/demo-cloudfront-logs-1-2026-11-21-11-00-00-fe69b346-d460-947d-fdc8-b19a00644d15.gz",
    "altitude": "A1",
-   "bytes": 4677,
+   "bytes": 4751,
    "modified": "2026-11-21T11:59:00.000Z",
    "requests": 250,
    "first": "2026-11-21T11:00:40Z",
@@ -311,11 +300,11 @@
    "backend": "twin"
   },
   {
-   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/09/demo-distribution-1-2026-11-22-09-00-00.gz",
+   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/09/demo-cloudfront-logs-1-2026-11-22-09-00-00-dff8026e-ad4b-5e15-31b5-114685fa2e36.gz",
    "type": "object",
-   "label": "cloudfront/2026/11/22/09/demo-distribution-1-2026-11-22-09-00-00.gz",
+   "label": "cloudfront/2026/11/22/09/demo-cloudfront-logs-1-2026-11-22-09-00-00-dff8026e-ad4b-5e15-31b5-114685fa2e36.gz",
    "altitude": "A1",
-   "bytes": 4624,
+   "bytes": 4658,
    "modified": "2026-11-22T09:59:00.000Z",
    "requests": 250,
    "first": "2026-11-22T09:00:52Z",
@@ -325,11 +314,11 @@
    "backend": "twin"
   },
   {
-   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/10/demo-distribution-1-2026-11-22-10-00-00.gz",
+   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/10/demo-cloudfront-logs-1-2026-11-22-10-00-00-e35dc430-e385-afd8-a48d-1c55199ec8cc.gz",
    "type": "object",
-   "label": "cloudfront/2026/11/22/10/demo-distribution-1-2026-11-22-10-00-00.gz",
+   "label": "cloudfront/2026/11/22/10/demo-cloudfront-logs-1-2026-11-22-10-00-00-e35dc430-e385-afd8-a48d-1c55199ec8cc.gz",
    "altitude": "A1",
-   "bytes": 4648,
+   "bytes": 4694,
    "modified": "2026-11-22T10:59:00.000Z",
    "requests": 250,
    "first": "2026-11-22T10:00:06Z",
@@ -339,11 +328,11 @@
    "backend": "twin"
   },
   {
-   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/11/demo-distribution-1-2026-11-22-11-00-00.gz",
+   "id": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/11/demo-cloudfront-logs-1-2026-11-22-11-00-00-5d63e379-e925-12b9-ac1b-88f9cae10a42.gz",
    "type": "object",
-   "label": "cloudfront/2026/11/22/11/demo-distribution-1-2026-11-22-11-00-00.gz",
+   "label": "cloudfront/2026/11/22/11/demo-cloudfront-logs-1-2026-11-22-11-00-00-5d63e379-e925-12b9-ac1b-88f9cae10a42.gz",
    "altitude": "A1",
-   "bytes": 4687,
+   "bytes": 4713,
    "modified": "2026-11-22T11:59:00.000Z",
    "requests": 250,
    "first": "2026-11-22T11:00:06Z",
@@ -915,15 +904,7 @@
    "source": "Lambda ListFunctions (Role)"
   },
   {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/09/demo-distribution-1-2026-11-20-09-00-00.gz",
-   "rel": "records",
-   "to": "urn:sws:cloudfront-distribution:demo-distribution-1",
-   "evidence": "naming",
-   "trust": "claimed",
-   "source": "log object key names demo-distribution-1"
-  },
-  {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/09/demo-distribution-1-2026-11-20-09-00-00.gz",
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/09/demo-cloudfront-logs-1-2026-11-20-09-00-00-60d0b979-a047-e548-d287-b047f387d3e9.gz",
    "rel": "refers_to",
    "to": "urn:sws:vault:vault-demo-001",
    "evidence": "content",
@@ -931,7 +912,7 @@
    "source": "log lines (cs_uri_stem /vault/vault-demo-001/files)"
   },
   {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/09/demo-distribution-1-2026-11-20-09-00-00.gz",
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/09/demo-cloudfront-logs-1-2026-11-20-09-00-00-60d0b979-a047-e548-d287-b047f387d3e9.gz",
    "rel": "refers_to",
    "to": "urn:sws:vault:vault-demo-002",
    "evidence": "content",
@@ -939,15 +920,7 @@
    "source": "log lines (cs_uri_stem /vault/vault-demo-002/files)"
   },
   {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/10/demo-distribution-1-2026-11-20-10-00-00.gz",
-   "rel": "records",
-   "to": "urn:sws:cloudfront-distribution:demo-distribution-1",
-   "evidence": "naming",
-   "trust": "claimed",
-   "source": "log object key names demo-distribution-1"
-  },
-  {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/10/demo-distribution-1-2026-11-20-10-00-00.gz",
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/10/demo-cloudfront-logs-1-2026-11-20-10-00-00-41aafbe3-fec3-1996-b62c-59d67c5e2b08.gz",
    "rel": "refers_to",
    "to": "urn:sws:vault:vault-demo-001",
    "evidence": "content",
@@ -955,7 +928,7 @@
    "source": "log lines (cs_uri_stem /vault/vault-demo-001/files)"
   },
   {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/10/demo-distribution-1-2026-11-20-10-00-00.gz",
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/10/demo-cloudfront-logs-1-2026-11-20-10-00-00-41aafbe3-fec3-1996-b62c-59d67c5e2b08.gz",
    "rel": "refers_to",
    "to": "urn:sws:vault:vault-demo-002",
    "evidence": "content",
@@ -963,15 +936,7 @@
    "source": "log lines (cs_uri_stem /vault/vault-demo-002/files)"
   },
   {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/11/demo-distribution-1-2026-11-20-11-00-00.gz",
-   "rel": "records",
-   "to": "urn:sws:cloudfront-distribution:demo-distribution-1",
-   "evidence": "naming",
-   "trust": "claimed",
-   "source": "log object key names demo-distribution-1"
-  },
-  {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/11/demo-distribution-1-2026-11-20-11-00-00.gz",
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/11/demo-cloudfront-logs-1-2026-11-20-11-00-00-26f3ecff-4be1-0a3b-7462-85576c577bfa.gz",
    "rel": "refers_to",
    "to": "urn:sws:vault:vault-demo-001",
    "evidence": "content",
@@ -979,7 +944,7 @@
    "source": "log lines (cs_uri_stem /vault/vault-demo-001/files)"
   },
   {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/11/demo-distribution-1-2026-11-20-11-00-00.gz",
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/11/demo-cloudfront-logs-1-2026-11-20-11-00-00-26f3ecff-4be1-0a3b-7462-85576c577bfa.gz",
    "rel": "refers_to",
    "to": "urn:sws:vault:vault-demo-002",
    "evidence": "content",
@@ -987,15 +952,7 @@
    "source": "log lines (cs_uri_stem /vault/vault-demo-002/files)"
   },
   {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/09/demo-distribution-1-2026-11-21-09-00-00.gz",
-   "rel": "records",
-   "to": "urn:sws:cloudfront-distribution:demo-distribution-1",
-   "evidence": "naming",
-   "trust": "claimed",
-   "source": "log object key names demo-distribution-1"
-  },
-  {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/09/demo-distribution-1-2026-11-21-09-00-00.gz",
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/09/demo-cloudfront-logs-1-2026-11-21-09-00-00-24167f31-57bf-554c-9845-3d4dc736240a.gz",
    "rel": "refers_to",
    "to": "urn:sws:vault:vault-demo-001",
    "evidence": "content",
@@ -1003,7 +960,7 @@
    "source": "log lines (cs_uri_stem /vault/vault-demo-001/files)"
   },
   {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/09/demo-distribution-1-2026-11-21-09-00-00.gz",
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/09/demo-cloudfront-logs-1-2026-11-21-09-00-00-24167f31-57bf-554c-9845-3d4dc736240a.gz",
    "rel": "refers_to",
    "to": "urn:sws:vault:vault-demo-002",
    "evidence": "content",
@@ -1011,15 +968,7 @@
    "source": "log lines (cs_uri_stem /vault/vault-demo-002/files)"
   },
   {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/10/demo-distribution-1-2026-11-21-10-00-00.gz",
-   "rel": "records",
-   "to": "urn:sws:cloudfront-distribution:demo-distribution-1",
-   "evidence": "naming",
-   "trust": "claimed",
-   "source": "log object key names demo-distribution-1"
-  },
-  {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/10/demo-distribution-1-2026-11-21-10-00-00.gz",
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/10/demo-cloudfront-logs-1-2026-11-21-10-00-00-07439fbe-f46c-0ab0-93ae-3d50fb64f81d.gz",
    "rel": "refers_to",
    "to": "urn:sws:vault:vault-demo-001",
    "evidence": "content",
@@ -1027,7 +976,7 @@
    "source": "log lines (cs_uri_stem /vault/vault-demo-001/files)"
   },
   {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/10/demo-distribution-1-2026-11-21-10-00-00.gz",
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/10/demo-cloudfront-logs-1-2026-11-21-10-00-00-07439fbe-f46c-0ab0-93ae-3d50fb64f81d.gz",
    "rel": "refers_to",
    "to": "urn:sws:vault:vault-demo-002",
    "evidence": "content",
@@ -1035,15 +984,7 @@
    "source": "log lines (cs_uri_stem /vault/vault-demo-002/files)"
   },
   {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/11/demo-distribution-1-2026-11-21-11-00-00.gz",
-   "rel": "records",
-   "to": "urn:sws:cloudfront-distribution:demo-distribution-1",
-   "evidence": "naming",
-   "trust": "claimed",
-   "source": "log object key names demo-distribution-1"
-  },
-  {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/11/demo-distribution-1-2026-11-21-11-00-00.gz",
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/11/demo-cloudfront-logs-1-2026-11-21-11-00-00-fe69b346-d460-947d-fdc8-b19a00644d15.gz",
    "rel": "refers_to",
    "to": "urn:sws:vault:vault-demo-001",
    "evidence": "content",
@@ -1051,7 +992,7 @@
    "source": "log lines (cs_uri_stem /vault/vault-demo-001/files)"
   },
   {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/11/demo-distribution-1-2026-11-21-11-00-00.gz",
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/11/demo-cloudfront-logs-1-2026-11-21-11-00-00-fe69b346-d460-947d-fdc8-b19a00644d15.gz",
    "rel": "refers_to",
    "to": "urn:sws:vault:vault-demo-002",
    "evidence": "content",
@@ -1059,15 +1000,7 @@
    "source": "log lines (cs_uri_stem /vault/vault-demo-002/files)"
   },
   {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/09/demo-distribution-1-2026-11-22-09-00-00.gz",
-   "rel": "records",
-   "to": "urn:sws:cloudfront-distribution:demo-distribution-1",
-   "evidence": "naming",
-   "trust": "claimed",
-   "source": "log object key names demo-distribution-1"
-  },
-  {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/09/demo-distribution-1-2026-11-22-09-00-00.gz",
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/09/demo-cloudfront-logs-1-2026-11-22-09-00-00-dff8026e-ad4b-5e15-31b5-114685fa2e36.gz",
    "rel": "refers_to",
    "to": "urn:sws:vault:vault-demo-001",
    "evidence": "content",
@@ -1075,7 +1008,7 @@
    "source": "log lines (cs_uri_stem /vault/vault-demo-001/files)"
   },
   {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/09/demo-distribution-1-2026-11-22-09-00-00.gz",
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/09/demo-cloudfront-logs-1-2026-11-22-09-00-00-dff8026e-ad4b-5e15-31b5-114685fa2e36.gz",
    "rel": "refers_to",
    "to": "urn:sws:vault:vault-demo-002",
    "evidence": "content",
@@ -1083,15 +1016,7 @@
    "source": "log lines (cs_uri_stem /vault/vault-demo-002/files)"
   },
   {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/10/demo-distribution-1-2026-11-22-10-00-00.gz",
-   "rel": "records",
-   "to": "urn:sws:cloudfront-distribution:demo-distribution-1",
-   "evidence": "naming",
-   "trust": "claimed",
-   "source": "log object key names demo-distribution-1"
-  },
-  {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/10/demo-distribution-1-2026-11-22-10-00-00.gz",
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/10/demo-cloudfront-logs-1-2026-11-22-10-00-00-e35dc430-e385-afd8-a48d-1c55199ec8cc.gz",
    "rel": "refers_to",
    "to": "urn:sws:vault:vault-demo-001",
    "evidence": "content",
@@ -1099,7 +1024,7 @@
    "source": "log lines (cs_uri_stem /vault/vault-demo-001/files)"
   },
   {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/10/demo-distribution-1-2026-11-22-10-00-00.gz",
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/10/demo-cloudfront-logs-1-2026-11-22-10-00-00-e35dc430-e385-afd8-a48d-1c55199ec8cc.gz",
    "rel": "refers_to",
    "to": "urn:sws:vault:vault-demo-002",
    "evidence": "content",
@@ -1107,15 +1032,7 @@
    "source": "log lines (cs_uri_stem /vault/vault-demo-002/files)"
   },
   {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/11/demo-distribution-1-2026-11-22-11-00-00.gz",
-   "rel": "records",
-   "to": "urn:sws:cloudfront-distribution:demo-distribution-1",
-   "evidence": "naming",
-   "trust": "claimed",
-   "source": "log object key names demo-distribution-1"
-  },
-  {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/11/demo-distribution-1-2026-11-22-11-00-00.gz",
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/11/demo-cloudfront-logs-1-2026-11-22-11-00-00-5d63e379-e925-12b9-ac1b-88f9cae10a42.gz",
    "rel": "refers_to",
    "to": "urn:sws:vault:vault-demo-001",
    "evidence": "content",
@@ -1123,7 +1040,7 @@
    "source": "log lines (cs_uri_stem /vault/vault-demo-001/files)"
   },
   {
-   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/11/demo-distribution-1-2026-11-22-11-00-00.gz",
+   "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/11/demo-cloudfront-logs-1-2026-11-22-11-00-00-5d63e379-e925-12b9-ac1b-88f9cae10a42.gz",
    "rel": "refers_to",
    "to": "urn:sws:vault:vault-demo-002",
    "evidence": "content",
@@ -1133,7 +1050,7 @@
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
    "rel": "holds",
-   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/09/demo-distribution-1-2026-11-20-09-00-00.gz",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/09/demo-cloudfront-logs-1-2026-11-20-09-00-00-60d0b979-a047-e548-d287-b047f387d3e9.gz",
    "evidence": "api",
    "trust": "verified",
    "source": "S3 ListObjectsV2"
@@ -1141,7 +1058,7 @@
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
    "rel": "holds",
-   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/10/demo-distribution-1-2026-11-20-10-00-00.gz",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/10/demo-cloudfront-logs-1-2026-11-20-10-00-00-41aafbe3-fec3-1996-b62c-59d67c5e2b08.gz",
    "evidence": "api",
    "trust": "verified",
    "source": "S3 ListObjectsV2"
@@ -1149,7 +1066,7 @@
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
    "rel": "holds",
-   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/11/demo-distribution-1-2026-11-20-11-00-00.gz",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/20/11/demo-cloudfront-logs-1-2026-11-20-11-00-00-26f3ecff-4be1-0a3b-7462-85576c577bfa.gz",
    "evidence": "api",
    "trust": "verified",
    "source": "S3 ListObjectsV2"
@@ -1157,7 +1074,7 @@
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
    "rel": "holds",
-   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/09/demo-distribution-1-2026-11-21-09-00-00.gz",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/09/demo-cloudfront-logs-1-2026-11-21-09-00-00-24167f31-57bf-554c-9845-3d4dc736240a.gz",
    "evidence": "api",
    "trust": "verified",
    "source": "S3 ListObjectsV2"
@@ -1165,7 +1082,7 @@
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
    "rel": "holds",
-   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/10/demo-distribution-1-2026-11-21-10-00-00.gz",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/10/demo-cloudfront-logs-1-2026-11-21-10-00-00-07439fbe-f46c-0ab0-93ae-3d50fb64f81d.gz",
    "evidence": "api",
    "trust": "verified",
    "source": "S3 ListObjectsV2"
@@ -1173,7 +1090,7 @@
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
    "rel": "holds",
-   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/11/demo-distribution-1-2026-11-21-11-00-00.gz",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/21/11/demo-cloudfront-logs-1-2026-11-21-11-00-00-fe69b346-d460-947d-fdc8-b19a00644d15.gz",
    "evidence": "api",
    "trust": "verified",
    "source": "S3 ListObjectsV2"
@@ -1181,7 +1098,7 @@
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
    "rel": "holds",
-   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/09/demo-distribution-1-2026-11-22-09-00-00.gz",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/09/demo-cloudfront-logs-1-2026-11-22-09-00-00-dff8026e-ad4b-5e15-31b5-114685fa2e36.gz",
    "evidence": "api",
    "trust": "verified",
    "source": "S3 ListObjectsV2"
@@ -1189,7 +1106,7 @@
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
    "rel": "holds",
-   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/10/demo-distribution-1-2026-11-22-10-00-00.gz",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/10/demo-cloudfront-logs-1-2026-11-22-10-00-00-e35dc430-e385-afd8-a48d-1c55199ec8cc.gz",
    "evidence": "api",
    "trust": "verified",
    "source": "S3 ListObjectsV2"
@@ -1197,7 +1114,7 @@
   {
    "from": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2",
    "rel": "holds",
-   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/11/demo-distribution-1-2026-11-22-11-00-00.gz",
+   "to": "arn:aws:s3:::111122223333--demo-cloudfront-logs--eu-west-2/cloudfront/2026/11/22/11/demo-cloudfront-logs-1-2026-11-22-11-00-00-5d63e379-e925-12b9-ac1b-88f9cae10a42.gz",
    "evidence": "api",
    "trust": "verified",
    "source": "S3 ListObjectsV2"
@@ -1433,30 +1350,6 @@
    "evidence": "curated",
    "trust": "curated",
    "source": "ontology rule: the function is about each vault"
-  },
-  {
-   "from": "urn:sws:cloudfront-distribution:demo-distribution-1",
-   "rel": "logs_to",
-   "to": "arn:aws:firehose:eu-west-2:111122223333:deliverystream/demo-cloudfront-logs",
-   "evidence": "naming",
-   "trust": "claimed",
-   "source": "log files named after demo-distribution-1 sit under the stream's prefix cloudfront/"
-  },
-  {
-   "from": "urn:sws:cloudfront-distribution:demo-distribution-1",
-   "rel": "part_of",
-   "to": "urn:sws:site:demo",
-   "evidence": "curated",
-   "trust": "curated",
-   "source": "ontology rule: the demo site's serving and logging path"
-  },
-  {
-   "from": "urn:sws:cloudfront-distribution:demo-distribution-1",
-   "rel": "serves_from",
-   "to": "arn:aws:s3:::111122223333--demo-site--eu-west-2",
-   "evidence": "content",
-   "trust": "claimed",
-   "source": "index.html ('Served from S3 through CloudFront')"
   },
   {
    "from": "urn:sws:cloudtrail-event:00000000-0000-4000-8000-000000000001",

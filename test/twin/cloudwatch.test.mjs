@@ -21,7 +21,10 @@ const lines = async (T, key) => {
   const txt = await new Response(r.body.pipeThrough(new DecompressionStream("gzip"))).text();
   return txt.trim().split("\n").map((l) => JSON.parse(l));
 };
-const key = (iso) => { const [d, h] = [iso.slice(8, 10), iso.slice(11, 13)]; return "cloudfront/2026/11/" + d + "/" + h + "/demo-distribution-1-2026-11-" + d + "-" + h + "-00-00.gz"; };
+// The hour's one file, found by listing its folder: Firehose's names end in a uuid (design 06).
+const key = async (iso) => { const [d, h] = [iso.slice(8, 10), iso.slice(11, 13)];
+  const ls = await (await T.handle("https://" + T.buckets.logs + ".s3.eu-west-2.amazonaws.com/?list-type=2&prefix=" + encodeURIComponent("cloudfront/2026/11/" + d + "/" + h + "/"), { method: "GET", headers: auth })).text();
+  const keys = [...ls.matchAll(/<Key>([^<]*)<\/Key>/g)].map((m) => m[1]); if (keys.length !== 1) fail("one file per hour, got " + keys.length + " for " + iso); return keys[0]; };
 const api = (L) => L.filter((l) => /^\/vault\/[^/]+\/files/.test(l.cs_uri_stem));
 
 let T = load("");
@@ -29,11 +32,11 @@ let T = load("");
 const fr = await series(T, "AWS/Firehose", "DeliveryToS3.Records", "DeliveryStreamName", "demo-cloudfront-logs", "Sum");
 if (fr.t.length !== 9) fail("expected 9 hourly datapoints, got " + fr.t.length);
 if (fr.t[0] !== "2026-11-22T11:00:00Z" || fr.t[8] !== "2026-11-20T09:00:00Z") fail("not descending by default: " + fr.t[0] + " .. " + fr.t[8]);
-for (let i = 0; i < 9; i++) { const L = await lines(T, key(fr.t[i])); if (L.length !== fr.v[i]) fail("records " + fr.t[i] + ": " + fr.v[i] + " vs " + L.length + " lines"); }
+for (let i = 0; i < 9; i++) { const L = await lines(T, await key(fr.t[i])); if (L.length !== fr.v[i]) fail("records " + fr.t[i] + ": " + fr.v[i] + " vs " + L.length + " lines"); }
 if (!/^<GetMetricDataResponse xmlns="http:\/\/monitoring.amazonaws.com\/doc\/2010-08-01\/">/.test(fr.x) || !fr.x.includes("<StatusCode>Complete</StatusCode>")) fail("response shape");
 // demo-handler invocations are the vault API requests in the logs
 const inv = await series(T, "AWS/Lambda", "Invocations", "FunctionName", "demo-handler", "Sum");
-for (let i = 0; i < 9; i++) { const n = api(await lines(T, key(inv.t[i]))).length; if (n !== inv.v[i]) fail("invocations " + inv.t[i] + ": " + inv.v[i] + " vs " + n); }
+for (let i = 0; i < 9; i++) { const n = api(await lines(T, await key(inv.t[i]))).length; if (n !== inv.v[i]) fail("invocations " + inv.t[i] + ": " + inv.v[i] + " vs " + n); }
 const err = await series(T, "AWS/Lambda", "Errors", "FunctionName", "demo-handler", "Sum");
 if (err.v.some((v) => v !== 0)) fail("errors on a normal day: " + err.v);
 const dur = await series(T, "AWS/Lambda", "Duration", "FunctionName", "demo-handler", "Average");
@@ -74,5 +77,5 @@ T = load("?pack=attack");
 const ae = await series(T, "AWS/Lambda", "Errors", "FunctionName", "demo-handler", "Sum");
 const on22 = ae.t.map((t, i) => [t, ae.v[i]]).filter((p) => p[0].startsWith("2026-11-22"));
 if (!on22.some((p) => p[1] > 0) || ae.t.some((t, i) => !t.startsWith("2026-11-22") && ae.v[i] > 0)) fail("attack errors: " + JSON.stringify(ae));
-for (const [t, v] of on22) { const n = api(await lines(T, key(t))).filter((l) => l.sc_status >= 400).length; if (n !== v) fail("attack errors " + t + ": " + v + " vs " + n); }
+for (const [t, v] of on22) { const n = api(await lines(T, await key(t))).filter((l) => l.sc_status >= 400).length; if (n !== v) fail("attack errors " + t + ": " + v + " vs " + n); }
 console.log("OK (cloudwatch: Firehose records = lines delivered, demo-handler = vault API requests, order, window, refusals, attack errors)");

@@ -34,12 +34,29 @@
       return { amp: "&", lt: "<", gt: ">", quot: "\"", apos: "'" }[e];
     });
   }
-  function blocks(xml, tag) {
-    var out = [], re = new RegExp("<" + tag + "(?:\\s[^>]*)?>([\\s\\S]*?)</" + tag + ">", "g"), m;
-    while ((m = re.exec(xml))) out.push(m[1]);
+  var MAX_BODY = 4 * 1024 * 1024; // an answer larger than this is refused before parsing (security R-023)
+  // indexOf scanners: linear, so an unclosed or hostile tag cannot stall the page (security R-023, as cfn-api.js).
+  function open(xml, tag, from) {
+    var p = from || 0, lt = "<" + tag;
+    while ((p = xml.indexOf(lt, p)) >= 0) {
+      var c = xml.charAt(p + lt.length);
+      if (c === ">") return { start: p, end: p + lt.length + 1 };
+      if (c === " " || c === "\t" || c === "\n" || c === "\r") { var gt = xml.indexOf(">", p); return gt < 0 ? null : { start: p, end: gt + 1 }; }
+      p += lt.length;
+    }
+    return null;
+  }
+  function blocks(xml, tag, first) {
+    var out = [], p = 0, close = "</" + tag + ">", o, c;
+    while ((o = open(xml, tag, p))) {
+      if ((c = xml.indexOf(close, o.end)) < 0) break;
+      out.push(xml.slice(o.end, c));
+      if (first) break;
+      p = c + close.length;
+    }
     return out;
   }
-  function text(xml, tag) { var b = blocks(xml, tag)[0]; return b === undefined ? "" : unescape(b); }
+  function text(xml, tag) { var b = blocks(xml, tag, true)[0]; return b === undefined ? "" : unescape(b); }
   function fail(code, message, status) { var e = new Error(code + ": " + message); e.code = code; e.status = status; return e; }
   function arr(v) { return v === undefined || v === null ? [] : Array.isArray(v) ? v : [v]; }
   // Plain JSON is parsed as it is (a literal % in it would break decoding, security R-019); anything else is
@@ -89,6 +106,7 @@
       return send({ service: "iam", region: REGION, method: "POST", url: ENDPOINT, body: q,
         headers: { "content-type": "application/x-www-form-urlencoded; charset=utf-8" } }).then(function (r) {
         return r.text().then(function (t) {
+          if (t.length > MAX_BODY) throw fail("TooLarge", "the answer is over " + MAX_BODY + " characters; not read", r.status);
           if (!r.ok) throw fail(text(t, "Code") || "HTTP " + r.status, text(t, "Message") || "no message", r.status);
           return t;
         });

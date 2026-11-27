@@ -386,29 +386,36 @@
     put(B.site, "data/vaults.json", "application/json", JSON.stringify({ vaults: [{ id: "vault-demo-001", files: 42, region: REGION }, { id: "vault-demo-002", files: 7, region: "eu-west-1" }] }));
     put(B.site, "config/site.yaml", "application/x-yaml", "site: demo\nregion: eu-west-2\ncache:\n  ttl: 3600   # seconds\n  enabled: true\nlogs: s3://" + B.logs + "/\n");
     };
-    // CloudFront logs delivered by Firehose: one gzip of JSON lines per hour
+    // CloudFront logs delivered by Firehose: one gzip of JSON lines per hour. AWS's v2 records carry no distribution id
+    // (one delivery source is one distribution; boto3.aws.a via architect.aws.a, design 06 section 4), so each line has
+    // the host the visitor asked for: the www alias, or for a small seeded share the distribution's own domain (direct hits).
     G["cloudfront.traffic"] = function (P) {
+    var hosts = rng("cloudfront.hosts", thePack().seed), withHost = function (l) { l["x-host-header"] = hosts() < 0.05 ? "d111111abcdef8.cloudfront.net" : "www.example.com"; return l; };
+    var names = rng("cloudfront.names", thePack().seed), hex = function (n) { var o = ""; for (var i = 0; i < n; i++) o += "0123456789abcdef"[Math.floor(names() * 16)]; return o; };
+    var logUuid = function () { return hex(8) + "-" + hex(4) + "-" + hex(4) + "-" + hex(4) + "-" + hex(12); };
     var paths = ["/", "/index.html", "/assets/site.css", "/data/vaults.json", "/vault/vault-demo-001/files", "/vault/vault-demo-002/files", "/favicon.ico"];
     P.days.forEach(function (day) { P.hours.forEach(function (hour) {
       var lines = [];
       for (var i = 0; i < P.perHour; i++) {
         var p = P.hot && rnd() < P.hotShare ? P.hot : pick(paths);
-        lines.push(JSON.stringify(enrich({ timestamp: "2026-11-" + day + "T" + pad(hour) + ":" + pad(Math.floor(rnd() * 60)) + ":" + pad(Math.floor(rnd() * 60)) + "Z",
+        lines.push(JSON.stringify(withHost(enrich({ timestamp: "2026-11-" + day + "T" + pad(hour) + ":" + pad(Math.floor(rnd() * 60)) + ":" + pad(Math.floor(rnd() * 60)) + "Z",
           c_ip: VISITOR_IPS[Math.floor(rnd() * VISITOR_IPS.length)], cs_method: "GET", cs_uri_stem: p, sc_status: p === "/favicon.ico" ? 404 : 200,
-          sc_bytes: Math.floor(rnd() * 9000 + 300), time_taken: +(rnd() * 0.2).toFixed(3), x_edge_location: pick(["LHR50-C1", "DUB2-C1", "AMS1-C1"]), cs_user_agent: pick(["Mozilla/5.0", "curl/8.5", "python-requests/2.32"]) })));
+          sc_bytes: Math.floor(rnd() * 9000 + 300), time_taken: +(rnd() * 0.2).toFixed(3), x_edge_location: pick(["LHR50-C1", "DUB2-C1", "AMS1-C1"]), cs_user_agent: pick(["Mozilla/5.0", "curl/8.5", "python-requests/2.32"]) }))));
       }
       if (P.probe && day === P.probe.day) {
         // One address (TEST-NET-3, documentation range) probing, getting louder each hour.
         var probes = ["/.env", "/.git/config", "/wp-admin/", "/admin", "/config.json", "/backup.zip", "/vault/../../etc/passwd", "/vault/vault-demo-001/files?key=../../secrets", "/api/vaults?id=1%27%20OR%20%271%27=%271"];
         for (var a = 0; a < (hour - 8) * P.probe.perHourStep; a++) {
           var pr = pick(probes);
-          lines.push(JSON.stringify(enrich({ timestamp: "2026-11-22T" + pad(hour) + ":" + pad(Math.floor(rnd() * 60)) + ":" + pad(Math.floor(rnd() * 60)) + "Z",
+          lines.push(JSON.stringify(withHost(enrich({ timestamp: "2026-11-22T" + pad(hour) + ":" + pad(Math.floor(rnd() * 60)) + ":" + pad(Math.floor(rnd() * 60)) + "Z",
             c_ip: P.probe.ip, cs_method: pick(["GET", "GET", "POST"]), cs_uri_stem: pr, sc_status: pick([403, 404, 404, 400]), sc_bytes: Math.floor(rnd() * 400 + 100),
-            time_taken: +(rnd() * 0.05).toFixed(3), x_edge_location: "AMS1-C1", cs_user_agent: pick(["sqlmap/1.8", "Nuclei - Open-source project", "curl/8.5"]) })));
+            time_taken: +(rnd() * 0.05).toFixed(3), x_edge_location: "AMS1-C1", cs_user_agent: pick(["sqlmap/1.8", "Nuclei - Open-source project", "curl/8.5"]) }))));
         }
         lines.sort();
       }
-      put(B.logs, "cloudfront/2026/11/" + day + "/" + pad(hour) + "/demo-distribution-1-2026-11-" + day + "-" + pad(hour) + "-00-00.gz", "application/x-gzip", { gzipText: lines.join("\n") + "\n" }, "2026-11-" + day + "T" + pad(hour) + ":59:00.000Z", "cloudfront.traffic");
+      // Firehose's object name (boto3.aws.a's note 18): <prefix><stream>-<version>-<yyyy>-<mm>-<dd>-<hh>-<mi>-<ss>-<uuid>.gz;
+      // the distribution id is in the records, not the name. The uuid comes from its own stream, so the records are unchanged.
+      put(B.logs, "cloudfront/2026/11/" + day + "/" + pad(hour) + "/demo-cloudfront-logs-1-2026-11-" + day + "-" + pad(hour) + "-00-00-" + logUuid() + ".gz", "application/x-gzip", { gzipText: lines.join("\n") + "\n" }, "2026-11-" + day + "T" + pad(hour) + ":59:00.000Z", "cloudfront.traffic");
     }); });
     };
     // Lambda dependencies as zips
@@ -1176,7 +1183,104 @@
           "<WebACLId>" + esc(d.webAcl || "") + "</WebACLId><HttpVersion>" + d.httpVersion + "</HttpVersion><Staging>false</Staging></DistributionSummary>";
       }).join("") + "</Items>" : "") + "</DistributionList>");
   }
-  function ce() { return json({ ResultsByTime: [{ Total: { UnblendedCost: { Amount: "42.17", Unit: "USD" } } }] }); }
+  // ---- Costs (the Costs tab: billing.aws.a's site/billing.js on CostsApi, site/api/costs-api.js) ----
+  // Cost Explorer GetCostAndUsage, GetCostForecast and GetDimensionValues for the twin's account, signed calls only
+  // (security.aws.a, R-025 (a)), and Budgets DescribeBudgets (conductor.aws.a's preflight at 2026-11-24T00:47Z found
+  // budgets.amazonaws.com allows the site's origin, as ce.us-east-1 does; the SDK's table does not mark it, note 21).
+  // Every figure is synthetic and every answer says so (x-twin-note). Figures (billing.aws.a's choice): small round amounts per service per
+  // day, in ten-thousandths of a dollar so every view adds up exactly, from 1 September 2026 to today (the twin's clock
+  // where it has one); later days are empty, the current month is Estimated, each period echoes the request. The twin's
+  // own choices: these services and amounts, region global for CloudFront and Tax, 31 periods a page, a forecast that may
+  // not start in the past, the error wording.
+  var COST_NOTE = "synthetic figures from the twin, not an AWS bill", COST_FROM = Date.UTC(2026, 8, 1), DAY_MS = 86400000;
+  var COST_SERVICES = [
+    { name: "AWS Cost Explorer", region: "us-east-1", daily: 500 }, { name: "AWS Lambda", region: REGION, daily: 200 },
+    { name: "AWS Secrets Manager", region: "us-east-1", monthly: 4000 }, { name: "Amazon CloudFront", region: "global", daily: 1000 },
+    { name: "Amazon Simple Storage Service", region: REGION, daily: 500 }, { name: "Tax", region: "global", daily: 0 }
+  ];
+  var COST_SPAN_DAYS = 427; // about 14 months: the twin's own bound (security.aws.a), so no request builds a huge answer
+  var COST_METRICS = { UnblendedCost: 1, BlendedCost: 1, AmortizedCost: 1, NetUnblendedCost: 1 };
+  function costJson(o, status) { var r = new Response(JSON.stringify(o), { status: status || 200, headers: { "content-type": "application/x-amz-json-1.1", "x-twin-note": COST_NOTE } }); return r; }
+  function costErr(type, msg, status) { return costJson({ __type: type, message: msg }, status || 400); }
+  function costDay(v) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v || "")); if (!m) return null; var t = Date.UTC(+m[1], +m[2] - 1, +m[3]); return new Date(t).toISOString().slice(0, 10) === m[0] ? t : null; }
+  function costIso(t) { return new Date(t).toISOString().slice(0, 10); }
+  function costToday() { var n = new Date(typeof nowMs === "function" ? nowMs() : Date.now()); return Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()); }
+  function costOn(svc, t) { return t < COST_FROM || t > costToday() ? 0 : (svc.daily || 0) + (svc.monthly && new Date(t).getUTCDate() === 1 ? svc.monthly : 0); }
+  function costSum(svcs, a, b) { var n = 0; svcs.forEach(function (sv) { for (var t = a; t < b; t += DAY_MS) n += costOn(sv, t); }); return n; }
+  function costExpected(t) { var n = 0; COST_SERVICES.forEach(function (sv) { n += (sv.daily || 0) + (sv.monthly && new Date(t).getUTCDate() === 1 ? sv.monthly : 0); }); return n; }
+  function costAmount(n) { return Math.floor(n / 10000) + "." + String(n % 10000).padStart(4, "0") + "000000"; }
+  function costPeriods(start, end, gran) {
+    var out = [], t = start;
+    while (t < end) { var d = new Date(t), next = gran === "DAILY" ? t + DAY_MS : Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1); out.push([t, Math.min(next, end)]); t = Math.min(next, end); }
+    return out;
+  }
+  function ce(init, target, body) {
+    if (!signed(init)) return costErr("AccessDeniedException", "Missing Authentication Token", 403);
+    var q; try { q = JSON.parse(body || "{}"); } catch (e) { return costErr("ValidationException", "The body is not JSON."); }
+    var tp = q.TimePeriod || {}, start = costDay(tp.Start), end = costDay(tp.End), gran = q.Granularity || "MONTHLY";
+    if (start === null || end === null || start >= end) return costErr("ValidationException", "TimePeriod needs Start before End, both YYYY-MM-DD (End is exclusive).");
+    if (end - start > COST_SPAN_DAYS * DAY_MS) return costErr("ValidationException", "TimePeriod is at most " + COST_SPAN_DAYS + " days (about 14 months) in the twin.");
+    if (gran !== "DAILY" && gran !== "MONTHLY") return costErr("ValidationException", "Granularity is DAILY or MONTHLY in the twin.");
+    var action = String(target || "").replace(/^AWSInsightsIndexService\./, "");
+    if (action === "GetCostAndUsage") {
+      var metrics = Array.isArray(q.Metrics) ? q.Metrics : [];
+      if (!metrics.length || !metrics.every(function (m) { return typeof m === "string" && Object.prototype.hasOwnProperty.call(COST_METRICS, m); })) return costErr("ValidationException", "Metrics are UnblendedCost, BlendedCost, AmortizedCost or NetUnblendedCost in the twin.");
+      var group = Array.isArray(q.GroupBy) && q.GroupBy[0] ? q.GroupBy[0] : null;
+      if (group && (q.GroupBy.length > 1 || group.Type !== "DIMENSION" || (group.Key !== "SERVICE" && group.Key !== "REGION"))) return costErr("ValidationException", "GroupBy is one DIMENSION, SERVICE or REGION, in the twin.");
+      var periods = costPeriods(start, end, gran), from = 0;
+      if (q.NextPageToken) { var pm = /^twin-costs-(\d{1,4})$/.exec(String(q.NextPageToken)); if (!pm || +pm[1] >= periods.length) return costErr("ValidationException", "The NextPageToken is not valid."); from = +pm[1]; }
+      var today = new Date(costToday()), monthStart = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1);
+      var money = function (n) { var o = {}; metrics.forEach(function (m) { o[m] = { Amount: costAmount(n), Unit: "USD" }; }); return o; };
+      var out = { ResultsByTime: periods.slice(from, from + 31).map(function (p) {
+        var r = { TimePeriod: { Start: costIso(p[0]), End: costIso(p[1]) }, Total: {}, Groups: [], Estimated: p[1] > monthStart };
+        if (!group) r.Total = money(costSum(COST_SERVICES, p[0], p[1]));
+        else {
+          var keys = {};
+          COST_SERVICES.forEach(function (sv) { var k = group.Key === "SERVICE" ? sv.name : sv.region; keys[k] = (keys[k] || 0) + costSum([sv], p[0], p[1]); });
+          r.Groups = Object.keys(keys).sort().map(function (k) { return { Keys: [k], Metrics: money(keys[k]) }; });
+        }
+        return r;
+      }), DimensionValueAttributes: [] };
+      if (group) out.GroupDefinitions = [{ Type: "DIMENSION", Key: group.Key }];
+      if (from + 31 < periods.length) out.NextPageToken = "twin-costs-" + (from + 31);
+      return costJson(out);
+    }
+    if (action === "GetCostForecast") {
+      if (!/^(UNBLENDED|BLENDED|AMORTIZED|NET_UNBLENDED)_COST$/.test(String(q.Metric || ""))) return costErr("ValidationException", "Metric is UNBLENDED_COST, BLENDED_COST, AMORTIZED_COST or NET_UNBLENDED_COST in the twin.");
+      if (start < costToday()) return costErr("ValidationException", "The forecast may not start in the past (the twin's rule).");
+      var expected = costExpected;
+      var fr = costPeriods(start, end, gran).map(function (p) { var n = 0; for (var t = p[0]; t < p[1]; t += DAY_MS) n += expected(t); return [p, n]; }), total = 0;
+      fr.forEach(function (x) { total += x[1]; });
+      return costJson({ Total: { Amount: costAmount(total), Unit: "USD" }, ForecastResultsByTime: fr.map(function (x) {
+        return { TimePeriod: { Start: costIso(x[0][0]), End: costIso(x[0][1]) }, MeanValue: costAmount(x[1]), PredictionIntervalLowerBound: costAmount(Math.round(x[1] * 0.9)), PredictionIntervalUpperBound: costAmount(Math.round(x[1] * 1.1)) };
+      }) });
+    }
+    if (action === "GetDimensionValues") {
+      if (q.Dimension !== "SERVICE" && q.Dimension !== "REGION") return costErr("ValidationException", "Dimension is SERVICE or REGION in the twin.");
+      var vals = {};
+      COST_SERVICES.forEach(function (sv) { if (costSum([sv], start, end) > 0) vals[q.Dimension === "SERVICE" ? sv.name : sv.region] = 1; });
+      var vs = Object.keys(vals).sort();
+      return costJson({ DimensionValues: vs.map(function (v) { return { Value: v, Attributes: {} }; }), ReturnSize: vs.length, TotalSize: vs.length });
+    }
+    return costErr("ValidationException", "The twin answers three Cost Explorer reads only: GetCostAndUsage, GetCostForecast and GetDimensionValues.");
+  }
+  // Budgets DescribeBudgets: signed only, the caller's account only, one synthetic budget (the twin's choice): a 10 USD
+  // monthly cap whose actual spend is this month's Cost Explorer total to today and whose forecast adds the expected
+  // days to month end, so it agrees with the Costs tab's other views. One page; MaxResults 1 to 100.
+  function budgets(init, target, body) {
+    if (!signed(init)) return costErr("AccessDeniedException", "Missing Authentication Token", 403);
+    if (target !== "AWSBudgetServiceGateway.DescribeBudgets") return costErr("ValidationException", "The twin answers one Budgets read only: DescribeBudgets.");
+    var q; try { q = JSON.parse(body || "{}"); } catch (e) { return costErr("ValidationException", "The body is not JSON."); }
+    if (!q || q.AccountId !== ACCOUNT) return costErr("AccessDeniedException", "The account id is not the caller's.", 403);
+    if (q.MaxResults !== undefined && !(Number.isInteger(q.MaxResults) && q.MaxResults >= 1 && q.MaxResults <= 100)) return costErr("InvalidParameterException", "MaxResults is 1 to 100.");
+    if (q.NextToken !== undefined) return costErr("InvalidNextTokenException", "The twin's budgets are one page.");
+    var today = costToday(), d = new Date(today), m0 = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1), m1 = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+    var actual = costSum(COST_SERVICES, m0, today + DAY_MS), rest = 0;
+    for (var day = today + DAY_MS; day < m1; day += DAY_MS) rest += costExpected(day);
+    return costJson({ Budgets: [{ BudgetName: "Monthly cap (synthetic)", BudgetLimit: { Amount: "10.0", Unit: "USD" }, TimeUnit: "MONTHLY", BudgetType: "COST",
+      TimePeriod: { Start: COST_FROM / 1000, End: Date.UTC(2027, 7, 31) / 1000 },
+      CalculatedSpend: { ActualSpend: { Amount: costAmount(actual), Unit: "USD" }, ForecastedSpend: { Amount: costAmount(actual + rest), Unit: "USD" } } }] });
+  }
   function cloudcontrol(target, body, init, host) {
     if (!signed(init)) return json({ __type: "AccessDeniedException", message: "Missing signature" }, 403);
     var s = build(), q = JSON.parse(body || "{}"), region = host.split(".")[1];
@@ -1588,7 +1692,8 @@
       if (host === "sts.amazonaws.com" || /^sts\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = sts(new URLSearchParams(body), init);
       else if (host === "iam.amazonaws.com") p = iam(new URLSearchParams(body), init);
       else if (/^cloudformation\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudformation(new URLSearchParams(body), init, host);
-      else if (/^ce\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = ce();
+      else if (/^ce\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = ce(init, hdr(init, "x-amz-target"), body);
+      else if (host === "budgets.amazonaws.com") p = budgets(init, hdr(init, "x-amz-target"), body);
       else if (/^cloudcontrolapi\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudcontrol((hdr(init, "x-amz-target") || "").split(".")[1], body, init, host);
       else if (/^lambda\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = lambda(url, init);
       else if (/^monitoring\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudwatch(new URLSearchParams(body), init);

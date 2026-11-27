@@ -123,4 +123,24 @@ const j = twin.journal().slice(j0);
 assert.ok(j.every((e) => /^cloudformation\./.test(e.op)), "no entry from a CloudFront read: " + [...new Set(j.map((e) => e.op))].join());
 checks += 1;
 
-console.log("OK (twin CloudFront reads: " + checks + " checks; demo distribution in the platform account, each Vault's in the customer's from its create to its delete, -health on /health, paging, isolation, reads only)");
+// 8. The demo distribution's logs (design 06 section 4, boto3.aws.a's note 18): Firehose's object names; AWS's v2 records
+// carry no distribution id (one delivery source is one distribution), so each line has the host asked for: the www
+// alias, or for a few direct hits the distribution's own domain. Both are what ListDistributions gives.
+{
+  const t = fresh(), logs = "https://" + t.buckets.logs + ".s3." + R + ".amazonaws.com/", READ = { method: "GET", headers: { authorization: "AWS4-HMAC-SHA256 Credential=ASIATWINREAD/x" } };
+  const keys = [...(await (await t.handle(logs + "?list-type=2&prefix=cloudfront%2F", READ)).text()).matchAll(/<Key>([^<]*)<\/Key>/g)].map((m) => m[1]);
+  assert.equal(keys.length, 9, "nine hourly files");
+  assert.ok(keys.every((k) => /^cloudfront\/\d{4}\/\d{2}\/\d{2}\/\d{2}\/demo-cloudfront-logs-1-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}-[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}\.gz$/.test(k)), "Firehose's names: " + keys[0]);
+  assert.ok(keys.every((k) => !k.includes("EDEMOTWIN00001")), "the id is not in the name");
+  assert.equal(new Set(keys.map((k) => k.slice(-39))).size, 9, "a different uuid per file");
+  let recs = [];
+  for (const k of keys) { const r = await t.handle(logs + k, READ); recs = recs.concat((await new Response(r.body.pipeThrough(new DecompressionStream("gzip"))).text()).trim().split("\n").map((l) => JSON.parse(l))); }
+  const dist = (await cf(t, "distribution")).text, names = [...tag(dist, "CNAME"), tag(dist, "DomainName")[0]];
+  assert.ok(recs.length > 0 && recs.every((x) => names.includes(x["x-host-header"])), "every line's host is the distribution's alias or domain");
+  const direct = recs.filter((x) => x["x-host-header"] === "d111111abcdef8.cloudfront.net").length;
+  assert.ok(direct > 0 && direct < recs.length / 10, "a few direct hits on the distribution's domain (" + direct + " of " + recs.length + ")");
+  assert.ok(recs.every((x) => !("distribution_id" in x)), "no distribution id in the records");
+  checks += 7;
+}
+
+console.log("OK (twin CloudFront reads: " + checks + " checks; demo distribution in the platform account, each Vault's in the customer's from its create to its delete, -health on /health, paging, isolation, reads only; its logs under Firehose's names with the host in each record)");

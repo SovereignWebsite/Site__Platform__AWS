@@ -13,9 +13,20 @@
 //   g.add.firehose(streams)                  FirehoseApi stream() results
 //   g.add.iam({ roles, providers })          IamApi roles() items or role() results, each with .attached, and
 //                                            providers() (optional)
+//   g.add.cfn({ stacks, exports })          CfnApi stacks() items or stack() results, each with .resources (resources()
+//                                            items) and optionally .importers: [{ export, stack }] (importers() per
+//                                            export the stack exports: the export's name and an importing stack's name);
+//                                            exports() items (optional, to check an export is the stack's own)
+//   g.add.cloudfront({ distributions, functions })  CloudFrontApi distribution() results (or distributions() items) and
+//                                            functions() items (optional): architect.aws.a design 06, section 3
+//   g.add.route53({ zones, records })        Route53Api zone() or zones() items, and records() items (each with its id)
 //   g.add.zips([{ bucket, key, sha256, packageName, entries }])   deployment packages; the facts come from
 //                                            Graph.zipFacts(bytes) -> Promise<{ sha256, packageName, entries }>
 //   g.toJSON()                               -> { about, evidence_levels, counts, nodes, edges } (schema shape)
+//   Graph.rules(json)                        -> [rule item] over a toJSON() result (ux.aws.a design 08, Desk; design 07
+//                                            "Worth a look"): { id, kind: "finding" | "question", evidence: "confirmed" |
+//                                            "claimed", title, count, nodes: [id], edges?: [{ from, rel, to }] }. Read only:
+//                                            an item never names a change, never pre-fills a plan (R-020).
 //
 // Ids: the ARN where AWS defines one, otherwise urn:sws:<kind>:<name>. An edge seen twice keeps the stronger
 // evidence (api, template, content, naming, comment, curated). Edges may name nodes no adapter has added yet
@@ -157,8 +168,10 @@
     // Content: what the files say, by what they hold rather than by their names (the builder's rules made general):
     //   - an s3://<bucket> reference in a config file (YAML, JSON, TOML, INI, .conf, .env) refers_to that bucket;
     //   - a JSON document with a "vaults" list names vaults (in a region, part of the site if it sits in the site's bucket);
-    //   - a CloudFront log file (key <distribution>-YYYY-MM-DD-HH-MM-SS.gz, lines with c_ip, cs_uri_stem, sc_status)
-    //     records its distribution (naming), refers_to the vaults its paths name, and an address with at least 10
+    //   - a CloudFront log file (any object whose lines are JSON with c_ip, cs_uri_stem and sc_status, whatever its key)
+    //     records the distribution whose domain or alias its lines' host header names (content; design 06 section 3,
+    //     joined at toJSON against add.cloudfront's answers; no match, no edge: AWS's v2 records carry no distribution
+    //     id). It refers_to the vaults its paths name, and an address with at least 10
     //     requests, at least 80% of them refused (4xx), becomes an actor seen_in those files and targeting those vaults.
     //     Addresses are counted and named by their network only (/24, /48; design 03, Privacy).
     // Vault lists are read before logs, so log lines can name known vaults. Files nothing recognises are left alone.
@@ -169,7 +182,8 @@
       if (!X || typeof X.network !== "function") throw new Error("Graph needs LogExtract.network (site/data/extract.js)");
       return X.network(ip) || "";
     }
-    var LOG_KEY = /\/([a-z0-9-]+)-\d{4}-\d\d-\d\d-\d\d-\d\d-\d\d\.gz$/, CONFIG = /\.(ya?ml|json|toml|ini|conf|cfg|env)$/i;
+    // Log line fields read by name in one place (boto3.aws.a is checking AWS's v2 field names against the twin's).
+    var LOG_FIELD = { host: "x-host-header" }, HOST = /^[a-z0-9]([a-z0-9-]{0,62}\.)*[a-z0-9-]{1,63}$/, CONFIG = /\.(ya?ml|json|toml|ini|conf|cfg|env)$/i;
     function content(files, o) {
       o = o || {};
       var siteId = null;
@@ -202,14 +216,13 @@
       });
       var byNet = Object.create(null);
       files.forEach(function (f) {
-        var m = LOG_KEY.exec(f.key);
-        if (!m) return;
+        if (typeof f.text !== "string" || f.text.charAt(0) !== "{" || CONFIG.test(f.key)) return;
         var lines = f.text.split("\n").map(function (l) { try { return JSON.parse(l); } catch (e) { return null; } })
           .filter(function (l) { return l && typeof l === "object" && "c_ip" in l && "cs_uri_stem" in l && "sc_status" in l; });
         if (!lines.length) return;
-        var fid = ids.object(f.bucket, f.key), did = "urn:sws:cloudfront-distribution:" + m[1];
-        node(did, "distribution", "A2", m[1], { cfn_type: "AWS::CloudFront::Distribution", inferred: true, note: "named by its log files" });
-        edge(fid, "records", did, "naming", "log object key names " + m[1]);
+        var fid = ids.object(f.bucket, f.key), hosts = Object.create(null);
+        lines.forEach(function (l) { var h = l[LOG_FIELD.host]; if (typeof h === "string" && h.length <= 253 && HOST.test(h = h.toLowerCase())) hosts[h] = 1; });
+        logHosts[fid] = Object.keys(hosts).sort();
         var vaults = Object.create(null);
         lines.forEach(function (l) {
           var v = /^\/vault\/([^/?]+)/.exec(String(l.cs_uri_stem));
@@ -283,6 +296,171 @@
     // it trusts; a GitHub OIDC trust's sub conditions name the repositories and environments it allows; its attached
     // managed policies are policies it has. Service and account principals make no edge (the builder makes none).
     var GH = "token.actions.githubusercontent.com";
+    // CloudFormation: each stack, its region, and what it made (made_by, from ListStackResources). A resource's id is
+    // its ARN from CfnApi; a derived one (arnDerived, design 03 refinement 1) gives way, at toJSON, to the node the
+    // owning service described with the same type and name (a role with a path); urn:sws:cfn-resource ids are always
+    // rebuilt from the stack's ARN, so a stack read by name or by ARN gives the same graph. A resource no adapter
+    // describes becomes a node of its own here, typed from its CloudFormation type where the schema has one.
+    // A stack that imports another's export refers_to it (ListImports).
+    var CFN_TYPE = { "AWS::S3::Bucket": ["bucket", "A2"], "AWS::IAM::Role": ["role", "A4"], "AWS::Lambda::Function": ["function", "A2"],
+      "AWS::CloudFront::Distribution": ["distribution", "A2"], "AWS::Route53::RecordSet": ["record", "A2"], "AWS::KinesisFirehose::DeliveryStream": ["stream", "A2"],
+      "AWS::CloudFormation::Stack": ["stack", "A2"] };
+    var cfnMade = [];
+    function cfn(o) {
+      o = o || {};
+      var byName = Object.create(null), exportsBy = Object.create(null);
+      (Array.isArray(o.stacks) ? o.stacks : []).forEach(function (st) {
+        if (!st || typeof st.arn !== "string" || typeof st.name !== "string") return;
+        vouch(node(st.arn, "stack", "A2", st.name, { cfn_type: "AWS::CloudFormation::Stack", status: st.status || undefined, updated: st.updated || undefined }));
+        if (st.region) edge(st.arn, "in", vouch(region(st.region, "api", "CloudFormation ListStacks (StackId)")), "api", "CloudFormation ListStacks (StackId)");
+        byName[st.region + "\u0000" + st.name] = st.arn;
+        (Array.isArray(st.resources) ? st.resources : []).forEach(function (r) {
+          if (!r || typeof r.logicalId !== "string" || typeof r.arn !== "string") return;
+          var id = r.arn.indexOf("urn:sws:cfn-resource:") === 0 ? "urn:sws:cfn-resource:" + st.arn + "/" + r.logicalId : r.arn;
+          cfnMade.push({ id: id, derived: !!r.arnDerived, type: r.type, physicalId: r.physicalId, logicalId: r.logicalId, status: r.status, stack: st.arn });
+        });
+      });
+      (Array.isArray(o.exports) ? o.exports : []).forEach(function (x) { if (x && x.name && x.stackArn) exportsBy[x.name] = x.stackArn; });
+      (Array.isArray(o.stacks) ? o.stacks : []).forEach(function (st) {
+        if (!st || !Array.isArray(st.importers)) return;
+        st.importers.forEach(function (imp) {
+          var by = byName[st.region + "\u0000" + (imp && imp.stack)], ex = imp && imp.export;
+          if (by && ex && exportsBy[ex] === st.arn) edge(by, "refers_to", st.arn, "api", "CloudFormation ListImports (" + ex + ")");
+        });
+      });
+    }
+    // A stack's AWS::Route53::RecordSet comes with its name only (ListStackResources' physical id): it is made_by on every
+    // record of that name (all types and set ids) in a zone the same stack made; failing that, in the only zone holding
+    // that name; otherwise no record is chosen and it stays its own node (architect.aws.a, design 03 refinement 3). One
+    // record set: api; several (an A and AAAA pair): each naming (claimed), since the stack names the name only and
+    // which is which is not guessed (ontology.aws.a). The record sets stay verified through "in" their zone. A zone's
+    // apex NS and SOA are never candidates: Route 53 makes them with the zone.
+    function recordsMadeBy(m, stackZones) {
+      var name = String(m.physicalId || "").toLowerCase().replace(/\.$/, ""), byZone = Object.create(null), zs = [];
+      if (!name) return [];
+      nodes.forEach(function (n) {
+        if (n.type !== "record" || n.name !== name || !n.zone_id) return;
+        // NS and SOA at a zone's apex are made with the zone, never by a record set (cloudformation.aws.a).
+        var zn = nodes.get("arn:aws:route53:::hostedzone/" + n.zone_id);
+        if ((n.record_type === "NS" || n.record_type === "SOA") && zn && zn.label === name) return;
+        if (!byZone[n.zone_id]) { byZone[n.zone_id] = []; zs.push(n.zone_id); }
+        byZone[n.zone_id].push(n.id);
+      });
+      var own = zs.filter(function (z) { return stackZones[m.stack + "\u0000" + z]; });
+      if (own.length) return own.reduce(function (a, z) { return a.concat(byZone[z]); }, []);
+      return zs.length === 1 ? byZone[zs[0]] : [];
+    }
+    function cfnResolve() {
+      var stackZones = Object.create(null);
+      cfnMade.forEach(function (m) { if (m.type === "AWS::Route53::HostedZone" && m.physicalId) stackZones[m.stack + "\u0000" + m.physicalId] = true; });
+      cfnMade.splice(0).forEach(function (m) {
+        var id = m.id;
+        if (m.type === "AWS::Route53::RecordSet") {
+          var recs = recordsMadeBy(m, stackZones);
+          var nm = String(m.physicalId).toLowerCase().replace(/\.$/, "");
+          if (recs.length === 1) return edge(recs[0], "made_by", m.stack, "api", "CloudFormation ListStackResources (" + m.logicalId + ", AWS::Route53::RecordSet) and Route 53: one record set named " + nm);
+          if (recs.length) return recs.forEach(function (r) { edge(r, "made_by", m.stack, "naming", "CloudFormation ListStackResources (" + m.logicalId + ") names " + nm + " only; " + recs.length + " record sets have that name"); });
+        }
+        if (m.derived && !nodes.has(id)) {
+          var same = []; nodes.forEach(function (n) { if (n.cfn_type === m.type && n.label === m.physicalId) same.push(n.id); });
+          if (same.length === 1) id = same[0];
+        }
+        if (!nodes.has(id)) {
+          var t = Object.prototype.hasOwnProperty.call(CFN_TYPE, m.type) ? CFN_TYPE[m.type] : ["unknown", "A2"];
+          var prev = ctxTrust; ctxTrust = { trust: "verified", source: "CloudFormation ListStackResources" };
+          try { node(id, t[0], t[1], m.physicalId || m.logicalId, { cfn_type: m.type, physical_id: m.physicalId || undefined, logical_id: m.logicalId, arn_derived: m.derived || undefined, status: m.status || undefined }); }
+          finally { ctxTrust = prev; }
+          // CloudFormation vouches that the resource exists, not for the ARN built from its physical id (architect.aws.a).
+          if (m.derived) nodes.get(id).attribute_trust.id = { trust: "claimed", source: "ARN derived from the physical id (design 03, refinement 1)" };
+        }
+        edge(id, "made_by", m.stack, "api", "CloudFormation ListStackResources");
+      });
+    }
+
+    // CloudFront (architect.aws.a design 06, section 3): a node per distribution (its ARN, type distribution, label its
+    // domain); serves_from each origin's target (api), an origin with no target making no edge (its domain stays an
+    // attribute, never a guess); invokes each associated CloudFront Function (event and path pattern in the source,
+    // until the schema gives edges attributes); logs_to the legacy logging bucket (api). CfnApi's derived ARN is the same
+    // id, so the stack's resource and this answer are one node. Its domain and aliases are the hosts log lines join on.
+    function cloudfront(o) {
+      o = o || {};
+      var fnByArn = Object.create(null);
+      (Array.isArray(o.functions) ? o.functions : []).forEach(function (f) {
+        if (!f || typeof f.arn !== "string") return;
+        fnByArn[f.arn] = f;
+        vouch(node(f.arn, "function", "A2", f.name || f.arn, { cfn_type: "AWS::CloudFront::Function", runtime: f.runtime || undefined, stage: f.stage || undefined }));
+      });
+      (Array.isArray(o.distributions) ? o.distributions : []).forEach(function (d) {
+        if (!d || typeof d.arn !== "string" || !/^arn:aws[a-z-]*:cloudfront::\d{12}:distribution\/[A-Z0-9]+$/.test(d.arn)) return;
+        vouch(node(d.arn, "distribution", "A2", d.domain || d.id, { cfn_type: "AWS::CloudFront::Distribution", distribution_id: d.id || undefined,
+          aliases: Array.isArray(d.aliases) && d.aliases.length ? d.aliases.slice() : undefined, status: d.status || undefined, enabled: typeof d.enabled === "boolean" ? d.enabled : undefined,
+          origin_domains: Array.isArray(d.origins) && d.origins.length ? d.origins.map(function (x) { return x && x.domain; }).filter(Boolean) : undefined }));
+        if (typeof d.domain === "string" && d.domain) distHosts[d.domain.toLowerCase()] = { arn: d.arn, as: "domain" };
+        (Array.isArray(d.aliases) ? d.aliases : []).forEach(function (a) { if (typeof a === "string" && a) distHosts[a.toLowerCase()] = { arn: d.arn, as: "alias" }; });
+        (Array.isArray(d.origins) ? d.origins : []).forEach(function (x) {
+          if (x && typeof x.target === "string" && /^arn:aws[a-z-]*:s3:::[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(x.target))
+            edge(d.arn, "serves_from", x.target, "api", "CloudFront GetDistribution (origin " + x.id + ")");
+        });
+        (Array.isArray(d.functions) ? d.functions : []).forEach(function (f) {
+          if (!f || typeof f.arn !== "string" || !/^arn:aws[a-z-]*:cloudfront::\d{12}:function\/[A-Za-z0-9_-]+$/.test(f.arn)) return;
+          if (!fnByArn[f.arn]) vouch(node(f.arn, "function", "A2", f.arn.split("/").pop(), { cfn_type: "AWS::CloudFront::Function" }));
+          edge(d.arn, "invokes", f.arn, "api", "CloudFront GetDistribution (" + f.event + " on " + f.behaviour + ")");
+        });
+        var lb = d.logging && d.logging.bucket ? root.CloudFrontApi && root.CloudFrontApi.originKind ? root.CloudFrontApi.originKind(d.logging.bucket, (/^arn:(aws[a-z-]*):/.exec(d.arn) || [])[1]) : null : null;
+        if (lb && lb.target) edge(d.arn, "logs_to", lb.target, "api", "CloudFront GetDistribution (Logging)");
+      });
+    }
+    // Route 53 (design 03 part 1; architect.aws.a's note): a node per zone (its ARN, type zone, in the account) and per
+    // record (urn:sws:route53-record:<zoneId>/<name>/<type>[/<setIdentifier>], design 03 refinement 3; type record, in its zone). A record's alias or CNAME target joins
+    // at toJSON: a distribution's domain or alias is that distribution's ARN node (api, both are API answers); an S3
+    // endpoint names its bucket (naming: the bucket is read from the host), which stays dangling when no adapter
+    // describes it; anything else makes no edge and stays an attribute, never a guess.
+    var recordTargets = [];
+    function route53(o) {
+      o = o || {};
+      (Array.isArray(o.zones) ? o.zones : []).forEach(function (z) {
+        if (!z || typeof z.arn !== "string" || !/^arn:aws[a-z-]*:route53:::hostedzone\/Z[A-Z0-9]{1,32}$/.test(z.arn)) return;
+        vouch(node(z.arn, "zone", "A2", String(z.name || z.id || z.arn).replace(/\.$/, ""), { cfn_type: "AWS::Route53::HostedZone", private: typeof z.private === "boolean" ? z.private : undefined,
+          record_count: typeof z.recordCount === "number" ? z.recordCount : undefined }));
+        var a = accountNode();
+        if (a) edge(z.arn, "in", a, "api", "Route 53 ListHostedZones");
+      });
+      (Array.isArray(o.records) ? o.records : []).forEach(function (r) {
+        if (!r || typeof r.id !== "string" || !/^Z[A-Z0-9]{1,32}$/.test(r.zoneId || "")) return;
+        var rm = /^urn:sws:route53-record:(Z[A-Z0-9]{1,32})\/([a-z0-9*_.-]{1,253})\/([A-Z]{1,10})(\/[^\s]{1,128})?$/.exec(r.id);
+        if (!rm || rm[1] !== r.zoneId) return;
+        vouch(node(r.id, "record", "A2", rm[2] + " " + rm[3], { cfn_type: "AWS::Route53::RecordSet", name: rm[2], record_type: rm[3], zone_id: rm[1],
+          set_identifier: r.setIdentifier || undefined }));
+        edge(r.id, "in", "arn:aws:route53:::hostedzone/" + r.zoneId, "api", "Route 53 ListResourceRecordSets");
+        if (r.alias && typeof r.alias.dnsName === "string") recordTargets.push({ id: r.id, host: r.alias.dnsName, how: "alias" });
+        if (r.type === "CNAME" && Array.isArray(r.values)) r.values.forEach(function (v) { if (typeof v === "string") recordTargets.push({ id: r.id, host: v, how: "CNAME" }); });
+      });
+    }
+    function joinRecords() {
+      recordTargets.forEach(function (t) {
+        var h = t.host.toLowerCase().replace(/\.$/, ""), d = distHosts[h];
+        if (d) return edge(t.id, "refers_to", d.arn, "api", "Route 53 " + t.how + " target " + h + " is the distribution's " + d.as);
+        var k = root.CloudFrontApi && root.CloudFrontApi.originKind ? root.CloudFrontApi.originKind(h) : null;
+        if (k && k.target) edge(t.id, "refers_to", k.target, "naming", "Route 53 " + t.how + " target " + h + " names the bucket by its " + k.kind + " endpoint");
+      });
+    }
+    var distHosts = Object.create(null), logHosts = Object.create(null);
+    // A log file records each distribution one of its lines' hosts is the domain or alias of (content), citing the
+    // first such host in sorted order; a host no distribution answers for makes no edge (ontology.aws.a's builder).
+    var recorded = Object.create(null);
+    function joinLogs() {
+      Object.keys(logHosts).forEach(function (fid) {
+        var done = Object.create(null);
+        logHosts[fid].forEach(function (h) {
+          var d = distHosts[h];
+          if (!d || done[d.arn]) return;
+          done[d.arn] = 1;
+          edge(fid, "records", d.arn, "content", "log lines (host header " + h + " is the distribution's " + d.as + ")");
+        });
+        recorded[fid] = Object.keys(done).sort();
+      });
+    }
+
     function iam(o) {
       o = o || {};
       (Array.isArray(o.providers) ? o.providers : []).forEach(function (p) { if (p && typeof p.arn === "string") vouch(node(p.arn, "identity_provider", "A4", p.url || p.arn, { cfn_type: "AWS::IAM::OIDCProvider" })); });
@@ -351,15 +529,19 @@
       });
     }
 
-    // A distribution whose log files sit under a stream's prefix in that stream's bucket logs through that stream.
+    // A distribution whose log files sit under a stream's prefix in that stream's bucket logs through that stream (content).
     function logsThroughStreams() {
-      var dists = new Map();
-      nodes.forEach(function (n) { if (n.type === "distribution") dists.set(n.label, n); });
-      if (!dists.size) return;
+      var fids = Object.keys(recorded);
+      if (!fids.length) return;
       streamDests.forEach(function (sd) {
-        var under = ids.bucket(sd.bucket) + "/" + sd.prefix, named = new Set();
-        nodes.forEach(function (n, id) { var m = id.indexOf(under) === 0 && LOG_KEY.exec(id); if (m && dists.has(m[1])) named.add(m[1]); });
-        named.forEach(function (label) { edge(dists.get(label).id, "logs_to", sd.stream, "naming", "log files named after " + label + " sit under the stream's prefix " + (sd.prefix || "(none)")); });
+        var under = ids.bucket(sd.bucket) + "/" + sd.prefix, seen = Object.create(null);
+        fids.forEach(function (fid) {
+          if (fid.indexOf(under) !== 0) return;
+          recorded[fid].forEach(function (did) {
+            if (seen[did]) return; seen[did] = 1;
+            edge(did, "logs_to", sd.stream, "content", "its log files sit under the stream's prefix " + (sd.prefix || "(none)"));
+          });
+        });
       });
     }
 
@@ -373,6 +555,9 @@
     function nodeTrust(id) { return nodeTrustMap ? nodeTrustMap.get(id) || "claimed" : "claimed"; }
     var nodeTrustMap = null;
     function toJSON() {
+      cfnResolve();
+      joinLogs();
+      joinRecords();
       logsThroughStreams();
       packagesFunctions();
       // Node trust from the edges that name it (design 03): verified wins, then claimed, curated only if nothing else.
@@ -410,11 +595,52 @@
         lambda: as("verified", "Lambda ListFunctions", lambda),
         firehose: as("verified", "Firehose DescribeDeliveryStream", firehose),
         iam: as("verified", "IAM ListRoles, GetRole and ListAttachedRolePolicies", iam),
+        cfn: as("verified", "CloudFormation ListStacks, DescribeStacks and ListStackResources", cfn),
+        cloudfront: as("verified", "CloudFront ListDistributions, GetDistribution and ListFunctions", cloudfront),
+        route53: as("verified", "Route 53 ListHostedZones, GetHostedZone and ListResourceRecordSets", route53),
         activity: as("claimed", "CloudTrail log files in a bucket", activity),
         content: as("claimed", "files in a bucket", content),
         zips: as("claimed", "zip files in a bucket", addZips)
       }, toJSON: toJSON, ids: ids };
   }
+
+  // Rules for Desk and the Map's "Worth a look" (ux.aws.a designs 07 and 08), as data over a toJSON() result. A rule
+  // whose evidence AWS answered is a finding; one resting only on a file or a name is a question (R-020: a question may
+  // only ask, never suggest removing, replacing or narrowing). Items with nothing to cover are left out.
+  //   unowned             A2 resources AWS answered for (buckets, functions, distributions, streams) that no stack made
+  //                       (no made_by edge). Only when the graph holds CloudFormation stacks: without them nothing is
+  //                       known about who made what, and no item is given. Objects and records are left out (design 07).
+  //   by-name-only        links whose strongest evidence is a name (naming): a question.
+  //   dangling-confirmed  names an API answer gives (a function's role, a stream's bucket) that no adapter described.
+  //   dangling-claimed    names only files or names give that no adapter described: a question.
+  var OWNABLE = { bucket: true, function: true, distribution: true, stream: true };
+  Graph.rules = function (json) {
+    var nodes = (json && Array.isArray(json.nodes)) ? json.nodes : [], edges = (json && Array.isArray(json.edges)) ? json.edges : [];
+    var made = Object.create(null), hasStack = false;
+    nodes.forEach(function (n) { if (n && n.type === "stack") hasStack = true; });
+    edges.forEach(function (e) { if (e && e.rel === "made_by") made[e.from] = true; });
+    var sortIds = function (a) { return a.slice().sort(); };
+    var out = [];
+    function item(id, kind, title, ids, extra) {
+      if (!ids.length) return;
+      var it = { id: id, kind: kind, evidence: kind === "finding" ? "confirmed" : "claimed", title: title, count: ids.length, nodes: sortIds(ids) };
+      Object.keys(extra || {}).forEach(function (k) { it[k] = extra[k]; });
+      out.push(it);
+    }
+    if (hasStack) item("unowned", "finding", "Resources no stack made", nodes.filter(function (n) {
+      return n && OWNABLE[n.type] === true && n.altitude === "A2" && !n.dangling && n.trust === "verified" && !made[n.id];
+    }).map(function (n) { return n.id; }));
+    var named = edges.filter(function (e) { return e && e.evidence === "naming"; });
+    var ends = Object.create(null);
+    named.forEach(function (e) { ends[e.from] = true; ends[e.to] = true; });
+    item("by-name-only", "question", "Links by name only", Object.keys(ends), { count: named.length, edges: named.map(function (e) { return { from: e.from, rel: e.rel, to: e.to }; })
+      .sort(function (a, b) { var x = a.from + a.rel + a.to, y = b.from + b.rel + b.to; return x < y ? -1 : x > y ? 1 : 0; }) });
+    var dangling = nodes.filter(function (n) { return n && n.dangling; });
+    item("dangling-confirmed", "finding", "Named by AWS, not found", dangling.filter(function (n) { return n.trust === "verified"; }).map(function (n) { return n.id; }));
+    item("dangling-claimed", "question", "Named by a file or a name, not found", dangling.filter(function (n) { return n.trust !== "verified"; }).map(function (n) { return n.id; }));
+    var order = { finding: 0, question: 1 };
+    return out.sort(function (a, b) { return order[a.kind] - order[b.kind] || (a.id < b.id ? -1 : 1); });
+  };
 
   // A zip's facts for add.zips: its SHA-256 (base64, as Lambda's CodeSha256), the package name its
   // *.dist-info/METADATA gives, and how many entries it has. Reads the bytes in memory with zip.js (site/zip.js).
