@@ -665,5 +665,41 @@
   // An edge an AWS API answered for (evidence api or template). content and naming edges come from what files say or
   // from names, which bucket contents can plant (security R-020): show them as claims, never as proof.
   Graph.verified = function (e) { return !!e && (e.trust ? e.trust === "verified" : TRUST[e.evidence] === "verified"); };
+  // What a node is connected to, for a "Connected to this" panel (s3.aws.a's S3-4): pure, over a toJSON() result.
+  //   Graph.neighbours(json, id) -> { node, links: [{ rel, direction: "out" | "in", node, evidence, trust, source, via }] }
+  // One hop: every edge naming the node. A second hop through what the node holds (a bucket's objects and prefixes):
+  // their edges, with via set to the object, never leading back to the node itself. Links are sorted by direction,
+  // rel and the other node's id, so views and tests see a stable order. Unknown id: null.
+  Graph.neighbours = function (json, id) {
+    if (!json || !Array.isArray(json.nodes) || !Array.isArray(json.edges)) throw new TypeError("Graph.neighbours needs a toJSON() result");
+    var byId = new Map(json.nodes.map(function (n) { return [n.id, n]; }));
+    if (!byId.has(id)) return null;
+    var touching = new Map();
+    json.edges.forEach(function (e) {
+      [e.from, e.to].forEach(function (end) { if (!touching.has(end)) touching.set(end, []); touching.get(end).push(e); });
+    });
+    function link(e, from, via) {
+      var out = e.from === from;
+      return { rel: e.rel, direction: out ? "out" : "in", node: byId.get(out ? e.to : e.from), evidence: e.evidence, trust: e.trust || TRUST[e.evidence], source: e.source, via: via || null };
+    }
+    var links = [], held = [];
+    (touching.get(id) || []).forEach(function (e) {
+      if (e.from === e.to) return;
+      links.push(link(e, id, null));
+      if (e.from === id && e.rel === "holds") held.push(e.to);
+    });
+    held.forEach(function (oid) {
+      (touching.get(oid) || []).forEach(function (e) {
+        if (e.from === id || e.to === id) return; // the hop back to the node
+        links.push(link(e, oid, byId.get(oid)));
+      });
+    });
+    links.sort(function (a, b) {
+      var x = (a.via ? "1" : "0") + a.direction + a.rel + a.node.id + (a.via ? a.via.id : ""), y = (b.via ? "1" : "0") + b.direction + b.rel + b.node.id + (b.via ? b.via.id : "");
+      return x < y ? -1 : x > y ? 1 : 0;
+    });
+    return { node: byId.get(id), links: links };
+  };
+
   root.Graph = Graph;
 })(typeof window !== "undefined" ? window : globalThis);

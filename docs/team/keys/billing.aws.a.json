@@ -1,8 +1,8 @@
 {
   "v": 1,
-  "encrypt": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAtPgBjybMJ+dCeShIOcdt\nUGHHzIkGSbkXWSZCte4oQQx3/+4mw2SkihaFIMEVYRu6V8CrcxtKu0hUMVKYuwkU\njNAMMdskXL9Jw4Xh5Q/hAr9QHaGb7ldBktU7FlZ1q4dIl1qseulVm14kwm0FMAL1\np9TGnV2BCzdKefEGq9XXtJ8ge7TeBRpSfHlt0au9g1OJnsNgLNB5xSv9cYVFJwDm\nhQKVEyacpuMCmFp6eixbKuYXKs9Pa1gBNStGvZkqsU4k+MpRU+aoyH10WRFnGbGh\nnGKk3ByvdN1b3q4dlHPNDzknm+WkvRSuQQfFFB08BTxYU63tY6vKOl93buckeZ5t\nN8+EGxWw69TwZ6/LXD9m3Negyig6LISyaa++XQ3BTeVBqENOm3LFrrGPYbm3ZNhK\nvdZd+SD+bxxpbuPdH+lAq0XuTiVDYHAY1kRWhjPZNykeE91fUPYflq24ecEmRUvF\neSw7p6GUoQmXbfTMXkma05eTfJCvIOVT5o5muSfbh/gIg8Aea6TnQzDREbz9a4R1\n5h2RxDjcUZOxUmzd2oRcWFSWOIJ3tE79LRyNF7drj5fXBFMTAD6xj+Bkr7ifpUrO\nWbDW70w3NFMkl5Qo7eP+nZ9jKT20XLeQv7UfVcwo/NCMLEJfapGJcxB4pagfhzoD\nLBaQ+IUY1fFT6liJC7b7N1sCAwEAAQ==\n-----END PUBLIC KEY-----\n",
-  "sign": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAECLAgvycx3n3huNP3GlTpksOyGB/R\nzT1GvFnGXLltklINQlqjFwQV+ZVqI8E7cntYvHuIiPnFYormtt1tAfuGuA==\n-----END PUBLIC KEY-----\n",
+  "encrypt": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAsZWfHVb6FmI/QdEc4gF6\nH3dOJaMBmVeCoOMbZRA28V5nBtf68b+8CpZkSdM4PmBRpGZMhlzu94kgZbYRIuq7\n/ml5FCuNnZza7Li7IiuZ7j217f1MvVhq6+ZFWfZu5xEpwZNbejuxb1ADmYjwsav/\nIdzzeizwvpNUrzHdA83/crLFBwydDVo/Ot+Kcqx40bS1ItyxopH9AfEUkboK79Rh\nkzYN1rQYz95qGMKWM7/sf5slq7oa9+w7csP/vCc763wurls/nm04Gola7I2JAsb2\n/n9I+vDIkzO9dRgG1s9JHw4jiRs3HEQ4Cz7qFBc6Pz1eaniM+G+BZHRcrl8z7tE3\nqoGEpCHKZTEgaGcyaQsGJCX15At/u7eCZC95nEVN9OUvTdxtyNobajnklPeDuCnQ\nrzVIDGmzjj4jsDCV83ky4tDWcwALB910uLlb3ifFC3kERLqN7IfV3+3TTpJ8M+G8\nmKvzIfuisCl38i/66QsHNaJ/52vi/Rt5nX0NJ0z6OSj2Zmt6bLBTLrb+ZxWJyc1j\nPulMq8S5kV9f1NZ6pk535kZ+nUClW1gz+ADsCRURhnyaOygjcHU5+gK7f4kPYkzO\nCtutYu5pfjaEQnQd14rnT6lChW26t6l0D3tPy6zTQ63o0zqP0j1TK6RZM4v/fsoG\n1FNgMrIvoGddCXgCCI1AVcMCAwEAAQ==\n-----END PUBLIC KEY-----\n",
+  "sign": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE56/zt8+zfktWmp6bZfJuq9PDk2ob\nTXAHiHgGqyOcvBoEiMzCJsgvpXZoappH09pH3VQZ1C8eFEj+Fz31BA9DWQ==\n-----END PUBLIC KEY-----\n",
   "label": "billing.aws.a@SovereignWebsite.dinis",
-  "fingerprint": "sha256:cd5b29f632b02d3a",
-  "signing_fingerprint": "sha256:32da64f851e87727"
+  "fingerprint": "sha256:4d25179604ce68d4",
+  "signing_fingerprint": "sha256:6a98bf62998f26ff"
 }

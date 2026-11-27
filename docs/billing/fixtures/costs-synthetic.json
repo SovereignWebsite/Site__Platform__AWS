@@ -1,0 +1,27 @@
+{
+  "about": "Synthetic answers for the Costs view (site/billing.js), shaped as AWS's Cost Explorer and Budgets API reference documents them (GetCostAndUsage, GetCostForecast, DescribeBudgets). Made-up numbers, for tests and for the twin (dev.2.aws.a); not anyone's bill. billing.aws.a, 24 Nov 2026.",
+  "monthToDate": { "ResultsByTime": [ { "TimePeriod": { "Start": "2026-11-01", "End": "2026-11-24" }, "Total": { "UnblendedCost": { "Amount": "42.17", "Unit": "USD" } }, "Groups": [], "Estimated": true } ] },
+  "byService": { "ResultsByTime": [ { "TimePeriod": { "Start": "2026-11-01", "End": "2026-11-24" }, "Total": {}, "Groups": [
+    { "Keys": ["Amazon CloudFront"], "Metrics": { "UnblendedCost": { "Amount": "18.40", "Unit": "USD" } } },
+    { "Keys": ["AWS Lambda"], "Metrics": { "UnblendedCost": { "Amount": "3.10", "Unit": "USD" } } },
+    { "Keys": ["Amazon Simple Storage Service"], "Metrics": { "UnblendedCost": { "Amount": "12.02", "Unit": "USD" } } },
+    { "Keys": ["AWS Secrets Manager"], "Metrics": { "UnblendedCost": { "Amount": "0.30", "Unit": "USD" } } },
+    { "Keys": ["AWS Cost Explorer"], "Metrics": { "UnblendedCost": { "Amount": "8.35", "Unit": "USD" } } },
+    { "Keys": ["Tax"], "Metrics": { "UnblendedCost": { "Amount": "0", "Unit": "USD" } } }
+  ], "Estimated": true } ] },
+  "byRegion": { "ResultsByTime": [ { "TimePeriod": { "Start": "2026-11-01", "End": "2026-11-24" }, "Total": {}, "Groups": [
+    { "Keys": ["eu-west-2"], "Metrics": { "UnblendedCost": { "Amount": "21.10", "Unit": "USD" } } },
+    { "Keys": ["global"], "Metrics": { "UnblendedCost": { "Amount": "18.40", "Unit": "USD" } } },
+    { "Keys": ["us-east-1"], "Metrics": { "UnblendedCost": { "Amount": "2.67", "Unit": "USD" } } }
+  ], "Estimated": true } ] },
+  "daily": { "ResultsByTime": [
+    { "TimePeriod": { "Start": "2026-11-21", "End": "2026-11-22" }, "Total": { "UnblendedCost": { "Amount": "1.62", "Unit": "USD" } }, "Estimated": true },
+    { "TimePeriod": { "Start": "2026-11-22", "End": "2026-11-23" }, "Total": { "UnblendedCost": { "Amount": "2.05", "Unit": "USD" } }, "Estimated": true },
+    { "TimePeriod": { "Start": "2026-11-23", "End": "2026-11-24" }, "Total": { "UnblendedCost": { "Amount": "0.81", "Unit": "USD" } }, "Estimated": true }
+  ] },
+  "forecast": { "Total": { "Amount": "11.83", "Unit": "USD" }, "ForecastResultsByTime": [ { "TimePeriod": { "Start": "2026-11-24", "End": "2026-12-01" }, "MeanValue": "11.83" } ] },
+  "budgets": { "Budgets": [
+    { "BudgetName": "monthly-cap", "BudgetType": "COST", "TimeUnit": "MONTHLY", "BudgetLimit": { "Amount": "60.0", "Unit": "USD" },
+      "CalculatedSpend": { "ActualSpend": { "Amount": "42.17", "Unit": "USD" }, "ForecastedSpend": { "Amount": "54.00", "Unit": "USD" } } }
+  ] }
+}
