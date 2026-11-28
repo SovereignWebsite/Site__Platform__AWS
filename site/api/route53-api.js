@@ -144,6 +144,7 @@
   Route53Api.zoneId = zoneId;
   Route53Api.recordId = recordId;
   Route53Api.normName = normName;
+  Route53Api.parts = { tree: tree, kid: kid, kids: kids, txt: txt, fail: fail, zoneId: zoneId, zoneOf: zoneOf };
   Route53Api.all = function (page, opts) { return root.ApiAll(page, opts); };
   root.Route53Api = Route53Api;
 })(typeof window !== "undefined" ? window : globalThis);

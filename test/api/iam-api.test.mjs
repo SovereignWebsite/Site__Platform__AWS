@@ -50,7 +50,7 @@ ok(dns.lastUsed === null && read.boundary === null && dns.boundary === null && d
 ok((await api.role("demo-handler-role")).trust.statements[0].principals[0].kind === "service", "a service principal");
 ok(JSON.stringify(plain((await api.attached("sws-aws-platform-read")).items)) === JSON.stringify([{ name: "ViewOnlyAccess", arn: "arn:aws:iam::aws:policy/job-function/ViewOnlyAccess" }, { name: "SecurityAudit", arn: "arn:aws:iam::aws:policy/SecurityAudit" }]), "attached");
 const inl = await api.inline("sws-aws-platform-change");
-ok(JSON.stringify(plain(inl)) === JSON.stringify({ items: ["dns-role-trust-only", "s3-cors", "self-update"], next: null }), "inline");
+ok(JSON.stringify(plain(inl)) === JSON.stringify({ items: ["dns-role-trust-only", "dns-zones", "s3-cors", "self-update"], next: null }), "inline (dns-zones since template v2.2)");
 const su = await api.inlineDocument("sws-aws-platform-change", "self-update");
 ok(su.Statement.length === 4 && su.Statement[2].Condition["ForAnyValue:StringEquals"]["aws:CalledVia"] === "cloudformation.amazonaws.com", "inlineDocument as AWS wrote it");
 const pd = await api.policyDocument("arn:aws:iam::aws:policy/SecurityAudit");

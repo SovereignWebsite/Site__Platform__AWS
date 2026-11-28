@@ -48,8 +48,11 @@ assert.equal((await get("hostedzone/ZNOSUCHZONE1/rrset")).status, 404);
 checks += 15;
 
 // Only these three reads; the customer account refused; nothing written
-for (const p of ["healthcheck", "hostedzone/Z0DEMOTWIN0001/rrset/extra", "hostedzonecount", "change/C1"]) { r = await get(p); assert.equal(r.status, 501, p); assert.equal(r.note, NOTE); }
-assert.equal((await get("hostedzone/Z0DEMOTWIN0001/rrset", READ, "POST")).status, 501, "ChangeResourceRecordSets is not in the twin");
+for (const p of ["healthcheck", "hostedzone/Z0DEMOTWIN0001/rrset/extra", "hostedzonecount"]) { r = await get(p); assert.equal(r.status, 501, p); assert.equal(r.note, NOTE); }
+// Since template v2.2 (28 Nov 2026) the twin takes Route 53 changes from the change role only (test/twin/route53-writes.test.mjs):
+// the read role is refused as IAM would refuse it, and an unknown change id is a 404.
+assert.equal((await get("change/C1")).status, 404, "an unknown change id");
+assert.equal((await get("hostedzone/Z0DEMOTWIN0001/rrset", READ, "POST")).status, 403, "ChangeResourceRecordSets refused to the read role");
 assert.equal((await get("hostedzone", CUST)).status, 403, "the customer account has no Route 53 in the twin");
 r = await get("hostedzone", {}); assert.equal(r.status, 403, "an unsigned call is refused, as by every other twin service"); assert.match(r.text, /MissingAuthenticationToken/);
 assert.equal(twin.journal().length, j0, "reads write nothing");

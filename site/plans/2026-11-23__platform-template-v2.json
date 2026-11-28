@@ -1,7 +1,7 @@
 {
   "id": "2026-11-23__platform-template-v2",
-  "title": "This platform's own stack: run the site's latest template (v2.1: the change role narrowed)",
-  "why": "Template v2.1 (23 Nov 2026): fixes security.aws.c's R-001 (Critical). The change role had iam:* on the platform roles, so it could make itself account admin. Now it may only make the IAM changes CloudFormation needs to update its two roles, only through CloudFormation (a change set you approve), with no CreateRole, DeleteRole or PassRole, and may attach only AWS's ViewOnlyAccess and SecurityAudit. Also: the template's descriptions no longer name the owner. v2 (same night) added the S3 browser and let the stack update itself; its first move was made in the console. Side effect (security.aws.c): a later template that adds or deletes a role, or attaches another managed policy, will fail until the change role's list grows; that growth is itself reviewed. Open after this: R-008 (a change set from the page), see docs/security/risks.md.",
+  "title": "This platform's own stack: run the site's latest template (v2.2: DNS from the site)",
+  "why": "Template v2.2 (28 Nov 2026), at Dinis's word: the change role may create public hosted zones and add, change and delete NS, A, CNAME and TXT records, so DNS is managed from the Stacks and DNS tab, each change shown as a plan first. No zone deletion, no other record types, no private zones. Note: record changes are allowed in every hosted zone of the account, including zones other systems use (for example the IaC's DNS deploys); the page asks before each change, the role does not. Earlier: v2.1 (23 Nov) fixed security.aws.c's R-001 (the change role could make itself admin); v2 added the S3 browser and let the stack update itself.",
   "summary": "Shows the template AWS holds beside the site's; then AWS's own change set; then executes it. Parameters keep their values.",
   "role": "sws-aws-platform-change",
   "action": "cloudformation.update_stack",

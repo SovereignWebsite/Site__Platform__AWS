@@ -535,6 +535,9 @@
       "sws-aws-platform-change": role({ id: 2, created: "2026-11-22T09:58:00Z", description: "The changes the owner approves on the AWS platform site; grows only by a reviewed change to this template",
         lastUsed: { when: "2026-11-22T10:04:40Z", region: "us-east-1" },
         inline: { "dns-role-trust-only": doc(stmt("TheDnsRoleTrustPolicy", ["iam:GetRole", "iam:UpdateAssumeRolePolicy"], R + "sovereignwebsite-factory-dns")),
+          "dns-zones": doc(stmt("CreatePublicHostedZones", "route53:CreateHostedZone", "*"),
+            stmt("RecordsOfFourTypes", "route53:ChangeResourceRecordSets", "arn:aws:route53:::hostedzone/*", { Condition: { "ForAllValues:StringEquals": { "route53:ChangeResourceRecordSetsRecordTypes": ["NS", "A", "CNAME", "TXT"], "route53:ChangeResourceRecordSetsActions": ["CREATE", "UPSERT", "DELETE"] } } }),
+            stmt("ReadBackWhatChanged", ["route53:GetChange", "route53:GetHostedZone", "route53:ListHostedZones", "route53:ListResourceRecordSets"], "*")),
           "s3-cors": doc(stmt("BucketCorsThroughCloudControl", ["s3:Get*", "s3:List*", "s3:PutBucketCORS", "cloudformation:GetResource", "cloudformation:ListResources", "cloudformation:UpdateResource", "cloudformation:GetResourceRequestStatus"], "*")),
           "self-update": doc(
             stmt("ThisStackOnly", ["cloudformation:DescribeStacks", "cloudformation:DescribeStackEvents", "cloudformation:GetTemplate", "cloudformation:GetTemplateSummary", "cloudformation:CreateChangeSet", "cloudformation:DescribeChangeSet", "cloudformation:ExecuteChangeSet", "cloudformation:DeleteChangeSet"], "arn:aws:cloudformation:us-east-1:" + ACCOUNT + ":stack/sws-aws-platform/*"), // ${AWS::Region} of the hub's stack: the page calls CloudFormation in us-east-1
@@ -1649,10 +1652,69 @@
       ? "<AliasTarget><DNSName>" + esc(r.alias.dns) + "</DNSName><EvaluateTargetHealth>" + r.alias.health + "</EvaluateTargetHealth></AliasTarget>"
       : "<TTL>" + r.ttl + "</TTL><ResourceRecords>" + r.values.map(function (v) { return "<ResourceRecord><Value>" + esc(v) + "</Value></ResourceRecord>"; }).join("") + "</ResourceRecords>") + "</ResourceRecordSet>";
   }
+  // Writes (Dinis, 28 Nov 2026): CreateHostedZone and ChangeResourceRecordSets for NS, A, CNAME and TXT, with CREATE,
+  // UPSERT and DELETE, as template v2.2's change role allows; GetChange answers INSYNC (the twin has one server). Only the
+  // change role's credentials may write, as IAM would refuse the read role. Checks as Route 53 documents them: a CREATE of
+  // a record that exists, or a DELETE that does not match a record exactly (TTL and values), fails the whole batch.
+  var R53_CHANGES = {}, R53_N = 0;
+  function r53Change(id) { var c = R53_CHANGES[id]; return "<ChangeInfo><Id>/change/" + id + "</Id><Status>INSYNC</Status><SubmittedAt>" + c.at + "</SubmittedAt></ChangeInfo>"; }
+  function r53NewChange() { R53_N++; var id = "C0TWIN" + pad(R53_N, 6); R53_CHANGES[id] = { at: new Date().toISOString() }; return id; }
+  function tagText(x, t) { var mm = new RegExp("<" + t + ">([\\s\\S]*?)</" + t + ">").exec(x); return mm ? mm[1].replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, "\"").replace(/&amp;/g, "&") : null; }
+  function tagsText(x, t) { var out = [], re = new RegExp("<" + t + ">([\\s\\S]*?)</" + t + ">", "g"), mm; while ((mm = re.exec(x))) out.push(mm[1]); return out; }
+  function r53Write(m, body, init) {
+    var auth = hdr(init, "authorization") || "";
+    if (!/Credential=ASIATWINCHANGE/.test(auth)) return r53Err("AccessDenied", "User: the read role is not authorized to perform this Route 53 change (the twin, as IAM would answer).", 403);
+    if (m[1] === undefined) {
+      var name = String(tagText(body, "Name") || "").toLowerCase(), ref = tagText(body, "CallerReference");
+      if (!/^([a-z0-9_-]+\.)+[a-z]{2,63}\.?$/.test(name) || !ref) return r53Err("InvalidInput", "A name and a caller reference are required.");
+      if (!/\.$/.test(name)) name += ".";
+      if (R53_ZONES.some(function (z) { return z.ref === ref; })) return r53Err("HostedZoneAlreadyExists", "A hosted zone was already created with this caller reference.", 409);
+      R53_N++;
+      var id = "Z0TWINNEW" + pad(R53_N, 4), ns = ["ns-" + (100 + R53_N) + ".awsdns-" + pad(R53_N % 64, 2) + ".org", "ns-" + (900 + R53_N) + ".awsdns-" + pad((R53_N + 7) % 64, 2) + ".co.uk",
+        "ns-" + (1500 + R53_N) + ".awsdns-" + pad((R53_N + 13) % 64, 2) + ".net", "ns-" + (2000 + R53_N) + ".awsdns-" + pad((R53_N + 29) % 64, 2) + ".com"];
+      var zone = { id: id, name: name, comment: tagText(body, "Comment") || "", ns: ns, ref: ref, records: [
+        { name: name, type: "NS", ttl: 172800, values: ns.map(function (n) { return n + "."; }) },
+        { name: name, type: "SOA", ttl: 900, values: [ns[0] + ". awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400"] }] };
+      R53_ZONES.push(zone);
+      var cid = r53NewChange();
+      var res = r53("<CreateHostedZoneResponse" + R53_NS + ">" + r53Zone(zone) + r53Change(cid).replace("INSYNC", "PENDING") + "<DelegationSet><NameServers>" + ns.map(function (n) { return "<NameServer>" + n + "</NameServer>"; }).join("") + "</NameServers></DelegationSet></CreateHostedZoneResponse>", 201);
+      return res;
+    }
+    var zone2 = R53_ZONES.filter(function (z) { return z.id === m[1]; })[0];
+    if (!zone2) return r53Err("NoSuchHostedZone", "No hosted zone found with ID: " + m[1], 404);
+    if (!m[2]) return r53Err("NotImplemented", "The twin does not change a hosted zone itself.", 501);
+    var changes = tagsText(body, "Change").map(function (c) {
+      return { action: tagText(c, "Action"), name: String(tagText(c, "Name") || "").toLowerCase(), type: tagText(c, "Type"), ttl: Number(tagText(c, "TTL")),
+        values: tagsText(c, "Value").map(function (v) { return v.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, "\"").replace(/&amp;/g, "&"); }) };
+    });
+    if (!changes.length) return r53Err("InvalidChangeBatch", "The change batch has no changes.");
+    var next = zone2.records.slice(), problems = [];
+    changes.forEach(function (c) {
+      if (["NS", "A", "CNAME", "TXT"].indexOf(c.type) < 0) return problems.push("Not allowed: " + c.type + " (the change role allows NS, A, CNAME and TXT)");
+      if (["CREATE", "UPSERT", "DELETE"].indexOf(c.action) < 0) return problems.push("Not allowed: " + c.action);
+      if (!/\.$/.test(c.name)) c.name += ".";
+      if (c.name !== zone2.name && c.name.slice(-(zone2.name.length + 1)) !== "." + zone2.name) return problems.push("RRSet with DNS name " + c.name + " is not permitted in zone " + zone2.name);
+      var at = -1; next.forEach(function (r, i) { if (r.name === c.name && r.type === c.type) at = i; });
+      if (c.type === "CNAME" && c.action !== "DELETE" && next.some(function (r) { return r.name === c.name && r.type !== "CNAME"; })) return problems.push("RRSet of type CNAME with DNS name " + c.name + " is not permitted as it conflicts with other records with the same DNS name");
+      if (c.action === "CREATE") { if (at >= 0) return problems.push("Tried to create resource record set [name='" + c.name + "', type='" + c.type + "'] but it already exists"); next.push({ name: c.name, type: c.type, ttl: c.ttl, values: c.values }); }
+      if (c.action === "UPSERT") { if (at >= 0) next[at] = { name: c.name, type: c.type, ttl: c.ttl, values: c.values }; else next.push({ name: c.name, type: c.type, ttl: c.ttl, values: c.values }); }
+      if (c.action === "DELETE") {
+        if (at < 0 || next[at].ttl !== c.ttl || next[at].values.join("\n") !== c.values.join("\n")) return problems.push("Tried to delete resource record set [name='" + c.name + "', type='" + c.type + "'] but the values provided do not match the current values");
+        if (c.type === "NS" && c.name === zone2.name) return problems.push("A HostedZone must contain at least one NS record for the zone itself.");
+        next.splice(at, 1);
+      }
+    });
+    if (problems.length) return r53Err("InvalidChangeBatch", problems.join("; "));
+    zone2.records = next;
+    return r53("<ChangeResourceRecordSetsResponse" + R53_NS + ">" + r53Change(r53NewChange()).replace("INSYNC", "PENDING") + "</ChangeResourceRecordSetsResponse>");
+  }
   function route53(url, init) {
     if (!signed(init)) return r53Err("MissingAuthenticationToken", "Request is missing Authentication Token", 403);
-    var u = new URL(url), q = u.searchParams, m = /^\/2013-04-01\/hostedzone(?:\/([^\/]+)(\/rrset)?)?$/.exec(u.pathname);
-    if (!m || (init.method || "GET").toUpperCase() !== "GET")
+    var u = new URL(url), q = u.searchParams, m = /^\/2013-04-01\/hostedzone(?:\/([^\/]+)(\/rrset)?)?\/?$/.exec(u.pathname);
+    var method = (init.method || "GET").toUpperCase(), cm = /^\/2013-04-01\/change\/([A-Z0-9]+)$/.exec(u.pathname);
+    if (cm && method === "GET") return R53_CHANGES[cm[1]] ? r53("<GetChangeResponse" + R53_NS + ">" + r53Change(cm[1]) + "</GetChangeResponse>") : r53Err("NoSuchChange", "A change with the specified change ID does not exist.", 404);
+    if (m && method === "POST") return r53Write(m, typeof init.body === "string" ? init.body : "", init);
+    if (!m || method !== "GET")
       return r53Err("NotImplemented", "The twin answers three Route 53 reads only: ListHostedZones, GetHostedZone and ListResourceRecordSets. Twin mode never calls real AWS.", 501);
     if (m[1] === undefined) {
       var zmax = r53Max(q, 100);

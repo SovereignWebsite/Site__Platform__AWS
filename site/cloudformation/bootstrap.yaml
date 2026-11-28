@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  SovereignWebsite AWS platform v2.1, bootstrap (the last console log-in). Two roles that
+  SovereignWebsite AWS platform v2.2, bootstrap (the last console log-in). Two roles that
   the account owner's own Google sign-in, in their browser on aws.platform.sovereignweb.site, may
   assume through STS AssumeRoleWithWebIdentity for at most one hour. No IAM user, no
   access key, nothing stored. Written by aws.c@SovereignWebsite.dinis, 22 Nov 2026; the site fills in both parameters.
@@ -91,6 +91,29 @@ Resources:
               - Sid: BucketCorsThroughCloudControl
                 Effect: Allow
                 Action: ["s3:Get*", "s3:List*", s3:PutBucketCORS, cloudformation:GetResource, cloudformation:ListResources, cloudformation:UpdateResource, cloudformation:GetResourceRequestStatus]
+                Resource: "*"
+        # v2.2, 28 Nov 2026: DNS from the site (Dinis: create a hosted zone; view a zone's records; add, change and
+        # delete NS, A, CNAME and TXT records). Each change is a plan the owner approves on the site. Public zones only
+        # (no VPC actions); no zone deletion; record changes limited to those four types and CREATE, UPSERT, DELETE.
+        - PolicyName: dns-zones
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: CreatePublicHostedZones
+                Effect: Allow
+                Action: route53:CreateHostedZone
+                Resource: "*"
+              - Sid: RecordsOfFourTypes
+                Effect: Allow
+                Action: route53:ChangeResourceRecordSets
+                Resource: arn:aws:route53:::hostedzone/*
+                Condition:
+                  ForAllValues:StringEquals:
+                    route53:ChangeResourceRecordSetsRecordTypes: [NS, A, CNAME, TXT]
+                    route53:ChangeResourceRecordSetsActions: [CREATE, UPSERT, DELETE]
+              - Sid: ReadBackWhatChanged
+                Effect: Allow
+                Action: [route53:GetChange, route53:GetHostedZone, route53:ListHostedZones, route53:ListResourceRecordSets]
                 Resource: "*"
         # v2, 23 Nov 2026: this stack updates itself from the site, as a plan the owner approves, so no more
         # console visits. Dinis: "for now [allow] a lot of updates on [the] CloudFormation stack. We'll tighten

@@ -70,7 +70,7 @@ ok(JSON.stringify(tag(r.text, "PolicyArn")) === JSON.stringify(["arn:aws:iam::aw
 r = await iam({ Action: "ListAttachedRolePolicies", RoleName: "demo-handler-role" });
 ok(r.text.includes("<AttachedPolicies></AttachedPolicies>"), "no attached policies");
 r = await iam({ Action: "ListRolePolicies", RoleName: "sws-aws-platform-change" });
-ok(JSON.stringify(tag(one(r.text, "PolicyNames"), "member")) === JSON.stringify(["dns-role-trust-only", "s3-cors", "self-update"]), "ListRolePolicies");
+ok(JSON.stringify(tag(one(r.text, "PolicyNames"), "member")) === JSON.stringify(["dns-role-trust-only", "dns-zones", "s3-cors", "self-update"]), "ListRolePolicies (dns-zones since template v2.2)");
 r = await iam({ Action: "GetRolePolicy", RoleName: "sws-aws-platform-change", PolicyName: "dns-role-trust-only" });
 const pd = JSON.parse(decodeURIComponent(one(r.text, "PolicyDocument")));
 ok(one(r.text, "PolicyName") === "dns-role-trust-only" && pd.Statement[0].Resource === "arn:aws:iam::" + A + ":role/sovereignwebsite-factory-dns", "GetRolePolicy document");

@@ -23,9 +23,9 @@
 
   // ---- one send for every API ----
   function account(sel) { var id = sel && sel.value; return P.accounts().filter(function (a) { return a.id === id; })[0] || P.accounts()[0]; }
-  function sender(acct) {
+  function sender(acct, role) {
     return function (req) {
-      return P.assume(acct, "sws-aws-platform-read").then(function (c) {
+      return P.assume(acct, role || "sws-aws-platform-read").then(function (c) {
         return SigV4.sign({ method: req.method, url: req.url, headers: req.headers || {}, body: req.body || "" }, c, req.region, req.service);
       }).then(function (h) { return AwsTransport.fetch(req.url, { method: req.method, headers: h, body: req.body || undefined }); });
     };
@@ -177,21 +177,121 @@
       // DNS: Route 53 is global; read once with the stacks.
       var dns = el("div", { class: "console-dns" }); f.body.appendChild(dns); dns.appendChild(h3("DNS (Route 53)"));
       if (needsTwin(["route53"])) { twinOnly(dns, ["route53"], f); return "Read " + r.items.length + " stacks."; }
-      var r53 = Route53Api(send, { account: acct.id });
-      return drain(function (n) { return r53.zones({ next: n }); }).then(function (z) {
-        if (!live()) return;
-        if (!z.items.length) { dns.appendChild(note("No hosted zones.")); return; }
-        dns.appendChild(table([{ h: "Zone", get: function (x) { return x.name; } }, { h: "Records", n: true, get: function (x) { return x.recordCount; } }, { h: "Private", get: function (x) { return x.private ? "yes" : "no"; } }, { h: "Comment", get: function (x) { return x.comment; } }], z.items,
-          function (zone) {
-            var d = detail(f); d.appendChild(h3(zone.name));
-            drain(function (n) { return r53.records(zone.id, { next: n }); }).then(function (rr) {
-              d.appendChild(table([{ h: "Name", get: function (x) { return x.name; } }, { h: "Type", get: function (x) { return x.type; } }, { h: "TTL", n: true, get: function (x) { return x.ttl; } },
-                { h: "Points at", get: function (x) { return x.alias ? "alias: " + (x.alias.dnsName || x.alias.target || JSON.stringify(x.alias)) : (x.values || []).join(", "); } }], rr.items));
-            }).catch(function (e) { fail(f.st, e); });
-          }));
-      }).then(function () { return "Read " + r.items.length + " stacks and the hosted zones."; });
+      return dnsManager(f, acct, send, dns, live).then(function () { return "Read " + r.items.length + " stacks and the hosted zones."; });
     });
   } });
+
+  // ---- DNS: Route 53 zones and records, read with the read role; changed with the change role after Approve ----
+  // Dinis Cruz, 28 Nov 2026: create a hosted zone, view a zone's records, add (and change, and delete) NS, A, CNAME and
+  // TXT records from this UI. Every change is shown first as a plan (what the zone holds now, what it will hold after,
+  // and what it costs); nothing is sent until Approve. Template v2.2's change role allows exactly these changes.
+  var TYPES = ["A", "CNAME", "TXT", "NS"];
+  function dnsManager(f, acct, send, dns, live) {
+    var r53 = Route53Api(send, { account: acct.id });
+    function changer() { return Route53Changes(sender(acct, "sws-aws-platform-change")); }
+    function hint(e) { return /AccessDenied|not authorized/i.test(e.message) ? " (The change role needs template v2.2: approve it on the Plans tab.)" : ""; }
+    // A plan card: lines before, lines after, a note, and Approve, which runs go() and shows its result.
+    function planCard(box, title, before, after, notes, go) {
+      box.textContent = "";
+      var st = el("p", { class: "status" }), approve = el("button", { type: "button", class: "approve", text: "Approve: make this change" });
+      var cancel = el("button", { type: "button", class: "quiet", text: "Cancel" });
+      cancel.onclick = function () { box.textContent = ""; };
+      box.appendChild(el("div", { class: "card plan-card" }, [el("h4", { text: title }), P.diffView(before, after), el("div", {}, notes.map(note)), el("div", { class: "row" }, [approve, cancel]), st]));
+      approve.onclick = function () {
+        approve.disabled = true; P.say(st, "Asking AWS with the change role...");
+        Promise.resolve().then(go).then(function (msg) { P.say(st, msg, "ok"); cancel.textContent = "Close"; }, function (e) { approve.disabled = false; P.say(st, e.message + hint(e), "bad"); });
+      };
+    }
+    function waitInSync(api, id) {
+      var tries = 0;
+      function poll() { return api.change(id).then(function (c) { if (c.status === "INSYNC" || ++tries > 20) return c; return new Promise(function (res) { setTimeout(res, 3000); }).then(poll); }); }
+      return poll();
+    }
+    function recLine(r) { return r.name + "  " + r.type + "  " + (r.ttl === null ? "" : r.ttl + " s  ") + (r.alias ? "alias " + r.alias.dnsName : (r.values || []).join("  ")); }
+    function full(name, zoneName) { var n = String(name || "").trim().toLowerCase().replace(/\.$/, ""), z = zoneName.replace(/\.$/, ""); return (!n || n === "@" ? z : n === z || n.slice(-(z.length + 1)) === "." + z ? n : n + "." + z) + "."; }
+    function quoteTxt(v) { v = v.trim(); return /^".*"$/.test(v) ? v : "\"" + v.replace(/\\/g, "\\\\").replace(/"/g, "\\\"") + "\""; }
+
+    function openZone(zone) {
+      var d = detail(f); d.appendChild(h3(zone.name + (zone.comment ? "  (" + zone.comment + ")" : "")));
+      var plan = el("div", {});
+      return Promise.all([drain(function (n) { return r53.records(zone.id, { next: n }); }), r53.zone(zone.id).catch(function () { return null; })]).then(function (x) {
+        var records = x[0].items, info = x[1];
+        if (info && info.nameServers && info.nameServers.length) d.appendChild(kv([["Name servers (give these to your domain's registrar)", info.nameServers.join("  ")]]));
+        var tb = el("tbody", {});
+        records.forEach(function (rec) {
+          var acts = el("td", {});
+          var editable = TYPES.indexOf(rec.type) >= 0 && !rec.alias && !(rec.type === "NS" && rec.name === zone.name);
+          if (editable) {
+            var ch = el("button", { type: "button", class: "linkish", text: "Change" }); ch.onclick = function () { fill(rec); };
+            var del = el("button", { type: "button", class: "linkish", text: "Delete" });
+            del.onclick = function () {
+              planCard(plan, "Delete " + rec.type + " " + rec.name, records.map(recLine).join("\n"), records.filter(function (o) { return o !== rec; }).map(recLine).join("\n"),
+                ["Route 53 deletes only an exact match (name, type, TTL and values), as shown. Takes effect within about a minute; resolvers may keep the old answer for up to its TTL (" + rec.ttl + " s)."],
+                function () { var api = changer(); return api.changeRecords(zone.id, [{ action: "DELETE", record: { name: rec.name, type: rec.type, ttl: rec.ttl, values: rec.values } }], "deleted from aws.platform.sovereignweb.site")
+                  .then(function (c) { return waitInSync(api, c.id); }).then(function (c) { openZone(zone); return "Deleted (" + c.status + ")."; }); });
+            };
+            acts.appendChild(ch); acts.appendChild(document.createTextNode(" ")); acts.appendChild(del);
+          }
+          tb.appendChild(el("tr", {}, [el("td", { text: rec.name }), el("td", { text: rec.type }), el("td", { class: "n", text: rec.ttl === null ? "" : String(rec.ttl) }),
+            el("td", { text: rec.alias ? "alias: " + rec.alias.dnsName : (rec.values || []).join(", ") }), acts]));
+        });
+        d.appendChild(el("div", { class: "s3-wrap" }, [el("table", { class: "s3-table" }, [el("thead", {}, [el("tr", {}, ["Name", "Type", "TTL", "Points at", ""].map(function (h) { return el("th", { text: h }); }))]), tb])]));
+
+        // Add or change a record
+        var name = el("input", { type: "text", placeholder: "name (blank for " + zone.name.replace(/\.$/, "") + ")", "aria-label": "Record name" });
+        var type = el("select", { "aria-label": "Record type" }, TYPES.map(function (t) { return el("option", { value: t, text: t }); }));
+        var ttl = el("input", { type: "number", min: "0", value: "300", "aria-label": "TTL in seconds", class: "ttl" });
+        var vals = el("textarea", { rows: "3", placeholder: "A: IPv4 addresses, one per line. CNAME: one host name. TXT: one text per line (quotes added for you). NS: name servers, one per line.", "aria-label": "Values" });
+        var show = el("button", { type: "button", text: "Show the plan" });
+        function fill(rec) { name.value = rec.name.replace(/\.$/, ""); type.value = rec.type; ttl.value = rec.ttl; vals.value = rec.type === "TXT" ? rec.values.map(function (v) { return v.replace(/^"|"$/g, ""); }).join("\n") : rec.values.join("\n"); vals.focus(); }
+        show.onclick = function () {
+          var nm = full(name.value, zone.name), tp = type.value, t = Number(ttl.value);
+          var values = vals.value.split("\n").map(function (v) { return v.trim(); }).filter(Boolean).map(function (v) { return tp === "TXT" ? quoteTxt(v) : tp === "A" ? v : v.replace(/\.$/, ""); });
+          var existing = records.filter(function (o) { return o.name === nm && o.type === tp; })[0];
+          var change = { action: existing ? "UPSERT" : "CREATE", record: { name: nm, type: tp, ttl: t, values: values } };
+          if (!Route53Changes.checkChange(change)) return planCard(plan, "Not a valid " + tp + " record", "", "", ["Check the name, the TTL and the values: A needs IPv4 addresses, CNAME exactly one host name, NS host names, TXT up to 255 characters per line."], function () { throw new Error("Fix the record first."); });
+          if (tp === "CNAME" && records.some(function (o) { return o.name === nm && o.type !== "CNAME"; })) return planCard(plan, "A CNAME cannot share its name", "", "", ["DNS does not allow a CNAME on a name that has other records (" + nm + ")."], function () { throw new Error("Choose another name."); });
+          var after = records.filter(function (o) { return o !== existing; }).concat([{ name: nm, type: tp, ttl: t, values: values }]);
+          planCard(plan, (existing ? "Change " : "Add ") + tp + " " + nm, records.map(recLine).join("\n"), after.map(recLine).join("\n"),
+            [(existing ? "Replaces the record now there (UPSERT)." : "Adds a new record (CREATE).") + " Takes effect within about a minute; resolvers may keep an old answer for up to its TTL."],
+            function () { var api = changer(); return api.changeRecords(zone.id, [change], "from aws.platform.sovereignweb.site").then(function (c) { return waitInSync(api, c.id); }).then(function (c) { openZone(zone); return (existing ? "Changed" : "Added") + " (" + c.status + ")."; }); });
+        };
+        d.appendChild(el("h4", { text: "Add or change a record" }));
+        d.appendChild(el("div", { class: "dns-form" }, [el("div", { class: "row" }, [name, type, ttl]), vals, el("div", { class: "row" }, [show])]));
+        d.appendChild(plan);
+      }).catch(function (e) { fail(f.st, e); });
+    }
+
+    return drain(function (n) { return r53.zones({ next: n }); }).then(function (z) {
+      if (!live()) return;
+      if (!z.items.length) dns.appendChild(note("No hosted zones yet."));
+      else dns.appendChild(table([{ h: "Zone", get: function (x) { return x.name; } }, { h: "Records", n: true, get: function (x) { return x.recordCount; } }, { h: "Private", get: function (x) { return x.private ? "yes" : "no"; } }, { h: "Comment", get: function (x) { return x.comment; } }], z.items, openZone));
+      // Create a hosted zone
+      var dom = el("input", { type: "text", placeholder: "domain, for example example.org", "aria-label": "Domain for the new zone" });
+      var com = el("input", { type: "text", placeholder: "a note for you (optional)", "aria-label": "Comment" });
+      var show = el("button", { type: "button", text: "Show the plan" }), plan = el("div", {});
+      show.onclick = function () {
+        var n = dom.value.trim().toLowerCase().replace(/\.$/, "");
+        if (!/^([a-z0-9_-]+\.)+[a-z]{2,63}$/.test(n)) return planCard(plan, "Not a domain name", "", "", ["Type a domain such as example.org or shop.example.org."], function () { throw new Error("Fix the domain first."); });
+        var same = z.items.filter(function (x) { return x.name === n + "."; });
+        planCard(plan, "Create the public hosted zone " + n, z.items.map(function (x) { return x.name; }).join("\n"), z.items.map(function (x) { return x.name; }).concat([n + ".  (new)"]).join("\n"),
+          [(same.length ? "There is already a zone for " + n + ": a second one is allowed, but only one can be the one your registrar points at. " : "") +
+            "Cost: $0.50 a month for the zone, charged in full for any part of a month (and per million queries). AWS gives it four name servers; to make it live, set those at the registrar of " + n + ". It starts with its NS and SOA records only."],
+          function () {
+            var api = changer();
+            return api.createZone(n, { comment: com.value.trim() }).then(function (r) {
+              return waitInSync(api, r.change.id).then(function () {
+                dns.textContent = ""; dns.appendChild(h3("DNS (Route 53)"));
+                return dnsManager(f, acct, send, dns, live).then(function () { openZone(r.zone); return "Created " + n + ". Name servers: " + r.nameServers.join(", ") + "."; });
+              });
+            });
+          });
+      };
+      dns.appendChild(el("h4", { text: "Create a hosted zone" }));
+      dns.appendChild(el("div", { class: "row dns-form" }, [dom, com, show]));
+      dns.appendChild(plan);
+    });
+  }
 
   // ---- IAM roles ----
   function trustedBy(role) {

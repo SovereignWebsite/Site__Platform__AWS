@@ -45,6 +45,29 @@ const fail = (m) => { throw new Error(m); };
   // the zone's records open from Stacks and DNS
   await pg.click("#tab-stacks"); await pg.click("#console-stacks button:has-text('example.com.')");
   await pg.waitForFunction(() => /www\.example\.com/.test(document.querySelector("#console-stacks .console-detail").textContent));
+  // DNS changes: create a zone, add an A record, change it, delete it; each a plan first, then Approve
+  await pg.fill("#console-stacks input[aria-label='Domain for the new zone']", "new.example.org");
+  await pg.click("#console-stacks .dns-form button:has-text('Show the plan')");
+  await pg.waitForSelector("#console-stacks .plan-card >> text=Create the public hosted zone new.example.org");
+  if (!/\$0\.50 a month/.test(await pg.textContent("#console-stacks .plan-card"))) fail("zone plan has no cost");
+  await pg.click("#console-stacks .plan-card button.approve");
+  await pg.waitForFunction(() => { const d = document.querySelector("#console-stacks .console-detail"); return d && /^new\.example\.org\./.test((d.querySelector("h3") || {}).textContent || "") && /Name servers \(give these/.test(d.textContent); }, null, { timeout: 15000 });
+  await pg.fill("#console-stacks input[aria-label='Record name']", "app");
+  await pg.selectOption("#console-stacks select[aria-label='Record type']", "A");
+  await pg.fill("#console-stacks textarea[aria-label='Values']", "192.0.2.10");
+  await pg.click("#console-stacks .console-detail button:has-text('Show the plan')");
+  await pg.waitForSelector("#console-stacks .console-detail .plan-card >> text=Add A app.new.example.org.");
+  await pg.click("#console-stacks .console-detail .plan-card button.approve");
+  await pg.waitForFunction(() => /app\.new\.example\.org\.\s*A\s*300\s*192\.0\.2\.10/.test(((document.querySelector("#console-stacks .console-detail table") || {}).textContent || "").replace(/\s+/g, " ")), null, { timeout: 15000 });
+  await pg.fill("#console-stacks textarea[aria-label='Values']", "192.0.2.11");
+  await pg.fill("#console-stacks input[aria-label='Record name']", "app");
+  await pg.click("#console-stacks .console-detail button:has-text('Show the plan')");
+  await pg.waitForSelector("#console-stacks .console-detail .plan-card >> text=Change A app.new.example.org.");
+  await pg.click("#console-stacks .console-detail .plan-card button.approve");
+  await pg.waitForFunction(() => /192\.0\.2\.11/.test(((document.querySelector("#console-stacks .console-detail table") || {}).textContent || "")), null, { timeout: 15000 });
+  await pg.click("#console-stacks .console-detail tr:has-text('app.new.example.org.') button:has-text('Delete')");
+  await pg.click("#console-stacks .console-detail .plan-card button.approve");
+  await pg.waitForFunction(() => !/app\.new\.example\.org/.test(((document.querySelector("#console-stacks .console-detail table") || {}).textContent || "")), null, { timeout: 15000 });
   // a region with no stacks says so
   await pg.selectOption("#console-stacks .console-controls select[aria-label=Region]", "us-east-1"); await done("stacks");
   if (!/sws-aws-platform/.test(await pg.textContent("#console-stacks .console-body"))) fail("the platform stack in us-east-1");
