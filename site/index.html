@@ -105,6 +105,7 @@
   <button type="button" role="tab" id="tab-lambda" data-tab="lambda" aria-controls="console-lambda">Lambda</button>
   <button type="button" role="tab" id="tab-cloudfront" data-tab="cloudfront" aria-controls="console-cloudfront">CloudFront</button>
   <button type="button" role="tab" id="tab-activity" data-tab="activity" aria-controls="console-activity">Activity</button>
+  <button type="button" role="tab" id="tab-feedback" data-tab="feedback" aria-controls="feedback">Feedback</button>
   <button type="button" role="tab" id="tab-about" data-tab="about" aria-controls="about">How it works</button>
 </nav>
 
@@ -207,6 +208,11 @@
   <div class="console-body"></div>
 </section>
 
+<section class="panel" id="feedback" data-panel="feedback" role="tabpanel" aria-labelledby="tab-feedback" hidden>
+  <div class="panel-head"><h2>Feedback</h2><p class="small">Tell the agents what to fix or build next, and share parts of your account so they know what is there. Nothing is sent until you press Send.</p></div>
+  <div class="feedback-body"></div>
+</section>
+
 <section class="panel" id="about" data-panel="about" role="tabpanel" aria-labelledby="tab-about">
   <div class="panel-head"><h2>How it works</h2></div>
   <ul class="explain">
@@ -253,6 +259,7 @@ A sovereign website, made with the <a href="https://sovereignwebsite.org/">open 
 <script src="api/cloudtrail-api.js"></script>
 <script src="billing.js"></script>
 <script src="consoles.js"></script>
+<script src="feedback.js"></script>
 <script src="mask.js"></script>
 </body>
 </html>

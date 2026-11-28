@@ -52,6 +52,14 @@ const fail = (m) => { throw new Error(m); };
   await pg.click("#tab-lambda"); await pg.click("#console-lambda button:has-text('demo-cloudfront-logs')");
   await pg.click("#console-lambda button:has-text('Open its files in the S3 browser')");
   await pg.waitForSelector("#s3-list >> text=2026/");
+  // Feedback: the message and chosen parts, read here and shown before anything is sent; the account ID masked
+  await pg.click("#tab-feedback"); await pg.fill("#fb-msg", "Please chart the costs.");
+  for (const p of ["lambda", "cloudfront", "stacks"]) await pg.check("#fb-part-" + p);
+  await pg.click("text=Prepare: read the parts");
+  await pg.waitForFunction(() => /exactly what will be shared/.test(document.querySelector("#feedback .status").textContent), null, { timeout: 15000 });
+  const pv = await pg.textContent("#feedback .fb-preview");
+  if (!/Please chart the costs/.test(pv) || !/demo-handler/.test(pv) || !/EDEMOTWIN00001/.test(pv) || !/demo-site/.test(pv)) fail("feedback preview: " + pv.slice(0, 300));
+  if (/111122223333/.test(pv) || !/\*{8}3333/.test(pv)) fail("feedback did not mask the account ID");
   if (errors.length) fail("page errors: " + errors.join(" | "));
   if (outside.length) fail("the twin reached outside the page: " + [...new Set(outside)].join(", "));
   console.log("OK (consoles: costs, stacks and DNS, IAM roles, Lambda with runs and Firehose, CloudFront; details open; nothing left the page)");

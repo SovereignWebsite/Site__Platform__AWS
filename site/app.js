@@ -283,6 +283,7 @@
     renderPlans();
     if (window.S3Browser) S3Browser.render();
     if (window.Consoles) Consoles.render();
+    if (window.Feedback) Feedback.render();
     // No account yet (a new user, or a new browser): say what to do first, open on Accounts, and in every other tab
     // say why it is empty instead of showing an empty picker (Dinis's screenshots, 28 Nov 2026).
     var none = !!mem.idToken && !accounts.length && !TWIN;
@@ -290,7 +291,7 @@
     document.body.classList.toggle("no-accounts", none);
     Array.prototype.forEach.call(document.querySelectorAll("[data-panel]"), function (p) {
       var name = p.getAttribute("data-panel"), n = p.querySelector(".needs-account");
-      if (name === "accounts" || name === "about") return;
+      if (name === "accounts" || name === "about" || name === "feedback") return;
       if (none && !n) {
         var go = el("button", { type: "button", text: "Add your AWS account" }); go.onclick = function () { setTab("accounts"); $("acct-label").focus(); };
         var tw = el("button", { type: "button", class: "quiet", text: "Try it on the twin" }); tw.onclick = function () { enterTwin(true); };
@@ -299,7 +300,7 @@
       }
       if (n) n.hidden = !none;
     });
-    if (none && currentTab !== "accounts" && currentTab !== "about") currentTab = "accounts";
+    if (none && currentTab !== "accounts" && currentTab !== "about" && currentTab !== "feedback") currentTab = "accounts";
     setTab(currentTab);
   }
   $("copy-accounts").onclick = function () {

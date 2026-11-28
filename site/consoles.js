@@ -377,6 +377,6 @@
     var f = { costs: costs, stacks: stacks, iam: iam, lambda: lambda, cloudfront: cloudfront, activity: activity }[name];
     if (f && TWIN && P.signedIn() && !f.loaded && P.accounts().length) f.run();
   }
-  window.Consoles = { render: render, opened: opened, LIVE: LIVE, corsCheck: corsCheck, checked: function () { return checked; } };
+  window.Consoles = { render: render, opened: opened, LIVE: LIVE, corsCheck: corsCheck, checked: function () { return checked; }, liveOk: function (svc) { return TWIN || !!liveOk(svc); }, sender: sender };
   render();
 })();

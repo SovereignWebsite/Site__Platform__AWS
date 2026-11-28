@@ -147,3 +147,9 @@ dl.kv dt { color: var(--muted); } dl.kv dd { margin: 0; overflow-wrap: anywhere;
 .first-steps ol { margin: .4rem 0 .6rem; padding-left: 1.3rem; } .first-steps li { margin: .35rem 0; }
 .needs-account { margin: .6rem 0 1rem; }
 body.no-accounts #step4 > .toolbar, body.no-accounts .console-controls, body.no-accounts #plans, body.no-accounts #plans-history { display: none; }
+
+/* Feedback (feedback.js) */
+.fb-card textarea, .fb-card input[type=text] { width: 100%; font: inherit; padding: .5rem .6rem; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--fg); }
+.fb-card textarea { margin: .5rem 0; }
+.fb-parts { display: grid; gap: .3rem; margin: .4rem 0 .6rem; } .fb-part { font-size: .95rem; }
+.fb-preview { max-height: 22rem; overflow: auto; white-space: pre-wrap; } .fb-preview:empty { display: none; }
