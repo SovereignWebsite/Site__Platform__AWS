@@ -110,6 +110,15 @@
 <section class="panel" id="step2" data-panel="accounts" role="tabpanel" aria-labelledby="tab-accounts" hidden>
   <div class="panel-head"><h2>Your AWS accounts</h2><p class="small">Kept in this browser only, sealed with its key; never on the page or in any repository.</p></div>
   <p id="identity-warning" class="warning" hidden></p>
+  <div id="first-steps" class="card first-steps" hidden>
+    <h3>Start here: connect your first AWS account</h3>
+    <ol>
+      <li><strong>Add it below</strong>: a name for you, and its 12-digit account ID (top right of the AWS console).</li>
+      <li><strong>Set it up once</strong>: download its template and create one CloudFormation stack in that account. It makes two roles that trust only your Google account through this site; no AWS key is made.</li>
+      <li><strong>Read it</strong>: press the account's Read button. From then on S3, Costs, Stacks, IAM and the other tabs work on it.</li>
+    </ol>
+    <p class="small">No AWS account to hand, or want to look first? <button type="button" id="first-steps-twin" class="linkish">Try everything on the twin</button>: a synthetic AWS in this page, nothing real touched.</p>
+  </div>
   <ul class="grid" id="accounts"></ul>
   <p id="twin-add-note" class="small" hidden>Your own AWS account cannot be added inside the twin: <button type="button" id="twin-add-leave" class="linkish">leave the twin</button> and sign in with Google to add it.</p>
   <form id="add-account" class="card add-card">

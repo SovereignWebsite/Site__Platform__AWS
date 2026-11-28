@@ -87,7 +87,16 @@ const flip = (p) => { const q = JSON.parse(JSON.stringify(p)); if (flips++ % 2) 
   await pg.click("#g");
   await pg.waitForSelector("#step1-done:not([hidden])");
   if (await pg.isVisible("#google-button")) throw new Error("button still shown when signed in");
+  // A new user, no account yet: first steps shown on Accounts; every other tab says why it is empty, no empty picker.
+  if (await pg.isHidden("#first-steps")) throw new Error("first steps not shown to a user with no account");
+  await pg.click("#tab-s3");
+  if (await pg.isHidden("#step4 .needs-account") || await pg.isVisible("#s3-list-buckets")) throw new Error("S3 tab with no account");
+  await pg.click("#tab-costs");
+  if (await pg.isHidden("#console-costs .needs-account") || await pg.isVisible("#console-costs .console-controls")) throw new Error("Costs tab with no account");
+  await pg.click("#console-costs .needs-account button:has-text('Add your AWS account')");
+  if ((await pg.getAttribute("#tab-accounts", "aria-selected")) !== "true") throw new Error("Add your AWS account did not open Accounts");
   await pg.fill("#acct-label", "Main"); await pg.fill("#acct-id", "000000000000"); await pg.click("#add-account button");
+  if (await pg.isVisible("#first-steps") || await pg.isVisible("#step4 .needs-account")) throw new Error("first steps still shown with an account");
   const [dl] = await Promise.all([pg.waitForEvent("download"), pg.click("text=1. Download this account's template")]);
   const tpl = fs.readFileSync(await dl.path(), "utf8");
   if (!tpl.includes('Default: "111222333444555"') || !tpl.includes('Default: "123-abc.apps.googleusercontent.com"')) throw new Error("template defaults missing: " + tpl.slice(0, 600));

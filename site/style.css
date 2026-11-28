@@ -141,3 +141,9 @@ main.doc ol.steps li, main.doc ul li { margin-bottom: .45rem; }
 dl.kv { display: grid; grid-template-columns: max-content 1fr; gap: .2rem 1rem; margin: .4rem 0; font-size: .9rem; }
 dl.kv dt { color: var(--muted); } dl.kv dd { margin: 0; overflow-wrap: anywhere; }
 .twin-only { padding: .8rem 1rem; }
+
+/* First steps, and tabs that need an account (app.js) */
+.first-steps { margin-bottom: 1rem; border-left: 3px solid var(--accent); }
+.first-steps ol { margin: .4rem 0 .6rem; padding-left: 1.3rem; } .first-steps li { margin: .35rem 0; }
+.needs-account { margin: .6rem 0 1rem; }
+body.no-accounts #step4 > .toolbar, body.no-accounts .console-controls, body.no-accounts #plans, body.no-accounts #plans-history { display: none; }

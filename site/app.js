@@ -283,6 +283,23 @@
     renderPlans();
     if (window.S3Browser) S3Browser.render();
     if (window.Consoles) Consoles.render();
+    // No account yet (a new user, or a new browser): say what to do first, open on Accounts, and in every other tab
+    // say why it is empty instead of showing an empty picker (Dinis's screenshots, 28 Nov 2026).
+    var none = !!mem.idToken && !accounts.length && !TWIN;
+    $("first-steps").hidden = !none;
+    document.body.classList.toggle("no-accounts", none);
+    Array.prototype.forEach.call(document.querySelectorAll("[data-panel]"), function (p) {
+      var name = p.getAttribute("data-panel"), n = p.querySelector(".needs-account");
+      if (name === "accounts" || name === "about") return;
+      if (none && !n) {
+        var go = el("button", { type: "button", text: "Add your AWS account" }); go.onclick = function () { setTab("accounts"); $("acct-label").focus(); };
+        var tw = el("button", { type: "button", class: "quiet", text: "Try it on the twin" }); tw.onclick = function () { enterTwin(true); };
+        n = el("div", { class: "card needs-account" }, [el("p", { text: "No AWS account is connected in this browser yet, so there is nothing to show here." }), el("div", { class: "row" }, [go, tw])]);
+        var head = p.querySelector(".panel-head"); head.parentNode.insertBefore(n, head.nextSibling);
+      }
+      if (n) n.hidden = !none;
+    });
+    if (none && currentTab !== "accounts" && currentTab !== "about") currentTab = "accounts";
     setTab(currentTab);
   }
   $("copy-accounts").onclick = function () {
@@ -504,6 +521,7 @@
     if (window.SealedStore) SealedStore.forgetDevice().then(function () { say($("store-status"), "This device's key and everything sealed with it are deleted.", "ok"); });
   };
   if ($("twin-enter")) $("twin-enter").onclick = function () { enterTwin(true); };
+  if ($("first-steps-twin")) $("first-steps-twin").onclick = function () { enterTwin(true); };
   if ($("twin-leave")) $("twin-leave").onclick = function () { enterTwin(false); };
   $("twin-bar").hidden = !TWIN;
   // In the twin, Leave the twin is the way out; sign out and forget this device belong to real sign-in.
