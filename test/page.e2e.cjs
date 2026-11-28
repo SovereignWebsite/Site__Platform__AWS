@@ -143,6 +143,26 @@ const flip = (p) => { const q = JSON.parse(JSON.stringify(p)); if (flips++ % 2) 
     await pg.waitForSelector("#console-" + t + " .twin-only >> text=not read from live AWS yet");
   }
   if (calls.some((c) => /lambda|cloudfront|firehose|logs:/.test(c))) throw new Error("a twin-only service was called live: " + calls.join(" "));
+  // The browser check: Lambda answers, Route 53 answers "access denied" (still an answer), the others are blocked.
+  const acao = { "access-control-allow-origin": "*" }, probed = [];
+  await pg.route(/https:\/\/lambda\.[a-z0-9-]+\.amazonaws\.com\//, (r) => { probed.push("lambda " + r.request().method()); r.fulfill({ contentType: "application/json", headers: acao, body: JSON.stringify({ Functions: [] }) }); });
+  await pg.route("https://route53.amazonaws.com/**", (r) => { probed.push("route53 " + r.request().method()); r.fulfill({ status: 403, contentType: "text/xml", headers: acao, body: "<ErrorResponse><Error><Code>AccessDenied</Code><Message>not authorized</Message></Error></ErrorResponse>" }); });
+  for (const h of [/https:\/\/firehose\.[a-z0-9-]+\.amazonaws\.com\//, /https:\/\/logs\.[a-z0-9-]+\.amazonaws\.com\//, "https://cloudfront.amazonaws.com/**"]) await pg.route(h, (r) => { probed.push(String(h) + " " + r.request().method()); r.abort("failed"); });
+  const errsBefore = errors.length;
+  await pg.click("#tab-cloudfront");
+  await pg.click("#console-cloudfront button:has-text('Check now')");
+  await pg.waitForFunction(() => document.querySelectorAll("#console-cloudfront .twin-only tbody tr").length === 5 && !/checking/.test(document.querySelector("#console-cloudfront .twin-only tbody").textContent));
+  const res = await pg.$$eval("#console-cloudfront .twin-only tbody tr", (rs) => Object.fromEntries(rs.map((r) => [r.cells[0].textContent, r.cells[1].textContent])));
+  if (res.Lambda !== "yes" || res["Route 53"] !== "yes" || res.CloudFront !== "no" || res.Firehose !== "no" || res["CloudWatch Logs"] !== "no") throw new Error("browser check " + JSON.stringify(res));
+  if (probed.some((p) => !/ GET$| POST$/.test(p))) throw new Error("the check made a write-like call: " + probed.join(", "));
+  const kept = await pg.evaluate(() => JSON.parse(localStorage.getItem("sws-aws-cors")));
+  if (!kept.lambda.answers || kept.cloudfront.answers) throw new Error("check not kept " + JSON.stringify(kept));
+  // Lambda still needs Firehose and Logs, so its tab stays in the twin; nothing else was asked of AWS meanwhile.
+  await pg.click("#tab-lambda"); await pg.click("#console-lambda .console-controls button");
+  await pg.waitForSelector("#console-lambda .twin-only");
+  // The blocked and refused probes log "Failed to load resource" in the console, as a real browser does: expected here.
+  const probeErrs = errors.splice(errsBefore).filter((m) => !/^Failed to load resource/.test(m));
+  if (probeErrs.length) throw new Error("page errors during the check: " + probeErrs.join(" | "));
   // The S3 browser: list buckets, add the CORS rule on Approve, list, open JSON formatted (and never run it).
   await pg.click("#tab-s3");
   await pg.click("#s3-list-buckets");

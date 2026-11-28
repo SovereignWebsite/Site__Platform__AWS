@@ -13,6 +13,13 @@
   // Which services answer a browser on live AWS, as far as checked (CORS). The rest work in the twin only for now.
   var LIVE = { ce: true, budgets: true, cloudformation: true, iam: true, route53: false, lambda: false, firehose: false, logs: false, cloudfront: false };
   var NAMES = { route53: "Route 53", lambda: "Lambda", firehose: "Firehose", logs: "CloudWatch Logs", cloudfront: "CloudFront" };
+  // The browser check (Dinis, 28 Nov 2026: "set up the CORS check for the twin-only services"): one read call per
+  // service with the read role. A service that answers at all (even "access denied") allows this site from a browser;
+  // one the browser blocks fails with a TypeError and no answer. A service seen to answer is read live in this
+  // browser from then on (kept in localStorage: a convenience, not a secret); aws.c then records it in LIVE above.
+  var CORS_KEY = "sws-aws-cors", checked = {};
+  try { checked = JSON.parse(localStorage.getItem(CORS_KEY) || "{}") || {}; } catch (e) { checked = {}; }
+  function liveOk(s) { return LIVE[s] || (checked[s] && checked[s].answers); }
 
   // ---- one send for every API ----
   function account(sel) { var id = sel && sel.value; return P.accounts().filter(function (a) { return a.id === id; })[0] || P.accounts()[0]; }
@@ -48,15 +55,58 @@
   function h3(t) { return el("h3", { text: t }); }
   function note(t) { return el("p", { class: "small", text: t }); }
   function fail(st, e) { P.say(st, (e && e.message) || String(e), "bad"); }
-  // A part of a view that live AWS cannot show yet: say so, and offer the twin.
-  function twinOnly(box, services) {
+  // A part of a view that live AWS cannot show yet: say so, offer the browser check, and offer the twin.
+  function twinOnly(box, services, f) {
     var names = services.map(function (s) { return NAMES[s] || s; }).join(" and ");
     var go = el("button", { type: "button", class: "quiet", text: "Open this in the twin" });
     go.onclick = function () { if (P.enterTwin) P.enterTwin(true); };
+    var check = el("button", { type: "button", text: "Check now: does AWS answer this site?" });
+    var out = el("div", {});
+    check.onclick = function () {
+      check.disabled = true;
+      corsCheck(account(f.sel), f.reg ? f.reg.value : "eu-west-2", out).then(function () {
+        check.disabled = false;
+        if (services.every(liveOk)) f.run();
+      });
+    };
     box.appendChild(el("div", { class: "card twin-only" }, [
-      el("p", { text: names + ": not read from live AWS yet. Whether " + names + " answers this site from a browser has not been checked; until it is, this view runs in the twin (synthetic data) only." }), go]));
+      el("p", { text: names + ": not read from live AWS yet. Whether " + names + " answers this site from a browser has not been checked; until it is, this view runs in the twin (synthetic data) only." }),
+      el("p", { class: "small", text: "The check makes one read call to each of Route 53, Lambda, Firehose, CloudWatch Logs and CloudFront with the read role (listing at most one item each). It changes nothing in AWS." }),
+      el("div", { class: "row" }, [check, go]), out]));
   }
-  function needsTwin(services) { return !TWIN && services.some(function (s) { return !LIVE[s]; }); }
+  var PROBES = {
+    route53: function (send, acct) { return Route53Api(send, { account: acct.id }).zones({ max: 1 }); },
+    lambda: function (send, acct, region) { return LambdaApi(send).functions(region, { max: 1 }); },
+    firehose: function (send, acct, region) { return FirehoseApi(send, { account: acct.id }).streams(region, { max: 1 }); },
+    logs: function (send, acct, region) { return LogsApi(send).groups(region, { max: 1 }); },
+    cloudfront: function (send, acct) { return CloudFrontApi(send, { account: acct.id }).distributions({ max: 1 }); }
+  };
+  // Runs every probe, shows each result, and keeps what it learnt. Resolves when all have answered or failed.
+  function corsCheck(acct, region, out) {
+    out.textContent = ""; if (!acct) { out.appendChild(note("Add an account first (Accounts tab).")); return Promise.resolve(); }
+    var send = sender(acct), rows = [];
+    var tb = el("tbody", {});
+    out.appendChild(el("div", { class: "s3-wrap" }, [el("table", { class: "s3-table" }, [el("thead", {}, [el("tr", {}, [el("th", { text: "Service" }), el("th", { text: "Answers this site?" }), el("th", { text: "What AWS said" })])]), tb])]));
+    return Promise.all(Object.keys(PROBES).map(function (s) {
+      var cell = el("td", { text: "checking..." }), said = el("td", { text: "" });
+      tb.appendChild(el("tr", {}, [el("td", { text: NAMES[s] }), cell, said]));
+      return Promise.resolve().then(function () { return PROBES[s](send, acct, region); }).then(function () {
+        return { answers: true, said: "answered (" + region + ")" };
+      }, function (e) {
+        var m = (e && e.message) || String(e);
+        // A TypeError with no answer is the browser refusing the cross-site call (or no network).
+        if (e instanceof TypeError && /fetch|network|load failed/i.test(m)) return { answers: false, said: "the browser blocked it: no CORS answer (" + m + ")" };
+        return { answers: true, said: "answered with an error, so it allows this site; the read role may lack this action: " + m };
+      }).then(function (r) {
+        r.at = new Date().toISOString(); r.region = region; checked[s] = r; rows.push([s, r]);
+        cell.textContent = r.answers ? "yes" : "no"; said.textContent = r.said;
+      });
+    })).then(function () {
+      try { localStorage.setItem(CORS_KEY, JSON.stringify(checked)); } catch (e) { /* kept for this page only */ }
+      out.appendChild(note("Kept in this browser: services that answered are now read live here. Send the table to aws.c so it can be recorded for everyone."));
+    });
+  }
+  function needsTwin(services) { return !TWIN && services.some(function (s) { return !liveOk(s); }); }
 
   // ---- the frame each console shares: account, region (if regional), Load, status, body ----
   function frame(id, opts) {
@@ -122,7 +172,7 @@
         }));
       // DNS: Route 53 is global; read once with the stacks.
       var dns = el("div", { class: "console-dns" }); f.body.appendChild(dns); dns.appendChild(h3("DNS (Route 53)"));
-      if (needsTwin(["route53"])) { twinOnly(dns, ["route53"]); return "Read " + r.items.length + " stacks."; }
+      if (needsTwin(["route53"])) { twinOnly(dns, ["route53"], f); return "Read " + r.items.length + " stacks."; }
       var r53 = Route53Api(send, { account: acct.id });
       return drain(function (n) { return r53.zones({ next: n }); }).then(function (z) {
         if (!live()) return;
@@ -172,7 +222,7 @@
 
   // ---- Lambda functions, their recent runs (CloudWatch Logs), and Firehose streams ----
   var lambda = frame("console-lambda", { regional: true, button: "Read functions", show: function (f, acct, send, region, live) {
-    if (needsTwin(["lambda", "firehose", "logs"])) { twinOnly(f.body, ["lambda", "firehose", "logs"]); return "Twin only for now."; }
+    if (needsTwin(["lambda", "firehose", "logs"])) { twinOnly(f.body, ["lambda", "firehose", "logs"], f); return "Twin only for now."; }
     var lam = LambdaApi(send), logs = LogsApi(send), fh = FirehoseApi(send, { account: acct.id });
     return Promise.all([drain(function (n) { return lam.functions(region, { next: n }); }), drain(function (n) { return fh.streams(region, { next: n }); })]).then(function (x) {
       if (!live()) return;
@@ -210,7 +260,7 @@
 
   // ---- CloudFront ----
   var cloudfront = frame("console-cloudfront", { button: "Read distributions", show: function (f, acct, send, region, live) {
-    if (needsTwin(["cloudfront"])) { twinOnly(f.body, ["cloudfront"]); return "Twin only for now."; }
+    if (needsTwin(["cloudfront"])) { twinOnly(f.body, ["cloudfront"], f); return "Twin only for now."; }
     var api = CloudFrontApi(send, { account: acct.id });
     return drain(function (n) { return api.distributions({ next: n }); }).then(function (r) {
       if (!live()) return;
@@ -241,6 +291,6 @@
     var f = { costs: costs, stacks: stacks, iam: iam, lambda: lambda, cloudfront: cloudfront }[name];
     if (f && TWIN && P.signedIn() && !f.loaded && P.accounts().length) f.run();
   }
-  window.Consoles = { render: render, opened: opened, LIVE: LIVE };
+  window.Consoles = { render: render, opened: opened, LIVE: LIVE, corsCheck: corsCheck, checked: function () { return checked; } };
   render();
 })();
