@@ -11,8 +11,8 @@
   var TWIN = !!(window.AwsTransport && AwsTransport.isTwin());
   var REGIONS = ["eu-west-2", "eu-west-1", "us-east-1", "us-east-2", "us-west-2", "eu-central-1", "ap-southeast-2"];
   // Which services answer a browser on live AWS, as far as checked (CORS). The rest work in the twin only for now.
-  var LIVE = { ce: true, budgets: true, cloudformation: true, iam: true, route53: false, lambda: false, firehose: false, logs: false, cloudfront: false };
-  var NAMES = { route53: "Route 53", lambda: "Lambda", firehose: "Firehose", logs: "CloudWatch Logs", cloudfront: "CloudFront" };
+  var LIVE = { ce: true, budgets: true, cloudformation: true, iam: true, route53: false, lambda: false, firehose: false, logs: false, cloudfront: false, cloudtrail: false };
+  var NAMES = { route53: "Route 53", lambda: "Lambda", firehose: "Firehose", logs: "CloudWatch Logs", cloudfront: "CloudFront", cloudtrail: "CloudTrail" };
   // The browser check (Dinis, 28 Nov 2026: "set up the CORS check for the twin-only services"): one read call per
   // service with the read role. A service that answers at all (even "access denied") allows this site from a browser;
   // one the browser blocks fails with a TypeError and no answer. A service seen to answer is read live in this
@@ -71,7 +71,7 @@
     };
     box.appendChild(el("div", { class: "card twin-only" }, [
       el("p", { text: names + ": not read from live AWS yet. Whether " + names + " answers this site from a browser has not been checked; until it is, this view runs in the twin (synthetic data) only." }),
-      el("p", { class: "small", text: "The check makes one read call to each of Route 53, Lambda, Firehose, CloudWatch Logs and CloudFront with the read role (listing at most one item each). It changes nothing in AWS." }),
+      el("p", { class: "small", text: "The check makes one read call to each of Route 53, Lambda, Firehose, CloudWatch Logs, CloudFront and CloudTrail with the read role (listing at most one item each). It changes nothing in AWS." }),
       el("div", { class: "row" }, [check, go]), out]));
   }
   var PROBES = {
@@ -79,7 +79,8 @@
     lambda: function (send, acct, region) { return LambdaApi(send).functions(region, { max: 1 }); },
     firehose: function (send, acct, region) { return FirehoseApi(send, { account: acct.id }).streams(region, { max: 1 }); },
     logs: function (send, acct, region) { return LogsApi(send).groups(region, { max: 1 }); },
-    cloudfront: function (send, acct) { return CloudFrontApi(send, { account: acct.id }).distributions({ max: 1 }); }
+    cloudfront: function (send, acct) { return CloudFrontApi(send, { account: acct.id }).distributions({ max: 1 }); },
+    cloudtrail: function (send, acct, region) { return CloudTrailApi(send).events(region, { max: 1 }); }
   };
   // Runs every probe, shows each result, and keeps what it learnt. Resolves when all have answered or failed.
   function corsCheck(acct, region, out) {
@@ -113,8 +114,10 @@
     var sec = $(id); if (!sec) return null;
     var head = sec.querySelector(".console-controls"), st = sec.querySelector(".status"), body = sec.querySelector(".console-body");
     var sel = el("select", { "aria-label": "Account" }), reg = opts.regional ? el("select", { "aria-label": "Region" }, REGIONS.map(function (r) { return el("option", { value: r, text: r }); })) : null;
+    if (reg && opts.region) reg.value = opts.region;
+    var extra = opts.controls ? opts.controls() : [];
     var load = el("button", { type: "button", text: opts.button || "Load" });
-    head.textContent = ""; head.appendChild(sel); if (reg) head.appendChild(reg); head.appendChild(load);
+    head.textContent = ""; head.appendChild(sel); if (reg) head.appendChild(reg); extra.forEach(function (x) { head.appendChild(x); }); head.appendChild(load);
     head.appendChild(el("span", { class: "badge " + (TWIN ? "" : "ok"), text: TWIN ? "twin: synthetic data" : "live AWS, read role" }));
     var f = { sec: sec, sel: sel, reg: reg, load: load, st: st, body: body, loaded: false, gen: 0 };
     f.fill = function () {
@@ -130,7 +133,8 @@
       Promise.resolve(opts.show(f, acct, sender(acct), reg ? reg.value : "us-east-1", function () { return my === f.gen; }))
         .then(function (msg) { if (my === f.gen) P.say(st, msg || "Read.", "ok"); }, function (e) { if (my === f.gen) fail(st, e); });
     };
-    load.onclick = f.run; if (reg) reg.onchange = f.run; sel.onchange = f.run;
+    load.onclick = f.run; if (reg) reg.onchange = f.run; sel.onchange = f.run; extra.forEach(function (x) { if (x.tagName === "SELECT") x.onchange = f.run; });
+    f.extra = extra;
     return f;
   }
   // A detail area under a table: one at a time, replaced on each pick.
@@ -335,13 +339,42 @@
     });
   } });
 
-  var all = [costs, stacks, iam, lambda, cloudfront].filter(Boolean);
+  // ---- Activity: CloudTrail's event history, what this site's browser sessions (and everyone else) did ----
+  // The page assumes its roles with session name sws-aws-platform, so CloudTrail's Username for those calls is that name:
+  // "This site's sessions" is exactly what was done through this site. Sign-ins themselves (AssumeRoleWithWebIdentity)
+  // carry the Google account as Username and show under Everything. LookupEvents is regional: global services such as
+  // IAM, STS and Cost Explorer are recorded in us-east-1. Each read is one LookupEvents call per 50 events, up to 200.
+  var activity = frame("console-activity", { regional: true, region: "us-east-1", button: "Read activity",
+    controls: function () { return [el("select", { "aria-label": "Show" }, [el("option", { value: "site", text: "This site's sessions" }), el("option", { value: "changes", text: "Changes only (no reads)" }), el("option", { value: "all", text: "Everything" })])]; },
+    show: function (f, acct, send, region, live) {
+      if (needsTwin(["cloudtrail"])) { twinOnly(f.body, ["cloudtrail"], f); return "Twin only for now."; }
+      var api = CloudTrailApi(send), which = f.extra[0].value;
+      var attribute = which === "site" ? { key: "Username", value: "sws-aws-platform" } : which === "changes" ? { key: "ReadOnly", value: "false" } : null;
+      return ApiAll(function (n) { return api.events(region, { attribute: attribute, next: n, max: 50 }); }, { maxItems: 200, maxPages: 4 }).then(function (r) {
+        if (!live()) return;
+        f.body.appendChild(h3((which === "site" ? "Done through this site" : which === "changes" ? "Changes" : "Everything") + " in " + region + ", newest first (" + r.items.length + (r.capped ? ", the latest 200" : "") + ")"));
+        if (!r.items.length) { f.body.appendChild(note("Nothing recorded in " + region + " for this choice in the last 90 days. IAM, STS and Cost Explorer are recorded in us-east-1.")); return "No events."; }
+        f.body.appendChild(table([{ h: "Time (UTC)", get: function (e) { return when(e.time); } }, { h: "Who", get: function (e) { return e.actor; } },
+          { h: "Did", get: function (e) { return e.name; } }, { h: "Service", get: function (e) { return String(e.source || "").replace(".amazonaws.com", ""); } },
+          { h: "Kind", get: function (e) { return e.readOnly ? "read" : "change"; } },
+          { h: "On", get: function (e) { var p = e.record.requestParameters || {}; return e.resources.map(function (x) { return x.name; }).join(", ") || p.roleName || p.bucketName || p.stackName || p.typeName || p.roleArn || ""; } }], r.items,
+          function (e) {
+            var d = detail(f); d.appendChild(h3(e.name + " at " + when(e.time) + " UTC"));
+            d.appendChild(kv([["Who", e.actor], ["Kind", e.readOnly ? "read" : "change"], ["Region", e.region], ["From", e.record.sourceIPAddress], ["Event id", e.id]]));
+            d.appendChild(el("h4", { text: "The CloudTrail record" }));
+            d.appendChild(window.S3Browser && S3Browser.jsonView ? S3Browser.jsonView(e.record) : el("pre", { text: JSON.stringify(e.record, null, 2) }));
+          }));
+        return "Read " + r.items.length + " events.";
+      });
+    } });
+
+  var all = [costs, stacks, iam, lambda, cloudfront, activity].filter(Boolean);
   // Called by app.js whenever accounts or sign-in change; and on opening a tab in the twin, the view reads itself.
   function render() {
     all.forEach(function (f) { f.sec.hidden = !P.signedIn(); f.fill(); });
   }
   function opened(name) {
-    var f = { costs: costs, stacks: stacks, iam: iam, lambda: lambda, cloudfront: cloudfront }[name];
+    var f = { costs: costs, stacks: stacks, iam: iam, lambda: lambda, cloudfront: cloudfront, activity: activity }[name];
     if (f && TWIN && P.signedIn() && !f.loaded && P.accounts().length) f.run();
   }
   window.Consoles = { render: render, opened: opened, LIVE: LIVE, corsCheck: corsCheck, checked: function () { return checked; } };

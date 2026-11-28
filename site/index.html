@@ -104,6 +104,7 @@
   <button type="button" role="tab" id="tab-iam" data-tab="iam" aria-controls="console-iam">Access and IAM</button>
   <button type="button" role="tab" id="tab-lambda" data-tab="lambda" aria-controls="console-lambda">Lambda</button>
   <button type="button" role="tab" id="tab-cloudfront" data-tab="cloudfront" aria-controls="console-cloudfront">CloudFront</button>
+  <button type="button" role="tab" id="tab-activity" data-tab="activity" aria-controls="console-activity">Activity</button>
   <button type="button" role="tab" id="tab-about" data-tab="about" aria-controls="about">How it works</button>
 </nav>
 
@@ -199,6 +200,13 @@
   <div class="console-body"></div>
 </section>
 
+<section class="panel console" id="console-activity" data-panel="activity" role="tabpanel" aria-labelledby="tab-activity" hidden>
+  <div class="panel-head"><h2>Activity</h2><p class="small">What was done in the account, from CloudTrail's event history (the last 90 days, one region at a time): what this site's browser sessions did, changes only, or everything. Reads only.</p></div>
+  <div class="row console-controls"></div>
+  <p class="status" role="status"></p>
+  <div class="console-body"></div>
+</section>
+
 <section class="panel" id="about" data-panel="about" role="tabpanel" aria-labelledby="tab-about">
   <div class="panel-head"><h2>How it works</h2></div>
   <ul class="explain">
@@ -242,6 +250,7 @@ A sovereign website, made with the <a href="https://sovereignwebsite.org/">open 
 <script src="api/firehose-api.js"></script>
 <script src="api/logs-api.js"></script>
 <script src="api/cloudfront-api.js"></script>
+<script src="api/cloudtrail-api.js"></script>
 <script src="billing.js"></script>
 <script src="consoles.js"></script>
 <script src="mask.js"></script>

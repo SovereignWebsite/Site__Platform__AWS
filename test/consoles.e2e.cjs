@@ -34,6 +34,14 @@ const fail = (m) => { throw new Error(m); };
       await pg.waitForFunction(([t, re]) => new RegExp(re).test((document.querySelector("#console-" + t + " .console-detail") || {}).textContent || ""), [tab, det.source], { timeout: 15000 });
     }
   }
+  // Activity: CloudTrail's history, with the calls this page just made as this site's sessions, newest first
+  await pg.click("#tab-activity"); await done("activity");
+  const act = await pg.textContent("#console-activity .console-body");
+  if (!/Done through this site in us-east-1/.test(act) || !/ListRoles/.test(act) || !/role sws-aws-platform-read/.test(act)) fail("activity: " + act.slice(0, 200));
+  await pg.click("#console-activity .console-body tbody button >> nth=0");
+  await pg.waitForSelector("#console-activity .console-detail >> text=The CloudTrail record");
+  await pg.selectOption("#console-activity select[aria-label=Show]", "changes"); await done("activity");
+  if (!/UpdateAssumeRolePolicy/.test(await pg.textContent("#console-activity .console-body"))) fail("activity: changes only");
   // the zone's records open from Stacks and DNS
   await pg.click("#tab-stacks"); await pg.click("#console-stacks button:has-text('example.com.')");
   await pg.waitForFunction(() => /www\.example\.com/.test(document.querySelector("#console-stacks .console-detail").textContent));

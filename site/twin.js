@@ -1680,6 +1680,83 @@
     return r53("<ListResourceRecordSetsResponse" + R53_NS + "><ResourceRecordSets>" + rp.map(r53Record).join("") + "</ResourceRecordSets><IsTruncated>" + !!rnext + "</IsTruncated>" +
       (rnext ? "<NextRecordName>" + esc(rnext.name) + "</NextRecordName><NextRecordType>" + rnext.type + "</NextRecordType>" : "") + "<MaxItems>" + rmax + "</MaxItems></ListResourceRecordSetsResponse>");
   }
+  // ---- CloudTrail LookupEvents: what this site's browser sessions did (Dinis, 28 Nov 2026: "a great way to really
+  // understand what is going on, and what these 'browser based accounts' have done") ----
+  // Every signed management call the page makes to the twin is noted as a CloudTrail event, as a real trail would, after a
+  // few seeded ones from earlier days; S3 object reads are data events, which LookupEvents never returns, so they are
+  // not noted. LookupEvents filters by one LookupAttribute (Username, EventName, EventSource, ReadOnly), a time window,
+  // MaxResults (1 to 50) and NextToken; newest first. JSON 1.1, CloudTrail_20131101.LookupEvents. Twin's choices: the
+  // event ids, the token (an offset), and that the AssumeRoleWithWebIdentity user name is the Google subject.
+  var TRAIL = [], TRAIL_N = 0;
+  var READ_ACTION = /^(Get|List|Describe|Lookup|Head|Filter|Search|Select|Check|Query|Scan|View)/;
+  function trailNote(t, source, name, region, role, sub, params) {
+    TRAIL_N++;
+    var assumed = role && role !== "web-identity", ev = {
+      eventVersion: "1.09", eventTime: new Date(t).toISOString().replace(/\.\d+Z$/, "Z"), eventSource: source, eventName: name, awsRegion: region,
+      sourceIPAddress: OPERATOR_IP, userAgent: "Mozilla/5.0 (the AWS platform site)", requestParameters: params || null, responseElements: null,
+      eventID: "00000000-0000-4000-9000-" + pad(TRAIL_N, 12), readOnly: READ_ACTION.test(name), eventType: "AwsApiCall", managementEvent: true,
+      recipientAccountId: ACCOUNT, eventCategory: "Management",
+      userIdentity: assumed ? { type: "AssumedRole", principalId: "AROATWIN" + (role === "sws-aws-platform-change" ? "CHANGE" : "READ") + ":sws-aws-platform",
+        arn: "arn:aws:sts::" + ACCOUNT + ":assumed-role/" + role + "/sws-aws-platform", accountId: ACCOUNT,
+        sessionContext: { sessionIssuer: { type: "Role", arn: "arn:aws:iam::" + ACCOUNT + ":role/" + role, accountId: ACCOUNT, userName: role },
+          webIdFederationData: { federatedProvider: "accounts.google.com" } } }
+        : { type: "WebIdentityUser", principalId: "accounts.google.com:twin-client-id.apps.googleusercontent.com:" + sub, userName: sub, identityProvider: "accounts.google.com" }
+    };
+    TRAIL.push({ id: ev.eventID, name: name, source: source, time: t, readOnly: ev.readOnly, user: assumed ? "sws-aws-platform" : sub, region: region, record: ev });
+  }
+  (function seedTrail() {
+    var day = Date.UTC(2026, 10, 22, 10, 0, 0);
+    [["sts.amazonaws.com", "AssumeRoleWithWebIdentity", "us-east-1", "web-identity", { roleArn: "arn:aws:iam::" + ACCOUNT + ":role/sws-aws-platform-read" }],
+     ["sts.amazonaws.com", "GetCallerIdentity", "us-east-1", "sws-aws-platform-read"],
+     ["ce.amazonaws.com", "GetCostAndUsage", "us-east-1", "sws-aws-platform-read"],
+     ["cloudcontrolapi.amazonaws.com", "ListResources", "us-east-1", "sws-aws-platform-read", { typeName: "AWS::S3::Bucket" }],
+     ["sts.amazonaws.com", "AssumeRoleWithWebIdentity", "us-east-1", "web-identity", { roleArn: "arn:aws:iam::" + ACCOUNT + ":role/sws-aws-platform-change" }],
+     ["iam.amazonaws.com", "GetRole", "us-east-1", "sws-aws-platform-change", { roleName: "sovereignwebsite-factory-dns" }],
+     ["iam.amazonaws.com", "UpdateAssumeRolePolicy", "us-east-1", "sws-aws-platform-change", { roleName: "sovereignwebsite-factory-dns" }],
+     ["cloudcontrolapi.amazonaws.com", "UpdateResource", "us-east-1", "sws-aws-platform-change", { typeName: "AWS::S3::Bucket", identifier: B.site }]
+    ].forEach(function (e, i) { trailNote(day + i * 61000, e[0], e[1], e[2], e[3], "000000000000000000001", e[4]); });
+  })();
+  // Notes a call the page makes (from answer, before it is answered). Unsigned STS is the web identity sign-in itself.
+  function noteCall(url, init, host, body) {
+    var auth = hdr(init, "authorization") || "", m = /Credential=ASIATWIN(\w+)/.exec(auth);
+    var role = m ? (m[1] === "CHANGE" ? "sws-aws-platform-change" : "sws-aws-platform-read") : null;
+    var svc = host.split(".")[0], region = (host.split(".")[1] && /-\d$/.test(host.split(".")[1])) ? host.split(".")[1] : "us-east-1", name = null, params = null;
+    var target = hdr(init, "x-amz-target");
+    if (svc === "s3" || /\.s3\./.test("." + host)) return; // data events: not returned by LookupEvents
+    if (svc === "cloudtrail") return;                       // reading the trail is not noted, so the view does not fill itself
+    if (target) name = target.split(".").pop();
+    else if (body && /Action=/.test(body)) { var q = new URLSearchParams(body); name = q.get("Action"); if (q.get("RoleArn")) params = { roleArn: q.get("RoleArn") }; if (q.get("RoleName")) params = { roleName: q.get("RoleName") }; if (q.get("StackName")) params = { stackName: q.get("StackName") }; }
+    else { var path = new URL(url).pathname; name = ((init.method || "GET").toUpperCase() === "GET" ? "Get" : "Change") + " " + path.split("/").filter(Boolean).slice(-1)[0]; }
+    if (!name) return;
+    if (!role && name !== "AssumeRoleWithWebIdentity") return; // unsigned and refused: AWS records nothing either
+    trailNote(Date.now(), (svc === "monitoring" ? "monitoring" : svc) + ".amazonaws.com", name, region, role || "web-identity", "000000000000000000001", params);
+  }
+  function cloudtrail(target, body, init) {
+    if (!signed(init)) return json({ __type: "AccessDeniedException", message: "Missing Authentication Token" }, 403);
+    if (target !== "LookupEvents") return json({ __type: "UnknownOperationException", message: "The twin answers one CloudTrail read only: LookupEvents." }, 400);
+    var q; try { q = JSON.parse(body || "{}"); } catch (e) { return json({ __type: "SerializationException", message: "The body is not JSON." }, 400); }
+    var max = q.MaxResults === undefined ? 50 : +q.MaxResults;
+    if (!(max >= 1 && max <= 50)) return json({ __type: "InvalidMaxResultsException", message: "MaxResults must be from 1 to 50." }, 400);
+    var attrs = q.LookupAttributes || [];
+    if (attrs.length > 1) return json({ __type: "InvalidLookupAttributesException", message: "Only one lookup attribute is allowed." }, 400);
+    var a = attrs[0], key = a && a.AttributeKey, val = a && a.AttributeValue;
+    var start = q.StartTime ? q.StartTime * 1000 : 0, end = q.EndTime ? q.EndTime * 1000 : Infinity;
+    var list = TRAIL.filter(function (e) {
+      if (e.time < start || e.time > end) return false;
+      if (!key) return true;
+      if (key === "Username") return e.user === val;
+      if (key === "EventName") return e.name === val;
+      if (key === "EventSource") return e.source === val;
+      if (key === "ReadOnly") return String(e.readOnly) === String(val);
+      return true;
+    }).slice().reverse();
+    var from = q.NextToken ? +q.NextToken : 0, page = list.slice(from, from + max);
+    return json({ Events: page.map(function (e) {
+      return { EventId: e.id, EventName: e.name, ReadOnly: String(e.readOnly), AccessKeyId: e.record.userIdentity.type === "AssumedRole" ? "ASIATWIN" : "", EventTime: e.time / 1000,
+        EventSource: e.source, Username: e.user, Resources: [], CloudTrailEvent: JSON.stringify(e.record) };
+    }), NextToken: from + max < list.length ? String(from + max) : undefined });
+  }
+
   function answer(url, init, host) {
     var body = typeof init.body === "string" ? init.body : "";
     // The customer's account has only its CloudFormation stacks and, from them, its CloudFront distributions and functions
@@ -1688,6 +1765,7 @@
     if (customerOf(init) && !/^cloudformation\.[a-z0-9-]+\.amazonaws\.com$/.test(host) && host !== "cloudfront.amazonaws.com")
       return Promise.resolve(xmlErr("AccessDenied", "Not in the twin's customer account yet: only CloudFormation and CloudFront answer it. Twin mode never calls real AWS.", 403));
     var p;
+    try { noteCall(url, init, host, body); } catch (e) { /* noting never stops an answer */ }
     try {
       if (host === "sts.amazonaws.com" || /^sts\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = sts(new URLSearchParams(body), init);
       else if (host === "iam.amazonaws.com") p = iam(new URLSearchParams(body), init);
@@ -1702,6 +1780,7 @@
       else if (/\.?s3\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = s3(url, init);
       else if (host === "cloudfront.amazonaws.com") p = cloudfront(url, init, customerOf(init) || ACCOUNT);
       else if (host === "route53.amazonaws.com") p = route53(url, init);
+      else if (/^cloudtrail\.[a-z0-9-]+\.amazonaws\.com$/.test(host)) p = cloudtrail((hdr(init, "x-amz-target") || "").split(".").pop(), body, init);
       else p = xmlErr("NotImplemented", "The twin does not answer " + host + " yet. Twin mode never calls real AWS.", 501);
     } catch (e) { p = xmlErr("InternalFailure", e.message, 500); }
     return Promise.resolve(p).then(function (r) { return new Promise(function (res) { setTimeout(function () { res(r); }, 60 + lag() * 120); }); });
