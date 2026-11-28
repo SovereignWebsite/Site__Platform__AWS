@@ -21,7 +21,7 @@ const fail = (m) => { throw new Error(m); };
   const steps = [
     ["costs", null, /This month so far/, null],
     ["stacks", "demo-site", /Stacks in eu-west-2 \(3\)/, /What it made \(3\)/],
-    ["iam", "demo-handler-role", /Roles \(\d+\)/, /Who may assume it/],
+    ["iam", "demo-handler-role", /Who has access to this account through this site[\s\S]*you \(visitor@twin\.example\)[\s\S]*Read and Change[\s\S]*open any file in S3[\s\S]*Roles \(\d+\)/, /Who may assume it/],
     ["lambda", "demo-handler", /Functions in eu-west-2 \(3\)/, /Recent runs[\s\S]*Duration ms/],
     ["cloudfront", "EDEMOTWIN00001", /Distributions \(1\)/, /Origins/],
   ];

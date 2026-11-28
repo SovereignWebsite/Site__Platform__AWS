@@ -195,9 +195,62 @@
     ((role.trust && role.trust.statements) || []).forEach(function (s) { (s.principals || []).forEach(function (p) { out.push(p.kind + ": " + p.id); }); });
     return out.join(", ");
   }
+  // ---- Who has access: the people this site's two roles trust, and what each role lets them do ----
+  // Dinis, 28 Nov 2026: "a view that shows all the users that we have mapped (and authorized) and what they can do".
+  // Read from AWS itself: the Google subjects in the trust of sws-aws-platform-read and -change, and the policies on
+  // each role. A Google subject cannot be turned back into a name or an email; the signed-in user is shown as "you".
+  var DOES = {
+    ViewOnlyAccess: "see the list and settings of most AWS resources (not what is inside them)",
+    SecurityAudit: "read security settings: IAM, logging, encryption, network rules",
+    "costs-read": "read costs, forecasts and budgets",
+    "s3-browse": "list every bucket and open any file in S3",
+    "dns-role-trust-only": "change who the DNS deploy role trusts, nothing else",
+    "s3-cors": "add this site's CORS rule to a bucket so it can be browsed here",
+    "self-update": "update this platform's own stack, through a CloudFormation change set"
+  };
+  var PLATFORM = [["sws-aws-platform-read", "Read"], ["sws-aws-platform-change", "Change (each change shown as a plan; nothing happens until Approve)"]];
+  function googleSubjects(role) {
+    var out = { subs: [], aud: [] };
+    ((role.trust && role.trust.statements) || []).forEach(function (st) {
+      if (st.effect !== "Allow" || !(st.principals || []).some(function (p) { return p.id === "accounts.google.com"; })) return;
+      (st.conditions || []).forEach(function (c) {
+        if (c.key === "accounts.google.com:sub") out.subs = out.subs.concat(c.values || []);
+        if (c.key === "accounts.google.com:aud") out.aud = out.aud.concat(c.values || []);
+      });
+    });
+    return out;
+  }
+  function whoHasAccess(api, box, live) {
+    var me = P.me() || {};
+    return Promise.all(PLATFORM.map(function (pr) {
+      return Promise.all([api.role(pr[0]), drain(function (n) { return api.attached(pr[0], { next: n }); }), drain(function (n) { return api.inline(pr[0], { next: n }); })])
+        .then(function (x) { return { name: pr[0], label: pr[1], role: x[0], policies: x[1].items.map(function (p) { return p.name; }).concat(x[2].items) }; },
+          function (e) { return { name: pr[0], label: pr[1], error: e.message }; });
+    })).then(function (roles) {
+      if (!live()) return;
+      box.appendChild(h3("Who has access to this account through this site"));
+      var people = {};
+      roles.forEach(function (r) { if (r.role) googleSubjects(r.role).subs.forEach(function (s) { (people[s] = people[s] || []).push(r); }); });
+      var subs = Object.keys(people);
+      if (!subs.length) box.appendChild(note(roles.some(function (r) { return r.error; }) ? "The platform roles could not be read: " + roles.map(function (r) { return r.error; }).filter(Boolean).join("; ") : "No Google account is trusted by this site's roles."));
+      else box.appendChild(table([
+        { h: "Person (Google account)", get: function (s) { return s === me.sub ? "you" + (me.email ? " (" + me.email + ")" : "") : "another Google account, ID ending " + s.slice(-6); } },
+        { h: "Can use", get: function (s) { return people[s].map(function (r) { return r.label.split(" (")[0]; }).join(" and "); } },
+        { h: "So they can", get: function (s) { return people[s].map(function (r) { return r.policies.map(function (p) { return DOES[p] || p; }).join("; "); }).join("; "); } }
+      ], subs));
+      roles.forEach(function (r) {
+        if (!r.role) return;
+        box.appendChild(el("h4", { text: r.label.split(" (")[0] + " role (" + r.name + ")" }));
+        box.appendChild(table([{ h: "Policy", get: function (p) { return p; } }, { h: "Lets the role", get: function (p) { return DOES[p] || "(see the policy in IAM)"; } }], r.policies));
+      });
+      box.appendChild(note("Read live from IAM: these roles trust only Google sign-ins to this site's app (audience) for the Google account IDs above, for one hour at a time. A Google account ID cannot be turned back into a name, so others show by the end of their ID. Who may assume the roles changes only by changing the account's stack."));
+    });
+  }
   var iam = frame("console-iam", { button: "Read roles", show: function (f, acct, send, region, live) {
-    var api = IamApi(send);
-    return drain(function (n) { return api.roles({ next: n }); }).then(function (r) {
+    var api = IamApi(send), access = el("div", { class: "console-access" });
+    f.body.appendChild(access);
+    var who = whoHasAccess(api, access, live).catch(function (e) { access.appendChild(note("Who has access could not be read: " + e.message)); });
+    return who.then(function () { return drain(function (n) { return api.roles({ next: n }); }); }).then(function (r) {
       if (!live()) return;
       f.body.appendChild(h3("Roles (" + r.items.length + ")"));
       f.body.appendChild(table([{ h: "Role", get: function (x) { return x.name; } }, { h: "Trusted by", get: trustedBy }, { h: "Created (UTC)", get: function (x) { return when(x.created); } }, { h: "Description", get: function (x) { return x.description; } }], r.items,
@@ -209,7 +262,7 @@
               ["Longest session", full.maxSession ? full.maxSession / 3600 + " h" : ""], ["Permissions boundary", full.boundary && (full.boundary.arn || full.boundary)], ["Description", full.description]]));
             d.appendChild(el("h4", { text: "Who may assume it" }));
             d.appendChild(table([{ h: "Effect", get: function (s) { return s.effect; } }, { h: "Principals", get: function (s) { return (s.principals || []).map(function (p) { return p.kind + ": " + p.id; }).join(", "); } },
-              { h: "Actions", get: function (s) { return (s.actions || []).join(", "); } }, { h: "Conditions", get: function (s) { return (s.conditions || []).map(function (c) { return c.operator + " " + c.key + " = " + [].concat(c.values || c.value || []).join(" | "); }).join("; "); } }], (full.trust && full.trust.statements) || []));
+              { h: "Actions", get: function (s) { return (s.actions || []).join(", "); } }, { h: "Conditions", get: function (s) { return (s.conditions || []).map(function (c) { return (c.op || c.operator) + " " + c.key + " = " + [].concat(c.values || c.value || []).join(" | "); }).join("; "); } }], (full.trust && full.trust.statements) || []));
             d.appendChild(el("h4", { text: "Policies attached (" + x[1].items.length + ")" }));
             d.appendChild(x[1].items.length ? table([{ h: "Policy", get: function (p) { return p.name; } }, { h: "ARN", get: function (p) { return p.arn; } }], x[1].items) : note("None."));
             d.appendChild(el("h4", { text: "Inline policies (" + x[2].items.length + ")" }));

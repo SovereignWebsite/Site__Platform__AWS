@@ -540,7 +540,7 @@
     // A pack is a whole world: loading one reloads the page on it.
     ps.onchange = function () { AwsTwin.usePack(ps.value); location.href = location.pathname + "?twin&pack=" + ps.value; };
   }
-  window.Platform = { enterTwin: enterTwin, diffView: diffView, jsonLine: jsonLine, assume: assume, jsonCall: jsonCall, xmlText: xmlText, awsError: awsError, el: el, say: say,
+  window.Platform = { me: function () { return mem.claims ? { sub: mem.claims.sub, email: mem.claims.email, name: mem.claims.name } : null; }, enterTwin: enterTwin, diffView: diffView, jsonLine: jsonLine, assume: assume, jsonCall: jsonCall, xmlText: xmlText, awsError: awsError, el: el, say: say,
     accounts: function () { return accounts; }, signedIn: function () { return !!mem.idToken; } };
   initGoogle();
   loadAccounts().then(restore).then(renderAccounts).then(function () { return gisReady; }).then(autoSignIn);
